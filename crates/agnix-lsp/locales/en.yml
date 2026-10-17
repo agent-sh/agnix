@@ -63,9 +63,12 @@ rules:
     message: "Permission rule at index %{index} denies '%{host}', but sandbox_network rules are first-match and the earlier allow rule at index %{allow} already matches it, so this deny never applies"
     suggestion: "Move the specific deny before the broader allow."
   oc_dep_005:
+    message: "Deprecated top-level key '%{key}'. TUI settings belong in tui.json"
     cleanup_suggestion: "Move '%{key}' to tui.json first. Only use the unsafe cleanup after migration is complete; it deletes legacy TUI settings without moving them."
     cleanup_fix: "Remove legacy TUI settings only after migration to tui.json is complete (does not move configuration)"
   oc_dep_002:
+    message: "Deprecated key 'tools'. Use 'permission' instead"
+    agent_message: "Agent '%{agent}' uses deprecated 'tools'; use the agent's permission field"
     migration_suggestion: "Migrate tools boolean values to permission actions/rules; do not only rename the key. Legacy tools remains supported."
   cop_027:
     fix: "Replace infer with invocation controls, preserving explicit fields"
@@ -177,6 +180,22 @@ rules:
   cx_sk_001:
     message: field '%{field}' is not supported by %{client} -- it will be ignored
     suggestion: Remove '%{field}' or move this skill to a client that supports it
+  cx_sk_004:
+    message: "The %{count} skills in this skills directory use about %{chars} characters of name, description and path metadata; Codex limits its initial skill list to 2% of the context window, or %{limit} characters when the window is unknown, and shortens descriptions or omits skills beyond that"
+    suggestion: Shorten skill descriptions (front-load the key use case), or raise skills.max_context_tokens (capped at 10000)
+  cx_sk_006:
+    ignored: "Codex ignores %{field}: %{reason}"
+    empty: the value is empty
+    too_long: "it has %{length} characters (at most %{max})"
+    bad_color: "'%{value}' is not #RRGGBB"
+    type_error: "%{field} must be %{expected}; Codex ignores this whole agents/openai.yaml"
+    parse_error: "Codex cannot parse agents/openai.yaml (%{error}) and ignores its interface, dependencies and policy"
+    root_type: agents/openai.yaml must be a mapping; Codex ignores it
+    dependency: "dependencies.tools entry %{index} has no %{fields}; Codex drops it"
+    suggestion: Fix the field so Codex reads it (see the skill-creator openai_yaml reference)
+  cx_sk_007:
+    message: "Skill folder contains %{files}; Codex's skill guidance says to avoid a README, installation guide or changelog inside a skill"
+    suggestion: Keep only files the skill uses; put needed material in SKILL.md or references/
   oc_sk_001:
     message: field '%{field}' is not supported by %{client} -- it will be ignored
     suggestion: Remove '%{field}' or move this skill to a client that supports it
@@ -678,55 +697,252 @@ rules:
     suggestion: Fix the JSON syntax error in .gemini/settings.json
     unknown_key: Unknown top-level key '%{key}' in .gemini/settings.json
   oc_001:
-    message: 'Invalid share mode ''%{value}''. Valid values: ''manual'', ''auto'', ''disabled'''
-    type_error: 'Field ''share'' must be a string. Valid values: ''manual'', ''auto'', ''disabled'''
-    suggestion: Use 'manual', 'auto', or 'disabled' for the share field
-    fix: Change share mode to '%{fixed}'
+    message: "Invalid share mode '%{value}'. Valid values: 'manual', 'auto', 'disabled'"
+    type_error: "Field 'share' must be a string. Valid values: 'manual', 'auto', 'disabled'"
+    suggestion: "Use 'manual', 'auto', or 'disabled' for the share field"
+    fix: "Change share mode to '%{fixed}'"
   oc_002:
-    not_found: Instruction path '%{path}' does not exist
-    invalid_glob: Instruction path '%{path}' has invalid glob syntax
-    traversal: Instruction path '%{path}' must be relative and must not contain '..'
-    type_error: Field 'instructions' must be an array of strings
-    suggestion: Use relative paths that exist or valid glob patterns in the instructions array
+    not_found: "Instruction path '%{path}' does not exist; OpenCode skips missing instruction files"
+    invalid_glob: "Instruction path '%{path}' has invalid glob syntax"
+    type_error: "Field 'instructions' must be an array of strings"
+    suggestion: "Use paths that exist relative to the project root, ~/ or absolute paths, glob patterns, or http(s) URLs"
   oc_003:
-    message: 'opencode.json parse error: %{error}'
-    suggestion: Fix the JSON syntax in opencode.json
+    message: "opencode.json parse error: %{error}"
+    root_type: "OpenCode config must be a JSON object, found %{found}"
+    suggestion: "Fix the JSON syntax (OpenCode accepts comments and trailing commas)"
   oc_004:
-    message: Unknown config key '%{key}' in opencode.json
-    suggestion: Remove unrecognized keys or check the OpenCode documentation for valid configuration options
+    message: "Unknown config key '%{key}' in opencode.json"
+    did_you_mean: "Did you mean '%{key}'? The config schema (opencode.ai/config.json) lists the valid keys"
+    suggestion: "Remove the key or check https://opencode.ai/config.json for valid options"
+    v2_key_on_v1: "'%{key}' is an OpenCode 2 key; OpenCode 1 (pinned in [tool_versions]) does not read it"
+    v2_key_on_v1_suggestion: "Use the OpenCode 1 form of this setting, or update the opencode pin in .agnix.toml"
   oc_006:
-    message: Remote instruction URL '%{url}' may slow startup (5-second timeout per URL)
-    suggestion: Consider using local instruction files instead of remote URLs for faster startup
+    message: "Remote instruction URL '%{url}' is fetched when the config loads with a 5-second timeout; OpenCode skips it if the fetch fails"
+    suggestion: "Make sure the URL is reachable from every machine, or use a local instruction file"
   oc_007:
-    message: Custom agent '%{name}' is missing required field 'description'
-    type_error: Field 'agent' must be an object mapping agent names to their configuration
-    suggestion: Add a 'description' field to each custom agent definition
+    message: "Custom agent '%{name}' has no description; OpenCode uses it to choose the agent"
+    type_error: "Field '%{field}' must be an object mapping agent names to their configuration"
+    entry_type: "Agent '%{name}' must be an object"
+    suggestion: "Add a 'description' that says what the agent does and when to use it"
   oc_008:
-    message: 'Invalid permission value ''%{value}'' for tool ''%{tool}''. Valid values: ''allow'', ''ask'', ''deny'''
-    type_error: Field 'permission' must be an object or a string ('allow', 'ask', or 'deny')
-    suggestion: Use 'allow', 'ask', or 'deny' for permission values
+    message: "Invalid permission value '%{value}' for '%{tool}'. Valid values: 'allow', 'ask', 'deny'"
+    type_error: "Permission values must be 'allow', 'ask' or 'deny', or an object of patterns mapped to those values"
+    suggestion: "Use 'allow', 'ask', or 'deny' for permission values"
+    fix: "Replace the permission value with '%{value}'"
+    v2_type_error: "'permissions' must be an ordered array of { action, resource, effect } rules"
+    v2_rule_type: "Permission rule %{index} must be an object with action, resource and effect"
+    v2_unknown_field: "Permission rule %{index} has unknown field '%{field}'; rules accept only action, resource and effect"
+    v2_missing: "Permission rule %{index} needs a string '%{field}'"
+    v2_suggestion: "Write each rule as { \"action\": \"shell\", \"resource\": \"git status *\", \"effect\": \"allow\" }"
   oc_009:
-    message: Invalid variable substitution '%{pattern}' - %{reason}
-    suggestion: Use {env:VARIABLE_NAME} or {file:path/to/file} syntax for variable substitution
+    message: "Invalid variable substitution '%{pattern}' - %{reason}"
+    unknown_prefix: "unknown prefix '%{prefix}'. Valid prefixes: 'env', 'file'"
+    empty_value: "empty value after '%{prefix}:'"
+    suggestion: "Use {env:VARIABLE_NAME} or {file:path/to/file} syntax for variable substitution"
+  oc_tui_003:
+    message: "Invalid diff_style '%{value}'. Must be one of: %{values}"
+    type_error: "diff_style must be a string"
+    suggestion: "Set diff_style to one of: %{values}"
+    fix: "Replace diff_style with '%{value}'"
+  oc_tui_002:
+    message: "scroll_speed must be a number >= 0.001"
+    suggestion: "Set scroll_speed to a number >= 0.001"
+  oc_tui_001:
+    message: "Unknown TUI key '%{key}'"
+    suggestion: "Valid TUI keys: %{keys}"
+  oc_tool_001:
+    message: "Custom tool '%{tool}' replaces OpenCode's built-in '%{tool}' tool"
+    suggestion: "Rename the file unless you mean to replace the built-in; use permissions to disable a built-in tool"
+  oc_sk_002:
+    message: "Skill '%{id}' is also defined in %{winner}; OpenCode loads only that higher-precedence copy"
+    suggestion: "Remove one copy, or ignore this if the override is intended"
+  oc_pol_001:
+    dropped: "%{field} statement %{index} is invalid (%{reason}); OpenCode drops it and the restriction is not enforced"
+    type_error: "%{field} must be an array of { action, resource, effect } statements"
+    resource_shape: "Statement %{index}: resource '%{resource}' does not have the %{action} form %{expected}, so it matches nothing"
+    v1_action: "Statement %{index}: OpenCode 1 policies support only provider.use, not '%{action}'"
+    suggestion: "Use action provider.use, tool.use or integration.use, a string resource, and effect allow or deny"
+  oc_pm_007:
+    message: "Shell pattern '%{pattern}' has no wildcard, so it matches only the command without arguments"
+    suggestion: "Use '%{pattern} *' to allow the command with arguments"
+  oc_pm_006:
+    message: "%{tool} allows every command and relies on deny patterns (%{count}) to block dangerous ones; OpenCode recommends a narrow allowlist"
+    suggestion: "Ask for every command by default and allow specific prefixes, such as 'git status *'"
+  oc_pm_005:
+    renamed: "Permission action '%{action}' is the OpenCode 1 name; OpenCode 2 uses '%{replacement}', so this rule matches no built-in tool"
+    removed: "Permission action '%{action}' is not an OpenCode 2 action, so this rule matches nothing"
+    suggestion_renamed: "Use \"action\": \"%{replacement}\""
+    suggestion_removed: "Remove the rule"
+  oc_pm_004:
+    message: "external_directory allows '%{pattern}', which covers paths outside the project broadly"
+    suggestion: "Allow only specific trusted directories, such as \"~/projects/reference/*\""
+  oc_pm_003:
+    message: "%{rule} %{scope} overrides the earlier rules before it (%{count}, first: '%{first}'); OpenCode applies the last matching rule, so those rules never take effect"
+    scope_tools: "for all tools"
+    scope_tool: "for '%{tool}'"
+    scope_rules: "in this ordered list"
+    suggestion: "Put the catch-all rule first and the specific exceptions after it"
+  oc_pm_002:
+    message: "Permission key '%{key}' is not a built-in permission; did you mean '%{suggestion}'?"
+    suggestion: "Permission keys are tool-name patterns; fix the spelling if you meant the built-in key"
+  oc_lsp_002:
+    message: "LSP server '%{server}' extensions must be a non-empty array of strings"
+    suggestion: "Set extensions to an array like [\".ts\", \".js\"]"
+  oc_lsp_001:
+    message: "LSP server '%{server}' has 'command' but no 'extensions'"
+    suggestion: "Add an 'extensions' array to specify file extensions"
+  oc_dep_009:
+    message: "OpenCode 2 ignores '%{field}' and warns at startup; %{instead}"
+    log_level: "use OPENCODE_LOG_LEVEL when starting OpenCode"
+    server: "use the OpenCode 2 service and explicit server options"
+    subagent_depth: "use experimental.subagent_depth instead"
+    compaction: "OpenCode 2 uses compaction.keep.tokens instead"
+    agent_name: "the agent ID is the map key or the file name"
+    enabled_only: "an entry with only 'enabled' and no type is not read; give the full server definition"
+    no_equivalent: "it has no OpenCode 2 equivalent"
+    suggestion: "Remove the field, or pin OpenCode 1 in .agnix.toml ([tool_versions] opencode) if this config targets OpenCode 1"
+  oc_dep_008:
+    message: "'%{dir}/' is the legacy singular directory; use '%{replacement}/'"
+    suggestion: "Move the file to %{replacement}/ (the path below it stays the ID)"
+    modes: "'%{dir}/' holds deprecated modes; OpenCode loads them as primary agents"
+    modes_suggestion: "Move the file to agents/ and add mode: primary to its frontmatter"
+  oc_dep_007:
+    message: "Deprecated key 'reference'. Use 'references' instead"
+    suggestion: "Rename 'reference' to 'references'; the entry shapes are the same"
+    fix: "Rename 'reference' to 'references'"
+  oc_dep_006:
+    message: "Agent '%{agent}' uses deprecated 'maxSteps'. Use 'steps' instead"
+    suggestion: "Rename 'maxSteps' to 'steps'"
+    fix: "Rename 'maxSteps' to 'steps'"
+  oc_dep_003:
+    message: "Deprecated key 'autoshare'. Use 'share' instead"
+    suggestion: "Replace \"autoshare\": true with \"share\": \"auto\""
+    fix: "Replace autoshare with \"share\": \"%{mode}\""
+  oc_dep_001:
+    message: "Deprecated key 'mode'. Define these agents under 'agent' with mode: primary"
+    suggestion: "Move each entry to agent.<name> and add \"mode\": \"primary\""
+    fix: "Rename 'mode' to 'agent' (entries then default to mode all; add mode: primary to keep them primary)"
+  oc_cmd_003:
+    message: "Markdown command '%{command}' sets template in frontmatter; the file body is the template"
+    suggestion: "Remove template from the frontmatter and put the prompt in the body"
+  oc_cmd_002:
+    message: "Command '%{command}' has no template; JSON commands require one"
+    type_error: "Command '%{command}' template must be a string"
+    entry_type: "Command '%{command}' must be an object with a template"
+    suggestion: "Add \"template\": \"...\" with the prompt text"
+  oc_cmd_001:
+    message: "Command '%{command}' puts %{placeholder} inside a shell block; shell blocks run outside OpenCode's permission checks"
+    suggestion: "Pass arguments to the agent instead, or validate them in a script you control"
+  oc_agm_003:
+    message: "OpenCode 2 reads AGENTS.md only; this CLAUDE.md is ignored"
+    both_lines: "OpenCode 1 uses this CLAUDE.md only because no AGENTS.md exists here; OpenCode 2 ignores it"
+    suggestion: "Move shared guidance into AGENTS.md (CLAUDE.md can import it with @AGENTS.md)"
+  oc_agm_002:
+    message: "Possible credential in AGENTS.md; OpenCode project instructions are committed and shared with everyone using the repository"
+    suggestion: "Remove the secret and reference an environment variable instead"
+  oc_ag_011:
+    message: "Agent '%{agent}' sets hidden but its mode is %{mode}; OpenCode 1 applies hidden only to subagents"
+    suggestion: "Set mode: subagent, or remove hidden (it controls visibility, not permissions)"
+  oc_ag_010:
+    message: "Agent '%{agent}' has no description; OpenCode shows it to the model that chooses which agent to launch"
+    suggestion: "Add a description that says what the agent does and when to use it"
+  oc_ag_009:
+    message: "Agent '%{agent}' %{field} must be a boolean"
+    suggestion: "Set %{field} to true or false"
+  oc_ag_008:
+    message: "Agent '%{agent}' hidden must be a boolean"
+    suggestion: "Set hidden to true or false"
+  oc_ag_007:
+    message: "Agent '%{agent}' sets both 'steps' and the deprecated 'maxSteps'"
+    suggestion: "Remove 'maxSteps' and keep 'steps'"
+  oc_ag_006:
+    message: "Invalid color '%{value}'; use a hex color or one of: %{colors}"
+    suggestion: "Use a hex color like '#FF5733' or a theme color such as 'accent'"
+    fix: "Replace color with '%{value}'"
+  oc_ag_005:
+    message: "Agent '%{agent}' top_p must be a number from 0.0 to 1.0"
+    suggestion: "Set top_p to a value such as 0.9"
+  oc_ag_004:
+    message: "Agent '%{agent}' steps must be a positive integer"
+    suggestion: "Use an integer greater than zero, such as 20"
+  oc_ag_003:
+    message: "temperature %{value} is outside 0-2 (agnix heuristic: provider limits)"
+    type_error: "temperature must be a number"
+    suggestion: "Use a value such as 0.1 for focused output or 0.7 for more varied output"
+  oc_cfg_022:
+    message: "'%{key}' only works in the global config; OpenCode ignores project-level values"
+    suggestion: "Move it to ~/.config/opencode/opencode.json(c)"
+  oc_cfg_021:
+    enabled: "MCP server '%{server}' under mcp.servers uses 'enabled', which OpenCode 2 does not read there; use 'disabled'"
+    enabled_suggestion: "Replace \"enabled\": false with \"disabled\": true (servers connect unless disabled)"
+    timeout: "MCP server '%{server}' under mcp.servers uses a numeric timeout; OpenCode 2 timeouts are an object"
+    timeout_suggestion: "Use \"timeout\": { \"catalog\": 30000, \"execution\": 30000 }"
+    oauth: "MCP server '%{server}' under mcp.servers uses the OpenCode 1 OAuth field '%{key}'; OpenCode 2 uses '%{replacement}'"
+    oauth_suggestion: "Use the snake_case OAuth fields under mcp.servers (client_id, client_secret, callback_port, redirect_uri)"
+  oc_cfg_020:
+    message: "%{count} MCP servers are enabled; each adds tools to the context (agnix heuristic: more than %{limit})"
+    suggestion: "Enable only the servers you need, or disable their tools globally and enable them per agent"
+  oc_cfg_019:
+    message: "Reference '%{alias}': '%{target}' is read as a Git repository, not a local directory"
+    suggestion: "Write './%{target}' for a local directory"
+  oc_cfg_018:
+    message: "Reference '%{alias}' has no description, so OpenCode does not advertise it to agents"
+    suggestion: "Use the object form with a short description of when to use the reference, or ignore this for references you attach by hand"
+  oc_cfg_017:
+    message: "%{entry} mixes OpenCode 1 ('%{v1}') and OpenCode 2 ('%{v2}') fields; OpenCode does not infer formats inside one entry"
+    agent: "Agent '%{id}'"
+    command: "Command '%{id}'"
+    provider: "Provider '%{id}'"
+    model: "Model '%{id}'"
+    suggestion: "Keep each agent, command, provider and model entry entirely in one format"
+  oc_cfg_015:
+    message: "'%{variable}' is not expanded by OpenCode; JSON strings only substitute {env:%{name}}"
+    suggestion: "Write {env:%{name}} instead"
+  oc_cfg_014:
+    message: "%{field} must be a non-negative integer"
+    suggestion: "Use 0 (no subagents), 1 (the default) or a higher nesting depth"
+  oc_cfg_013:
+    message: "server.%{field} must be %{expected}"
+    suggestion: "Fix the server option type (port, hostname, mdns, mdnsDomain, cors)"
+  oc_cfg_012:
+    type_error: "MCP server '%{server}' oauth must be an object or false"
+    unknown: "MCP server '%{server}' oauth has unknown field '%{key}'"
+    did_you_mean: "Did you mean '%{key}'? No OAuth field is required; OpenCode uses dynamic client registration without a client ID"
+    port: "MCP server '%{server}' oauth.%{key} must be an integer from 1 to 65535"
+    string: "MCP server '%{server}' oauth.%{key} must be a string"
+    suggestion: "Use clientId, clientSecret, scope (OpenCode 1) or client_id, client_secret, scope, callback_port, redirect_uri, auth_server_metadata_url (mcp.servers)"
+  oc_cfg_011:
+    message: "MCP server '%{server}' timeout must be a positive integer (milliseconds)"
+    suggestion: "Set timeout to a positive number of milliseconds (default 5000)"
+    v2_type: "%{field} must be an object with startup, catalog and execution timeouts"
+    v2_unknown: "%{field} has unknown key '%{key}'; use startup, catalog or execution"
+    v2_value: "%{field}.%{key} must be a positive integer (milliseconds)"
+    v2_suggestion: "Use { \"startup\": 30000, \"catalog\": 30000, \"execution\": 600000 } style values in milliseconds"
+  oc_cfg_010:
+    message: "Invalid skills URL '%{url}'. Must start with http:// or https://"
+    item_type: "skills.urls entries must be strings"
+    type_error: "skills.urls must be an array"
+    suggestion: "Use full http:// or https:// URLs in skills.urls"
+  oc_cfg_009:
+    message: "%{field} must be a non-negative integer"
+    suggestion: "Set it to a token count of 0 or more"
+  oc_cfg_008:
+    message: "Invalid logLevel '%{value}'. Must be one of: %{values}"
+    type_error: "logLevel must be a string"
+    suggestion: "Set logLevel to one of: %{values}"
+    fix: "Replace logLevel with '%{value}'"
+  oc_cfg_004:
+    message: "default_agent '%{value}' is not a built-in or defined agent; OpenCode falls back to build"
+    type_error: "default_agent must be a string naming a primary agent"
+    suggestion: "Use 'build', 'plan', or a primary agent defined in the config or in an agents/ directory"
   cdx_000:
     message: 'Failed to parse .codex/config.toml as TOML: %{error}'
     suggestion: Validate TOML syntax -- check for missing quotes, brackets, or invalid key-value pairs
-  cdx_001:
-    message: 'Invalid approvalMode ''%{value}''. Valid values: ''suggest'', ''auto-edit'', ''full-auto'''
-    type_error: 'Field ''approvalMode'' must be a string. Valid values: ''suggest'', ''auto-edit'', ''full-auto'''
-    suggestion: Use 'suggest', 'auto-edit', or 'full-auto' for the approvalMode field
-    fix: Change approvalMode to '%{fixed}'
-  cdx_002:
-    message: 'Invalid fullAutoErrorMode ''%{value}''. Valid values: ''ask-user'', ''ignore-and-continue'''
-    type_error: 'Field ''fullAutoErrorMode'' must be a string. Valid values: ''ask-user'', ''ignore-and-continue'''
-    suggestion: Use 'ask-user' or 'ignore-and-continue' for the fullAutoErrorMode field
-    fix: Change fullAutoErrorMode to '%{fixed}'
-  cdx_003:
-    message: AGENTS.override.md should not be in version control
-    suggestion: Add AGENTS.override.md to .gitignore (it contains user-specific overrides)
   cdx_004:
     message: Unknown config key '%{key}' in .codex/config.toml
-    suggestion: Remove unrecognized keys or check the Codex CLI documentation for valid configuration options
+    legacy_ts_cli: "'%{key}' is a setting of the retired TypeScript Codex CLI; the current Codex CLI ignores it"
+    requirements_only: "'%{key}' only works in managed requirements.toml; in config.toml it does not enable managed-hooks-only mode"
+    suggestion: Remove unrecognized keys or check the Codex CLI configuration reference for valid options
   cdx_005:
     type_error: "Field 'project_doc_max_bytes' must be a non-negative integer"
     suggestion: "Set project_doc_max_bytes to a non-negative integer (default: 32768; zero is valid and the schema has no maximum)"
@@ -766,8 +982,9 @@ rules:
     message: Unknown Codex config field '%{key}'
     suggestion: Remove unsupported keys or verify spelling against the official Codex config schema
   cdx_cfg_007:
-    message: sandbox_mode is set to danger-full-access without explicit warning acknowledgment
-    suggestion: Set [notice].hide_full_access_warning = true only after explicitly reviewing the risk
+    message: "%{key} = \"%{value}\" removes the Codex sandbox; Codex advises full access only in a controlled environment such as an isolated CI runner or container"
+    no_approvals: "%{key} = \"%{value}\" with approval_policy = \"never\" runs Codex with no sandbox and no approvals, a combination Codex marks as not recommended"
+    suggestion: Use workspace-write (or a permission profile) and keep approvals on, or set full access only in an isolated environment
   cdx_cfg_008:
     message: 'Invalid shell environment inherit mode ''%{value}''. Valid values: ''core'', ''all'', ''none'''
     type_error: shell_environment_policy.inherit must be a string
@@ -803,9 +1020,9 @@ rules:
     message: AGENTS.md appears overly generic and may not provide actionable project guidance
     suggestion: Add repository-specific commands, paths, and guardrails
   cdx_app_001:
-    message: 'Invalid default_tools_approval_mode ''%{value}'' for app ''%{app}''. Valid values: ''auto'', ''prompt'', ''approve'''
-    type_error: default_tools_approval_mode for app '%{app}' must be a string
-    suggestion: 'Use one of: ''auto'', ''prompt'', ''approve'''
+    message: "Invalid tool approval mode '%{value}' for %{field}. Valid values: 'auto', 'prompt', 'writes', 'approve'"
+    type_error: "%{field} must be a string: 'auto', 'prompt', 'writes', or 'approve'"
+    suggestion: "Use 'auto', 'prompt', 'writes' (prompt for tools not marked read-only), or 'approve'"
   ws_001:
     message: Windsurf rule file is empty
     suggestion: Add rule content to the file
@@ -1096,11 +1313,28 @@ rules:
     message: 'Invalid ''hooks'' value: expected a string, string array, object, or object array; found %{actual}'
     suggestion: Use a relative hook-file path, an array of paths, an inline hooks object, or an array of inline hooks objects
   cdx_pl_014:
-    message: Missing 'description' field - recommended for marketplace visibility
-    suggestion: Add a 'description' string to plugin.json for better discoverability
+    missing: "Codex-format plugin manifest is missing required package fields: %{fields}; Codex package validation requires them"
+    suggestion: Add the missing fields (version, description, author.name and an interface with composerIcon and logo), or publish a portable root plugin.json
+    too_long: Plugin description has %{length} characters; Codex allows at most %{max}
+    too_long_suggestion: Shorten the description to 4000 characters or fewer
   cdx_pl_016:
     message: Dark-mode logo path '%{path}' in interface.logoDark must start with ./ and not use '..' traversal
     suggestion: Use a relative dark-mode logo asset path such as './assets/logo-dark.png'
+  cdx_pl_017:
+    message: This plugin has only a Codex compatibility manifest; OpenAI recommends the portable root plugin.json for new packages
+    suggestion: Add a root plugin.json with the Agent Plugins $schema and put Codex settings under extensions.com.openai
+  cdx_pl_018:
+    name: "Plugin name '%{name}' does not meet public submission rules (at most 64 lowercase letters, digits and single hyphens)"
+    too_long: "interface.%{field} has %{length} characters; public submission allows at most %{max}"
+    capabilities: "interface.capabilities has %{count} entries; public submission allows at most 20, each at most 120 characters"
+    hooks: Plugins with lifecycle hooks are not eligible for the public plugin directory
+    apps: Plugin packages with app references cannot currently be submitted
+    suggestion: These limits apply to public directory submission; ignore them for plugins you install manually
+  cdx_pl_019:
+    client_secret: "MCP server '%{server}' has a client secret in %{field}; the plugin manifest does not accept a clientSecret field"
+    client_secret_suggestion: Remove the secret from the package and supply it through the connection setup flow
+    header: "MCP server '%{server}' sends a literal credential in header '%{header}'; do not embed tokens in plugin server headers"
+    header_suggestion: Remove the token; declare API-key authentication in extensions.com.openai.auth and supply the key at connection time
   roo_001:
     message: Roo Code rule file is empty
     suggestion: Add rule content to the file
@@ -1144,10 +1378,6 @@ rules:
   xp_004_read_error_suggestion: Check file permissions and ensure the file exists and is readable
   invalid_glob_pattern: 'Ignoring invalid glob pattern ''%{pattern}'': %{error}'
   invalid_glob_pattern_suggestion: 'Fix the glob pattern syntax. Use standard glob characters: *, **, ?, [abc]'
-  cdx_cfg_013:
-    message: 'Invalid sandbox_workspace_write mode ''%{value}''. Valid values: ''read-only'', ''read-write'', ''interactive'''
-    type_error: Field 'sandbox_workspace_write' must be a string
-    suggestion: 'Use one of: ''read-only'', ''read-write'', ''interactive'''
   cdx_cfg_014:
     type_error: Field 'model' must be a string
     suggestion: Set 'model' to a valid Codex model identifier (e.g. 'gpt-5', 'claude-sonnet-4-5')
@@ -1186,16 +1416,116 @@ rules:
   cdx_ag_006:
     message: AGENTS.md missing project context (no headings, no commands, no paths)
     suggestion: Add at least one heading, one command example, or a project-structure section so Codex has anchors to follow
-  cdx_ag_007:
-    message: AGENTS.md contradicts .codex/config.toml
-    suggestion: Reconcile the documented guidance in AGENTS.md with the declared config values (approval modes, tool policy,
-      etc.)
+  cdx_ag_008:
+    message: An AGENTS.override.md in this directory replaces this AGENTS.md for Codex; Codex reads at most one instruction file per directory, while other tools still read AGENTS.md
+    suggestion: Keep shared guidance in AGENTS.md and only Codex-specific overrides in AGENTS.override.md, or remove the override if it is not intended
   cdx_app_002:
-    type_error: Field 'skills' for app '%{app}' must be an array of strings
-    suggestion: Set 'skills' to an array of skill names (e.g. skills = ["my-skill"])
+    type_error: Field 'skills' must be a table
+    suggestion: Use a [skills] table (for example skills.max_context_tokens or [[skills.config]] entries)
   cdx_app_003:
-    type_error: Field 'profile' for app '%{app}' must be a string
-    suggestion: Set 'profile' to a profile name defined in your Codex config
+    selector: The top-level profile selector is no longer supported; Codex ignores it
+    table: Codex no longer reads [profiles.<name>] tables from config.toml
+    suggestion: Move each profile into ~/.codex/<name>.config.toml with top-level keys and select it with --profile <name>
+  cdx_cfg_026:
+    message: "Unknown key '%{key}' in [permissions.%{profile}.network]. Known keys: %{known}"
+    suggestion: Remove or rename the key; network rules of a permission profile go under [permissions.<name>.network]
+  cdx_cfg_031:
+    capped: "skills.max_context_tokens = %{value} is above the cap; Codex caps explicit values at %{cap} tokens"
+    invalid: skills.max_context_tokens must be a positive integer
+    suggestion: Set skills.max_context_tokens to a positive integer of at most 10000
+  cdx_cfg_032:
+    message: "Codex ignores '%{key}' in a project .codex/config.toml and prints a startup warning"
+    suggestion: "Set '%{key}' in the user config ~/.codex/config.toml (or select a profile with --profile)"
+  cdx_cfg_033:
+    shadowed: "%{key} has no effect while sandbox_mode is set: Codex uses the older sandbox settings instead of permission profiles"
+    mixed: "%{key} and %{legacy} configure two sandbox systems; Codex expects one of them, not both"
+    suggestion: Configure either default_permissions and [permissions], or sandbox_mode and [sandbox_workspace_write]
+  cdx_cfg_034:
+    message: "Permission profile '%{profile}' sets network domain rules, but without features.network_proxy = true they do not restrict network access"
+    suggestion: Set features.network_proxy = true, or rely on managed [experimental_network] requirements that start the proxy
+  cdx_cfg_035:
+    message: "Permission profile '%{profile}' extends '%{parent}': %{reason}"
+    danger: Codex rejects extending :danger-full-access
+    unknown_builtin: "'%{parent}' is not a built-in profile Codex can extend (:read-only or :workspace)"
+    cycle: the extends chain loops back to this profile, which Codex rejects
+    default: "default_permissions = \"%{value}\" names no built-in profile (:read-only, :workspace, :danger-full-access)"
+    suggestion: Extend :read-only, :workspace or a named profile without cycles
+    fix: "Use the built-in profile %{value}"
+  cdx_hk_000:
+    message: "%{reason}; Codex cannot load %{scope} and skips every hook in it"
+    scope_file: this hooks file
+    scope_inline: the inline [hooks] table of this layer
+    parse_error: "Codex cannot parse this hooks file (%{error}) and skips every hook in it"
+    parse_suggestion: Fix the JSON syntax; hooks.json is plain JSON without comments or trailing commas
+    root_type: The hooks file must be a JSON object
+    wrong_type: "%{field} must be %{expected}"
+    unknown_top_level: "Unknown top-level key '%{key}' (hooks.json accepts only description and hooks)"
+    missing_type: A hook handler has no type (command, mcp_tool, prompt or agent)
+    missing_field: "A %{kind} hook handler needs a %{field} field"
+    unknown_type: "Unknown hook handler type '%{kind}' (use command or mcp_tool)"
+    suggestion: Fix the field so the file deserializes; one invalid value disables all hooks in it
+  cdx_hk_001:
+    too_long: "%{event} hook timeout is %{timeout} seconds; Codex limits %{event} timeouts to 1-%{max} seconds and clamps the value"
+    zero: "%{event} hook timeout 0 is raised to 1 second; Codex timeouts are seconds and there is no 'no timeout' value"
+    suggestion: Use a timeout in whole seconds (SessionEnd and Interrupt allow 1-3; omit timeout for the 600-second default)
+  cdx_hk_002:
+    unsupported_type: "Codex parses but skips '%{kind}' hook handlers; this %{event} hook never runs"
+    session_end_mcp: SessionEnd does not support mcp_tool hooks; Codex skips this handler
+    blank_command: "Codex skips this %{event} hook because its command is empty"
+    blank_mcp: "Codex skips this mcp_tool hook because %{fields} is empty"
+    bad_matcher: "Matcher '%{matcher}' for %{event} is not a valid regex (%{error}); Codex skips the whole matcher group"
+    bad_matcher_suggestion: Fix the regex, or use an exact tool name such as Bash or Edit|Write
+    suggestion: Use a command or mcp_tool handler that Codex runs
+  cdx_hk_003:
+    message: This layer has both hooks.json and inline [hooks] in config.toml; Codex loads both and warns at startup
+    suggestion: Keep the hooks of one config layer in a single representation (hooks.json or inline [hooks])
+  cdx_hk_004:
+    no_context: "additionalContextLimit has no effect on %{event} hooks, which cannot emit additionalContext; Codex ignores it with a warning"
+    unbounded: "additionalContextLimit = 0 passes this %{event} hook's whole additionalContext to the model; one hook can fill the context window"
+    suggestion: Remove additionalContextLimit, or set a positive token limit (the default is about 2,500 tokens)
+  cdx_hk_005:
+    message: "Codex has no '%{event}' hook event and ignores these hooks without a warning"
+    near_miss: "Codex has no '%{event}' hook event (did you mean '%{suggestion}'?); these hooks are ignored"
+    suggestion: "Use a Codex event: %{events}"
+  cdx_sub_001:
+    missing: "Codex custom agent file must define '%{field}'"
+    blank: "'%{field}' in a Codex custom agent file cannot be blank"
+    not_string: "'%{field}' in a Codex custom agent file must be a string"
+    parse_error: "Codex cannot load this custom agent file: invalid TOML (%{error})"
+    nicknames: "Codex rejects nickname_candidates: %{reason}"
+    nicknames_suggestion: List one or more unique names made of ASCII letters, digits, spaces, hyphens and underscores
+    suggestion: Define name, description and developer_instructions as non-empty strings
+  cdx_sub_002:
+    message: "'%{key}' has no effect in a Codex custom agent file; the agent inherits it from the parent session"
+    suggestion: "Set '%{key}' on the parent session (config.toml or the command line); use developer_instructions to narrow what the agent does"
+  cdx_sub_003:
+    message: "Custom agent '%{name}' replaces Codex's built-in '%{name}' agent"
+    suggestion: Rename the agent unless replacing the built-in is intended
+  cdx_rl_001:
+    message: A forbidden prefix_rule has no justification; Codex shows the justification when it blocks the command
+    suggestion: Add a justification that names the recommended alternative, for example "Use rg instead of grep."
+  cdx_rl_002:
+    message: "prefix_rule allows '%{command}' outside the sandbox without a prompt, which lets any code or command run there (agnix heuristic)"
+    suggestion: Allow a narrower prefix, or use decision = "prompt"
+  cdx_dep_001:
+    message: Codex custom prompts are deprecated; use a skill instead
+    nested: Codex scans only the top-level Markdown files of ~/.codex/prompts, so this prompt in a subdirectory is never loaded; custom prompts are also deprecated in favor of skills
+    not_home: Codex reads custom prompts only from the Codex home (~/.codex/prompts), and they are deprecated; use a skill instead
+    suggestion: Move the prompt into a skill (.agents/skills/<name>/SKILL.md) so Codex can invoke it explicitly or implicitly
+  cdx_req_002:
+    message: "requirements.toml prefix rule %{index}: %{problem}"
+    missing: "it has no decision; requirements rules must set decision to \"prompt\" or \"forbidden\""
+    invalid: "decision '%{value}' is not allowed; requirements rules must use \"prompt\" or \"forbidden\""
+    not_string: decision must be the string "prompt" or "forbidden"
+    suggestion: Set decision = "prompt" or decision = "forbidden"; allow rules belong in .rules files
+  cdx_req_003:
+    outside: "Managed %{event} hook command does not use a script path under managed_dir (%{dir})"
+    no_dir: "Managed %{event} hook command is set without %{key}"
+    suggestion: Point managed hook commands at absolute script paths under managed_dir, where your device management installs them
+  cdx_req_004:
+    mixed: "[experimental_network] combines the domains map with the legacy %{key} list"
+    no_allow: managed_allowed_domains_only = true without administrator allow entries leaves managed commands no allowed destinations
+    suggestion: Use only the [experimental_network.domains] map, and add allow entries when managed_allowed_domains_only is true
   kiro_010:
     message: "Steering file sets '%{field}' but no inclusion mode, so Kiro includes it in every interaction"
     suggestion: "Add inclusion: auto (with a description) to load it on demand or inclusion: manual to load it on request; remove the field if the file should always load"
@@ -1667,42 +1997,50 @@ rules:
     suggestion: 'Set experimental.autoMemory: true alongside memoryManager to keep background skill extraction and /memory
       inbox working after v0.40 (see https://github.com/google-gemini/gemini-cli/pull/25601)'
   oc_cfg_001:
-    message: Invalid model format '%{value}'; expected 'provider/model-id' (e.g. 'anthropic/claude-sonnet-4-5')
-    type_error: Field 'model' must be a string
-    suggestion: Use 'provider/model-id' format — 'anthropic/claude-sonnet-4-5', 'openai/gpt-5', etc.
+    message: "Invalid %{field} '%{value}'; expected 'provider/model-id' with an optional '#variant'"
+    object_error: "%{field} object needs string 'providerID' and 'model' fields"
+    type_error: "%{field} must be a 'provider/model' string"
+    suggestion: "Use 'provider/model-id' format, such as 'anthropic/claude-sonnet-4-5' or 'anthropic/claude-sonnet-4-5#high'"
   oc_cfg_002:
-    message: Invalid autoupdate value. Use boolean true/false or string 'notify'
-    suggestion: Set autoupdate to true, false, or 'notify'
-  oc_cfg_003:
-    message: Unknown top-level config key '%{key}' in opencode.json
-    suggestion: Remove unsupported top-level keys or verify spelling against OpenCode docs
+    message: "Invalid autoupdate value. Use boolean true/false or the string 'notify'"
+    suggestion: "Set autoupdate to true, false, or 'notify'"
+    update_message: "Invalid update value. Use 'disable', 'notify' or 'auto'"
+    update_suggestion: "Set update to 'disable', 'notify' (the default) or 'auto'"
   oc_cfg_005:
-    message: Potential hardcoded API key detected in opencode.json
-    suggestion: Replace plaintext keys with environment variable references ({env:ANTHROPIC_API_KEY}) or use opencode auth
-      login
+    provider: "Provider '%{name}' has a literal API key in the config file"
+    header: "%{owner} sends a literal credential in header '%{header}'"
+    mcp_environment: "MCP server '%{server}' sets a literal credential in environment variable '%{name}'"
+    oauth: "MCP server '%{server}' has a literal OAuth client secret in '%{key}'"
+    suggestion: "Store the secret in an environment variable or a file and reference it with {env:NAME} or {file:path}"
   oc_cfg_006:
-    message: Invalid MCP server entry '%{server}' — each server must be an object
-    type_error: Field 'mcp' must be an object mapping server names to server configs
-    suggestion_type: Each server value must be an object (not a string, array, or primitive)
-    suggestion: Shape each mcp server entry as an object with a 'type' and either 'command' or 'url'
+    message: "MCP server entry '%{server}' must be an object"
+    type_error: "Field 'mcp' must be an object of named servers (OpenCode 2: under mcp.servers)"
+    missing_type: "MCP server '%{server}' has no 'type'; set \"local\" or \"remote\""
+    invalid_type: "MCP server '%{server}' has type '%{value}'; the type must be \"local\" or \"remote\""
+    suggestion_type: "Each server value must be an object (not a string, array, or primitive)"
+    suggestion: "Shape each MCP server as an object with a 'type' and either 'command' (local) or 'url' (remote)"
   oc_cfg_007:
-    local_missing: MCP server '%{server}' has type 'local' but no command
-    remote_missing: MCP server '%{server}' has type 'remote' but no url
-    suggestion_local: Add a 'command' array for local servers (e.g. command = ["npx", "my-server"])
-    suggestion_remote: Add a 'url' for remote servers (e.g. url = "https://…")
-    environment_type: Local MCP server 'environment' must be an object whose values are strings
-    unsupported_env: Local MCP servers do not support 'env'; the field is ignored
-    suggestion_environment: Rename 'env' to 'environment' and use string values for every variable
+    local_missing: "MCP server '%{server}' has type 'local' but no command"
+    remote_missing: "MCP server '%{server}' has type 'remote' but no url"
+    command_type: "MCP server '%{server}' command must be a non-empty array of non-empty strings"
+    cwd_type: "MCP server '%{server}' cwd must be a non-empty string"
+    url_type: "MCP server '%{server}' url must be an absolute http:// or https:// URL"
+    protocol: "MCP server '%{server}' protocol must be one of: %{values}"
+    suggestion_local: "Add a 'command' array for local servers, such as [\"npx\", \"-y\", \"my-mcp-server\"]"
+    suggestion_remote: "Add a 'url' for remote servers, such as \"https://mcp.example.com/mcp\""
+    suggestion_cwd: "Set cwd to a directory path, or remove it (relative paths resolve from the workspace)"
+    suggestion_protocol: "Use 'legacy' (default), 'auto', or '2026-07-28'"
+    environment_type: "Local MCP server 'environment' must be an object whose values are strings"
+    unsupported_env: "MCP server '%{server}' uses 'env', which OpenCode does not read; the field is 'environment'"
+    suggestion_environment: "Rename 'env' to 'environment' and use string values for every variable"
   oc_ag_001:
-    message: 'Invalid OpenCode agent mode ''%{value}'' — valid modes: ''all'', ''read-only'', ''custom'''
-    suggestion: Set mode to 'all' (default), 'read-only', or 'custom'
+    message: "Invalid mode '%{value}' for agent '%{agent}'; valid modes: 'primary', 'subagent', 'all'"
+    type_error: "Agent '%{agent}' mode must be a string"
+    suggestion: "Set mode to 'primary', 'subagent' or 'all'"
   oc_ag_002:
-    message: Invalid color format '%{value}' — expected a hex color (#RRGGBB) or a named color
-    suggestion: Use a hex color like '#FF5733' or one of the named colors (red, green, blue, yellow, purple, cyan)
-  oc_pm_001:
-    message: 'Invalid permission action ''%{value}'' for ''%{tool}''. Valid values: ''allow'', ''ask'', ''deny'''
-    type_error: Permission values must be strings ('allow', 'ask', 'deny') or nested maps of those strings
-    suggestion: Use only 'allow', 'ask', or 'deny' for permission action values
+    message: "Invalid color '%{value}'; OpenCode accepts a six-digit hex color (#RRGGBB)"
+    v2_named: "Color '%{value}' is not a hex color; native OpenCode 2 agents accept only #RRGGBB"
+    suggestion: "Use a hex color such as '#FF5733'"
   cdx_cfg_028:
     message: MCP server '%{server}' uses unsupported inline 'bearer_token' field. Codex runtime rejects this - use 'bearer_token_env_var'
       to reference an env var instead

@@ -1,4 +1,32 @@
 {
+  // OpenCode 1 shape (comments and trailing commas are valid JSONC).
   "share": "public",
-  "instructions": ["nonexistent-file.md", "[unclosed"]
+  "instructions": ["nonexistent-file.md", "[unclosed"],
+  "totally_unknown": true,
+  "permission": {
+    "raed": "allow",
+    "bash": { "*": "allow", "git status": "allow", "rm *": "deny" },
+    "edit": { "src/*": "deny", "*": "allow" },
+    "external_directory": { "~/**": "allow" },
+  },
+  "agent": {
+    "helper": { "tools": { "write": false } },
+    "plan": { "mode": "primary", "hidden": true },
+    "mixed": { "description": "Mixes formats", "prompt": "p", "permissions": [] },
+  },
+  "command": {
+    "history": { "template": "Summarize: !`git log --oneline -$1`" },
+    "broken": { "description": "no template" },
+  },
+  "provider": {
+    "acme": { "options": { "apiKey": "sk-live-1234567890abcdef" } },
+  },
+  "mcp": {
+    "remote": {
+      "type": "remote",
+      "url": "https://mcp.example.com/mcp",
+      "headers": { "X-Api-Key": "${MY_API_KEY}" },
+    },
+  },
+  "references": { "docs": "docs" },
 }

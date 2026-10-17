@@ -8,11 +8,6 @@ rules:
     fix: "Normalizar el trigger del hook a %{canonical}"
     legacy: "El archivo .kiro.hook heredado usa el trigger de CLI %{trigger} sin un hook JSON V3 correspondiente en este directorio"
     legacy_suggestion: "Si este hook está destinado a CLI V3, mígralo a un archivo .kiro/hooks/*.json con versión. Los hooks manuales heredados del IDE pueden conservar su formato original."
-  oc_dep_005:
-    cleanup_suggestion: "Mueve primero '%{key}' a tui.json. Usa la limpieza no segura solo después de completar la migración; elimina los ajustes TUI heredados sin moverlos."
-    cleanup_fix: "Eliminar los ajustes TUI heredados solo después de completar la migración a tui.json (no mueve la configuración)"
-  oc_dep_002:
-    migration_suggestion: "Migra los valores booleanos de tools a acciones o reglas de permission; no cambies solo el nombre de la clave. El campo tools heredado sigue siendo compatible."
   cop_027:
     fix: "Reemplazar infer por controles de invocación, conservando los campos explícitos"
   cdx_cfg_001:
@@ -454,33 +449,9 @@ rules:
     message: 'Error al analizar .gemini/settings.json: %{error}'
     suggestion: Corrige el error de sintaxis JSON en .gemini/settings.json
     unknown_key: Clave de nivel superior desconocida '%{key}' en .gemini/settings.json
-  oc_001:
-    message: 'Modo de compartir invalido ''%{value}''. Valores validos: ''manual'', ''auto'', ''disabled'''
-    type_error: 'El campo ''share'' debe ser una cadena de texto. Valores validos: ''manual'', ''auto'', ''disabled'''
-    suggestion: Usa 'manual', 'auto' o 'disabled' para el campo share
-  oc_002:
-    not_found: La ruta de instruccion '%{path}' no existe
-    invalid_glob: La ruta de instruccion '%{path}' tiene sintaxis glob invalida
-    traversal: La ruta de instruccion '%{path}' debe ser relativa y no debe contener '..'
-    type_error: El campo 'instructions' debe ser un array de cadenas de texto
-    suggestion: Usa rutas relativas que existan o patrones glob validos en el array de instrucciones
-  oc_003:
-    message: 'Error de analisis en opencode.json: %{error}'
-    suggestion: Corrige la sintaxis JSON en opencode.json
   cdx_000:
     message: 'Error al analizar .codex/config.toml como TOML: %{error}'
     suggestion: Valida la sintaxis TOML -- verifica comillas faltantes, corchetes, o pares clave-valor invalidos
-  cdx_001:
-    message: 'approvalMode invalido ''%{value}''. Valores validos: ''suggest'', ''auto-edit'', ''full-auto'''
-    type_error: 'El campo ''approvalMode'' debe ser una cadena de texto. Valores validos: ''suggest'', ''auto-edit'', ''full-auto'''
-    suggestion: Usa 'suggest', 'auto-edit' o 'full-auto' para el campo approvalMode
-  cdx_002:
-    message: 'fullAutoErrorMode invalido ''%{value}''. Valores validos: ''ask-user'', ''ignore-and-continue'''
-    type_error: 'El campo ''fullAutoErrorMode'' debe ser una cadena de texto. Valores validos: ''ask-user'', ''ignore-and-continue'''
-    suggestion: Usa 'ask-user' o 'ignore-and-continue' para el campo fullAutoErrorMode
-  cdx_003:
-    message: AGENTS.override.md no deberia estar en el control de versiones
-    suggestion: Agrega AGENTS.override.md a .gitignore (contiene configuraciones especificas del usuario)
   cdx_006:
     type_error: El campo 'project_doc_fallback_filenames' debe ser un array de cadenas de texto
     non_string: El campo 'project_doc_fallback_filenames' contiene una entrada que no es cadena en el indice %{index}
@@ -629,10 +600,6 @@ rules:
   cdx_cfg_011:
     non_prefixed_type_error: features.non_prefixed_mcp_tool_names debe ser booleano o un objeto con 'enabled' booleano y 'server_names' como arreglo de cadenas
     non_prefixed_suggestion: Usa un booleano o configura enabled y server_names en [features.non_prefixed_mcp_tool_names]
-  oc_cfg_007:
-    environment_type: El campo 'environment' de un servidor MCP local debe ser un objeto cuyos valores sean cadenas
-    unsupported_env: Los servidores MCP locales no admiten 'env'; el campo se ignora
-    suggestion_environment: Renombra 'env' a 'environment' y usa cadenas para todas las variables
   cdx_pl_002:
     message: 'Error al analizar plugin.json: %{error}'
     suggestion: Valida la sintaxis JSON en plugin.json - verifica comas faltantes, corchetes o claves sin comillas
@@ -673,9 +640,6 @@ rules:
   cdx_pl_013:
     message: 'Valor ''hooks'' no valido: se esperaba una cadena, arreglo de cadenas, objeto o arreglo de objetos; se encontro %{actual}'
     suggestion: Usa una ruta relativa de archivo de hooks, un arreglo de rutas, un objeto de hooks en linea o un arreglo de objetos en linea
-  cdx_pl_014:
-    message: Falta el campo 'description' - recomendado para visibilidad en el marketplace
-    suggestion: Agrega una cadena 'description' a plugin.json para mejor descubrimiento
   cdx_pl_016:
     message: La ruta de logo oscuro '%{path}' en interface.logoDark debe comenzar con ./ y no usar recorrido '..'
     suggestion: Usa una ruta relativa para el logo oscuro, como './assets/logo-dark.png'

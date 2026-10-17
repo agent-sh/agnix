@@ -13,7 +13,7 @@ keywords: ["OC-TUI-003", "invalid diff_style", "opencode", "validation", "agnix"
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["OC-TUI-003", "invalid diff_style", "opencode", "validation", "agnix"
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/config/
 
 ## Test Coverage Metadata
 
@@ -38,15 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "tui": { "diff_style": "unified" }
-}
+"diff_style": "unified"
 ```
 
 ### Valid
 
 ```json
-{
-  "tui": { "diff_style": "auto" }
-}
+"diff_style": "auto"
 ```

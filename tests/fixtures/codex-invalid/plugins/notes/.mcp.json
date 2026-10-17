@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "notes": {
+      "url": "https://example.com/mcp",
+      "clientSecret": "s3cr3t-value-for-fixture"
+    }
+  }
+}

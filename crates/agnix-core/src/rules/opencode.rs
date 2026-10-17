@@ -1,29 +1,36 @@
-//! OpenCode configuration validation rules (OC-001 to OC-009)
+//! OpenCode configuration validation (`opencode.json`, `opencode.jsonc`).
 //!
-//! Validates:
-//! - OC-001: Invalid share mode (HIGH) - must be "manual", "auto", or "disabled"
-//! - OC-002: Invalid instruction path (HIGH) - paths must exist or be valid globs
-//! - OC-003: opencode.json/jsonc parse error (HIGH) - must be valid JSON/JSONC
-//! - OC-004: Unknown config key (MEDIUM) - unrecognized key in OpenCode config
-//! - OC-006: Remote URL in instructions (LOW) - may slow startup
-//! - OC-007: Invalid agent definition (MEDIUM/HIGH) - agents must have description
-//! - OC-008: Invalid permission config (HIGH) - must be allow/ask/deny
-//! - OC-009: Invalid variable substitution (MEDIUM) - must use {env:...} or {file:...}
+//! OpenCode 1 (`opencode-ai`) and OpenCode 2 (`@opencode/cli`, from
+//! 2026-09-11) read the same files. Both accept JSONC: "OpenCode supports
+//! JSON and JSONC. Use JSONC when you want comments or trailing commas."
+//! OpenCode 2 reads OpenCode 1 configuration and adds native fields
+//! (`agents`, `permissions`, `mcp.servers`, `policies`, ...). Each file is
+//! checked against the lines it targets (see `opencode_version`): checks
+//! that hold for one line only run when that is the only line targeted, so
+//! documented OpenCode 1 configuration never gets an OpenCode 2 finding
+//! unless the file uses OpenCode 2 fields or the version is pinned.
 
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
+    rules::opencode_common::{
+        AgentSource, BUILTIN_AGENTS, Member, Node, Out, V2_TOP_LEVEL_KEYS, Val,
+        agent_needs_description, check_agent, check_command_entry, check_mixed_entry, check_model,
+        check_permission_v1, check_permissions_v2, check_policies, config_has_v2_markers,
+        is_credential_name, is_literal_secret, is_user_or_system_dir, opencode_global_dir,
+        parse_config, rename_fix, shell_variable, string_fix,
+    },
+    rules::opencode_version::{OpenCodeLines, lines_for},
     rules::{Validator, ValidatorMetadata},
+    schemas::kiro_json::closest_name,
     schemas::opencode::{
-        DEPRECATED_KEYS, KNOWN_TUI_KEYS, VALID_DIFF_STYLES, VALID_LOG_LEVELS, VALID_NAMED_COLORS,
-        VALID_PERMISSION_MODES, VALID_SHARE_MODES, is_glob_pattern, parse_opencode_json,
-        validate_glob_pattern,
+        KNOWN_TOP_LEVEL_KEYS, KNOWN_TUI_KEYS, MCP_PROTOCOLS, V1_OAUTH_KEYS, V2_OAUTH_KEYS,
+        VALID_DIFF_STYLES, VALID_LOG_LEVELS, VALID_SHARE_MODES, VALID_UPDATE_MODES,
+        config_property_spans, is_glob_pattern, validate_glob_pattern,
     },
 };
 use rust_i18n::t;
-use std::path::Path;
-
-use crate::rules::{find_closest_value, find_unique_json_string_value_span};
+use std::path::{Path, PathBuf};
 
 const RULE_IDS: &[&str] = &[
     "OC-001",
@@ -36,7 +43,6 @@ const RULE_IDS: &[&str] = &[
     "OC-009",
     "OC-CFG-001",
     "OC-CFG-002",
-    "OC-CFG-003",
     "OC-CFG-004",
     "OC-CFG-005",
     "OC-CFG-006",
@@ -48,6 +54,13 @@ const RULE_IDS: &[&str] = &[
     "OC-CFG-012",
     "OC-CFG-013",
     "OC-CFG-014",
+    "OC-CFG-015",
+    "OC-CFG-017",
+    "OC-CFG-018",
+    "OC-CFG-019",
+    "OC-CFG-020",
+    "OC-CFG-021",
+    "OC-CFG-022",
     "OC-AG-001",
     "OC-AG-002",
     "OC-AG-003",
@@ -57,30 +70,59 @@ const RULE_IDS: &[&str] = &[
     "OC-AG-007",
     "OC-AG-008",
     "OC-AG-009",
+    "OC-AG-011",
     "OC-DEP-001",
     "OC-DEP-002",
     "OC-DEP-003",
     "OC-DEP-005",
     "OC-DEP-006",
     "OC-DEP-007",
+    "OC-DEP-009",
     "OC-LSP-001",
     "OC-LSP-002",
     "OC-TUI-001",
     "OC-TUI-002",
     "OC-TUI-003",
-    "OC-PM-001",
     "OC-PM-002",
+    "OC-PM-003",
+    "OC-PM-004",
+    "OC-PM-005",
+    "OC-PM-006",
+    "OC-PM-007",
+    "OC-POL-001",
+    "OC-CMD-001",
+    "OC-CMD-002",
 ];
 
-/// Builtin agent names recognized by OpenCode.
-const BUILTIN_AGENTS: &[&str] = &[
-    "build",
-    "plan",
-    "general",
-    "explore",
-    "compaction",
-    "title",
-    "summary",
+/// More enabled MCP servers than this get OC-CFG-020. agnix heuristic:
+/// OpenCode says each server adds context but gives no number.
+const MANY_MCP_SERVERS: usize = 8;
+
+/// OpenCode 1 provider members OpenCode 2 replaced.
+const V1_PROVIDER_MEMBERS: &[&str] = &["api", "id", "npm", "whitelist", "blacklist", "options"];
+/// Native OpenCode 2 provider members.
+const V2_PROVIDER_MEMBERS: &[&str] = &[
+    "canonical",
+    "package",
+    "compatibility",
+    "settings",
+    "headers",
+    "body",
+];
+const V1_MODEL_MEMBERS: &[&str] = &[
+    "id",
+    "release_date",
+    "tool_call",
+    "modalities",
+    "options",
+    "status",
+];
+const V2_MODEL_MEMBERS: &[&str] = &[
+    "modelID",
+    "capabilities",
+    "settings",
+    "releaseDate",
+    "disabled",
 ];
 
 pub struct OpenCodeValidator;
@@ -99,1989 +141,1617 @@ impl Validator for OpenCodeValidator {
         content: &str,
         config: &PerFileLintConfig<'_>,
     ) -> Vec<Diagnostic> {
-        let mut diagnostics = Vec::new();
-
-        // OC-003: Parse error (ERROR)
-        let parsed = parse_opencode_json(content);
-        if let Some(ref error) = parsed.parse_error {
-            if config.is_rule_enabled("OC-003") {
-                diagnostics.push(
-                    Diagnostic::error(
-                        path.to_path_buf(),
-                        error.line,
-                        error.column,
-                        "OC-003",
-                        t!("rules.oc_003.message", error = error.message.as_str()),
-                    )
-                    .with_suggestion(t!("rules.oc_003.suggestion")),
+        let mut out = Out::new(path, config);
+        let root = match parse_config(content) {
+            Ok(root) => root,
+            Err((error, pos)) => {
+                out.error(
+                    "OC-003",
+                    pos,
+                    t!("rules.oc_003.message", error = error.as_str()),
+                    t!("rules.oc_003.suggestion"),
                 );
+                return out.diags;
             }
-            // Can't continue if JSON is broken
-            return diagnostics;
-        }
-
-        // OC-004: Unknown config keys (WARNING)
-        // Runs on unknown_keys which are populated whenever JSON parses successfully,
-        // even when schema extraction fails.
-        if config.is_rule_enabled("OC-004") {
-            for unknown in &parsed.unknown_keys {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        path.to_path_buf(),
-                        unknown.line,
-                        unknown.column,
-                        "OC-004",
-                        t!("rules.oc_004.message", key = unknown.key.as_str()),
-                    )
-                    .with_suggestion(t!("rules.oc_004.suggestion")),
-                );
-            }
-        }
-
-        let schema = match parsed.schema {
-            Some(s) => s,
-            None => return diagnostics,
         };
-
-        // OC-001: Invalid share mode (ERROR)
-        if config.is_rule_enabled("OC-001") {
-            if parsed.share_wrong_type {
-                let line = find_key_line(content, "share").unwrap_or(1);
-                diagnostics.push(
-                    Diagnostic::error(
-                        path.to_path_buf(),
-                        line,
-                        0,
-                        "OC-001",
-                        t!("rules.oc_001.type_error"),
-                    )
-                    .with_suggestion(t!("rules.oc_001.suggestion")),
-                );
-            } else if let Some(ref share_value) = schema.share {
-                if !VALID_SHARE_MODES.contains(&share_value.as_str()) {
-                    let line = find_key_line(content, "share").unwrap_or(1);
-                    let mut diagnostic = Diagnostic::error(
-                        path.to_path_buf(),
-                        line,
-                        0,
-                        "OC-001",
-                        t!("rules.oc_001.message", value = share_value.as_str()),
-                    )
-                    .with_suggestion(t!("rules.oc_001.suggestion"));
-
-                    // Unsafe auto-fix: replace with closest valid share mode.
-                    if let Some(suggested) = find_closest_value(share_value, VALID_SHARE_MODES) {
-                        if let Some((start, end)) =
-                            find_unique_json_string_value_span(content, "share", share_value)
-                        {
-                            diagnostic = diagnostic.with_fix(Fix::replace(
-                                start,
-                                end,
-                                suggested,
-                                t!("rules.oc_001.fix", fixed = suggested),
-                                false,
-                            ));
-                        }
-                    }
-
-                    diagnostics.push(diagnostic);
-                }
-            }
+        if root.obj().is_none() {
+            out.error(
+                "OC-003",
+                root.pos,
+                t!("rules.oc_003.root_type", found = root.type_name()),
+                t!("rules.oc_003.suggestion"),
+            );
+            return out.diags;
         }
-
-        // OC-002: Invalid instruction path (ERROR)
-        if config.is_rule_enabled("OC-002") {
-            if parsed.instructions_wrong_type {
-                let instructions_line = find_key_line(content, "instructions").unwrap_or(1);
-                diagnostics.push(
-                    Diagnostic::error(
-                        path.to_path_buf(),
-                        instructions_line,
-                        0,
-                        "OC-002",
-                        t!("rules.oc_002.type_error"),
-                    )
-                    .with_suggestion(t!("rules.oc_002.suggestion")),
-                );
-            }
-            if let Some(ref instructions) = schema.instructions {
-                let config_dir = path.parent().unwrap_or(Path::new("."));
-                let instructions_line = find_key_line(content, "instructions").unwrap_or(1);
-                let fs = config.fs();
-
-                for instruction_path in instructions {
-                    if instruction_path.trim().is_empty() {
-                        continue;
-                    }
-
-                    // OC-006: Remote URL in instructions (INFO)
-                    if instruction_path.starts_with("http://")
-                        || instruction_path.starts_with("https://")
-                    {
-                        if config.is_rule_enabled("OC-006") {
-                            diagnostics.push(
-                                Diagnostic::info(
-                                    path.to_path_buf(),
-                                    instructions_line,
-                                    0,
-                                    "OC-006",
-                                    t!("rules.oc_006.message", url = instruction_path.as_str()),
-                                )
-                                .with_suggestion(t!("rules.oc_006.suggestion")),
-                            );
-                        }
-                        continue; // Don't check URL as file path
-                    }
-
-                    // Reject absolute paths and path traversal attempts
-                    let p = Path::new(instruction_path);
-                    if p.is_absolute()
-                        || p.components().any(|c| c == std::path::Component::ParentDir)
-                    {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                path.to_path_buf(),
-                                instructions_line,
-                                0,
-                                "OC-002",
-                                t!("rules.oc_002.traversal", path = instruction_path.as_str()),
-                            )
-                            .with_suggestion(t!("rules.oc_002.suggestion")),
-                        );
-                        continue;
-                    }
-
-                    // If it's a glob pattern, validate the pattern syntax
-                    if is_glob_pattern(instruction_path) {
-                        if !validate_glob_pattern(instruction_path) {
-                            diagnostics.push(
-                                Diagnostic::error(
-                                    path.to_path_buf(),
-                                    instructions_line,
-                                    0,
-                                    "OC-002",
-                                    t!(
-                                        "rules.oc_002.invalid_glob",
-                                        path = instruction_path.as_str()
-                                    ),
-                                )
-                                .with_suggestion(t!("rules.oc_002.suggestion")),
-                            );
-                        }
-                        // Valid glob patterns are allowed even if no files match yet
-                        continue;
-                    }
-
-                    // For non-glob paths, check if the file exists relative to config dir
-                    let resolved = config_dir.join(instruction_path);
-                    if !fs.exists(&resolved) {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                path.to_path_buf(),
-                                instructions_line,
-                                0,
-                                "OC-002",
-                                t!("rules.oc_002.not_found", path = instruction_path.as_str()),
-                            )
-                            .with_suggestion(t!("rules.oc_002.suggestion")),
-                        );
-                    }
-                }
-            }
+        let dir = path.parent().unwrap_or(Path::new("")).to_path_buf();
+        let mut cx = Cx {
+            lines: lines_for(config, config_has_v2_markers(&root)),
+            project: !is_user_or_system_dir(&dir),
+            dir,
+            content,
+            root: &root,
+            out,
+        };
+        cx.top_level_keys();
+        cx.share();
+        cx.instructions();
+        cx.agents();
+        cx.permissions();
+        cx.experimental();
+        cx.models_and_updates();
+        cx.default_agent();
+        cx.providers();
+        cx.mcp();
+        cx.commands();
+        cx.compaction_and_skills();
+        cx.references();
+        cx.v1_only_sections();
+        cx.tui();
+        if cx.out.on("OC-009") {
+            substitutions(&mut cx.out, &root, 0);
         }
-
-        // OC-007: Agent validation (WARNING for missing description, ERROR for wrong type)
-        if config.is_rule_enabled("OC-007") {
-            if parsed.agent_wrong_type {
-                let line = find_key_line(content, "agent").unwrap_or(1);
-                diagnostics.push(
-                    Diagnostic::error(
-                        path.to_path_buf(),
-                        line,
-                        0,
-                        "OC-007",
-                        t!("rules.oc_007.type_error"),
-                    )
-                    .with_suggestion(t!("rules.oc_007.suggestion")),
-                );
-            } else if let Some(ref agent_value) = schema.agent {
-                if let Some(agents) = agent_value.as_object() {
-                    let agent_line = find_key_line(content, "agent").unwrap_or(1);
-                    for (name, config_val) in agents {
-                        if let Some(obj) = config_val.as_object() {
-                            if !obj.contains_key("description") {
-                                diagnostics.push(
-                                    Diagnostic::warning(
-                                        path.to_path_buf(),
-                                        agent_line,
-                                        0,
-                                        "OC-007",
-                                        t!("rules.oc_007.message", name = name.as_str()),
-                                    )
-                                    .with_suggestion(t!("rules.oc_007.suggestion")),
-                                );
-                            }
-                        } else if !config_val.is_null() {
-                            diagnostics.push(
-                                Diagnostic::warning(
-                                    path.to_path_buf(),
-                                    agent_line,
-                                    0,
-                                    "OC-007",
-                                    t!("rules.oc_007.message", name = name.as_str()),
-                                )
-                                .with_suggestion(t!("rules.oc_007.suggestion")),
-                            );
-                        }
-                    }
-                }
-            }
-        }
-
-        // OC-008: Permission validation (ERROR)
-        if config.is_rule_enabled("OC-008") {
-            if parsed.permission_wrong_type {
-                let line = find_key_line(content, "permission").unwrap_or(1);
-                diagnostics.push(
-                    Diagnostic::error(
-                        path.to_path_buf(),
-                        line,
-                        0,
-                        "OC-008",
-                        t!("rules.oc_008.type_error"),
-                    )
-                    .with_suggestion(t!("rules.oc_008.suggestion")),
-                );
-            } else if let Some(ref perm_value) = schema.permission {
-                let perm_line = find_key_line(content, "permission").unwrap_or(1);
-                if let Some(perm_str) = perm_value.as_str() {
-                    // Global string shorthand
-                    if !VALID_PERMISSION_MODES.contains(&perm_str) {
-                        let mut diagnostic = Diagnostic::error(
-                            path.to_path_buf(),
-                            perm_line,
-                            0,
-                            "OC-008",
-                            t!("rules.oc_008.message", value = perm_str, tool = "*"),
-                        )
-                        .with_suggestion(t!("rules.oc_008.suggestion"));
-
-                        if let Some(suggested) =
-                            find_closest_value(perm_str, VALID_PERMISSION_MODES)
-                        {
-                            if let Some((start, end)) =
-                                find_unique_json_string_value_span(content, "permission", perm_str)
-                            {
-                                diagnostic = diagnostic.with_fix(Fix::replace(
-                                    start,
-                                    end,
-                                    suggested,
-                                    format!("Replace permission with '{}'", suggested),
-                                    false,
-                                ));
-                            }
-                        }
-
-                        diagnostics.push(diagnostic);
-                    }
-                } else if let Some(perm_obj) = perm_value.as_object() {
-                    for (tool, mode_value) in perm_obj {
-                        if let Some(mode_str) = mode_value.as_str() {
-                            if !VALID_PERMISSION_MODES.contains(&mode_str) {
-                                diagnostics.push(
-                                    Diagnostic::error(
-                                        path.to_path_buf(),
-                                        perm_line,
-                                        0,
-                                        "OC-008",
-                                        t!(
-                                            "rules.oc_008.message",
-                                            value = mode_str,
-                                            tool = tool.as_str()
-                                        ),
-                                    )
-                                    .with_suggestion(t!("rules.oc_008.suggestion")),
-                                );
-                            }
-                        } else if let Some(mode_obj) = mode_value.as_object() {
-                            // Nested permission objects (with patterns)
-                            for (_, pattern_mode) in mode_obj {
-                                if let Some(pm) = pattern_mode.as_str() {
-                                    if !VALID_PERMISSION_MODES.contains(&pm) {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                perm_line,
-                                                0,
-                                                "OC-008",
-                                                t!(
-                                                    "rules.oc_008.message",
-                                                    value = pm,
-                                                    tool = tool.as_str()
-                                                ),
-                                            )
-                                            .with_suggestion(t!("rules.oc_008.suggestion")),
-                                        );
-                                    }
-                                } else if !pattern_mode.is_null() {
-                                    diagnostics.push(
-                                        Diagnostic::error(
-                                            path.to_path_buf(),
-                                            perm_line,
-                                            0,
-                                            "OC-008",
-                                            t!("rules.oc_008.type_error"),
-                                        )
-                                        .with_suggestion(t!("rules.oc_008.suggestion")),
-                                    );
-                                }
-                            }
-                        } else if !mode_value.is_null() {
-                            diagnostics.push(
-                                Diagnostic::error(
-                                    path.to_path_buf(),
-                                    perm_line,
-                                    0,
-                                    "OC-008",
-                                    t!("rules.oc_008.type_error"),
-                                )
-                                .with_suggestion(t!("rules.oc_008.suggestion")),
-                            );
-                        }
-                    }
-                }
-            }
-        }
-
-        // OC-009: Variable substitution validation (WARNING)
-        if config.is_rule_enabled("OC-009") {
-            if let Some(ref raw_value) = parsed.raw_value {
-                validate_substitutions(raw_value, path, content, &mut diagnostics);
-            }
-        }
-
-        // New OpenCode Rules
-
-        if let Some(ref raw_value) = parsed.raw_value {
-            if let Some(obj) = raw_value.as_object() {
-                // OC-CFG-001: Invalid Model Format
-                if config.is_rule_enabled("OC-CFG-001") {
-                    for key in &["model", "small_model"] {
-                        if let Some(model_val) = obj.get(*key) {
-                            if let Some(model_str) = model_val.as_str() {
-                                if !model_str.contains('/') && !model_str.contains("{env:") {
-                                    diagnostics.push(
-                                        Diagnostic::error(
-                                            path.to_path_buf(),
-                                            find_key_line(content, key).unwrap_or(1),
-                                            0,
-                                            "OC-CFG-001",
-                                            t!("rules.oc_cfg_001.message").to_string(),
-                                        )
-                                        .with_suggestion(
-                                            t!("rules.oc_cfg_001.suggestion").to_string(),
-                                        ),
-                                    );
-                                }
-                            } else {
-                                diagnostics.push(
-                                    Diagnostic::error(
-                                        path.to_path_buf(),
-                                        find_key_line(content, key).unwrap_or(1),
-                                        0,
-                                        "OC-CFG-001",
-                                        t!("rules.oc_cfg_001.type_error").to_string(),
-                                    )
-                                    .with_suggestion(t!("rules.oc_cfg_001.suggestion")),
-                                );
-                            }
-                        }
-                    }
-                }
-
-                // OC-CFG-002: Invalid autoupdate value/type
-                if config.is_rule_enabled("OC-CFG-002")
-                    && let Some(autoupdate_val) = obj.get("autoupdate")
-                {
-                    let is_valid = autoupdate_val.is_boolean()
-                        || autoupdate_val
-                            .as_str()
-                            .is_some_and(|s| s.eq_ignore_ascii_case("notify"));
-
-                    if !is_valid {
-                        diagnostics.push(
-                            Diagnostic::error(
-                                path.to_path_buf(),
-                                find_key_line(content, "autoupdate").unwrap_or(1),
-                                0,
-                                "OC-CFG-002",
-                                t!("rules.oc_cfg_002.message").to_string(),
-                            )
-                            .with_suggestion(t!("rules.oc_cfg_002.suggestion")),
-                        );
-                    }
-                }
-
-                // OC-CFG-003: Unknown top-level config field
-                if config.is_rule_enabled("OC-CFG-003") {
-                    for unknown in &parsed.unknown_keys {
-                        diagnostics.push(
-                            Diagnostic::warning(
-                                path.to_path_buf(),
-                                unknown.line,
-                                unknown.column,
-                                "OC-CFG-003",
-                                t!("rules.oc_cfg_003.message", key = unknown.key.as_str())
-                                    .to_string(),
-                            )
-                            .with_suggestion(t!("rules.oc_cfg_003.suggestion")),
-                        );
-                    }
-                }
-
-                // OC-CFG-004: Invalid Default Agent
-                if config.is_rule_enabled("OC-CFG-004") {
-                    if let Some(agent_val) = obj.get("default_agent") {
-                        if let Some(agent_str) = agent_val.as_str() {
-                            let is_known = BUILTIN_AGENTS.contains(&agent_str)
-                                || obj
-                                    .get("agent")
-                                    .and_then(|a| a.as_object())
-                                    .is_some_and(|agents| agents.contains_key(agent_str));
-
-                            if !is_known {
-                                diagnostics.push(
-                                    Diagnostic::warning(
-                                        path.to_path_buf(),
-                                        find_key_line(content, "default_agent").unwrap_or(1),
-                                        0,
-                                        "OC-CFG-004",
-                                        format!("Invalid default_agent '{}'. Must be 'build' or a defined custom agent", agent_str),
-                                    )
-                                );
-                            }
-                        } else if !agent_val.is_null() {
-                            diagnostics.push(
-                                Diagnostic::warning(
-                                    path.to_path_buf(),
-                                    find_key_line(content, "default_agent").unwrap_or(1),
-                                    0,
-                                    "OC-CFG-004",
-                                    "Invalid default_agent type. Must be a string referring to a valid agent".to_string(),
-                                )
-                                .with_suggestion(
-                                    "Use a string value such as 'build' or a defined custom agent name"
-                                        .to_string(),
-                                ),
-                            );
-                        }
-                    }
-                }
-
-                // OC-CFG-005: Hardcoded API Key
-                if config.is_rule_enabled("OC-CFG-005") {
-                    if let Some(provider_obj) = obj.get("provider").and_then(|p| p.as_object()) {
-                        // Case 1: provider.options.apiKey
-                        if let Some(p_opts) =
-                            provider_obj.get("options").and_then(|o| o.as_object())
-                        {
-                            if let Some(api_key) = p_opts.get("apiKey").and_then(|k| k.as_str()) {
-                                if !api_key.starts_with("{env:") {
-                                    diagnostics.push(
-                                        Diagnostic::error(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "apiKey").unwrap_or(1),
-                                            0,
-                                            "OC-CFG-005",
-                                            t!("rules.oc_cfg_005.message", name = "provider")
-                                                .to_string(),
-                                        )
-                                        .with_suggestion(
-                                            t!("rules.oc_cfg_005.suggestion").to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-                        }
-
-                        // Case 2: provider.<providerName>.options.apiKey
-                        for (p_name, p_val) in provider_obj {
-                            if p_name == "options" {
-                                continue;
-                            }
-                            if let Some(p_opts) = p_val.get("options").and_then(|o| o.as_object()) {
-                                if let Some(api_key) = p_opts.get("apiKey").and_then(|k| k.as_str())
-                                {
-                                    if !api_key.starts_with("{env:") {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, "apiKey").unwrap_or(1),
-                                                0,
-                                                "OC-CFG-005",
-                                                t!("rules.oc_cfg_005.message", name = p_name)
-                                                    .to_string(),
-                                            )
-                                            .with_suggestion(
-                                                t!("rules.oc_cfg_005.suggestion").to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // OC-CFG-006 & OC-CFG-007: MCP Server Structure & Requirements
-                let check_mcp =
-                    config.is_rule_enabled("OC-CFG-006") || config.is_rule_enabled("OC-CFG-007");
-                if check_mcp {
-                    if let Some(mcp_val) = obj.get("mcp") {
-                        if let Some(mcp_obj) = mcp_val.as_object() {
-                            for (srv_name, srv_val) in mcp_obj {
-                                if let Some(srv) = srv_val.as_object() {
-                                    let srv_type =
-                                        srv.get("type").and_then(|t| t.as_str()).unwrap_or("");
-                                    if srv_type != "local" && srv_type != "remote" {
-                                        if config.is_rule_enabled("OC-CFG-006") {
-                                            diagnostics.push(
-                                                Diagnostic::error(
-                                                    path.to_path_buf(),
-                                                    find_key_line(content, srv_name).unwrap_or(1),
-                                                    0,
-                                                    "OC-CFG-006",
-                                                    t!("rules.oc_cfg_006.message", typ = srv_type)
-                                                        .to_string(),
-                                                )
-                                                .with_suggestion(
-                                                    t!("rules.oc_cfg_006.suggestion").to_string(),
-                                                ),
-                                            );
-                                        }
-                                    } else if config.is_rule_enabled("OC-CFG-007") {
-                                        if srv_type == "local" {
-                                            if !srv.contains_key("command") {
-                                                diagnostics.push(
-                                                    Diagnostic::error(
-                                                        path.to_path_buf(),
-                                                        find_key_line(content, srv_name)
-                                                            .unwrap_or(1),
-                                                        0,
-                                                        "OC-CFG-007",
-                                                        t!("rules.oc_cfg_007.local_missing")
-                                                            .to_string(),
-                                                    )
-                                                    .with_suggestion(
-                                                        t!("rules.oc_cfg_007.suggestion_local")
-                                                            .to_string(),
-                                                    ),
-                                                );
-                                            } else if let Some(command_val) = srv.get("command") {
-                                                let valid_command =
-                                                    command_val.as_array().is_some_and(|arr| {
-                                                        !arr.is_empty()
-                                                            && arr.iter().all(|v| {
-                                                                v.as_str().is_some_and(|s| {
-                                                                    !s.trim().is_empty()
-                                                                })
-                                                            })
-                                                    });
-
-                                                if !valid_command {
-                                                    diagnostics.push(
-                                                        Diagnostic::error(
-                                                            path.to_path_buf(),
-                                                            find_key_line(content, srv_name).unwrap_or(1),
-                                                            0,
-                                                            "OC-CFG-007",
-                                                            "Local MCP server 'command' must be a non-empty array of non-empty strings".to_string(),
-                                                        )
-                                                        .with_suggestion(
-                                                            "Use command like [\"node\", \"server.js\"]"
-                                                                .to_string(),
-                                                        ),
-                                                    );
-                                                }
-                                            }
-                                            if let Some(cwd_val) = srv.get("cwd") {
-                                                let valid_cwd = cwd_val
-                                                    .as_str()
-                                                    .is_some_and(|cwd| !cwd.trim().is_empty());
-
-                                                if !valid_cwd {
-                                                    diagnostics.push(
-                                                        Diagnostic::error(
-                                                            path.to_path_buf(),
-                                                            find_key_line(content, srv_name).unwrap_or(1),
-                                                            0,
-                                                            "OC-CFG-007",
-                                                            "Local MCP server 'cwd' must be a non-empty string when present".to_string(),
-                                                        )
-                                                        .with_suggestion(
-                                                            "Set cwd to a workspace-relative or absolute path string, or remove it"
-                                                                .to_string(),
-                                                        ),
-                                                    );
-                                                }
-                                            }
-                                            if let Some(environment) = srv.get("environment") {
-                                                let valid_environment = environment
-                                                    .as_object()
-                                                    .is_some_and(|environment| {
-                                                        environment
-                                                            .values()
-                                                            .all(|value| value.is_string())
-                                                    });
-                                                if !valid_environment {
-                                                    diagnostics.push(
-                                                        Diagnostic::error(
-                                                            path.to_path_buf(),
-                                                            find_key_line(content, "environment")
-                                                                .unwrap_or(1),
-                                                            0,
-                                                            "OC-CFG-007",
-                                                            t!("rules.oc_cfg_007.environment_type")
-                                                                .to_string(),
-                                                        )
-                                                        .with_suggestion(
-                                                            t!("rules.oc_cfg_007.suggestion_environment")
-                                                                .to_string(),
-                                                        ),
-                                                    );
-                                                }
-                                            }
-                                        } else if srv_type == "remote" {
-                                            if !srv.contains_key("url") {
-                                                diagnostics.push(
-                                                    Diagnostic::error(
-                                                        path.to_path_buf(),
-                                                        find_key_line(content, srv_name)
-                                                            .unwrap_or(1),
-                                                        0,
-                                                        "OC-CFG-007",
-                                                        t!("rules.oc_cfg_007.remote_missing")
-                                                            .to_string(),
-                                                    )
-                                                    .with_suggestion(
-                                                        t!("rules.oc_cfg_007.suggestion_remote")
-                                                            .to_string(),
-                                                    ),
-                                                );
-                                            } else if let Some(url_val) = srv.get("url") {
-                                                let valid_url =
-                                                    url_val.as_str().is_some_and(|url| {
-                                                        let trimmed = url.trim();
-                                                        !trimmed.is_empty()
-                                                            && (trimmed.starts_with("http://")
-                                                                || trimmed.starts_with("https://"))
-                                                    });
-
-                                                if !valid_url {
-                                                    diagnostics.push(
-                                                        Diagnostic::error(
-                                                            path.to_path_buf(),
-                                                            find_key_line(content, srv_name).unwrap_or(1),
-                                                            0,
-                                                            "OC-CFG-007",
-                                                            "Remote MCP server 'url' must be a non-empty http:// or https:// URL".to_string(),
-                                                        )
-                                                        .with_suggestion(
-                                                            "Set a valid URL such as \"https://example.com/mcp\""
-                                                                .to_string(),
-                                                        ),
-                                                    );
-                                                }
-                                            }
-                                        }
-                                        if srv.contains_key("env") {
-                                            diagnostics.push(
-                                                Diagnostic::error(
-                                                    path.to_path_buf(),
-                                                    find_key_line(content, "env").unwrap_or(1),
-                                                    0,
-                                                    "OC-CFG-007",
-                                                    t!("rules.oc_cfg_007.unsupported_env")
-                                                        .to_string(),
-                                                )
-                                                .with_suggestion(
-                                                    t!("rules.oc_cfg_007.suggestion_environment")
-                                                        .to_string(),
-                                                ),
-                                            );
-                                        }
-                                    }
-                                } else if config.is_rule_enabled("OC-CFG-006") {
-                                    diagnostics.push(
-                                        Diagnostic::error(
-                                            path.to_path_buf(),
-                                            find_key_line(content, srv_name).unwrap_or(1),
-                                            0,
-                                            "OC-CFG-006",
-                                            t!("rules.oc_cfg_006.type_error", name = srv_name)
-                                                .to_string(),
-                                        )
-                                        .with_suggestion(
-                                            t!("rules.oc_cfg_006.suggestion_type").to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-                        } else if config.is_rule_enabled("OC-CFG-006") {
-                            diagnostics.push(
-                                Diagnostic::error(
-                                    path.to_path_buf(),
-                                    find_key_line(content, "mcp").unwrap_or(1),
-                                    0,
-                                    "OC-CFG-006",
-                                    "Invalid mcp config type. Expected an object of named servers"
-                                        .to_string(),
-                                )
-                                .with_suggestion(
-                                    "Use object format: \"mcp\": { \"server-name\": { ... } }"
-                                        .to_string(),
-                                ),
-                            );
-                        }
-                    }
-                }
-
-                // Agent Validation (OC-AG-*)
-                if let Some(agent_obj) = obj.get("agent").and_then(|a| a.as_object()) {
-                    for (ag_name, ag_val) in agent_obj {
-                        if let Some(ag) = ag_val.as_object() {
-                            // OC-AG-001
-                            if config.is_rule_enabled("OC-AG-001") {
-                                if let Some(mode_val) = ag.get("mode").and_then(|m| m.as_str()) {
-                                    if mode_val != "subagent"
-                                        && mode_val != "primary"
-                                        && mode_val != "all"
-                                    {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, ag_name).unwrap_or(1),
-                                                0,
-                                                "OC-AG-001",
-                                                t!("rules.oc_ag_001.message", mode = mode_val)
-                                                    .to_string(),
-                                            )
-                                            .with_suggestion(
-                                                t!("rules.oc_ag_001.suggestion").to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-
-                            // OC-AG-002
-                            if config.is_rule_enabled("OC-AG-002") {
-                                if let Some(color_val) = ag.get("color").and_then(|c| c.as_str()) {
-                                    let valid_theme_colors = [
-                                        "accent", "blue", "cyan", "gray", "green", "indigo",
-                                        "orange", "pink", "purple", "red", "teal", "yellow",
-                                    ];
-                                    if !is_valid_hex_color(color_val)
-                                        && !valid_theme_colors.contains(&color_val)
-                                        && !VALID_NAMED_COLORS.contains(&color_val)
-                                    {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, "color").unwrap_or(1),
-                                                0,
-                                                "OC-AG-002",
-                                                t!("rules.oc_ag_002.message", color = color_val)
-                                                    .to_string(),
-                                            )
-                                            .with_suggestion(
-                                                t!("rules.oc_ag_002.suggestion").to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-
-                            // OC-AG-003
-                            if config.is_rule_enabled("OC-AG-003") {
-                                if let Some(temp_raw) = ag.get("temperature") {
-                                    if let Some(temp_val) = temp_raw.as_f64() {
-                                        if !(0.0..=2.0).contains(&temp_val) {
-                                            diagnostics.push(Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, "temperature").unwrap_or(1),
-                                                0,
-                                                "OC-AG-003",
-                                                "Temperature out of range (must be 0-2)"
-                                                    .to_string(),
-                                            ));
-                                        }
-                                    } else if !temp_raw.is_null() {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, "temperature").unwrap_or(1),
-                                                0,
-                                                "OC-AG-003",
-                                                "Temperature must be a number between 0 and 2"
-                                                    .to_string(),
-                                            )
-                                            .with_suggestion(
-                                                "Set temperature to a numeric value such as 0.7"
-                                                    .to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-
-                            // OC-AG-004
-                            if config.is_rule_enabled("OC-AG-004") {
-                                if let Some(steps_raw) = ag.get("steps") {
-                                    if let Some(steps_val) = steps_raw.as_i64() {
-                                        if steps_val <= 0 {
-                                            diagnostics.push(Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, "steps").unwrap_or(1),
-                                                0,
-                                                "OC-AG-004",
-                                                "Steps must be a positive integer".to_string(),
-                                            ));
-                                        }
-                                    } else if !steps_raw.is_null() {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, "steps").unwrap_or(1),
-                                                0,
-                                                "OC-AG-004",
-                                                "Steps must be a positive integer".to_string(),
-                                            )
-                                            .with_suggestion(
-                                                "Use an integer greater than zero, such as 20"
-                                                    .to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-
-                            // OC-AG-005: top_p out of range
-                            if config.is_rule_enabled("OC-AG-005") {
-                                if let Some(top_p_raw) = ag.get("top_p") {
-                                    if let Some(top_p_val) = top_p_raw.as_f64() {
-                                        if !(0.0..=1.0).contains(&top_p_val) {
-                                            diagnostics.push(
-                                                Diagnostic::error(
-                                                    path.to_path_buf(),
-                                                    find_key_line(content, "top_p").unwrap_or(1),
-                                                    0,
-                                                    "OC-AG-005",
-                                                    format!(
-                                                        "top_p must be between 0.0 and 1.0, got {}",
-                                                        top_p_val
-                                                    ),
-                                                )
-                                                .with_suggestion(
-                                                    "Set top_p to a value between 0.0 and 1.0"
-                                                        .to_string(),
-                                                ),
-                                            );
-                                        }
-                                    } else if !top_p_raw.is_null() {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, "top_p").unwrap_or(1),
-                                                0,
-                                                "OC-AG-005",
-                                                "top_p must be a number between 0.0 and 1.0"
-                                                    .to_string(),
-                                            )
-                                            .with_suggestion(
-                                                "Set top_p to a numeric value such as 0.9"
-                                                    .to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-
-                            // OC-AG-006: Invalid color (extended validation with named colors)
-                            // Only fires for values that look like named colors (no '#' prefix)
-                            // but aren't in VALID_NAMED_COLORS. Hex validation is handled by OC-AG-002.
-                            if config.is_rule_enabled("OC-AG-006") {
-                                if let Some(color_val) = ag.get("color").and_then(|c| c.as_str()) {
-                                    if !color_val.starts_with('#')
-                                        && !VALID_NAMED_COLORS.contains(&color_val)
-                                    {
-                                        let line = find_key_line(content, "color").unwrap_or(1);
-                                        let mut diagnostic = Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            line,
-                                            0,
-                                            "OC-AG-006",
-                                            format!(
-                                                "Invalid named color '{}'. Use a hex color or one of: {}",
-                                                color_val,
-                                                VALID_NAMED_COLORS.join(", ")
-                                            ),
-                                        )
-                                        .with_suggestion(format!(
-                                            "Use a hex color like '#FF5733' or one of: {}",
-                                            VALID_NAMED_COLORS.join(", ")
-                                        ));
-
-                                        if let Some(suggested) =
-                                            find_closest_value(color_val, VALID_NAMED_COLORS)
-                                        {
-                                            if let Some((start, end)) =
-                                                find_unique_json_string_value_span(
-                                                    content, "color", color_val,
-                                                )
-                                            {
-                                                diagnostic = diagnostic.with_fix(Fix::replace(
-                                                    start,
-                                                    end,
-                                                    suggested,
-                                                    format!("Replace color with '{}'", suggested),
-                                                    false,
-                                                ));
-                                            }
-                                        }
-
-                                        diagnostics.push(diagnostic);
-                                    }
-                                }
-                            }
-
-                            // OC-AG-007: Both steps and maxSteps present
-                            if config.is_rule_enabled("OC-AG-007") {
-                                if ag.contains_key("steps") && ag.contains_key("maxSteps") {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "maxSteps").unwrap_or(1),
-                                            0,
-                                            "OC-AG-007",
-                                            "Both 'steps' and 'maxSteps' are set. Use only 'steps'"
-                                                .to_string(),
-                                        )
-                                        .with_suggestion(
-                                            "Remove 'maxSteps' and use 'steps' only".to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-
-                            // OC-AG-008: hidden must be boolean
-                            if config.is_rule_enabled("OC-AG-008") {
-                                if let Some(hidden) = ag.get("hidden") {
-                                    if !hidden.is_boolean() && !hidden.is_null() {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, "hidden").unwrap_or(1),
-                                                0,
-                                                "OC-AG-008",
-                                                "Agent 'hidden' field must be a boolean"
-                                                    .to_string(),
-                                            )
-                                            .with_suggestion(
-                                                "Set hidden to true or false".to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-
-                            // OC-AG-009: disable must be boolean
-                            if config.is_rule_enabled("OC-AG-009") {
-                                if let Some(disable_val) = ag.get("disable") {
-                                    if !disable_val.is_boolean() && !disable_val.is_null() {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, "disable").unwrap_or(1),
-                                                0,
-                                                "OC-AG-009",
-                                                format!(
-                                                    "Agent '{}' has invalid 'disable' type. Must be a boolean",
-                                                    ag_name
-                                                ),
-                                            )
-                                            .with_suggestion(
-                                                "Set disable to true or false".to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-
-                            // OC-DEP-006: maxSteps deprecated in favor of steps
-                            if config.is_rule_enabled("OC-DEP-006") {
-                                if ag.contains_key("maxSteps") && !ag.contains_key("steps") {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "maxSteps").unwrap_or(1),
-                                            0,
-                                            "OC-DEP-006",
-                                            format!(
-                                                "Agent '{}' uses deprecated 'maxSteps'. Use 'steps' instead",
-                                                ag_name
-                                            ),
-                                        )
-                                        .with_suggestion(
-                                            "Rename 'maxSteps' to 'steps'".to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // OC-PM-002: Unknown Permission Key
-                if config.is_rule_enabled("OC-PM-002") {
-                    if let Some(perm_obj) = obj.get("permission").and_then(|p| p.as_object()) {
-                        let known_perms = [
-                            "read",
-                            "edit",
-                            "glob",
-                            "grep",
-                            "list",
-                            "bash",
-                            "task",
-                            "lsp",
-                            "skill",
-                            "todowrite",
-                            "todoread",
-                            "question",
-                            "webfetch",
-                            "websearch",
-                            "codesearch",
-                            "external_directory",
-                            "doom_loop",
-                        ];
-                        for key in perm_obj.keys() {
-                            if !known_perms.contains(&key.as_str()) {
-                                diagnostics.push(Diagnostic::warning(
-                                    path.to_path_buf(),
-                                    find_key_line(content, key).unwrap_or(1),
-                                    0,
-                                    "OC-PM-002",
-                                    format!("Unknown permission key '{}'", key),
-                                ));
-                            }
-                        }
-                    }
-                }
-
-                // OC-PM-001: Invalid permission action value
-                if config.is_rule_enabled("OC-PM-001")
-                    && let Some(permission_val) = obj.get("permission")
-                {
-                    let perm_line = find_key_line(content, "permission").unwrap_or(1);
-                    match permission_val {
-                        serde_json::Value::String(action) => {
-                            if !VALID_PERMISSION_MODES.contains(&action.as_str()) {
-                                diagnostics.push(
-                                    Diagnostic::error(
-                                        path.to_path_buf(),
-                                        perm_line,
-                                        0,
-                                        "OC-PM-001",
-                                        t!(
-                                            "rules.oc_pm_001.message",
-                                            value = action.as_str(),
-                                            tool = "*"
-                                        )
-                                        .to_string(),
-                                    )
-                                    .with_suggestion(t!("rules.oc_pm_001.suggestion")),
-                                );
-                            }
-                        }
-                        serde_json::Value::Object(perm_obj) => {
-                            for (tool, mode_value) in perm_obj {
-                                if let Some(mode_str) = mode_value.as_str() {
-                                    if !VALID_PERMISSION_MODES.contains(&mode_str) {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                perm_line,
-                                                0,
-                                                "OC-PM-001",
-                                                t!(
-                                                    "rules.oc_pm_001.message",
-                                                    value = mode_str,
-                                                    tool = tool.as_str()
-                                                )
-                                                .to_string(),
-                                            )
-                                            .with_suggestion(
-                                                t!("rules.oc_pm_001.suggestion").to_string(),
-                                            ),
-                                        );
-                                    }
-                                } else if let Some(mode_obj) = mode_value.as_object() {
-                                    for nested_mode in mode_obj.values() {
-                                        if let Some(pm) = nested_mode.as_str() {
-                                            if !VALID_PERMISSION_MODES.contains(&pm) {
-                                                diagnostics.push(
-                                                    Diagnostic::error(
-                                                        path.to_path_buf(),
-                                                        perm_line,
-                                                        0,
-                                                        "OC-PM-001",
-                                                        t!(
-                                                            "rules.oc_pm_001.message",
-                                                            value = pm,
-                                                            tool = tool.as_str()
-                                                        )
-                                                        .to_string(),
-                                                    )
-                                                    .with_suggestion(
-                                                        t!("rules.oc_pm_001.suggestion")
-                                                            .to_string(),
-                                                    ),
-                                                );
-                                            }
-                                        } else if !nested_mode.is_null() {
-                                            diagnostics.push(
-                                                Diagnostic::error(
-                                                    path.to_path_buf(),
-                                                    perm_line,
-                                                    0,
-                                                    "OC-PM-001",
-                                                    t!("rules.oc_pm_001.type_error").to_string(),
-                                                )
-                                                .with_suggestion(
-                                                    t!("rules.oc_pm_001.suggestion").to_string(),
-                                                ),
-                                            );
-                                        }
-                                    }
-                                } else if !mode_value.is_null() {
-                                    diagnostics.push(
-                                        Diagnostic::error(
-                                            path.to_path_buf(),
-                                            perm_line,
-                                            0,
-                                            "OC-PM-001",
-                                            t!("rules.oc_pm_001.type_error").to_string(),
-                                        )
-                                        .with_suggestion(
-                                            t!("rules.oc_pm_001.suggestion").to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-                        }
-                        serde_json::Value::Null => {}
-                        _ => {
-                            diagnostics.push(
-                                Diagnostic::error(
-                                    path.to_path_buf(),
-                                    perm_line,
-                                    0,
-                                    "OC-PM-001",
-                                    t!("rules.oc_pm_001.type_error").to_string(),
-                                )
-                                .with_suggestion(t!("rules.oc_pm_001.suggestion")),
-                            );
-                        }
-                    }
-                }
-
-                // OC-DEP-001/002/003/007: Deprecated top-level keys
-                for &(old_key, new_key) in DEPRECATED_KEYS {
-                    let rule_id = match old_key {
-                        "mode" => "OC-DEP-001",
-                        "tools" => "OC-DEP-002",
-                        "autoshare" => "OC-DEP-003",
-                        "reference" => "OC-DEP-007",
-                        _ => continue,
-                    };
-                    if config.is_rule_enabled(rule_id) && obj.contains_key(old_key) {
-                        let line = find_key_line(content, old_key).unwrap_or(1);
-                        let mut diagnostic = Diagnostic::warning(
-                            path.to_path_buf(),
-                            line,
-                            0,
-                            rule_id,
-                            format!("Deprecated key '{}'. Use '{}' instead", old_key, new_key),
-                        )
-                        .with_suggestion(format!("Rename '{}' to '{}'", old_key, new_key));
-
-                        // `tools` is a boolean map, not a permission action map.
-                        // A key-only rename would produce invalid configuration.
-                        if old_key == "tools" {
-                            diagnostic = diagnostic
-                                .with_suggestion(t!("rules.oc_dep_002.migration_suggestion"));
-                        }
-                        let shape_allows_rename = match old_key {
-                            "tools" => false,
-                            "mode" => obj
-                                .get(old_key)
-                                .and_then(serde_json::Value::as_object)
-                                .is_some_and(|modes| {
-                                    modes.values().all(serde_json::Value::is_object)
-                                }),
-                            _ => true,
-                        };
-                        // Never collide with an existing target (even null), or
-                        // rename a nested key with the same spelling.
-                        if shape_allows_rename && !obj.contains_key(new_key) {
-                            if let Some((start, end)) = find_json_key_span(content, old_key) {
-                                diagnostic = diagnostic.with_fix(Fix::replace(
-                                    start,
-                                    end,
-                                    new_key,
-                                    format!("Rename '{}' to '{}'", old_key, new_key),
-                                    true,
-                                ));
-                            }
-                        }
-
-                        diagnostics.push(diagnostic);
-                    }
-                }
-
-                // OC-DEP-005: Deprecated TUI keys in opencode.json
-                if config.is_rule_enabled("OC-DEP-005") {
-                    let deprecated_tui_keys = ["theme", "keybinds", "tui"];
-                    let cleanup = legacy_tui_cleanup(content);
-                    for &tui_key in &deprecated_tui_keys {
-                        if obj.contains_key(tui_key) {
-                            let mut diagnostic = Diagnostic::warning(
-                                    path.to_path_buf(),
-                                    find_key_line(content, tui_key).unwrap_or(1),
-                                    0,
-                                    "OC-DEP-005",
-                                    format!("Deprecated top-level key '{}'. TUI settings should be in a separate tui.json file", tui_key),
-                                )
-                                .with_suggestion(
-                                    t!("rules.oc_dep_005.cleanup_suggestion", key = tui_key),
-                                );
-                            if let Some(replacement) = &cleanup {
-                                diagnostic = diagnostic.with_fix(Fix::replace(
-                                    0,
-                                    content.len(),
-                                    replacement.clone(),
-                                    t!("rules.oc_dep_005.cleanup_fix"),
-                                    false,
-                                ));
-                            }
-                            diagnostics.push(diagnostic);
-                        }
-                    }
-                }
-
-                // OC-CFG-008: Invalid logLevel
-                if config.is_rule_enabled("OC-CFG-008") {
-                    if let Some(log_val) = obj.get("logLevel") {
-                        if let Some(log_str) = log_val.as_str() {
-                            let lower = log_str.to_lowercase();
-                            if !VALID_LOG_LEVELS.contains(&lower.as_str()) {
-                                let line = find_key_line(content, "logLevel").unwrap_or(1);
-                                let mut diagnostic = Diagnostic::error(
-                                    path.to_path_buf(),
-                                    line,
-                                    0,
-                                    "OC-CFG-008",
-                                    format!(
-                                        "Invalid logLevel '{}'. Must be one of: {}",
-                                        log_str,
-                                        VALID_LOG_LEVELS.join(", ")
-                                    ),
-                                )
-                                .with_suggestion(format!(
-                                    "Set logLevel to one of: {}",
-                                    VALID_LOG_LEVELS.join(", ")
-                                ));
-
-                                if let Some(suggested) =
-                                    find_closest_value(&lower, VALID_LOG_LEVELS)
-                                {
-                                    if let Some((start, end)) = find_unique_json_string_value_span(
-                                        content, "logLevel", log_str,
-                                    ) {
-                                        diagnostic = diagnostic.with_fix(Fix::replace(
-                                            start,
-                                            end,
-                                            suggested,
-                                            format!("Replace logLevel with '{}'", suggested),
-                                            false,
-                                        ));
-                                    }
-                                }
-
-                                diagnostics.push(diagnostic);
-                            }
-                        } else if !log_val.is_null() {
-                            diagnostics.push(
-                                Diagnostic::error(
-                                    path.to_path_buf(),
-                                    find_key_line(content, "logLevel").unwrap_or(1),
-                                    0,
-                                    "OC-CFG-008",
-                                    "logLevel must be a string".to_string(),
-                                )
-                                .with_suggestion(format!(
-                                    "Set logLevel to one of: {}",
-                                    VALID_LOG_LEVELS.join(", ")
-                                )),
-                            );
-                        }
-                    }
-                }
-
-                // OC-CFG-009: Invalid compaction.reserved
-                if config.is_rule_enabled("OC-CFG-009") {
-                    if let Some(compaction) = obj.get("compaction").and_then(|c| c.as_object()) {
-                        if let Some(reserved) = compaction.get("reserved") {
-                            if let Some(val) = reserved.as_i64() {
-                                if val < 0 {
-                                    diagnostics.push(
-                                        Diagnostic::error(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "reserved").unwrap_or(1),
-                                            0,
-                                            "OC-CFG-009",
-                                            format!(
-                                                "compaction.reserved must be >= 0, got {}",
-                                                val
-                                            ),
-                                        )
-                                        .with_suggestion(
-                                            "Set reserved to a non-negative integer".to_string(),
-                                        ),
-                                    );
-                                }
-                            } else if !reserved.is_null() {
-                                diagnostics.push(
-                                    Diagnostic::error(
-                                        path.to_path_buf(),
-                                        find_key_line(content, "reserved").unwrap_or(1),
-                                        0,
-                                        "OC-CFG-009",
-                                        "compaction.reserved must be an integer >= 0".to_string(),
-                                    )
-                                    .with_suggestion(
-                                        "Set reserved to a non-negative integer".to_string(),
-                                    ),
-                                );
-                            }
-                        }
-                    }
-                }
-
-                // OC-CFG-010: Invalid skills.urls
-                if config.is_rule_enabled("OC-CFG-010") {
-                    if let Some(skills) = obj.get("skills").and_then(|s| s.as_object()) {
-                        if let Some(urls_val) = skills.get("urls") {
-                            if let Some(urls) = urls_val.as_array() {
-                                for url_val in urls {
-                                    if let Some(url_str) = url_val.as_str() {
-                                        if !url_str.starts_with("http://")
-                                            && !url_str.starts_with("https://")
-                                        {
-                                            diagnostics.push(
-                                                Diagnostic::error(
-                                                    path.to_path_buf(),
-                                                    find_key_line(content, "urls").unwrap_or(1),
-                                                    0,
-                                                    "OC-CFG-010",
-                                                    format!(
-                                                        "Invalid skills URL '{}'. Must start with http:// or https://",
-                                                        truncate_for_display(url_str, 200)
-                                                    ),
-                                                )
-                                                .with_suggestion(
-                                                    "Use a full URL starting with http:// or https://"
-                                                        .to_string(),
-                                                ),
-                                            );
-                                        }
-                                    } else {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, "urls").unwrap_or(1),
-                                                0,
-                                                "OC-CFG-010",
-                                                "skills.urls entries must be strings".to_string(),
-                                            )
-                                            .with_suggestion(
-                                                "Each entry in skills.urls must be a URL string"
-                                                    .to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            } else {
-                                diagnostics.push(
-                                    Diagnostic::error(
-                                        path.to_path_buf(),
-                                        find_key_line(content, "urls").unwrap_or(1),
-                                        0,
-                                        "OC-CFG-010",
-                                        "skills.urls must be an array".to_string(),
-                                    )
-                                    .with_suggestion(
-                                        "Set skills.urls to an array of URL strings".to_string(),
-                                    ),
-                                );
-                            }
-                        }
-                    }
-                }
-
-                // OC-CFG-011: MCP timeout must be positive integer
-                if config.is_rule_enabled("OC-CFG-011") {
-                    if let Some(mcp_obj) = obj.get("mcp").and_then(|m| m.as_object()) {
-                        for (srv_name, srv_val) in mcp_obj {
-                            if let Some(srv) = srv_val.as_object() {
-                                if let Some(timeout) = srv.get("timeout") {
-                                    if let Some(val) = timeout.as_i64() {
-                                        if val <= 0 {
-                                            diagnostics.push(
-                                                Diagnostic::error(
-                                                    path.to_path_buf(),
-                                                    find_key_line(content, srv_name)
-                                                        .unwrap_or(1),
-                                                    0,
-                                                    "OC-CFG-011",
-                                                    format!(
-                                                        "MCP server '{}' timeout must be a positive integer, got {}",
-                                                        srv_name, val
-                                                    ),
-                                                )
-                                                .with_suggestion(
-                                                    "Set timeout to a positive integer (milliseconds)"
-                                                        .to_string(),
-                                                ),
-                                            );
-                                        }
-                                    } else if !timeout.is_null() {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, srv_name).unwrap_or(1),
-                                                0,
-                                                "OC-CFG-011",
-                                                format!(
-                                                    "MCP server '{}' timeout must be a positive integer",
-                                                    srv_name
-                                                ),
-                                            )
-                                            .with_suggestion(
-                                                "Set timeout to a positive integer (milliseconds)"
-                                                    .to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // OC-CFG-012: MCP OAuth validation
-                if config.is_rule_enabled("OC-CFG-012") {
-                    if let Some(mcp_obj) = obj.get("mcp").and_then(|m| m.as_object()) {
-                        for (srv_name, srv_val) in mcp_obj {
-                            if let Some(srv) = srv_val.as_object() {
-                                if let Some(oauth) = srv.get("oauth") {
-                                    if let Some(oauth_obj) = oauth.as_object() {
-                                        let has_client_id = oauth_obj.contains_key("client_id");
-                                        let has_auth_url =
-                                            oauth_obj.contains_key("authorization_url");
-                                        if !has_client_id || !has_auth_url {
-                                            let missing: Vec<&str> = [
-                                                (!has_client_id).then_some("client_id"),
-                                                (!has_auth_url).then_some("authorization_url"),
-                                            ]
-                                            .into_iter()
-                                            .flatten()
-                                            .collect();
-                                            diagnostics.push(
-                                                Diagnostic::error(
-                                                    path.to_path_buf(),
-                                                    find_key_line(content, srv_name)
-                                                        .unwrap_or(1),
-                                                    0,
-                                                    "OC-CFG-012",
-                                                    format!(
-                                                        "MCP server '{}' oauth missing required fields: {}",
-                                                        truncate_for_display(srv_name, 200),
-                                                        missing.join(", ")
-                                                    ),
-                                                )
-                                                .with_suggestion(
-                                                    "Add client_id and authorization_url to oauth config"
-                                                        .to_string(),
-                                                ),
-                                            );
-                                        }
-                                    } else if !oauth.is_null() {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, srv_name).unwrap_or(1),
-                                                0,
-                                                "OC-CFG-012",
-                                                format!(
-                                                    "MCP server '{}' oauth must be an object",
-                                                    srv_name
-                                                ),
-                                            )
-                                            .with_suggestion(
-                                                "Set oauth to an object with client_id and authorization_url"
-                                                    .to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // OC-CFG-013: Invalid server config
-                if config.is_rule_enabled("OC-CFG-013") {
-                    if let Some(server_val) = obj.get("server") {
-                        if let Some(server_obj) = server_val.as_object() {
-                            let server_line = find_key_line(content, "server").unwrap_or(1);
-                            if let Some(port_val) = server_obj.get("port") {
-                                if port_val.as_i64().is_none()
-                                    && port_val.as_f64().is_none()
-                                    && !port_val.is_null()
-                                {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "port").unwrap_or(server_line),
-                                            0,
-                                            "OC-CFG-013",
-                                            "Invalid server.port type. Expected a number"
-                                                .to_string(),
-                                        )
-                                        .with_suggestion(
-                                            "Set port to a number such as 8080".to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-                            if let Some(hostname_val) = server_obj.get("hostname") {
-                                if !hostname_val.is_string() && !hostname_val.is_null() {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "hostname")
-                                                .unwrap_or(server_line),
-                                            0,
-                                            "OC-CFG-013",
-                                            "Invalid server.hostname type. Expected a string"
-                                                .to_string(),
-                                        )
-                                        .with_suggestion(
-                                            "Set hostname to a string such as \"localhost\""
-                                                .to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-                            if let Some(mdns_val) = server_obj.get("mdns") {
-                                if !mdns_val.is_boolean() && !mdns_val.is_null() {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "mdns").unwrap_or(server_line),
-                                            0,
-                                            "OC-CFG-013",
-                                            "Invalid server.mdns type. Expected a boolean"
-                                                .to_string(),
-                                        )
-                                        .with_suggestion("Set mdns to true or false"),
-                                    );
-                                }
-                            }
-                            if let Some(cors_val) = server_obj.get("cors") {
-                                if !cors_val.is_array() && !cors_val.is_null() {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "cors").unwrap_or(server_line),
-                                            0,
-                                            "OC-CFG-013",
-                                            "Invalid server.cors type. Expected an array"
-                                                .to_string(),
-                                        )
-                                        .with_suggestion(
-                                            "Set cors to an array of allowed origins".to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // OC-CFG-014: Invalid subagent_depth value
-                if config.is_rule_enabled("OC-CFG-014") {
-                    if let Some(depth_val) = obj.get("subagent_depth") {
-                        if !depth_val.is_null() {
-                            if let Some(n) = depth_val.as_i64() {
-                                if n < 0 {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "subagent_depth").unwrap_or(1),
-                                            0,
-                                            "OC-CFG-014",
-                                            format!(
-                                                "subagent_depth must be non-negative (got {})",
-                                                n
-                                            ),
-                                        )
-                                        .with_suggestion(
-                                            "Use a non-negative integer such as 0 or 1".to_string(),
-                                        ),
-                                    );
-                                }
-                            } else {
-                                // Not an integer (string, bool, float, array, object)
-                                diagnostics.push(
-                                    Diagnostic::warning(
-                                        path.to_path_buf(),
-                                        find_key_line(content, "subagent_depth").unwrap_or(1),
-                                        0,
-                                        "OC-CFG-014",
-                                        "Invalid subagent_depth type. Must be a non-negative integer"
-                                            .to_string(),
-                                    )
-                                    .with_suggestion(
-                                        "Use a non-negative integer such as 0 or 1".to_string(),
-                                    ),
-                                );
-                            }
-                        }
-                    }
-                }
-
-                // OC-LSP-001: LSP entry with command but no extensions
-                if config.is_rule_enabled("OC-LSP-001") {
-                    if let Some(lsp_obj) = obj.get("lsp").and_then(|l| l.as_object()) {
-                        for (lsp_name, lsp_val) in lsp_obj {
-                            if let Some(lsp) = lsp_val.as_object() {
-                                if lsp.contains_key("command") && !lsp.contains_key("extensions") {
-                                    diagnostics.push(
-                                        Diagnostic::warning(
-                                            path.to_path_buf(),
-                                            find_key_line(content, lsp_name).unwrap_or(1),
-                                            0,
-                                            "OC-LSP-001",
-                                            format!(
-                                                "LSP server '{}' has 'command' but no 'extensions'",
-                                                lsp_name
-                                            ),
-                                        )
-                                        .with_suggestion(
-                                            "Add 'extensions' array to specify file extensions"
-                                                .to_string(),
-                                        ),
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // OC-LSP-002: LSP entry with empty or invalid extensions
-                if config.is_rule_enabled("OC-LSP-002") {
-                    if let Some(lsp_obj) = obj.get("lsp").and_then(|l| l.as_object()) {
-                        for (lsp_name, lsp_val) in lsp_obj {
-                            if let Some(lsp) = lsp_val.as_object() {
-                                if let Some(ext_val) = lsp.get("extensions") {
-                                    let is_invalid = if let Some(arr) = ext_val.as_array() {
-                                        arr.is_empty() || arr.iter().any(|v| !v.is_string())
-                                    } else {
-                                        true
-                                    };
-                                    if is_invalid {
-                                        diagnostics.push(
-                                            Diagnostic::error(
-                                                path.to_path_buf(),
-                                                find_key_line(content, lsp_name).unwrap_or(1),
-                                                0,
-                                                "OC-LSP-002",
-                                                format!(
-                                                    "LSP server '{}' extensions must be a non-empty array of strings",
-                                                    lsp_name
-                                                ),
-                                            )
-                                            .with_suggestion(
-                                                "Set extensions to an array like [\".ts\", \".js\"]"
-                                                    .to_string(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // OC-TUI-001: Unknown TUI keys
-                if config.is_rule_enabled("OC-TUI-001") {
-                    if let Some(tui_obj) = obj.get("tui").and_then(|t| t.as_object()) {
-                        for key in tui_obj.keys() {
-                            if !KNOWN_TUI_KEYS.contains(&key.as_str()) {
-                                diagnostics.push(
-                                    Diagnostic::warning(
-                                        path.to_path_buf(),
-                                        find_key_line(content, key).unwrap_or(1),
-                                        0,
-                                        "OC-TUI-001",
-                                        format!("Unknown TUI key '{}'", key),
-                                    )
-                                    .with_suggestion(format!(
-                                        "Valid TUI keys: {}",
-                                        KNOWN_TUI_KEYS.join(", ")
-                                    )),
-                                );
-                            }
-                        }
-                    }
-                }
-
-                // OC-TUI-002: Invalid scroll_speed
-                if config.is_rule_enabled("OC-TUI-002") {
-                    if let Some(tui_obj) = obj.get("tui").and_then(|t| t.as_object()) {
-                        if let Some(speed) = tui_obj.get("scroll_speed") {
-                            if let Some(val) = speed.as_f64() {
-                                if val < 0.001 {
-                                    diagnostics.push(
-                                        Diagnostic::error(
-                                            path.to_path_buf(),
-                                            find_key_line(content, "scroll_speed").unwrap_or(1),
-                                            0,
-                                            "OC-TUI-002",
-                                            format!("scroll_speed must be >= 0.001, got {}", val),
-                                        )
-                                        .with_suggestion(
-                                            "Set scroll_speed to a number >= 0.001".to_string(),
-                                        ),
-                                    );
-                                }
-                            } else if !speed.is_null() {
-                                diagnostics.push(
-                                    Diagnostic::error(
-                                        path.to_path_buf(),
-                                        find_key_line(content, "scroll_speed").unwrap_or(1),
-                                        0,
-                                        "OC-TUI-002",
-                                        "scroll_speed must be a number >= 0.001".to_string(),
-                                    )
-                                    .with_suggestion(
-                                        "Set scroll_speed to a number >= 0.001".to_string(),
-                                    ),
-                                );
-                            }
-                        }
-                    }
-                }
-
-                // OC-TUI-003: Invalid diff_style
-                if config.is_rule_enabled("OC-TUI-003") {
-                    if let Some(tui_obj) = obj.get("tui").and_then(|t| t.as_object()) {
-                        if let Some(style_val) = tui_obj.get("diff_style") {
-                            if let Some(style_str) = style_val.as_str() {
-                                if !VALID_DIFF_STYLES.contains(&style_str) {
-                                    let line = find_key_line(content, "diff_style").unwrap_or(1);
-                                    let mut diagnostic = Diagnostic::error(
-                                        path.to_path_buf(),
-                                        line,
-                                        0,
-                                        "OC-TUI-003",
-                                        format!(
-                                            "Invalid diff_style '{}'. Must be one of: {}",
-                                            style_str,
-                                            VALID_DIFF_STYLES.join(", ")
-                                        ),
-                                    )
-                                    .with_suggestion(format!(
-                                        "Set diff_style to one of: {}",
-                                        VALID_DIFF_STYLES.join(", ")
-                                    ));
-
-                                    if let Some(suggested) =
-                                        find_closest_value(style_str, VALID_DIFF_STYLES)
-                                    {
-                                        if let Some((start, end)) =
-                                            find_unique_json_string_value_span(
-                                                content,
-                                                "diff_style",
-                                                style_str,
-                                            )
-                                        {
-                                            diagnostic = diagnostic.with_fix(Fix::replace(
-                                                start,
-                                                end,
-                                                suggested,
-                                                format!("Replace diff_style with '{}'", suggested),
-                                                false,
-                                            ));
-                                        }
-                                    }
-
-                                    diagnostics.push(diagnostic);
-                                }
-                            } else if !style_val.is_null() {
-                                diagnostics.push(
-                                    Diagnostic::error(
-                                        path.to_path_buf(),
-                                        find_key_line(content, "diff_style").unwrap_or(1),
-                                        0,
-                                        "OC-TUI-003",
-                                        "diff_style must be a string".to_string(),
-                                    )
-                                    .with_suggestion(format!(
-                                        "Set diff_style to one of: {}",
-                                        VALID_DIFF_STYLES.join(", ")
-                                    )),
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        diagnostics
+        cx.out.diags
     }
 }
 
-/// Recursively walk the JSON value tree and validate any string containing
-/// variable substitution patterns like `{env:...}` or `{file:...}`.
-///
-/// Depth is bounded to prevent stack overflow on pathologically nested JSON.
-/// In practice, `file_utils::safe_read_file` enforces a 1 MiB limit upstream,
-/// but the depth guard is an additional safety layer.
-fn validate_substitutions(
-    value: &serde_json::Value,
-    path: &Path,
-    content: &str,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    validate_substitutions_inner(value, path, content, diagnostics, 0);
+struct Cx<'a, 'o, 'c> {
+    out: Out<'o, 'c>,
+    content: &'a str,
+    root: &'a Node,
+    lines: OpenCodeLines,
+    /// Directory of the config file.
+    dir: PathBuf,
+    /// False for the global and system config, whose settings apply to
+    /// every project.
+    project: bool,
 }
 
-/// Maximum recursion depth for JSON tree traversal (OC-009).
-const MAX_SUBSTITUTION_DEPTH: usize = 64;
+impl Cx<'_, '_, '_> {
+    fn member(&self, key: &str) -> Option<&Member> {
+        self.root.get(key)
+    }
 
-fn validate_substitutions_inner(
-    value: &serde_json::Value,
-    path: &Path,
-    content: &str,
-    diagnostics: &mut Vec<Diagnostic>,
-    depth: usize,
-) {
-    if depth > MAX_SUBSTITUTION_DEPTH {
+    fn ignored_by_v2(&mut self, pos: (usize, usize), field: &str, instead: String) {
+        if self.lines.v2_only() {
+            self.out.warn(
+                "OC-DEP-009",
+                pos,
+                t!(
+                    "rules.oc_dep_009.message",
+                    field = field,
+                    instead = instead.as_str()
+                ),
+                t!("rules.oc_dep_009.suggestion"),
+            );
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Top-level keys: OC-004, OC-DEP-*, OC-CFG-022
+    // ------------------------------------------------------------------
+
+    fn top_level_keys(&mut self) {
+        let root = self.root;
+        let members = root.obj().unwrap_or_default();
+        for member in members {
+            let key = member.key.as_str();
+            if !KNOWN_TOP_LEVEL_KEYS.contains(&key) {
+                let suggestion = closest_name(key, KNOWN_TOP_LEVEL_KEYS).map_or_else(
+                    || t!("rules.oc_004.suggestion").to_string(),
+                    |close| t!("rules.oc_004.did_you_mean", key = close).to_string(),
+                );
+                self.out.warn(
+                    "OC-004",
+                    member.pos,
+                    t!("rules.oc_004.message", key = key),
+                    suggestion,
+                );
+            } else if self.lines.v1_only() && V2_TOP_LEVEL_KEYS.contains(&key) {
+                self.out.warn(
+                    "OC-004",
+                    member.pos,
+                    t!("rules.oc_004.v2_key_on_v1", key = key),
+                    t!("rules.oc_004.v2_key_on_v1_suggestion"),
+                );
+            }
+        }
+
+        // OC-DEP-001: mode map (entries are primary agents).
+        if let Some(member) = self.member("mode") {
+            let all_objects = member
+                .value
+                .obj()
+                .is_some_and(|modes| modes.iter().all(|mode| mode.value.obj().is_some()));
+            let fix = (!root.has("agent") && all_objects && unique_key(root, "mode"))
+                .then(|| rename_fix(member, "agent", t!("rules.oc_dep_001.fix").to_string()))
+                .flatten();
+            if let Some(diagnostic) = self.out.warn(
+                "OC-DEP-001",
+                member.pos,
+                t!("rules.oc_dep_001.message"),
+                t!("rules.oc_dep_001.suggestion"),
+            ) && let Some(fix) = fix
+            {
+                diagnostic.fixes.push(fix);
+            }
+        }
+        // OC-DEP-002: top-level tools.
+        if let Some(member) = self.member("tools") {
+            self.out.warn(
+                "OC-DEP-002",
+                member.pos,
+                t!("rules.oc_dep_002.message"),
+                t!("rules.oc_dep_002.migration_suggestion"),
+            );
+        }
+        // OC-DEP-003: autoshare (boolean) -> share (mode string).
+        if let Some(member) = self.member("autoshare") {
+            let fix = match (member.value.bool(), member.key_span, member.value.span) {
+                (Some(enabled), Some((start, _)), Some((_, end)))
+                    if !root.has("share") && unique_key(root, "autoshare") =>
+                {
+                    let mode = if enabled { "auto" } else { "manual" };
+                    Some(Fix::replace(
+                        start,
+                        end,
+                        format!("\"share\": \"{mode}\""),
+                        t!("rules.oc_dep_003.fix", mode = mode),
+                        false,
+                    ))
+                }
+                _ => None,
+            };
+            if let Some(diagnostic) = self.out.warn(
+                "OC-DEP-003",
+                member.pos,
+                t!("rules.oc_dep_003.message"),
+                t!("rules.oc_dep_003.suggestion"),
+            ) && let Some(fix) = fix
+            {
+                diagnostic.fixes.push(fix);
+            }
+        }
+        // OC-DEP-007: reference -> references (same entry shapes).
+        if let Some(member) = self.member("reference") {
+            let fix = (!root.has("references") && unique_key(root, "reference"))
+                .then(|| rename_fix(member, "references", t!("rules.oc_dep_007.fix").to_string()))
+                .flatten();
+            if let Some(diagnostic) = self.out.warn(
+                "OC-DEP-007",
+                member.pos,
+                t!("rules.oc_dep_007.message"),
+                t!("rules.oc_dep_007.suggestion"),
+            ) && let Some(fix) = fix
+            {
+                diagnostic.fixes.push(fix);
+            }
+        }
+        // OC-DEP-005: TUI keys belong in tui.json.
+        if self.out.on("OC-DEP-005") {
+            let cleanup = legacy_tui_cleanup(self.content);
+            for key in ["theme", "keybinds", "tui"] {
+                if let Some(member) = self.member(key) {
+                    let fix = cleanup.as_ref().map(|replacement| {
+                        Fix::replace(
+                            0,
+                            self.content.len(),
+                            replacement.clone(),
+                            t!("rules.oc_dep_005.cleanup_fix"),
+                            false,
+                        )
+                    });
+                    if let Some(diagnostic) = self.out.warn(
+                        "OC-DEP-005",
+                        member.pos,
+                        t!("rules.oc_dep_005.message", key = key),
+                        t!("rules.oc_dep_005.cleanup_suggestion", key = key),
+                    ) && let Some(fix) = fix
+                    {
+                        diagnostic.fixes.push(fix);
+                    }
+                }
+            }
+        }
+        // OC-DEP-009: top-level fields OpenCode 2 ignores.
+        for (key, instead) in [
+            ("logLevel", t!("rules.oc_dep_009.log_level")),
+            ("server", t!("rules.oc_dep_009.server")),
+            ("subagent_depth", t!("rules.oc_dep_009.subagent_depth")),
+        ] {
+            if let Some(member) = self.member(key) {
+                let pos = member.pos;
+                self.ignored_by_v2(pos, key, instead.to_string());
+            }
+        }
+        // OC-CFG-022: global-only settings in a project config.
+        if self.project
+            && let Some(member) = self.member("update")
+        {
+            self.out.warn(
+                "OC-CFG-022",
+                member.pos,
+                t!("rules.oc_cfg_022.message", key = "update"),
+                t!("rules.oc_cfg_022.suggestion"),
+            );
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // OC-001 share, OC-002/006 instructions
+    // ------------------------------------------------------------------
+
+    fn share(&mut self) {
+        let Some(node) = self.root.at("share") else {
+            return;
+        };
+        match node.str() {
+            Some(value) if VALID_SHARE_MODES.contains(&value) => {}
+            Some(value) => {
+                let fix =
+                    crate::rules::find_closest_value(value, VALID_SHARE_MODES).and_then(|fixed| {
+                        string_fix(
+                            node,
+                            fixed,
+                            t!("rules.oc_001.fix", fixed = fixed).to_string(),
+                        )
+                    });
+                if let Some(diagnostic) = self.out.error(
+                    "OC-001",
+                    node.pos,
+                    t!("rules.oc_001.message", value = value),
+                    t!("rules.oc_001.suggestion"),
+                ) && let Some(fix) = fix
+                {
+                    diagnostic.fixes.push(fix);
+                }
+            }
+            None if node.is_null() => {}
+            None => {
+                self.out.error(
+                    "OC-001",
+                    node.pos,
+                    t!("rules.oc_001.type_error"),
+                    t!("rules.oc_001.suggestion"),
+                );
+            }
+        }
+    }
+
+    fn instructions(&mut self) {
+        let Some(node) = self.root.at("instructions") else {
+            return;
+        };
+        let Some(items) = node.arr() else {
+            if !node.is_null() {
+                self.out.error(
+                    "OC-002",
+                    node.pos,
+                    t!("rules.oc_002.type_error"),
+                    t!("rules.oc_002.suggestion"),
+                );
+            }
+            return;
+        };
+        // Relative entries are searched from the workspace up to the project
+        // root; a project config sits at that root (or in its `.opencode/`).
+        let roots: Vec<PathBuf> = if self.project {
+            let mut roots = vec![self.dir.clone()];
+            if self.dir.file_name().is_some_and(|name| name == ".opencode")
+                && let Some(parent) = self.dir.parent()
+            {
+                roots.push(parent.to_path_buf());
+            }
+            roots
+        } else {
+            Vec::new()
+        };
+        let fs = self.out.config.fs().clone();
+        for item in items {
+            let Some(entry) = item.str() else {
+                self.out.error(
+                    "OC-002",
+                    item.pos,
+                    t!("rules.oc_002.type_error"),
+                    t!("rules.oc_002.suggestion"),
+                );
+                continue;
+            };
+            let entry = entry.trim();
+            if entry.is_empty() {
+                continue;
+            }
+            if entry.starts_with("http://") || entry.starts_with("https://") {
+                self.out.info(
+                    "OC-006",
+                    item.pos,
+                    t!("rules.oc_006.message", url = entry),
+                    t!("rules.oc_006.suggestion"),
+                );
+                continue;
+            }
+            if is_glob_pattern(entry) {
+                if !validate_glob_pattern(entry) {
+                    self.out.error(
+                        "OC-002",
+                        item.pos,
+                        t!("rules.oc_002.invalid_glob", path = entry),
+                        t!("rules.oc_002.suggestion"),
+                    );
+                }
+                continue;
+            }
+            // `~/` and absolute entries are documented and machine-specific;
+            // they are not checked.
+            if entry.starts_with('~') || Path::new(entry).is_absolute() || roots.is_empty() {
+                continue;
+            }
+            if !roots.iter().any(|root| fs.exists(&root.join(entry))) {
+                self.out.error(
+                    "OC-002",
+                    item.pos,
+                    t!("rules.oc_002.not_found", path = entry),
+                    t!("rules.oc_002.suggestion"),
+                );
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Agents: OC-007, OC-AG-*, OC-DEP-009 (name)
+    // ------------------------------------------------------------------
+
+    fn agents(&mut self) {
+        let root = self.root;
+        for (key, source) in [
+            ("agent", AgentSource::V1Map),
+            ("agents", AgentSource::V2Map),
+        ] {
+            let Some(map) = root.get(key) else {
+                continue;
+            };
+            let Some(entries) = map.value.obj() else {
+                if !map.value.is_null() {
+                    self.out.error(
+                        "OC-007",
+                        map.value.pos,
+                        t!("rules.oc_007.type_error", field = key),
+                        t!("rules.oc_007.suggestion"),
+                    );
+                }
+                continue;
+            };
+            for entry in entries {
+                let id = entry.key.as_str();
+                if entry.value.obj().is_none() {
+                    if !entry.value.is_null() {
+                        self.out.warn(
+                            "OC-007",
+                            entry.pos,
+                            t!("rules.oc_007.entry_type", name = id),
+                            t!("rules.oc_007.suggestion"),
+                        );
+                    }
+                    continue;
+                }
+                if agent_needs_description(id, &entry.value, source, self.lines) {
+                    self.out.warn(
+                        "OC-007",
+                        entry.pos,
+                        t!("rules.oc_007.message", name = id),
+                        t!("rules.oc_007.suggestion"),
+                    );
+                }
+                if let Some(name) = entry.value.get("name") {
+                    let pos = name.pos;
+                    self.ignored_by_v2(pos, "name", t!("rules.oc_dep_009.agent_name").to_string());
+                }
+                check_agent(&mut self.out, id, &entry.value, source, self.lines);
+            }
+        }
+        if let Some(modes) = root.at("mode").and_then(Node::obj) {
+            for entry in modes {
+                if entry.value.obj().is_some() {
+                    check_agent(
+                        &mut self.out,
+                        &entry.key,
+                        &entry.value,
+                        AgentSource::V1Map,
+                        self.lines,
+                    );
+                }
+            }
+        }
+    }
+
+    fn permissions(&mut self) {
+        if let Some(node) = self.root.at("permission") {
+            check_permission_v1(&mut self.out, node);
+        }
+        if let Some(node) = self.root.at("permissions") {
+            check_permissions_v2(&mut self.out, node);
+        }
+        if let Some(node) = self.root.at("policies") {
+            check_policies(&mut self.out, node, "policies", self.lines);
+        }
+    }
+
+    fn experimental(&mut self) {
+        let Some(experimental) = self.root.at("experimental") else {
+            return;
+        };
+        if let Some(policies) = experimental.at("policies") {
+            check_policies(&mut self.out, policies, "experimental.policies", self.lines);
+        }
+        if let Some(depth) = experimental.at("subagent_depth")
+            && !depth.is_null()
+            && !depth.i64().is_some_and(|value| value >= 0)
+        {
+            self.out.warn(
+                "OC-CFG-014",
+                depth.pos,
+                t!(
+                    "rules.oc_cfg_014.message",
+                    field = "experimental.subagent_depth"
+                ),
+                t!("rules.oc_cfg_014.suggestion"),
+            );
+        }
+        for key in [
+            "batch_tool",
+            "openTelemetry",
+            "primary_tools",
+            "continue_loop_on_deny",
+        ] {
+            if let Some(member) = experimental.get(key) {
+                let pos = member.pos;
+                self.ignored_by_v2(
+                    pos,
+                    &format!("experimental.{key}"),
+                    t!("rules.oc_dep_009.no_equivalent").to_string(),
+                );
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // OC-CFG-001 model, OC-CFG-002 autoupdate / update
+    // ------------------------------------------------------------------
+
+    fn models_and_updates(&mut self) {
+        for key in ["model", "small_model"] {
+            if let Some(node) = self.root.at(key) {
+                check_model(&mut self.out, node, key);
+            }
+        }
+        if let Some(node) = self.root.at("autoupdate") {
+            let valid = node.bool().is_some() || node.str() == Some("notify") || node.is_null();
+            if !valid {
+                self.out.error(
+                    "OC-CFG-002",
+                    node.pos,
+                    t!("rules.oc_cfg_002.message"),
+                    t!("rules.oc_cfg_002.suggestion"),
+                );
+            }
+        }
+        if let Some(node) = self.root.at("update")
+            && !node
+                .str()
+                .is_some_and(|value| VALID_UPDATE_MODES.contains(&value))
+            && !node.is_null()
+        {
+            self.out.error(
+                "OC-CFG-002",
+                node.pos,
+                t!("rules.oc_cfg_002.update_message"),
+                t!("rules.oc_cfg_002.update_suggestion"),
+            );
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // OC-CFG-004 default_agent
+    // ------------------------------------------------------------------
+
+    fn default_agent(&mut self) {
+        let Some(node) = self.root.at("default_agent") else {
+            return;
+        };
+        let Some(id) = node.str() else {
+            if !node.is_null() {
+                self.out.warn(
+                    "OC-CFG-004",
+                    node.pos,
+                    t!("rules.oc_cfg_004.type_error"),
+                    t!("rules.oc_cfg_004.suggestion"),
+                );
+            }
+            return;
+        };
+        if BUILTIN_AGENTS.contains(&id) || id.contains("{env:") {
+            return;
+        }
+        let in_config = ["agent", "agents", "mode"]
+            .iter()
+            .any(|key| self.root.at(key).is_some_and(|map| map.has(id)));
+        if in_config || self.markdown_agent_exists(id) {
+            return;
+        }
+        self.out.warn(
+            "OC-CFG-004",
+            node.pos,
+            t!("rules.oc_cfg_004.message", value = id),
+            t!("rules.oc_cfg_004.suggestion"),
+        );
+    }
+
+    /// Whether a Markdown agent `<id>.md` exists in an agent directory this
+    /// config's OpenCode installation reads.
+    fn markdown_agent_exists(&self, id: &str) -> bool {
+        let mut config_dirs = Vec::new();
+        if self.dir.file_name().is_some_and(|name| name == ".opencode") || !self.project {
+            config_dirs.push(self.dir.clone());
+        } else {
+            config_dirs.push(self.dir.join(".opencode"));
+        }
+        if let Some(global) = opencode_global_dir() {
+            config_dirs.push(global);
+        }
+        let fs = self.out.config.fs();
+        config_dirs.iter().any(|dir| {
+            ["agents", "agent", "modes", "mode"]
+                .iter()
+                .any(|sub| fs.exists(&dir.join(sub).join(format!("{id}.md"))))
+        })
+    }
+
+    // ------------------------------------------------------------------
+    // Providers: OC-CFG-005, OC-CFG-015, OC-CFG-017, OC-DEP-009
+    // ------------------------------------------------------------------
+
+    fn providers(&mut self) {
+        let root = self.root;
+        for (key, v2) in [("provider", false), ("providers", true)] {
+            let Some(providers) = root.at(key).and_then(Node::obj) else {
+                continue;
+            };
+            for provider in providers {
+                let id = provider.key.as_str();
+                let entry = &provider.value;
+                check_mixed_entry(
+                    &mut self.out,
+                    entry,
+                    &t!("rules.oc_cfg_017.provider", id = id),
+                    V1_PROVIDER_MEMBERS,
+                    V2_PROVIDER_MEMBERS,
+                );
+                let settings_key = if v2 { "settings" } else { "options" };
+                if let Some(settings) = entry.at(settings_key) {
+                    if let Some(api_key) = settings.at("apiKey")
+                        && api_key.str().is_some_and(is_literal_api_key)
+                    {
+                        self.out.warn(
+                            "OC-CFG-005",
+                            api_key.pos,
+                            t!("rules.oc_cfg_005.provider", name = id),
+                            t!("rules.oc_cfg_005.suggestion"),
+                        );
+                    }
+                    shell_variables(&mut self.out, settings, 0);
+                }
+                if let Some(headers) = entry.at("headers") {
+                    secret_headers(&mut self.out, headers, &format!("provider '{id}'"));
+                    shell_variables(&mut self.out, headers, 0);
+                }
+                if !v2 {
+                    for field in ["id", "whitelist", "blacklist"] {
+                        if let Some(member) = entry.get(field) {
+                            let pos = member.pos;
+                            self.ignored_by_v2(
+                                pos,
+                                &format!("provider.{id}.{field}"),
+                                t!("rules.oc_dep_009.no_equivalent").to_string(),
+                            );
+                        }
+                    }
+                }
+                if let Some(models) = entry.at("models").and_then(Node::obj) {
+                    for model in models {
+                        check_mixed_entry(
+                            &mut self.out,
+                            &model.value,
+                            &t!("rules.oc_cfg_017.model", id = model.key.as_str()),
+                            V1_MODEL_MEMBERS,
+                            V2_MODEL_MEMBERS,
+                        );
+                        if !v2 {
+                            self.ignored_model_fields(id, model);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn ignored_model_fields(&mut self, provider: &str, model: &Member) {
+        for field in [
+            "release_date",
+            "attachment",
+            "reasoning",
+            "temperature",
+            "experimental",
+        ] {
+            if let Some(member) = model.value.get(field) {
+                let pos = member.pos;
+                self.ignored_by_v2(
+                    pos,
+                    &format!("provider.{provider}.models.{}.{field}", model.key),
+                    t!("rules.oc_dep_009.no_equivalent").to_string(),
+                );
+            }
+        }
+        if let Some(member) = model.value.get("status")
+            && member.value.str() != Some("deprecated")
+        {
+            let pos = member.pos;
+            self.ignored_by_v2(
+                pos,
+                &format!("provider.{provider}.models.{}.status", model.key),
+                t!("rules.oc_dep_009.no_equivalent").to_string(),
+            );
+        }
+        if let Some(member) = model.value.get("interleaved")
+            && member.value.bool().is_some()
+        {
+            let pos = member.pos;
+            self.ignored_by_v2(
+                pos,
+                &format!("provider.{provider}.models.{}.interleaved", model.key),
+                t!("rules.oc_dep_009.no_equivalent").to_string(),
+            );
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // MCP: OC-CFG-005/006/007/011/012/015/020/021, OC-DEP-009
+    // ------------------------------------------------------------------
+
+    fn mcp(&mut self) {
+        let Some(mcp) = self.root.get("mcp") else {
+            return;
+        };
+        let Some(members) = mcp.value.obj() else {
+            if !mcp.value.is_null() {
+                self.out.error(
+                    "OC-CFG-006",
+                    mcp.value.pos,
+                    t!("rules.oc_cfg_006.type_error"),
+                    t!("rules.oc_cfg_006.suggestion"),
+                );
+            }
+            return;
+        };
+        let mut enabled = 0usize;
+        for member in members {
+            let container = !self.lines.v1_only()
+                && member.value.obj().is_some()
+                && !member.value.has("type")
+                && !member.value.has("enabled");
+            match member.key.as_str() {
+                "servers" if container => {
+                    for server in member.value.obj().unwrap_or_default() {
+                        if self.server(server, true) {
+                            enabled += 1;
+                        }
+                    }
+                }
+                "timeout" if container => self.timeouts(&member.value, "mcp.timeout"),
+                _ => {
+                    if self.server(member, false) {
+                        enabled += 1;
+                    }
+                }
+            }
+        }
+        if enabled > MANY_MCP_SERVERS {
+            self.out.info(
+                "OC-CFG-020",
+                mcp.pos,
+                t!(
+                    "rules.oc_cfg_020.message",
+                    count = enabled,
+                    limit = MANY_MCP_SERVERS
+                ),
+                t!("rules.oc_cfg_020.suggestion"),
+            );
+        }
+    }
+
+    /// Check one server entry; returns whether it connects at startup.
+    fn server(&mut self, member: &Member, v2: bool) -> bool {
+        let name = member.key.as_str();
+        let server = &member.value;
+        let Some(fields) = server.obj() else {
+            self.out.error(
+                "OC-CFG-006",
+                member.pos,
+                t!("rules.oc_cfg_006.message", server = name),
+                t!("rules.oc_cfg_006.suggestion_type"),
+            );
+            return false;
+        };
+        // An OpenCode 1 entry with only `enabled` toggles a server defined
+        // by remote organization config.
+        if !v2 && fields.iter().all(|field| field.key == "enabled") && !fields.is_empty() {
+            self.ignored_by_v2(
+                member.pos,
+                &format!("mcp.{name}"),
+                t!("rules.oc_dep_009.enabled_only").to_string(),
+            );
+            return false;
+        }
+        let kind = server.at("type").and_then(Node::str);
+        match kind {
+            Some("local" | "remote") => {}
+            Some(other) => {
+                self.out.error(
+                    "OC-CFG-006",
+                    server.at("type").map_or(member.pos, |node| node.pos),
+                    t!(
+                        "rules.oc_cfg_006.invalid_type",
+                        server = name,
+                        value = other
+                    ),
+                    t!("rules.oc_cfg_006.suggestion"),
+                );
+            }
+            None => {
+                self.out.error(
+                    "OC-CFG-006",
+                    member.pos,
+                    t!("rules.oc_cfg_006.missing_type", server = name),
+                    t!("rules.oc_cfg_006.suggestion"),
+                );
+            }
+        }
+        if kind == Some("local") {
+            match server.at("command") {
+                None => {
+                    self.out.error(
+                        "OC-CFG-007",
+                        member.pos,
+                        t!("rules.oc_cfg_007.local_missing", server = name),
+                        t!("rules.oc_cfg_007.suggestion_local"),
+                    );
+                }
+                Some(command) => {
+                    let valid = command.arr().is_some_and(|items| {
+                        !items.is_empty()
+                            && items
+                                .iter()
+                                .all(|item| item.str().is_some_and(|s| !s.trim().is_empty()))
+                    });
+                    if !valid {
+                        self.out.error(
+                            "OC-CFG-007",
+                            command.pos,
+                            t!("rules.oc_cfg_007.command_type", server = name),
+                            t!("rules.oc_cfg_007.suggestion_local"),
+                        );
+                    }
+                }
+            }
+            if let Some(cwd) = server.at("cwd")
+                && !cwd.str().is_some_and(|value| !value.trim().is_empty())
+            {
+                self.out.error(
+                    "OC-CFG-007",
+                    cwd.pos,
+                    t!("rules.oc_cfg_007.cwd_type", server = name),
+                    t!("rules.oc_cfg_007.suggestion_cwd"),
+                );
+            }
+            if let Some(environment) = server.at("environment") {
+                let valid = environment
+                    .obj()
+                    .is_some_and(|vars| vars.iter().all(|var| var.value.str().is_some()));
+                if !valid {
+                    self.out.error(
+                        "OC-CFG-007",
+                        environment.pos,
+                        t!("rules.oc_cfg_007.environment_type"),
+                        t!("rules.oc_cfg_007.suggestion_environment"),
+                    );
+                }
+                for var in environment.obj().unwrap_or_default() {
+                    if is_credential_name(&var.key)
+                        && var.value.str().is_some_and(is_literal_secret)
+                    {
+                        self.out.warn(
+                            "OC-CFG-005",
+                            var.value.pos,
+                            t!(
+                                "rules.oc_cfg_005.mcp_environment",
+                                server = name,
+                                name = var.key.as_str()
+                            ),
+                            t!("rules.oc_cfg_005.suggestion"),
+                        );
+                    }
+                }
+                shell_variables(&mut self.out, environment, 0);
+            }
+        } else if kind == Some("remote") {
+            match server.at("url") {
+                None => {
+                    self.out.error(
+                        "OC-CFG-007",
+                        member.pos,
+                        t!("rules.oc_cfg_007.remote_missing", server = name),
+                        t!("rules.oc_cfg_007.suggestion_remote"),
+                    );
+                }
+                Some(url) => {
+                    let valid = url.str().is_some_and(|value| {
+                        let value = value.trim();
+                        value.starts_with("http://")
+                            || value.starts_with("https://")
+                            || value.starts_with("{env:")
+                    });
+                    if !valid {
+                        self.out.error(
+                            "OC-CFG-007",
+                            url.pos,
+                            t!("rules.oc_cfg_007.url_type", server = name),
+                            t!("rules.oc_cfg_007.suggestion_remote"),
+                        );
+                    }
+                    shell_variables(&mut self.out, url, 0);
+                }
+            }
+            if let Some(headers) = server.at("headers") {
+                secret_headers(&mut self.out, headers, &format!("MCP server '{name}'"));
+                shell_variables(&mut self.out, headers, 0);
+            }
+        }
+        if kind != Some("local")
+            && let Some(oauth) = server.get("oauth")
+        {
+            self.oauth(name, oauth, v2);
+        }
+        if server.has("env") {
+            self.out.error(
+                "OC-CFG-007",
+                server.get("env").map_or(member.pos, |env| env.pos),
+                t!("rules.oc_cfg_007.unsupported_env", server = name),
+                t!("rules.oc_cfg_007.suggestion_environment"),
+            );
+        }
+        if v2 {
+            if let Some(protocol) = server.at("protocol")
+                && !protocol
+                    .str()
+                    .is_some_and(|value| MCP_PROTOCOLS.contains(&value))
+            {
+                self.out.error(
+                    "OC-CFG-007",
+                    protocol.pos,
+                    t!(
+                        "rules.oc_cfg_007.protocol",
+                        server = name,
+                        values = MCP_PROTOCOLS.join(", ")
+                    ),
+                    t!("rules.oc_cfg_007.suggestion_protocol"),
+                );
+            }
+            if let Some(enabled) = server.get("enabled") {
+                self.out.warn(
+                    "OC-CFG-021",
+                    enabled.pos,
+                    t!("rules.oc_cfg_021.enabled", server = name),
+                    t!("rules.oc_cfg_021.enabled_suggestion"),
+                );
+            }
+            match server.at("timeout") {
+                Some(timeout) if timeout.is_num() => {
+                    self.out.warn(
+                        "OC-CFG-021",
+                        timeout.pos,
+                        t!("rules.oc_cfg_021.timeout", server = name),
+                        t!("rules.oc_cfg_021.timeout_suggestion"),
+                    );
+                }
+                Some(timeout) => {
+                    self.timeouts(timeout, &format!("mcp.servers.{name}.timeout"));
+                }
+                None => {}
+            }
+        } else if let Some(timeout) = server.at("timeout") {
+            if timeout.obj().is_none() {
+                if !timeout.is_null() && !timeout.i64().is_some_and(|value| value > 0) {
+                    self.out.error(
+                        "OC-CFG-011",
+                        timeout.pos,
+                        t!("rules.oc_cfg_011.message", server = name),
+                        t!("rules.oc_cfg_011.suggestion"),
+                    );
+                }
+            } else if self.lines.v1_only() {
+                self.out.error(
+                    "OC-CFG-011",
+                    timeout.pos,
+                    t!("rules.oc_cfg_011.message", server = name),
+                    t!("rules.oc_cfg_011.suggestion"),
+                );
+            }
+        }
+        let disabled = if v2 {
+            server.at("disabled").and_then(Node::bool) == Some(true)
+        } else {
+            server.at("enabled").and_then(Node::bool) == Some(false)
+        };
+        !disabled
+    }
+
+    /// OpenCode 2 timeout objects (`mcp.timeout`, a server's `timeout`).
+    fn timeouts(&mut self, node: &Node, field: &str) {
+        let Some(members) = node.obj() else {
+            if !node.is_null() {
+                self.out.error(
+                    "OC-CFG-011",
+                    node.pos,
+                    t!("rules.oc_cfg_011.v2_type", field = field),
+                    t!("rules.oc_cfg_011.v2_suggestion"),
+                );
+            }
+            return;
+        };
+        for member in members {
+            if !["startup", "catalog", "execution"].contains(&member.key.as_str()) {
+                self.out.error(
+                    "OC-CFG-011",
+                    member.pos,
+                    t!(
+                        "rules.oc_cfg_011.v2_unknown",
+                        field = field,
+                        key = member.key.as_str()
+                    ),
+                    t!("rules.oc_cfg_011.v2_suggestion"),
+                );
+            } else if !member.value.i64().is_some_and(|value| value > 0) {
+                self.out.error(
+                    "OC-CFG-011",
+                    member.value.pos,
+                    t!(
+                        "rules.oc_cfg_011.v2_value",
+                        field = field,
+                        key = member.key.as_str()
+                    ),
+                    t!("rules.oc_cfg_011.v2_suggestion"),
+                );
+            }
+        }
+    }
+
+    /// OC-CFG-012 (and OC-CFG-005, OC-CFG-015, OC-CFG-021) for `oauth`.
+    fn oauth(&mut self, server: &str, member: &Member, v2: bool) {
+        let oauth = &member.value;
+        match &oauth.val {
+            Val::Bool(false) | Val::Null => return,
+            Val::Obj(_) => {}
+            _ => {
+                self.out.error(
+                    "OC-CFG-012",
+                    oauth.pos,
+                    t!("rules.oc_cfg_012.type_error", server = server),
+                    t!("rules.oc_cfg_012.suggestion"),
+                );
+                return;
+            }
+        }
+        let allowed: Vec<&str> = if v2 {
+            V2_OAUTH_KEYS.to_vec()
+        } else if self.lines.v2_only() {
+            V1_OAUTH_KEYS.iter().chain(V2_OAUTH_KEYS).copied().collect()
+        } else {
+            V1_OAUTH_KEYS.to_vec()
+        };
+        for field in oauth.obj().unwrap_or_default() {
+            let key = field.key.as_str();
+            if !allowed.contains(&key) {
+                if v2 && V1_OAUTH_KEYS.contains(&key) {
+                    let snake = to_snake_case(key);
+                    self.out.warn(
+                        "OC-CFG-021",
+                        field.pos,
+                        t!(
+                            "rules.oc_cfg_021.oauth",
+                            server = server,
+                            key = key,
+                            replacement = snake.as_str()
+                        ),
+                        t!("rules.oc_cfg_021.oauth_suggestion"),
+                    );
+                } else {
+                    let suggestion = closest_name(key, &allowed).map_or_else(
+                        || t!("rules.oc_cfg_012.suggestion").to_string(),
+                        |close| t!("rules.oc_cfg_012.did_you_mean", key = close).to_string(),
+                    );
+                    self.out.error(
+                        "OC-CFG-012",
+                        field.pos,
+                        t!("rules.oc_cfg_012.unknown", server = server, key = key),
+                        suggestion,
+                    );
+                }
+                continue;
+            }
+            if key == "callbackPort" || key == "callback_port" {
+                if !field
+                    .value
+                    .i64()
+                    .is_some_and(|port| (1..=65535).contains(&port))
+                {
+                    self.out.error(
+                        "OC-CFG-012",
+                        field.value.pos,
+                        t!("rules.oc_cfg_012.port", server = server, key = key),
+                        t!("rules.oc_cfg_012.suggestion"),
+                    );
+                }
+            } else if field.value.str().is_none() {
+                self.out.error(
+                    "OC-CFG-012",
+                    field.value.pos,
+                    t!("rules.oc_cfg_012.string", server = server, key = key),
+                    t!("rules.oc_cfg_012.suggestion"),
+                );
+            } else if (key == "clientSecret" || key == "client_secret")
+                && field.value.str().is_some_and(is_literal_secret)
+            {
+                self.out.warn(
+                    "OC-CFG-005",
+                    field.value.pos,
+                    t!("rules.oc_cfg_005.oauth", server = server, key = key),
+                    t!("rules.oc_cfg_005.suggestion"),
+                );
+            }
+        }
+        shell_variables(&mut self.out, oauth, 0);
+    }
+
+    // ------------------------------------------------------------------
+    // Commands: OC-CMD-001/002, OC-CFG-001, OC-CFG-017
+    // ------------------------------------------------------------------
+
+    fn commands(&mut self) {
+        for key in ["command", "commands"] {
+            let Some(commands) = self.root.at(key).and_then(Node::obj) else {
+                continue;
+            };
+            for command in commands {
+                if command.value.obj().is_none() {
+                    self.out.error(
+                        "OC-CMD-002",
+                        command.pos,
+                        t!(
+                            "rules.oc_cmd_002.entry_type",
+                            command = command.key.as_str()
+                        ),
+                        t!("rules.oc_cmd_002.suggestion"),
+                    );
+                    continue;
+                }
+                check_command_entry(&mut self.out, &command.key, &command.value, false);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // OC-CFG-009 compaction, OC-CFG-010 skills
+    // ------------------------------------------------------------------
+
+    fn compaction_and_skills(&mut self) {
+        if let Some(compaction) = self.root.at("compaction") {
+            let keep_tokens = compaction.at("keep").and_then(|keep| keep.at("tokens"));
+            for (field, node) in [
+                ("compaction.reserved", compaction.at("reserved")),
+                ("compaction.buffer", compaction.at("buffer")),
+                ("compaction.keep.tokens", keep_tokens),
+            ] {
+                if let Some(node) = node
+                    && !node.is_null()
+                    && !node.i64().is_some_and(|value| value >= 0)
+                {
+                    self.out.error(
+                        "OC-CFG-009",
+                        node.pos,
+                        t!("rules.oc_cfg_009.message", field = field),
+                        t!("rules.oc_cfg_009.suggestion"),
+                    );
+                }
+            }
+            for key in ["tail_turns", "prune"] {
+                if let Some(member) = compaction.get(key) {
+                    let pos = member.pos;
+                    self.ignored_by_v2(
+                        pos,
+                        &format!("compaction.{key}"),
+                        t!("rules.oc_dep_009.compaction").to_string(),
+                    );
+                }
+            }
+        }
+        // The OpenCode 1 object form; the OpenCode 2 array mixes paths and
+        // URLs and is not checked here.
+        if let Some(urls) = self.root.at("skills").and_then(|skills| skills.at("urls")) {
+            match urls.arr() {
+                Some(items) => {
+                    for item in items {
+                        match item.str() {
+                            Some(url)
+                                if url.starts_with("http://") || url.starts_with("https://") => {}
+                            Some(url) => {
+                                self.out.error(
+                                    "OC-CFG-010",
+                                    item.pos,
+                                    t!(
+                                        "rules.oc_cfg_010.message",
+                                        url = truncate_for_display(url, 200)
+                                    ),
+                                    t!("rules.oc_cfg_010.suggestion"),
+                                );
+                            }
+                            None => {
+                                self.out.error(
+                                    "OC-CFG-010",
+                                    item.pos,
+                                    t!("rules.oc_cfg_010.item_type"),
+                                    t!("rules.oc_cfg_010.suggestion"),
+                                );
+                            }
+                        }
+                    }
+                }
+                None if urls.is_null() => {}
+                None => {
+                    self.out.error(
+                        "OC-CFG-010",
+                        urls.pos,
+                        t!("rules.oc_cfg_010.type_error"),
+                        t!("rules.oc_cfg_010.suggestion"),
+                    );
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // OC-CFG-018 / OC-CFG-019 references
+    // ------------------------------------------------------------------
+
+    fn references(&mut self) {
+        for key in ["references", "reference"] {
+            let Some(references) = self.root.at(key).and_then(Node::obj) else {
+                continue;
+            };
+            for reference in references {
+                let alias = reference.key.as_str();
+                match &reference.value.val {
+                    Val::Str(target) => {
+                        let local = target.starts_with('.')
+                            || target.starts_with('/')
+                            || target.starts_with('~');
+                        let git_like = target.contains('/') || target.contains(':');
+                        if !local && !git_like && !target.trim().is_empty() {
+                            self.out.info(
+                                "OC-CFG-019",
+                                reference.value.pos,
+                                t!(
+                                    "rules.oc_cfg_019.message",
+                                    alias = alias,
+                                    target = target.as_str()
+                                ),
+                                t!("rules.oc_cfg_019.suggestion", target = target.as_str()),
+                            );
+                        }
+                        self.out.info(
+                            "OC-CFG-018",
+                            reference.pos,
+                            t!("rules.oc_cfg_018.message", alias = alias),
+                            t!("rules.oc_cfg_018.suggestion"),
+                        );
+                    }
+                    Val::Obj(_) => {
+                        let described = reference
+                            .value
+                            .at("description")
+                            .and_then(Node::str)
+                            .is_some_and(|text| !text.trim().is_empty());
+                        if !described {
+                            self.out.info(
+                                "OC-CFG-018",
+                                reference.pos,
+                                t!("rules.oc_cfg_018.message", alias = alias),
+                                t!("rules.oc_cfg_018.suggestion"),
+                            );
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Fields only OpenCode 1 reads: OC-CFG-008, OC-CFG-013, OC-CFG-014,
+    // OC-LSP-001/002 (OpenCode 2 ignores logLevel, server and top-level
+    // subagent_depth, and does not run language servers)
+    // ------------------------------------------------------------------
+
+    fn v1_only_sections(&mut self) {
+        if !self.lines.v1 {
+            return;
+        }
+        if let Some(node) = self.root.at("logLevel") {
+            match node.str() {
+                Some(level) if VALID_LOG_LEVELS.contains(&level) => {}
+                Some(level) => {
+                    let fixed = crate::rules::find_closest_value(level, VALID_LOG_LEVELS);
+                    let fix = fixed.and_then(|fixed| {
+                        string_fix(
+                            node,
+                            fixed,
+                            t!("rules.oc_cfg_008.fix", value = fixed).to_string(),
+                        )
+                    });
+                    if let Some(diagnostic) = self.out.error(
+                        "OC-CFG-008",
+                        node.pos,
+                        t!(
+                            "rules.oc_cfg_008.message",
+                            value = level,
+                            values = VALID_LOG_LEVELS.join(", ")
+                        ),
+                        t!(
+                            "rules.oc_cfg_008.suggestion",
+                            values = VALID_LOG_LEVELS.join(", ")
+                        ),
+                    ) && let Some(fix) = fix
+                    {
+                        diagnostic.fixes.push(fix);
+                    }
+                }
+                None if node.is_null() => {}
+                None => {
+                    self.out.error(
+                        "OC-CFG-008",
+                        node.pos,
+                        t!("rules.oc_cfg_008.type_error"),
+                        t!(
+                            "rules.oc_cfg_008.suggestion",
+                            values = VALID_LOG_LEVELS.join(", ")
+                        ),
+                    );
+                }
+            }
+        }
+        if let Some(server) = self.root.at("server")
+            && server.obj().is_some()
+        {
+            for (field, expected, valid) in [
+                (
+                    "port",
+                    "a positive integer",
+                    server
+                        .at("port")
+                        .map(|port| port.i64().is_some_and(|p| p > 0)),
+                ),
+                (
+                    "hostname",
+                    "a string",
+                    server.at("hostname").map(|value| value.str().is_some()),
+                ),
+                (
+                    "mdns",
+                    "a boolean",
+                    server.at("mdns").map(|value| value.bool().is_some()),
+                ),
+                (
+                    "mdnsDomain",
+                    "a string",
+                    server.at("mdnsDomain").map(|value| value.str().is_some()),
+                ),
+                (
+                    "cors",
+                    "an array of origins",
+                    server.at("cors").map(|value| value.arr().is_some()),
+                ),
+            ] {
+                if valid == Some(false) {
+                    let node = server.at(field).expect("field present");
+                    if !node.is_null() {
+                        self.out.warn(
+                            "OC-CFG-013",
+                            node.pos,
+                            t!(
+                                "rules.oc_cfg_013.message",
+                                field = field,
+                                expected = expected
+                            ),
+                            t!("rules.oc_cfg_013.suggestion"),
+                        );
+                    }
+                }
+            }
+        }
+        if let Some(depth) = self.root.at("subagent_depth")
+            && !depth.is_null()
+            && !depth.i64().is_some_and(|value| value >= 0)
+        {
+            self.out.warn(
+                "OC-CFG-014",
+                depth.pos,
+                t!("rules.oc_cfg_014.message", field = "subagent_depth"),
+                t!("rules.oc_cfg_014.suggestion"),
+            );
+        }
+        if let Some(servers) = self.root.at("lsp").and_then(Node::obj) {
+            for server in servers {
+                let Some(_) = server.value.obj() else {
+                    continue;
+                };
+                if server.value.has("command") && !server.value.has("extensions") {
+                    self.out.warn(
+                        "OC-LSP-001",
+                        server.pos,
+                        t!("rules.oc_lsp_001.message", server = server.key.as_str()),
+                        t!("rules.oc_lsp_001.suggestion"),
+                    );
+                }
+                if let Some(extensions) = server.value.at("extensions") {
+                    let valid = extensions.arr().is_some_and(|items| {
+                        !items.is_empty() && items.iter().all(|item| item.str().is_some())
+                    });
+                    if !valid {
+                        self.out.error(
+                            "OC-LSP-002",
+                            extensions.pos,
+                            t!("rules.oc_lsp_002.message", server = server.key.as_str()),
+                            t!("rules.oc_lsp_002.suggestion"),
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // OC-TUI-001..003 (legacy `tui` object)
+    // ------------------------------------------------------------------
+
+    fn tui(&mut self) {
+        let Some(tui) = self.root.at("tui") else {
+            return;
+        };
+        for member in tui.obj().unwrap_or_default() {
+            if !KNOWN_TUI_KEYS.contains(&member.key.as_str()) {
+                self.out.warn(
+                    "OC-TUI-001",
+                    member.pos,
+                    t!("rules.oc_tui_001.message", key = member.key.as_str()),
+                    t!(
+                        "rules.oc_tui_001.suggestion",
+                        keys = KNOWN_TUI_KEYS.join(", ")
+                    ),
+                );
+            }
+        }
+        if let Some(speed) = tui.at("scroll_speed")
+            && !speed.is_null()
+            && !speed.f64().is_some_and(|value| value >= 0.001)
+        {
+            self.out.error(
+                "OC-TUI-002",
+                speed.pos,
+                t!("rules.oc_tui_002.message"),
+                t!("rules.oc_tui_002.suggestion"),
+            );
+        }
+        if let Some(style) = tui.at("diff_style") {
+            match style.str() {
+                Some(value) if VALID_DIFF_STYLES.contains(&value) => {}
+                Some(value) => {
+                    let fix = crate::rules::find_closest_value(value, VALID_DIFF_STYLES).and_then(
+                        |fixed| {
+                            string_fix(
+                                style,
+                                fixed,
+                                t!("rules.oc_tui_003.fix", value = fixed).to_string(),
+                            )
+                        },
+                    );
+                    if let Some(diagnostic) = self.out.error(
+                        "OC-TUI-003",
+                        style.pos,
+                        t!(
+                            "rules.oc_tui_003.message",
+                            value = value,
+                            values = VALID_DIFF_STYLES.join(", ")
+                        ),
+                        t!(
+                            "rules.oc_tui_003.suggestion",
+                            values = VALID_DIFF_STYLES.join(", ")
+                        ),
+                    ) && let Some(fix) = fix
+                    {
+                        diagnostic.fixes.push(fix);
+                    }
+                }
+                None if style.is_null() => {}
+                None => {
+                    self.out.error(
+                        "OC-TUI-003",
+                        style.pos,
+                        t!("rules.oc_tui_003.type_error"),
+                        t!(
+                            "rules.oc_tui_003.suggestion",
+                            values = VALID_DIFF_STYLES.join(", ")
+                        ),
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// Whether `key` occurs once at the top level (duplicate keys suppress
+/// fixes: the edit could target the copy OpenCode does not read).
+fn unique_key(root: &Node, key: &str) -> bool {
+    root.obj()
+        .is_some_and(|members| members.iter().filter(|member| member.key == key).count() == 1)
+}
+
+/// `apiKey` values that are literal keys. Local providers often use a dummy
+/// key (`"ollama"`), so short values and placeholders are not reported.
+fn is_literal_api_key(value: &str) -> bool {
+    is_literal_secret(value)
+}
+
+/// OC-CFG-005 for header maps.
+fn secret_headers(out: &mut Out<'_, '_>, headers: &Node, owner: &str) {
+    for header in headers.obj().unwrap_or_default() {
+        if is_credential_name(&header.key) && header.value.str().is_some_and(is_literal_secret) {
+            out.warn(
+                "OC-CFG-005",
+                header.value.pos,
+                t!(
+                    "rules.oc_cfg_005.header",
+                    owner = owner,
+                    header = header.key.as_str()
+                ),
+                t!("rules.oc_cfg_005.suggestion"),
+            );
+        }
+    }
+}
+
+/// OC-CFG-015: `$NAME` / `${NAME}` in strings OpenCode passes literally.
+fn shell_variables(out: &mut Out<'_, '_>, node: &Node, depth: usize) {
+    if depth > 16 {
         return;
     }
-    match value {
-        serde_json::Value::String(s) => {
-            validate_substitution_string(s, path, content, diagnostics);
-        }
-        serde_json::Value::Array(arr) => {
-            for item in arr {
-                validate_substitutions_inner(item, path, content, diagnostics, depth + 1);
+    match &node.val {
+        Val::Str(value) => {
+            if let Some((written, name)) = shell_variable(value) {
+                out.warn(
+                    "OC-CFG-015",
+                    node.pos,
+                    t!(
+                        "rules.oc_cfg_015.message",
+                        variable = written.as_str(),
+                        name = name.as_str()
+                    ),
+                    t!("rules.oc_cfg_015.suggestion", name = name.as_str()),
+                );
             }
         }
-        serde_json::Value::Object(obj) => {
-            for (_, v) in obj {
-                validate_substitutions_inner(v, path, content, diagnostics, depth + 1);
+        Val::Obj(members) => {
+            for member in members {
+                shell_variables(out, &member.value, depth + 1);
+            }
+        }
+        Val::Arr(items) => {
+            for item in items {
+                shell_variables(out, item, depth + 1);
             }
         }
         _ => {}
     }
 }
 
-/// Validate substitution patterns in a single string value.
-///
-/// Valid patterns: `{env:VARIABLE_NAME}`, `{file:path/to/file}`
-/// Flags: unknown prefix (not env or file), empty value part
-fn validate_substitution_string(
-    s: &str,
-    path: &Path,
-    content: &str,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    // Match patterns like {word:...}
+/// Maximum recursion depth for OC-009.
+const MAX_SUBSTITUTION_DEPTH: usize = 64;
+
+/// OC-009: `{word:...}` patterns other than `{env:...}` and `{file:...}`.
+fn substitutions(out: &mut Out<'_, '_>, node: &Node, depth: usize) {
+    if depth > MAX_SUBSTITUTION_DEPTH {
+        return;
+    }
+    match &node.val {
+        Val::Str(value) => substitution_string(out, node, value),
+        Val::Obj(members) => {
+            for member in members {
+                substitutions(out, &member.value, depth + 1);
+            }
+        }
+        Val::Arr(items) => {
+            for item in items {
+                substitutions(out, item, depth + 1);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn substitution_string(out: &mut Out<'_, '_>, node: &Node, s: &str) {
     let mut start = 0;
     while let Some(open_pos) = s[start..].find('{') {
         let abs_open = start + open_pos;
-        if let Some(close_pos) = s[abs_open..].find('}') {
-            let abs_close = abs_open + close_pos;
-            let inner = &s[abs_open + 1..abs_close];
-
-            if let Some(colon_pos) = inner.find(':') {
-                let prefix = &inner[..colon_pos];
-                let value_part = &inner[colon_pos + 1..];
-
-                // Only flag patterns that look like substitutions (word:something)
-                if !prefix.is_empty()
-                    && prefix
-                        .chars()
-                        .all(|c| c.is_ascii_alphanumeric() || c == '_')
-                {
-                    let reason = if prefix != "env" && prefix != "file" {
-                        Some(format!(
-                            "unknown prefix '{}'. Valid prefixes: 'env', 'file'",
-                            prefix
-                        ))
-                    } else if value_part.is_empty() {
-                        Some(format!("empty value after '{}:'", prefix))
-                    } else {
-                        None
-                    };
-
-                    if let Some(reason_str) = reason {
-                        let pattern = format!("{{{}}}", inner);
-                        diagnostics.push(
-                            Diagnostic::warning(
-                                path.to_path_buf(),
-                                find_string_line(content, &pattern).unwrap_or(1),
-                                0,
-                                "OC-009",
-                                t!(
-                                    "rules.oc_009.message",
-                                    pattern = pattern.as_str(),
-                                    reason = reason_str.as_str()
-                                ),
-                            )
-                            .with_suggestion(t!("rules.oc_009.suggestion")),
-                        );
-                    }
-                }
-            }
-
-            start = abs_close + 1;
-        } else {
+        let Some(close_pos) = s[abs_open..].find('}') else {
             break;
+        };
+        let abs_close = abs_open + close_pos;
+        let inner = &s[abs_open + 1..abs_close];
+        if let Some((prefix, value_part)) = inner.split_once(':')
+            && !prefix.is_empty()
+            && prefix
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        {
+            let reason = if prefix != "env" && prefix != "file" {
+                Some(t!("rules.oc_009.unknown_prefix", prefix = prefix).to_string())
+            } else if value_part.is_empty() {
+                Some(t!("rules.oc_009.empty_value", prefix = prefix).to_string())
+            } else {
+                None
+            };
+            if let Some(reason) = reason {
+                let pattern = format!("{{{inner}}}");
+                out.warn(
+                    "OC-009",
+                    node.pos,
+                    t!(
+                        "rules.oc_009.message",
+                        pattern = pattern.as_str(),
+                        reason = reason.as_str()
+                    ),
+                    t!("rules.oc_009.suggestion"),
+                );
+            }
+        }
+        start = abs_close + 1;
+    }
+}
+
+fn to_snake_case(key: &str) -> String {
+    let mut snake = String::new();
+    for c in key.chars() {
+        if c.is_ascii_uppercase() {
+            snake.push('_');
+            snake.push(c.to_ascii_lowercase());
+        } else {
+            snake.push(c);
         }
     }
+    snake
 }
 
 /// Opt-in cleanup only: this does NOT migrate data to tui.json. Use a single
 /// edit for all legacy fields so adjacent removals cannot leave a dangling comma.
 /// Keep all surviving source text (including comments), rather than reserialize.
 fn legacy_tui_cleanup(content: &str) -> Option<String> {
-    let properties = crate::schemas::opencode::config_property_spans(content)?;
+    let properties = config_property_spans(content)?;
     let legacy = |key: &str| matches!(key, "theme" | "keybinds" | "tui");
     let last_retained = properties
         .iter()
@@ -2106,45 +1776,8 @@ fn legacy_tui_cleanup(content: &str) -> Option<String> {
         fixed.replace_range(start..end, "");
     }
     // Always check syntax after composing the cleanup, including JSONC input.
-    crate::schemas::opencode::parse_opencode_json(&fixed)
-        .schema
-        .as_ref()?;
+    parse_config(&fixed).ok()?;
     Some(fixed)
-}
-
-/// Find only an unambiguous root key, never a similarly named nested key.
-fn find_json_key_span(content: &str, key: &str) -> Option<(usize, usize)> {
-    let properties = crate::schemas::opencode::config_property_spans(content)?;
-    let property = properties.iter().find(|property| property.key == key)?;
-    Some((property.key_start + 1, property.key_end - 1))
-}
-
-/// Find the 1-indexed line number where a string pattern appears in content.
-fn find_string_line(content: &str, pattern: &str) -> Option<usize> {
-    for (i, line) in content.lines().enumerate() {
-        if line.contains(pattern) {
-            return Some(i + 1);
-        }
-    }
-    None
-}
-
-/// Find the 1-indexed line number of a JSON key in the content.
-///
-/// Looks for `"key"` followed by `:` to avoid matching the key name
-/// when it appears as a string value rather than an object key.
-fn find_key_line(content: &str, key: &str) -> Option<usize> {
-    let needle = format!("\"{}\"", key);
-    for (i, line) in content.lines().enumerate() {
-        if let Some(pos) = line.find(&needle) {
-            // Check that a colon follows the key (possibly with whitespace)
-            let after = &line[pos + needle.len()..];
-            if after.trim_start().starts_with(':') {
-                return Some(i + 1);
-            }
-        }
-    }
-    None
 }
 
 /// Truncate a string for display in diagnostic messages.
@@ -2153,20 +1786,11 @@ fn truncate_for_display(s: &str, max: usize) -> String {
     if s.len() <= max {
         return s.to_string();
     }
-    // Find the last valid char boundary at or before max
     let mut end = max;
     while end > 0 && !s.is_char_boundary(end) {
         end -= 1;
     }
     format!("{}...", &s[..end])
-}
-
-fn is_valid_hex_color(value: &str) -> bool {
-    if !value.starts_with('#') {
-        return false;
-    }
-    let hex = &value[1..];
-    (hex.len() == 3 || hex.len() == 6) && hex.chars().all(|c| c.is_ascii_hexdigit())
 }
 
 #[cfg(test)]
@@ -2178,6 +1802,11 @@ mod tests {
     fn validate(content: &str) -> Vec<Diagnostic> {
         let validator = OpenCodeValidator;
         validator.validate(Path::new("opencode.json"), content, &LintConfig::default())
+    }
+
+    /// The value OpenCode reads (JSONC comments and trailing commas removed).
+    fn test_value(content: &str) -> serde_json::Value {
+        serde_json::from_str(&crate::schemas::kiro_json::blank_jsonc(content).0).unwrap()
     }
 
     fn validate_with_config(content: &str, config: &LintConfig) -> Vec<Diagnostic> {
@@ -2203,10 +1832,17 @@ mod tests {
     }
 
     #[test]
-    fn test_oc_003_trailing_comma() {
+    fn test_oc_003_trailing_comma_is_valid_jsonc() {
+        // OpenCode accepts trailing commas ("Use JSONC when you want comments
+        // or trailing commas"); the V1 docs' own first example has them.
         let diagnostics = validate(r#"{"share": "manual",}"#);
-        let oc_003: Vec<_> = diagnostics.iter().filter(|d| d.rule == "OC-003").collect();
-        assert_eq!(oc_003.len(), 1);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-003"));
+        let docs_example = "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"model\": \"anthropic/claude-sonnet-4-5\",\n  \"autoupdate\": true,\n  \"server\": {\n    \"port\": 4096,\n  },\n}\n";
+        assert!(
+            validate(docs_example).is_empty(),
+            "{:?}",
+            validate(docs_example)
+        );
     }
 
     #[test]
@@ -2282,17 +1918,17 @@ mod tests {
     }
 
     #[test]
-    fn test_oc_001_no_autofix_when_duplicate() {
-        // JSON with two "share" keys (duplicate keys are technically valid JSON
-        // but our regex uniqueness guard should catch this and suppress autofix).
+    fn test_oc_001_autofix_targets_top_level_share_only() {
+        // Fixes now use the exact span of the top-level value, so a nested
+        // "share" key with the same text no longer suppresses the fix (the
+        // old text search could not tell the two apart).
         let content = r#"{"share": "Manual", "nested": {"share": "Manual"}}"#;
         let diagnostics = validate(content);
         let oc_001: Vec<_> = diagnostics.iter().filter(|d| d.rule == "OC-001").collect();
         assert_eq!(oc_001.len(), 1);
-        assert!(
-            !oc_001[0].has_fixes(),
-            "OC-001 should not have auto-fix when share value appears multiple times"
-        );
+        let fix = &oc_001[0].fixes[0];
+        assert_eq!(fix.start_byte, 11);
+        assert_eq!(&content[fix.start_byte..fix.end_byte], "Manual");
     }
 
     #[test]
@@ -2513,10 +2149,12 @@ mod tests {
     // ===== Path Traversal Prevention =====
 
     #[test]
-    fn test_oc_002_absolute_path_rejected() {
-        let diagnostics = validate(r#"{"instructions": ["/etc/passwd"]}"#);
-        let oc_002: Vec<_> = diagnostics.iter().filter(|d| d.rule == "OC-002").collect();
-        assert_eq!(oc_002.len(), 1);
+    fn test_oc_002_absolute_and_home_paths_are_documented() {
+        // OpenCode documents "~/rules/opencode.md" and absolute entries
+        // ("Used as written"); they are machine-specific, so they are not
+        // checked (they were errors before).
+        let diagnostics = validate(r#"{"instructions": ["/etc/passwd", "~/rules/opencode.md"]}"#);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-002"));
     }
 
     #[test]
@@ -2937,29 +2575,6 @@ mod tests {
 
     // ===== find_key_line =====
 
-    #[test]
-    fn test_find_key_line() {
-        let content = "{\n  \"share\": \"manual\",\n  \"instructions\": []\n}";
-        assert_eq!(find_key_line(content, "share"), Some(2));
-        assert_eq!(find_key_line(content, "instructions"), Some(3));
-        assert_eq!(find_key_line(content, "nonexistent"), None);
-    }
-
-    #[test]
-    fn test_find_key_line_ignores_value_match() {
-        // "share" appears as a value, not as a key
-        let content = r#"{"comment": "the share key is important", "share": "manual"}"#;
-        // Should still find "share" as a key (second occurrence)
-        assert_eq!(find_key_line(content, "share"), Some(1));
-    }
-
-    #[test]
-    fn test_find_key_line_no_false_positive_on_value() {
-        // "share" only appears as a value, never as a key
-        let content = "{\n  \"comment\": \"share\"\n}";
-        assert_eq!(find_key_line(content, "share"), None);
-    }
-
     // ===== OC-CFG-001: Invalid Model Format =====
     #[test]
     fn test_oc_cfg_001_invalid_model() {
@@ -2986,9 +2601,11 @@ mod tests {
     }
 
     #[test]
-    fn test_oc_cfg_003_unknown_top_level_key() {
+    fn test_unknown_top_level_key_reported_once() {
+        // OC-CFG-003 was retired as a duplicate of OC-004.
         let diagnostics = validate(r#"{"unknown_field": true}"#);
-        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-003"));
+        assert_eq!(diagnostics.iter().filter(|d| d.rule == "OC-004").count(), 1);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-003"));
     }
 
     // ===== OC-CFG-004: Invalid Default Agent =====
@@ -3118,8 +2735,16 @@ mod tests {
 
     #[test]
     fn test_oc_ag_002_invalid_color() {
-        let diagnostics = validate(r#"{"agent": {"a": {"color": "foo"}}}"#);
+        // OC-AG-002 now covers malformed hex values only; an unknown name is
+        // OC-AG-006 (both fired for names before).
+        let diagnostics = validate(r##"{"agent": {"a": {"color": "#12"}}}"##);
         assert!(diagnostics.iter().any(|d| d.rule == "OC-AG-002"));
+        let named = validate(r#"{"agent": {"a": {"color": "foo"}}}"#);
+        assert!(!named.iter().any(|d| d.rule == "OC-AG-002"));
+        assert!(named.iter().any(|d| d.rule == "OC-AG-006"));
+        // Native OpenCode 2 agents accept only #RRGGBB.
+        let v2 = validate(r#"{"agents": {"a": {"color": "accent"}}}"#);
+        assert!(v2.iter().any(|d| d.rule == "OC-AG-002"));
     }
 
     #[test]
@@ -3162,23 +2787,26 @@ mod tests {
     }
 
     #[test]
-    fn test_oc_pm_001_invalid_action() {
+    fn test_invalid_permission_action_reported_once() {
+        // OC-PM-001 was retired as a duplicate of OC-008.
         let diagnostics = validate(r#"{"permission": {"read": "yes"}}"#);
-        assert!(diagnostics.iter().any(|d| d.rule == "OC-PM-001"));
-    }
-
-    #[test]
-    fn test_is_valid_hex_color_helper() {
-        assert!(is_valid_hex_color("#fff"));
-        assert!(is_valid_hex_color("#FF00AA"));
-        assert!(!is_valid_hex_color("#12"));
-        assert!(!is_valid_hex_color("red"));
+        assert_eq!(diagnostics.iter().filter(|d| d.rule == "OC-008").count(), 1);
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-PM-001"));
     }
 
     #[test]
     fn test_oc_pm_002_invalid_perm() {
-        let diagnostics = validate(r#"{"permission": {"foo": "allow"}}"#);
+        // Permission keys are wildcard patterns over tool names (custom and
+        // MCP tools), so only near misses of built-in keys are reported.
+        let diagnostics = validate(r#"{"permission": {"raed": "allow"}}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "OC-PM-002"));
+        for key in ["foo", "*", "mymcp_*", "mymcp_search"] {
+            let content = format!(r#"{{"permission": {{"{key}": "deny"}}}}"#);
+            assert!(
+                !validate(&content).iter().any(|d| d.rule == "OC-PM-002"),
+                "{key}"
+            );
+        }
     }
 
     // ===== OC-DEP-001: Deprecated mode key =====
@@ -3207,7 +2835,9 @@ mod tests {
         assert_eq!(dep.len(), 1);
         assert!(dep[0].has_fixes(), "OC-DEP-001 should have auto-fix");
         let fix = &dep[0].fixes[0];
-        assert!(fix.safe, "OC-DEP-001 fix should be safe");
+        // Unsafe now: renaming a key OpenCode reads changes behavior (mode
+        // entries are primary agents; agent entries default to mode all).
+        assert!(!fix.safe, "OC-DEP-001 fix should be unsafe");
         let target = &content[fix.start_byte..fix.end_byte];
         assert_eq!(target, "mode");
         assert_eq!(fix.replacement, "agent");
@@ -3261,17 +2891,29 @@ mod tests {
 
     #[test]
     fn test_oc_dep_003_autofix() {
-        let content = r#"{"autoshare": "manual"}"#;
+        // autoshare is a boolean and share a mode string, so a key-only
+        // rename produced invalid config; the fix now maps the value and is
+        // unsafe.
+        let content = r#"{"autoshare": true}"#;
         let diagnostics = validate(content);
         let dep: Vec<_> = diagnostics
             .iter()
             .filter(|d| d.rule == "OC-DEP-003")
             .collect();
-        assert!(dep[0].has_fixes());
         let fix = &dep[0].fixes[0];
-        let target = &content[fix.start_byte..fix.end_byte];
-        assert_eq!(target, "autoshare");
-        assert_eq!(fix.replacement, "share");
+        assert!(!fix.safe);
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        assert_eq!(fixed, r#"{"share": "auto"}"#);
+        assert!(validate(&fixed).is_empty());
+        let string_value = validate(r#"{"autoshare": "manual"}"#);
+        assert!(
+            !string_value
+                .iter()
+                .find(|d| d.rule == "OC-DEP-003")
+                .unwrap()
+                .has_fixes()
+        );
     }
 
     // ===== OC-CFG-008: Invalid logLevel =====
@@ -3284,8 +2926,13 @@ mod tests {
 
     #[test]
     fn test_oc_cfg_008_valid_loglevel() {
-        let diagnostics = validate(r#"{"logLevel": "info"}"#);
+        // The schema enum ($defs/LogLevel) is DEBUG, INFO, WARN, ERROR and
+        // case-sensitive; lowercase values were accepted before.
+        let diagnostics = validate(r#"{"logLevel": "INFO"}"#);
         assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-008"));
+        let lower = validate(r#"{"logLevel": "info"}"#);
+        let fix = &lower.iter().find(|d| d.rule == "OC-CFG-008").unwrap().fixes[0];
+        assert_eq!(fix.replacement, "INFO");
     }
 
     #[test]
@@ -3317,7 +2964,8 @@ mod tests {
         let fix = &cfg[0].fixes[0];
         let target = &content[fix.start_byte..fix.end_byte];
         assert_eq!(target, "debu");
-        assert_eq!(fix.replacement, "debug");
+        // Uppercase per the schema enum.
+        assert_eq!(fix.replacement, "DEBUG");
     }
 
     // ===== OC-CFG-009: Invalid compaction.reserved =====
@@ -3396,10 +3044,21 @@ mod tests {
 
     #[test]
     fn test_oc_cfg_012_valid_oauth() {
-        let diagnostics = validate(
-            r#"{"mcp": {"srv": {"oauth": {"client_id": "abc", "authorization_url": "https://auth.example.com"}}}}"#,
+        // The documented member sets: camelCase for OpenCode 1 servers,
+        // snake_case under mcp.servers. `authorization_url` (formerly
+        // required) appears on no OpenCode page.
+        let v1 = validate(
+            r#"{"mcp": {"srv": {"type": "remote", "url": "https://mcp.example.com/mcp", "oauth": {"clientId": "{env:ID}", "clientSecret": "{env:SECRET}", "scope": "tools:read tools:execute"}}}}"#,
         );
-        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-012"));
+        assert!(v1.is_empty(), "{v1:?}");
+        let v2 = validate(
+            r#"{"mcp": {"servers": {"srv": {"type": "remote", "url": "https://mcp.example.com/mcp", "oauth": {"client_id": "{env:ID}", "client_secret": "{env:SECRET}", "callback_port": 19876, "redirect_uri": "http://127.0.0.1:19876/callback"}}}}}"#,
+        );
+        assert!(v2.is_empty(), "{v2:?}");
+        let unknown = validate(
+            r#"{"mcp": {"srv": {"type": "remote", "url": "https://x.example", "oauth": {"authorization_url": "https://auth.example.com"}}}}"#,
+        );
+        assert!(unknown.iter().any(|d| d.rule == "OC-CFG-012"));
     }
 
     #[test]
@@ -3648,28 +3307,6 @@ mod tests {
 
     // ===== find_json_key_span =====
 
-    #[test]
-    fn test_find_json_key_span() {
-        let content = r#"{"mode": "agent"}"#;
-        let span = find_json_key_span(content, "mode");
-        assert!(span.is_some());
-        let (start, end) = span.unwrap();
-        assert_eq!(&content[start..end], "mode");
-    }
-
-    #[test]
-    fn test_find_json_key_span_not_found() {
-        let content = r#"{"share": "manual"}"#;
-        assert!(find_json_key_span(content, "mode").is_none());
-    }
-
-    #[test]
-    fn test_find_json_key_span_value_not_key() {
-        // "mode" appears only as a value, not as a key
-        let content = r#"{"comment": "mode"}"#;
-        assert!(find_json_key_span(content, "mode").is_none());
-    }
-
     // ===== Fix #3: OC-CFG-010 http:// URL should NOT fire =====
 
     #[test]
@@ -3691,11 +3328,9 @@ mod tests {
             .iter()
             .filter(|d| d.rule == "OC-CFG-012")
             .collect();
-        assert_eq!(
-            cfg_012.len(),
-            1,
-            "Empty oauth object should fire OC-CFG-012 for missing required fields"
-        );
+        // `oauth: {}` is a documented example (dynamic client registration);
+        // no OAuth field is required.
+        assert!(cfg_012.is_empty(), "{cfg_012:?}");
     }
 
     // ===== Fix #5: OC-AG-007 only maxSteps (no steps) =====
@@ -3741,14 +3376,6 @@ mod tests {
     }
 
     // ===== Fix #8: find_json_key_span nested key =====
-
-    #[test]
-    fn test_find_json_key_span_ignores_nested_keys() {
-        let content = r#"{"nested": {"name": "inner"}, "name": "outer"}"#;
-        let (start, end) = find_json_key_span(content, "name").unwrap();
-        assert_eq!(&content[start..end], "name");
-        assert!(content[end..].starts_with("\": \"outer\""));
-    }
 
     // ===== Fix #11: truncate_for_display =====
 
@@ -3872,8 +3499,9 @@ mod tests {
             .collect();
         assert_eq!(cfg.len(), 1);
         assert_eq!(cfg[0].level, DiagnosticLevel::Warning);
+        // The message no longer repeats the value; the diagnostic points at it.
         assert!(cfg[0].message.contains("non-negative"));
-        assert!(cfg[0].message.contains("-1"));
+        assert_eq!(cfg[0].column, 20);
     }
 
     #[test]
@@ -3886,7 +3514,8 @@ mod tests {
             .collect();
         assert_eq!(cfg.len(), 1);
         assert_eq!(cfg[0].level, DiagnosticLevel::Warning);
-        assert!(cfg[0].message.contains("type"));
+        // Message reworded to "... must be a non-negative integer".
+        assert!(cfg[0].message.contains("non-negative integer"));
     }
 
     #[test]
@@ -3899,7 +3528,8 @@ mod tests {
             .collect();
         assert_eq!(cfg.len(), 1);
         assert_eq!(cfg[0].level, DiagnosticLevel::Warning);
-        assert!(cfg[0].message.contains("type"));
+        // Message reworded to "... must be a non-negative integer".
+        assert!(cfg[0].message.contains("non-negative integer"));
     }
 
     #[test]
@@ -4122,10 +3752,11 @@ mod tests {
                 .find(|d| d.rule == "OC-DEP-001")
                 .unwrap()
                 .fixes[0];
-            assert!(fix.safe);
+            // Unsafe now, see test_oc_dep_001_autofix.
+            assert!(!fix.safe);
             let mut fixed = content.to_string();
             fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-            let value = parse_opencode_json(&fixed).raw_value.unwrap();
+            let value = test_value(&fixed);
             assert!(value.get("mode").is_none());
             assert!(value["agent"]["build"].is_object());
             assert!(value.get("agents").is_none());
@@ -4172,11 +3803,11 @@ mod tests {
             let mut fixed = content.to_string();
             let fix = fixes[0];
             fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
-            let mut expected = parse_opencode_json(content).raw_value.unwrap();
+            let mut expected = test_value(content);
             for key in ["theme", "keybinds", "tui"] {
                 expected.as_object_mut().unwrap().remove(key);
             }
-            assert_eq!(parse_opencode_json(&fixed).raw_value.unwrap(), expected);
+            assert_eq!(test_value(&fixed), expected);
             assert!(!validate(&fixed).iter().any(|d| d.rule == "OC-DEP-005"));
             if content.contains("// keep this comment") {
                 assert!(fixed.contains("// keep this comment"));
@@ -4214,15 +3845,24 @@ mod tests {
     }
 
     #[test]
-    fn test_oc_dep_005_duplicate_keys_and_unicode_comments_withhold_cleanup() {
-        for content in [
-            r#"{"theme":"dark","th\u0065me":"light"}"#,
-            "{/* héllo */ \"theme\": \"dark\"}",
-        ] {
-            let diagnostics = validate(content);
-            let diagnostic = diagnostics.iter().find(|d| d.rule == "OC-DEP-005").unwrap();
-            assert!(!diagnostic.has_fixes());
-        }
+    fn test_oc_dep_005_duplicate_keys_withhold_cleanup() {
+        let content = r#"{"theme":"dark","th\u0065me":"light"}"#;
+        let diagnostics = validate(content);
+        let diagnostic = diagnostics.iter().find(|d| d.rule == "OC-DEP-005").unwrap();
+        assert!(!diagnostic.has_fixes());
+        // Comments are now blanked byte for byte, so offsets stay exact with
+        // non-ASCII comments and the cleanup is offered (it was withheld).
+        let content = "{/* héllo */ \"theme\": \"dark\", \"model\": \"p/m\"}";
+        let diagnostics = validate(content);
+        let fix = &diagnostics
+            .iter()
+            .find(|d| d.rule == "OC-DEP-005")
+            .unwrap()
+            .fixes[0];
+        let mut fixed = content.to_string();
+        fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+        assert!(fixed.contains("/* héllo */"));
+        assert_eq!(test_value(&fixed), serde_json::json!({"model": "p/m"}));
     }
 
     // ===== Deprecated-key rename fix must not create a duplicate key =====
@@ -4267,5 +3907,363 @@ mod tests {
                 content
             );
         }
+    }
+
+    // ===== OpenCode 1 / OpenCode 2 handling =====
+
+    fn rules_of(diagnostics: &[Diagnostic]) -> Vec<&str> {
+        diagnostics.iter().map(|d| d.rule.as_str()).collect()
+    }
+
+    fn pinned(version: &str) -> LintConfig {
+        LintConfig::builder()
+            .tool_versions(crate::config::ToolVersions {
+                opencode: Some(version.to_string()),
+                ..crate::config::ToolVersions::default()
+            })
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    fn documented_v2_config_is_clean() {
+        let content = r#"{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-5",
+  "permissions": [
+    { "action": "shell", "resource": "*", "effect": "ask" },
+    { "action": "shell", "resource": "git status *", "effect": "allow" },
+    { "action": "shell", "resource": "git push *", "effect": "deny" },
+  ],
+  "policies": [
+    { "action": "provider.use", "resource": "*", "effect": "deny" },
+    { "action": "provider.use", "resource": "anthropic", "effect": "allow" },
+    { "action": "tool.use", "resource": "shell:git push *", "effect": "deny" },
+  ],
+  "agents": {
+    "reviewer": {
+      "description": "Review changes without editing files",
+      "mode": "subagent",
+      "model": "anthropic/claude-sonnet-4-5#high",
+      "system": "Focus on correctness, security, and missing tests.",
+      "permissions": [{ "action": "edit", "resource": "*", "effect": "deny" }],
+    },
+    "writer": { "mode": "primary" },
+    "build": { "permissions": [{ "action": "shell", "resource": "git push *", "effect": "ask" }] },
+  },
+  "default_agent": "writer",
+  "mcp": {
+    "timeout": { "startup": 45000, "catalog": 30000, "execution": 600000 },
+    "servers": {
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "oauth": false,
+        "headers": { "CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}" },
+      },
+      "company-tools": {
+        "type": "remote",
+        "url": "https://mcp.example.com/mcp",
+        "oauth": { "client_id": "{env:MCP_CLIENT_ID}", "client_secret": "{env:MCP_CLIENT_SECRET}", "scope": "tools:read", "callback_port": 19876 },
+      },
+      "everything": {
+        "type": "local",
+        "command": ["npx", "-y", "@modelcontextprotocol/server-everything"],
+        "environment": { "LOG_LEVEL": "info", "MCP_API_KEY": "{env:MCP_API_KEY}" },
+        "disabled": true,
+        "protocol": "auto",
+      },
+    },
+  },
+  "commands": {
+    "review": { "description": "Review the current changes", "template": "Review the current diff.", "subagent": true },
+  },
+  "providers": {
+    "openai": { "settings": { "apiKey": "{file:~/.secrets/openai-key}" } },
+  },
+  "references": {
+    "docs": { "path": "../product-docs", "description": "Product behavior and terminology" },
+    "effect": { "repository": "Effect-TS/effect", "branch": "main" },
+  },
+  "skills": ["./team-skills", "https://example.com/.well-known/skills/"],
+  "snapshots": false,
+  "compaction": { "auto": true, "keep": { "tokens": 15000 }, "buffer": 20000 },
+}"#;
+        let diagnostics = OpenCodeValidator.validate(
+            Path::new("/home/me/project/opencode.jsonc"),
+            content,
+            &LintConfig::default(),
+        );
+        // The effect reference has no description: OC-CFG-018 (info) is the
+        // only finding.
+        assert_eq!(rules_of(&diagnostics), ["OC-CFG-018"], "{diagnostics:?}");
+    }
+
+    #[test]
+    fn documented_v1_config_gets_no_errors() {
+        let content = r#"{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "build": { "mode": "primary", "model": "anthropic/claude-sonnet-4-20250514", "prompt": "{file:./prompts/build.txt}", "permission": { "edit": "allow", "bash": "allow" } },
+    "plan": { "mode": "primary", "permission": { "edit": "deny", "bash": "deny" } },
+    "code-reviewer": { "description": "Reviews code", "mode": "subagent", "permission": { "edit": "deny" }, "color": "accent" },
+  },
+  "permission": { "*": "ask", "bash": { "*": "ask", "git *": "allow", "rm *": "deny" }, "mymcp_*": "deny" },
+  "mcp": {
+    "jira": { "enabled": true },
+    "sentry": { "type": "remote", "url": "https://mcp.sentry.dev/mcp", "oauth": {} },
+    "my-remote-mcp": { "type": "remote", "url": "https://my-mcp-server.com", "enabled": true, "headers": { "Authorization": "Bearer MY_API_KEY" } },
+    "local": { "type": "local", "command": ["npx", "-y", "my-mcp-command"], "environment": { "MY_ENV_VAR": "my_env_var_value" }, "timeout": 5000 },
+  },
+  "provider": { "openai": { "options": { "apiKey": "{file:~/.secrets/openai-key}" } } },
+  "logLevel": "INFO",
+  "server": { "port": 4096, "hostname": "0.0.0.0", "mdns": true, "mdnsDomain": "myproject.local", "cors": ["http://localhost:5173"] },
+  "subagent_depth": 2,
+  "instructions": ["**/*.md", "https://raw.githubusercontent.com/my-org/shared-rules/main/style.md"],
+}"#;
+        let diagnostics = validate(content);
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.level != DiagnosticLevel::Error),
+            "{diagnostics:?}"
+        );
+        // Unpinned OpenCode 1 shape: no OpenCode 2 findings.
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-DEP-009"));
+        assert!(!diagnostics.iter().any(|d| d.rule == "OC-CFG-006"));
+    }
+
+    #[test]
+    fn v2_markers_or_pin_select_ignored_field_checks() {
+        let v1_fields =
+            r#"{"logLevel": "INFO", "subagent_depth": 2, "compaction": {"prune": true}}"#;
+        assert!(!rules_of(&validate(v1_fields)).contains(&"OC-DEP-009"));
+        let with_v2 = r#"{"logLevel": "INFO", "permissions": [], "compaction": {"prune": true}}"#;
+        let diagnostics = validate(with_v2);
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "OC-DEP-009")
+                .count(),
+            2
+        );
+        let pinned_v2 = validate_with_config(v1_fields, &pinned("2.0.32"));
+        assert_eq!(
+            pinned_v2.iter().filter(|d| d.rule == "OC-DEP-009").count(),
+            3
+        );
+        // A V1 pin keeps the V1 value checks and flags V2-only keys.
+        let pinned_v1 =
+            validate_with_config(r#"{"agents": {}, "logLevel": "nope"}"#, &pinned("1.19.3"));
+        let found = rules_of(&pinned_v1);
+        assert!(
+            found.contains(&"OC-004") && found.contains(&"OC-CFG-008"),
+            "{found:?}"
+        );
+        assert!(!found.contains(&"OC-DEP-009"));
+    }
+
+    #[test]
+    fn mcp_servers_container_and_placeholders() {
+        let diagnostics =
+            validate(r#"{"mcp": {"servers": {"x": "bad"}, "jira": {"enabled": false}}}"#);
+        let oc006: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-006")
+            .collect();
+        assert_eq!(oc006.len(), 1, "{diagnostics:?}");
+        assert!(oc006[0].message.contains("'x'") && !oc006[0].message.contains("%{"));
+        let v1_fields = validate(
+            r#"{"mcp": {"servers": {"p": {"type": "local", "command": ["x"], "enabled": false, "timeout": 30000, "protocol": "v3"}}}}"#,
+        );
+        let found = rules_of(&v1_fields);
+        assert_eq!(
+            found.iter().filter(|r| **r == "OC-CFG-021").count(),
+            2,
+            "{found:?}"
+        );
+        assert!(found.contains(&"OC-CFG-007"));
+        let oauth = validate(
+            r#"{"mcp": {"servers": {"r": {"type": "remote", "url": "https://x.example/mcp", "oauth": {"clientId": "abc"}}}}}"#,
+        );
+        assert_eq!(rules_of(&oauth), ["OC-CFG-021"]);
+        let oauth_true = validate(
+            r#"{"mcp": {"r": {"type": "remote", "url": "https://x.example", "oauth": true}}}"#,
+        );
+        assert_eq!(rules_of(&oauth_true), ["OC-CFG-012"]);
+    }
+
+    #[test]
+    fn secrets_and_shell_variables() {
+        let content = r#"{
+  "provider": { "a": { "options": { "apiKey": "sk-live-1234567890abcdef" } }, "local": { "options": { "apiKey": "ollama" } } },
+  "mcp": {
+    "r": { "type": "remote", "url": "https://x.example/${REGION}", "headers": { "Authorization": "Bearer ghp_abcdefghijklmnopqrstuvwxyz0123", "X-Key": "${MY_API_KEY}" } },
+    "l": { "type": "local", "command": ["run", "$HOME"], "environment": { "API_TOKEN": "0123456789abcdef0123" } }
+  }
+}"#;
+        let diagnostics = validate(content);
+        assert_eq!(
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "OC-CFG-005")
+                .count(),
+            3,
+            "{diagnostics:?}"
+        );
+        let shell: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-015")
+            .collect();
+        assert_eq!(shell.len(), 2, "command arrays are not checked: {shell:?}");
+        assert!(shell.iter().any(|d| d.message.contains("{env:MY_API_KEY}")));
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.level != DiagnosticLevel::Error)
+        );
+    }
+
+    #[test]
+    fn agents_descriptions_and_legacy_fields() {
+        // OpenCode 1 shape: description is "a required config option" for
+        // custom agents (built-ins and disabled agents are skipped).
+        let v1 = validate(
+            r#"{"agent": {"build": {"model": "a/b"}, "helper": {"tools": {"write": false}}, "off": {"disable": true}}}"#,
+        );
+        let oc007: Vec<_> = v1.iter().filter(|d| d.rule == "OC-007").collect();
+        assert_eq!(oc007.len(), 1, "{oc007:?}");
+        assert!(oc007[0].message.contains("'helper'"));
+        assert!(rules_of(&v1).contains(&"OC-DEP-002"));
+        // OpenCode 2 shape: only subagents need one; a file with native V2
+        // fields is checked against OpenCode 2 only.
+        let v2 = validate(
+            r#"{"agent": {"helper": {}}, "agents": {"writer": {"mode": "primary"}, "sub": {"mode": "subagent"}, "mixed": {"description": "d", "prompt": "p", "permissions": []}}}"#,
+        );
+        let oc007: Vec<_> = v2.iter().filter(|d| d.rule == "OC-007").collect();
+        assert_eq!(oc007.len(), 1, "{oc007:?}");
+        assert!(oc007[0].message.contains("'sub'"));
+        assert!(rules_of(&v2).contains(&"OC-CFG-017"));
+        let hidden = validate(r#"{"agent": {"plan": {"mode": "primary", "hidden": true}}}"#);
+        assert_eq!(rules_of(&hidden), ["OC-AG-011"]);
+        let hidden_v2 = validate(r#"{"agents": {"plan": {"mode": "primary", "hidden": true}}}"#);
+        assert!(hidden_v2.is_empty());
+    }
+
+    #[test]
+    fn permission_ordering_and_patterns() {
+        let v1 = validate(
+            r#"{"permission": {"bash": {"git status": "allow", "*": "ask"}, "external_directory": {"~/**": "allow"}, "edit": {"*": "allow", "src/*": "deny"}}}"#,
+        );
+        let found = rules_of(&v1);
+        for rule in ["OC-PM-003", "OC-PM-007", "OC-PM-004"] {
+            assert!(found.contains(&rule), "{rule}: {found:?}");
+        }
+        let v2 = validate(
+            r#"{"permissions": [{"action": "bash", "resource": "*", "effect": "ask"}, {"action": "shell", "resource": "git status", "effect": "allow"}, {"action": "shell", "resource": "*", "effect": "deny"}, {"action": "external_directory", "resource": "*", "effect": "allow"}, {"action": "shell", "resource": "x", "effect": "maybe", "extra": 1}]}"#,
+        );
+        let found = rules_of(&v2);
+        for rule in ["OC-PM-005", "OC-PM-003", "OC-PM-004", "OC-PM-007", "OC-008"] {
+            assert!(found.contains(&rule), "{rule}: {found:?}");
+        }
+        let allow_all = validate(
+            r#"{"permissions": [{"action": "shell", "resource": "*", "effect": "allow"}, {"action": "shell", "resource": "rm *", "effect": "deny"}]}"#,
+        );
+        assert_eq!(rules_of(&allow_all), ["OC-PM-006"]);
+    }
+
+    #[test]
+    fn policy_statements() {
+        let diagnostics = validate(
+            r#"{"policies": [{"action": "provider.use", "resource": "openai", "effect": "ask"}, {"action": "integration.use", "resource": "github", "effect": "deny"}, {"action": "tool.use", "resource": "shell:sudo *", "effect": "deny", "note": "x"}]}"#,
+        );
+        let pol: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-POL-001")
+            .collect();
+        assert_eq!(pol.len(), 3, "{pol:?}");
+        assert_eq!(
+            pol.iter()
+                .filter(|d| d.level == DiagnosticLevel::Error)
+                .count(),
+            2
+        );
+        let v1 = validate_with_config(
+            r#"{"experimental": {"policies": [{"action": "tool.use", "resource": "shell:*", "effect": "deny"}]}}"#,
+            &pinned("1.19.3"),
+        );
+        assert_eq!(rules_of(&v1), ["OC-POL-001"]);
+    }
+
+    #[test]
+    fn commands_need_templates_and_safe_shell_blocks() {
+        let diagnostics = validate(
+            r#"{"command": {"a": {"description": "d"}, "b": {"template": "Log: !`git log -$1`"}, "c": {"template": "Review $ARGUMENTS"}}, "commands": {"d": {"template": "x", "variant": "high", "subagent": true}}}"#,
+        );
+        let found = rules_of(&diagnostics);
+        assert_eq!(found.iter().filter(|r| **r == "OC-CMD-002").count(), 1);
+        assert_eq!(found.iter().filter(|r| **r == "OC-CMD-001").count(), 1);
+        assert!(found.contains(&"OC-CFG-017"));
+    }
+
+    #[test]
+    fn references_mcp_count_and_project_only_settings() {
+        let refs = validate(
+            r#"{"references": {"docs": "docs", "lib": "./lib", "effect": "Effect-TS/effect"}}"#,
+        );
+        assert_eq!(refs.iter().filter(|d| d.rule == "OC-CFG-019").count(), 1);
+        assert_eq!(refs.iter().filter(|d| d.rule == "OC-CFG-018").count(), 3);
+        let servers: Vec<String> = (0..9)
+            .map(|i| format!(r#""s{i}": {{"type": "local", "command": ["x"]}}"#))
+            .collect();
+        let many = validate(&format!(r#"{{"mcp": {{{}}}}}"#, servers.join(",")));
+        assert_eq!(rules_of(&many), ["OC-CFG-020"]);
+        let update = validate(r#"{"update": "auto"}"#);
+        assert_eq!(rules_of(&update), ["OC-CFG-022"]);
+        let bad_update = validate(r#"{"update": "always"}"#);
+        assert!(rules_of(&bad_update).contains(&"OC-CFG-002"));
+    }
+
+    #[test]
+    fn default_agent_and_instructions_use_the_filesystem() {
+        use crate::fs::MockFileSystem;
+        use std::sync::Arc;
+        let fs = MockFileSystem::new();
+        fs.add_file("/p/.opencode/agents/writer.md", "---\nmode: primary\n---\n");
+        fs.add_file("/p/CONTRIBUTING.md", "x");
+        let mut config = LintConfig::default();
+        config.set_fs(Arc::new(fs));
+        let root = OpenCodeValidator.validate(
+            Path::new("/p/opencode.json"),
+            r#"{"default_agent": "writer", "instructions": ["CONTRIBUTING.md"]}"#,
+            &config,
+        );
+        assert!(root.is_empty(), "{root:?}");
+        let nested = OpenCodeValidator.validate(
+            Path::new("/p/.opencode/opencode.json"),
+            r#"{"default_agent": "writer", "instructions": ["CONTRIBUTING.md", "missing.md"]}"#,
+            &config,
+        );
+        assert_eq!(rules_of(&nested), ["OC-002"], "{nested:?}");
+        let unknown = OpenCodeValidator.validate(
+            Path::new("/p/opencode.json"),
+            r#"{"default_agent": "ghost"}"#,
+            &config,
+        );
+        assert_eq!(rules_of(&unknown), ["OC-CFG-004"]);
+    }
+
+    #[test]
+    fn model_references() {
+        for ok in [
+            r#"{"model": "anthropic/claude-sonnet-4-5"}"#,
+            r#"{"agents": {"a": {"mode": "primary", "model": "anthropic/claude-sonnet-4-5#high"}}}"#,
+            r#"{"agents": {"a": {"mode": "primary", "model": {"providerID": "anthropic", "model": "claude-sonnet-4-5", "variant": "high"}}}}"#,
+        ] {
+            assert!(!rules_of(&validate(ok)).contains(&"OC-CFG-001"), "{ok}");
+        }
+        let bad = validate(r#"{"model": "gpt-5", "small_model": 5}"#);
+        assert_eq!(bad.iter().filter(|d| d.rule == "OC-CFG-001").count(), 2);
+        assert!(bad.iter().any(|d| d.message.contains("'gpt-5'")));
     }
 }

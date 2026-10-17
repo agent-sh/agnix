@@ -1,9 +1,9 @@
 ---
 id: oc-ag-009
-title: "OC-AG-009: Invalid Agent Disable Type - OpenCode"
+title: "OC-AG-009: Invalid Agent disable or disabled Type - OpenCode"
 sidebar_label: "OC-AG-009"
-description: "agnix rule OC-AG-009 checks for invalid agent disable type in opencode files. Severity: HIGH. See examples and fix guidance."
-keywords: ["OC-AG-009", "invalid agent disable type", "opencode", "validation", "agnix", "linter"]
+description: "agnix rule OC-AG-009 checks for invalid agent disable or disabled type in opencode files. Severity: HIGH. See examples and fix guidance."
+keywords: ["OC-AG-009", "invalid agent disable or disabled type", "opencode", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -12,8 +12,8 @@ keywords: ["OC-AG-009", "invalid agent disable type", "opencode", "validation", 
 - **Severity**: `HIGH`
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-23`
+- **Auto-Fix**: `No`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,12 +23,13 @@ keywords: ["OC-AG-009", "invalid agent disable type", "opencode", "validation", 
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/
+- https://opencode.ai/config.json
+- https://opencode.ai/v2/docs/agents/
 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "agent": { "a": { "disabled": "yes" } }
-}
+disable: "yes"
 ```
 
 ### Valid
 
 ```json
-{
-  "agent": { "a": { "disabled": true } }
-}
+disabled: true
 ```

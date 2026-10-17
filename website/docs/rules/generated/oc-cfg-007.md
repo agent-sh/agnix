@@ -13,7 +13,7 @@ keywords: ["OC-CFG-007", "invalid mcp server command, url, cwd, or environment",
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-30`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,8 +23,8 @@ keywords: ["OC-CFG-007", "invalid mcp server command, url, cwd, or environment",
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
-- https://github.com/sst/opencode/pull/30676
+- https://opencode.ai/docs/mcp-servers/
+- https://opencode.ai/v2/docs/mcp-servers/
 - https://opencode.ai/config.json
 
 ## Test Coverage Metadata
@@ -40,15 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "mcp": { "server": { "type": "local", "command": ["node"], "env": { "PORT": 3000 } } }
-}
+{"mcp": {"x": {"type": "remote"}}}
 ```
 
 ### Valid
 
 ```json
-{
-  "mcp": { "server": { "type": "local", "command": ["node"], "environment": { "NODE_ENV": "test" } } }
-}
+{"mcp": {"x": {"type": "remote", "url": "https://mcp.example.com/mcp"}}}
 ```

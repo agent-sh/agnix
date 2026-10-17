@@ -1,19 +1,19 @@
 ---
 id: cdx-cfg-007
-title: "CDX-CFG-007: Danger Full Access Without Acknowledgment"
+title: "CDX-CFG-007: Full Access Sandbox Posture - Codex CLI"
 sidebar_label: "CDX-CFG-007"
-description: "agnix rule CDX-CFG-007 checks for danger full access without acknowledgment in codex cli files. Severity: HIGH. See examples and fix guidance."
-keywords: ["CDX-CFG-007", "danger full access without acknowledgment", "codex cli", "validation", "agnix", "linter"]
+description: "agnix rule CDX-CFG-007 checks for full access sandbox posture in codex cli files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["CDX-CFG-007", "full access sandbox posture", "codex cli", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CDX-CFG-007`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `Codex CLI`
-- **Normative Level**: `MUST`
+- **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,9 +23,10 @@ keywords: ["CDX-CFG-007", "danger full access without acknowledgment", "codex cl
 
 ## Evidence Sources
 
-- https://developers.openai.com/codex/config-reference
-- https://developers.openai.com/codex/config-schema.json
-- https://developers.openai.com/codex/enterprise/managed-configuration
+- https://learn.chatgpt.com/docs/sandboxing
+- https://learn.chatgpt.com/docs/agent-approvals-security
+- https://learn.chatgpt.com/docs/non-interactive-mode
+- https://learn.chatgpt.com/docs/config-file/config-reference
 
 ## Test Coverage Metadata
 
@@ -41,12 +42,12 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ```toml
 sandbox_mode = "danger-full-access"
+approval_policy = "never"
 ```
 
 ### Valid
 
 ```toml
-sandbox_mode = "danger-full-access"
-[notice]
-hide_full_access_warning = true
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
 ```

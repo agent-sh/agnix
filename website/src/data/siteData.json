@@ -1,7 +1,7 @@
 {
-  "totalRules": 535,
+  "totalRules": 577,
   "categoryCount": 43,
-  "autofixCount": 136,
+  "autofixCount": 134,
   "uniqueTools": [
     "amp",
     "claude-code",

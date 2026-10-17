@@ -2,18 +2,18 @@
 id: oc-agm-002
 title: "OC-AGM-002: Secrets in AGENTS.md - OpenCode"
 sidebar_label: "OC-AGM-002"
-description: "agnix rule OC-AGM-002 checks for secrets in agents.md in opencode files. Severity: HIGH. See examples and fix guidance."
+description: "agnix rule OC-AGM-002 checks for secrets in agents.md in opencode files. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["OC-AGM-002", "secrets in agents.md", "opencode", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `OC-AGM-002`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `OpenCode`
-- **Normative Level**: `MUST`
+- **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["OC-AGM-002", "secrets in agents.md", "opencode", "validation", "agni
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/v2/docs/instructions/
+- https://opencode.ai/docs/rules/
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-# AGENTS
-
-API_KEY=sk-123456
+Deploy token: ghp_...
 ```
 
 ### Valid
 
 ```json
-# AGENTS
-
-Use environment variables.
+Use `$GITHUB_TOKEN` from the environment.
 ```

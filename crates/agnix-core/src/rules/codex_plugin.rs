@@ -1,4 +1,4 @@
-//! Codex CLI plugin manifest validation (CDX-PL-001 to CDX-PL-016).
+//! Codex CLI plugin manifest validation (CDX-PL-001 to CDX-PL-019).
 //!
 //! Validates `.codex-plugin/plugin.json` manifests for the Codex CLI
 //! plugin system introduced in v0.117.0.
@@ -28,7 +28,12 @@ const RULE_IDS: &[&str] = &[
     "CDX-PL-014",
     "CDX-PL-015",
     "CDX-PL-016",
+    "CDX-PL-017",
+    "CDX-PL-018",
 ];
+
+/// "Package summary, at most 4000 characters." (plugins/deploy/submission)
+const MAX_DESCRIPTION_CHARS: usize = 4000;
 
 /// Max number of defaultPrompt entries
 const MAX_DEFAULT_PROMPT_COUNT: usize = 3;
@@ -330,29 +335,228 @@ impl Validator for CodexPluginValidator {
             );
         }
 
-        // CDX-PL-014: Missing description (recommendation)
+        let plugin_root = path.parent().and_then(|dir| {
+            if is_in_codex_plugin {
+                dir.parent()
+            } else {
+                Some(dir)
+            }
+        });
+        // A `.codex-plugin/plugin.json` next to a portable root manifest is a
+        // compatibility overlay: identity fields come from the root manifest.
+        let has_portable_root = plugin_root.is_some_and(|root| {
+            config
+                .fs()
+                .read_to_string(&root.join("plugin.json"))
+                .ok()
+                .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+                .and_then(|value| {
+                    value
+                        .get("$schema")
+                        .and_then(|v| v.as_str())
+                        .map(str::to_owned)
+                })
+                .is_some_and(|schema| schema.starts_with(AGENT_PLUGIN_SCHEMA_PREFIX))
+        });
+
+        // CDX-PL-014: required Codex-format package fields. "`description` |
+        // Required for Codex; optional for Agent Plugins | Package summary, at
+        // most 4000 characters", and likewise `version`, `author.name`,
+        // `interface`; "Codex package validation requires both" `logo` and
+        // `composerIcon`.
         if config.is_rule_enabled("CDX-PL-014") {
-            let desc_missing = match raw_value.get("description") {
-                Some(v) => {
-                    !v.is_string() || v.as_str().map(|s| s.trim().is_empty()).unwrap_or(true)
+            if is_in_codex_plugin && !has_portable_root {
+                let interface = raw_value.get("interface");
+                let missing_string = |value: Option<&serde_json::Value>| {
+                    value
+                        .and_then(serde_json::Value::as_str)
+                        .is_none_or(|text| text.trim().is_empty())
+                };
+                let mut missing = Vec::new();
+                if missing_string(raw_value.get("version")) {
+                    missing.push("version");
                 }
-                None => true,
-            };
-            if desc_missing {
+                if missing_string(raw_value.get("description")) {
+                    missing.push("description");
+                }
+                if missing_string(raw_value.get("author").and_then(|a| a.get("name"))) {
+                    missing.push("author.name");
+                }
+                if interface.is_none_or(|i| !i.is_object()) {
+                    missing.push("interface");
+                } else {
+                    if missing_string(interface.and_then(|i| i.get("composerIcon"))) {
+                        missing.push("interface.composerIcon");
+                    }
+                    if missing_string(interface.and_then(|i| i.get("logo"))) {
+                        missing.push("interface.logo");
+                    }
+                }
+                if !missing.is_empty() {
+                    diagnostics.push(
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            1,
+                            1,
+                            "CDX-PL-014",
+                            t!("rules.cdx_pl_014.missing", fields = missing.join(", ")),
+                        )
+                        .with_suggestion(t!("rules.cdx_pl_014.suggestion")),
+                    );
+                }
+            }
+            if let Some(description) = raw_value.get("description").and_then(|v| v.as_str())
+                && description.chars().count() > MAX_DESCRIPTION_CHARS
+            {
+                let line = find_json_key_line(content, "description").unwrap_or(1);
                 diagnostics.push(
                     Diagnostic::warning(
                         path.to_path_buf(),
+                        line,
                         1,
-                        0,
                         "CDX-PL-014",
-                        t!("rules.cdx_pl_014.message"),
+                        t!(
+                            "rules.cdx_pl_014.too_long",
+                            length = description.chars().count(),
+                            max = MAX_DESCRIPTION_CHARS
+                        ),
                     )
-                    .with_suggestion(t!("rules.cdx_pl_014.suggestion")),
+                    .with_suggestion(t!("rules.cdx_pl_014.too_long_suggestion")),
                 );
             }
         }
 
+        // CDX-PL-017: "The root `plugin.json` is the portable entry point.
+        // OpenAI also accepts legacy and Claude-compatible manifests, but new
+        // packages should use this format."
+        if config.is_rule_enabled("CDX-PL-017") && is_in_codex_plugin && !has_portable_root {
+            diagnostics.push(
+                Diagnostic::info(
+                    path.to_path_buf(),
+                    1,
+                    1,
+                    "CDX-PL-017",
+                    t!("rules.cdx_pl_017.message"),
+                )
+                .with_suggestion(t!("rules.cdx_pl_017.suggestion")),
+            );
+        }
+
+        // CDX-PL-018: public submission limits, checked only for manifests
+        // that carry submission metadata ("The limits here are for public
+        // submission; a package upload can accept longer draft text.").
+        if config.is_rule_enabled("CDX-PL-018")
+            && let Some(fields) = codex_fields
+        {
+            submission_limits(
+                &raw_value,
+                fields,
+                plugin_root,
+                path,
+                content,
+                config,
+                &mut diagnostics,
+            );
+        }
+
         diagnostics
+    }
+}
+
+/// Whether a manifest carries public-submission metadata (listing or review
+/// fields), so the submission limits apply.
+fn has_submission_metadata(raw: &serde_json::Value, fields: &serde_json::Value) -> bool {
+    let interface = fields.get("interface");
+    let extension = raw
+        .get("extensions")
+        .and_then(|e| e.get("com.openai"))
+        .or(Some(fields));
+    ["developerName", "category", "longDescription"]
+        .iter()
+        .any(|key| interface.and_then(|i| i.get(*key)).is_some())
+        || ["review", "publication"]
+            .iter()
+            .any(|key| extension.and_then(|e| e.get(*key)).is_some())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn submission_limits(
+    raw: &serde_json::Value,
+    fields: &serde_json::Value,
+    plugin_root: Option<&Path>,
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    if !has_submission_metadata(raw, fields) {
+        return;
+    }
+    let mut push = |key: &str, message: String| {
+        let line = find_json_key_line(content, key).unwrap_or(1);
+        diagnostics.push(
+            Diagnostic::info(path.to_path_buf(), line, 1, "CDX-PL-018", message)
+                .with_suggestion(t!("rules.cdx_pl_018.suggestion")),
+        );
+    };
+    if let Some(name) = raw.get("name").and_then(|v| v.as_str()) {
+        let valid = name.len() <= 64
+            && !name.is_empty()
+            && name.split('-').all(|part| {
+                !part.is_empty()
+                    && part
+                        .bytes()
+                        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+            });
+        if !valid {
+            push("name", t!("rules.cdx_pl_018.name", name = name).to_string());
+        }
+    }
+    let interface = fields.get("interface");
+    for (key, max) in [
+        ("displayName", 30usize),
+        ("shortDescription", 30),
+        ("longDescription", 4000),
+        ("developerName", 80),
+    ] {
+        if let Some(text) = interface.and_then(|i| i.get(key)).and_then(|v| v.as_str())
+            && text.chars().count() > max
+        {
+            push(
+                key,
+                t!(
+                    "rules.cdx_pl_018.too_long",
+                    field = key,
+                    length = text.chars().count(),
+                    max = max
+                )
+                .to_string(),
+            );
+        }
+    }
+    if let Some(capabilities) = interface
+        .and_then(|i| i.get("capabilities"))
+        .and_then(|v| v.as_array())
+    {
+        let too_long = capabilities
+            .iter()
+            .filter_map(|v| v.as_str())
+            .any(|text| text.chars().count() > 120);
+        if capabilities.len() > 20 || too_long {
+            push(
+                "capabilities",
+                t!("rules.cdx_pl_018.capabilities", count = capabilities.len()).to_string(),
+            );
+        }
+    }
+    let has_hooks = fields.get("hooks").is_some_and(|hooks| !hooks.is_null())
+        || plugin_root
+            .is_some_and(|root| config.fs().is_file(&root.join("hooks").join("hooks.json")));
+    if has_hooks {
+        push("hooks", t!("rules.cdx_pl_018.hooks").to_string());
+    }
+    if fields.get("apps").is_some_and(|apps| !apps.is_null()) {
+        push("apps", t!("rules.cdx_pl_018.apps").to_string());
     }
 }
 
@@ -846,6 +1050,172 @@ fn find_json_key_line(content: &str, key: &str) -> Option<usize> {
         .lines()
         .position(|line| line.contains(&needle))
         .map(|idx| idx + 1)
+}
+
+/// CDX-PL-019: MCP configuration bundled in a Codex plugin. "Keep the client
+/// secret out of the package. The manifest doesn't accept a `clientSecret`
+/// field", and "Don't embed a token in server `headers` ... public submission
+/// rejects nonempty server headers." Applies to the plugin root's `.mcp.json`
+/// (Codex format) and `mcp.json` (portable format) when the plugin has a
+/// `.codex-plugin/plugin.json` or OpenAI extension settings.
+pub struct CodexPluginMcpValidator;
+
+/// Header names that carry credentials.
+fn is_credential_header(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    lower == "authorization"
+        || [
+            "token", "api-key", "api_key", "apikey", "secret", "password", "cookie",
+        ]
+        .iter()
+        .any(|needle| lower.contains(needle))
+}
+
+/// A literal credential, ignoring an auth scheme prefix and variable
+/// references such as `${TOKEN}`.
+fn is_literal_credential(value: &str) -> bool {
+    let trimmed = value.trim();
+    let token = ["Bearer ", "bearer ", "Basic ", "basic ", "Token ", "token "]
+        .iter()
+        .find_map(|scheme| trimmed.strip_prefix(scheme))
+        .unwrap_or(trimmed);
+    !token.contains("${") && crate::rules::seems_plaintext_secret(token)
+}
+
+fn is_codex_plugin_root(root: &Path, config: &PerFileLintConfig<'_>) -> bool {
+    let fs = config.fs();
+    if fs.is_file(&root.join(".codex-plugin").join("plugin.json")) {
+        return true;
+    }
+    fs.read_to_string(&root.join("plugin.json"))
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .is_some_and(|manifest| {
+            manifest
+                .get("extensions")
+                .and_then(|e| e.get("com.openai"))
+                .is_some()
+        })
+}
+
+fn find_secret_key(value: &serde_json::Value, trail: &mut Vec<String>) -> Option<Vec<String>> {
+    match value {
+        serde_json::Value::Object(map) => {
+            for (key, nested) in map {
+                trail.push(key.clone());
+                let lower = key.to_ascii_lowercase();
+                if (lower == "clientsecret" || lower == "client_secret")
+                    && nested.as_str().is_some_and(|s| !s.trim().is_empty())
+                {
+                    return Some(trail.clone());
+                }
+                if let Some(found) = find_secret_key(nested, trail) {
+                    return Some(found);
+                }
+                trail.pop();
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+impl Validator for CodexPluginMcpValidator {
+    fn metadata(&self) -> ValidatorMetadata {
+        ValidatorMetadata {
+            name: self.name(),
+            rule_ids: &["CDX-PL-019"],
+        }
+    }
+
+    fn validate_per_file(
+        &self,
+        path: &Path,
+        content: &str,
+        config: &PerFileLintConfig<'_>,
+    ) -> Vec<Diagnostic> {
+        let mut diagnostics = Vec::new();
+        if !config.is_rule_enabled("CDX-PL-019") {
+            return diagnostics;
+        }
+        let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if !matches!(filename, ".mcp.json" | "mcp.json") {
+            return diagnostics;
+        }
+        let Some(root) = path.parent() else {
+            return diagnostics;
+        };
+        if !is_codex_plugin_root(root, config) {
+            return diagnostics;
+        }
+        let Ok(value) = serde_json::from_str::<serde_json::Value>(content) else {
+            return diagnostics;
+        };
+        let Some(servers) = value.get("mcpServers").and_then(|v| v.as_object()) else {
+            return diagnostics;
+        };
+        let document = crate::schemas::kiro_json::parse_json_document(content, false).ok();
+        let pos = |segs: &[crate::rules::config_span::Seg<'_>]| {
+            document
+                .as_ref()
+                .and_then(|doc| crate::rules::config_span::json_offset(&doc.root, segs))
+                .map_or((1, 1), |offset| {
+                    crate::rules::config_span::line_col(content, offset)
+                })
+        };
+        use crate::rules::config_span::Seg;
+        for (server, settings) in servers {
+            let mut trail = Vec::new();
+            if let Some(secret_path) = find_secret_key(settings, &mut trail) {
+                let mut segs = vec![Seg::Key("mcpServers"), Seg::Key(server.as_str())];
+                segs.extend(secret_path.iter().map(|key| Seg::Key(key.as_str())));
+                let (line, column) = pos(&segs);
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        line,
+                        column,
+                        "CDX-PL-019",
+                        t!(
+                            "rules.cdx_pl_019.client_secret",
+                            server = server.as_str(),
+                            field = secret_path.join(".")
+                        ),
+                    )
+                    .with_suggestion(t!("rules.cdx_pl_019.client_secret_suggestion")),
+                );
+            }
+            if let Some(headers) = settings.get("headers").and_then(|v| v.as_object()) {
+                for (header, header_value) in headers {
+                    if is_credential_header(header)
+                        && header_value.as_str().is_some_and(is_literal_credential)
+                    {
+                        let (line, column) = pos(&[
+                            Seg::Key("mcpServers"),
+                            Seg::Key(server.as_str()),
+                            Seg::Key("headers"),
+                            Seg::Key(header.as_str()),
+                        ]);
+                        diagnostics.push(
+                            Diagnostic::warning(
+                                path.to_path_buf(),
+                                line,
+                                column,
+                                "CDX-PL-019",
+                                t!(
+                                    "rules.cdx_pl_019.header",
+                                    server = server.as_str(),
+                                    header = header.as_str()
+                                ),
+                            )
+                            .with_suggestion(t!("rules.cdx_pl_019.header_suggestion")),
+                        );
+                    }
+                }
+            }
+        }
+        diagnostics
+    }
 }
 
 #[cfg(test)]
@@ -1771,6 +2141,9 @@ mod tests {
 
     #[test]
     fn test_cdx_pl_014_has_description() {
+        // The Codex format also requires version, author.name and an
+        // interface with composerIcon and logo (formerly only a missing
+        // description was reported).
         let temp = TempDir::new().unwrap();
         let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
         write_plugin(
@@ -1784,8 +2157,130 @@ mod tests {
             &fs::read_to_string(&plugin_path).unwrap(),
             &LintConfig::default(),
         );
+        let cdx_pl_014: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-PL-014")
+            .collect();
+        assert_eq!(cdx_pl_014.len(), 1);
+        assert!(
+            cdx_pl_014[0]
+                .message
+                .contains("version, author.name, interface")
+        );
+        assert!(!cdx_pl_014[0].message.contains("description"));
 
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"test","version":"1.0.0","description":"A great plugin","author":{"name":"Team"},"interface":{"composerIcon":"./assets/icon.png","logo":"./assets/logo.png"}}"#,
+        );
+        let diagnostics = validator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
         assert!(!diagnostics.iter().any(|d| d.rule == "CDX-PL-014"));
+    }
+
+    #[test]
+    fn test_cdx_pl_014_overlay_next_to_portable_root_and_long_description() {
+        let temp = TempDir::new().unwrap();
+        write_plugin(
+            &temp.path().join("plugin.json"),
+            r#"{"$schema":"https://agent-plugins.org/schemas/1.0.0/plugin.schema.json","name":"p"}"#,
+        );
+        let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+        let long = "d".repeat(4001);
+        write_plugin(
+            &plugin_path,
+            &format!(r#"{{"name":"p","description":"{long}"}}"#),
+        );
+        let diagnostics = CodexPluginValidator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+        let rules: Vec<_> = diagnostics.iter().map(|d| d.rule.as_str()).collect();
+        // Overlay: no required-field or portable-format notes, only the length cap.
+        assert_eq!(rules, ["CDX-PL-014"], "{diagnostics:?}");
+        assert!(diagnostics[0].message.contains("4001"));
+    }
+
+    #[test]
+    fn test_cdx_pl_017_and_018_submission_profile() {
+        let temp = TempDir::new().unwrap();
+        let plugin_path = temp.path().join(".codex-plugin").join("plugin.json");
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"My_Plugin","version":"1.0.0","description":"d","author":{"name":"T"},"hooks":"./hooks/hooks.json",
+               "interface":{"displayName":"A display name that is far too long","developerName":"T","composerIcon":"./assets/i.png","logo":"./assets/l.png"}}"#,
+        );
+        let diagnostics = CodexPluginValidator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+        let count = |rule: &str| diagnostics.iter().filter(|d| d.rule == rule).count();
+        assert_eq!(count("CDX-PL-017"), 1);
+        // name, displayName and lifecycle hooks
+        assert_eq!(count("CDX-PL-018"), 3, "{diagnostics:?}");
+        // Without submission metadata the limits do not apply.
+        write_plugin(
+            &plugin_path,
+            r#"{"name":"My_Plugin","hooks":"./hooks/hooks.json"}"#,
+        );
+        let diagnostics = CodexPluginValidator.validate(
+            &plugin_path,
+            &fs::read_to_string(&plugin_path).unwrap(),
+            &LintConfig::default(),
+        );
+        assert!(!diagnostics.iter().any(|d| d.rule == "CDX-PL-018"));
+    }
+
+    #[test]
+    fn test_cdx_pl_019_secrets_in_plugin_mcp_config() {
+        let temp = TempDir::new().unwrap();
+        write_plugin(
+            &temp.path().join(".codex-plugin").join("plugin.json"),
+            r#"{"name":"p"}"#,
+        );
+        let mcp_path = temp.path().join(".mcp.json");
+        let content = r#"{
+  "mcpServers": {
+    "docs": {
+      "url": "https://example.com/mcp",
+      "headers": {"Authorization": "Bearer sk-live-abcdef1234567890", "X-Trace": "on"},
+      "extensions": {"com.openai": {"auth": {"type": "oauth", "client": {"mode": "provided", "clientId": "c", "clientSecret": "s3cr3t-value-123"}}}}
+    },
+    "env": {"url": "https://example.com/mcp", "headers": {"Authorization": "Bearer ${DOCS_TOKEN}"}}
+  }
+}"#;
+        write_plugin(&mcp_path, content);
+        let diagnostics =
+            CodexPluginMcpValidator.validate(&mcp_path, content, &LintConfig::default());
+        let summary: Vec<_> = diagnostics
+            .iter()
+            .map(|d| (d.rule.as_str(), d.line, d.level))
+            .collect();
+        assert_eq!(
+            summary,
+            [
+                ("CDX-PL-019", 6, crate::diagnostics::DiagnosticLevel::Error),
+                (
+                    "CDX-PL-019",
+                    5,
+                    crate::diagnostics::DiagnosticLevel::Warning
+                ),
+            ]
+        );
+        // Not a Codex plugin: nothing to report.
+        let other = TempDir::new().unwrap();
+        let other_mcp = other.path().join(".mcp.json");
+        write_plugin(&other_mcp, content);
+        assert!(
+            CodexPluginMcpValidator
+                .validate(&other_mcp, content, &LintConfig::default())
+                .is_empty()
+        );
     }
 
     // ===== Category disable =====
@@ -1843,7 +2338,9 @@ mod tests {
             &plugin_path,
             r#"{
                 "name": "my-codex-plugin",
+                "version": "1.0.0",
                 "description": "A test Codex plugin",
+                "author": {"name": "Test team"},
                 "skills": "./skills",
                 "mcpServers": "./mcp-servers",
                 "apps": "./apps",
@@ -1853,17 +2350,23 @@ mod tests {
                     "websiteUrl": "https://example.com",
                     "defaultPrompt": ["Prompt one", "Prompt two"],
                     "logo": "./assets/logo.png",
+                    "composerIcon": "./assets/icon.png",
                     "screenshots": ["./assets/s1.png"]
                 }
             }"#,
         );
 
         let validator = CodexPluginValidator;
-        let diagnostics = validator.validate(
-            &plugin_path,
-            &fs::read_to_string(&plugin_path).unwrap(),
-            &LintConfig::default(),
-        );
+        let diagnostics: Vec<_> = validator
+            .validate(
+                &plugin_path,
+                &fs::read_to_string(&plugin_path).unwrap(),
+                &LintConfig::default(),
+            )
+            .into_iter()
+            // CDX-PL-017 is the informational portable-format note.
+            .filter(|d| d.rule != "CDX-PL-017")
+            .collect();
 
         assert!(
             diagnostics.is_empty(),

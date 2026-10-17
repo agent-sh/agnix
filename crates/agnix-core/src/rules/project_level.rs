@@ -237,6 +237,7 @@ pub(crate) fn run_project_level_checks(
             || config.tool_versions().cursor.is_some()
             || config.tool_versions().copilot.is_some()
             || config.tool_versions().kiro.is_some()
+            || config.tool_versions().opencode.is_some()
             || config.is_mcp_revision_pinned()
             || config.spec_revisions().agent_skills_spec.is_some()
             || config.spec_revisions().agents_md_spec.is_some();

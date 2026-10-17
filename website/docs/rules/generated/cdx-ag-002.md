@@ -2,18 +2,18 @@
 id: cdx-ag-002
 title: "CDX-AG-002: Secrets in AGENTS.md for Codex - Codex CLI"
 sidebar_label: "CDX-AG-002"
-description: "agnix rule CDX-AG-002 checks for secrets in agents.md for codex in codex cli files. Severity: HIGH. See examples and fix guidance."
+description: "agnix rule CDX-AG-002 checks for secrets in agents.md for codex in codex cli files. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["CDX-AG-002", "secrets in agents.md for codex", "codex cli", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CDX-AG-002`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `Codex CLI`
-- **Normative Level**: `MUST`
+- **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,6 +23,7 @@ keywords: ["CDX-AG-002", "secrets in agents.md for codex", "codex cli", "validat
 
 ## Evidence Sources
 
+- https://learn.chatgpt.com/docs/customization/overview
 - https://learn.chatgpt.com/docs/agent-configuration/agents-md
 
 ## Test Coverage Metadata

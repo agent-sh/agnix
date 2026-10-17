@@ -12,8 +12,8 @@ keywords: ["OC-DEP-003", "deprecated autoshare field", "opencode", "validation",
 - **Severity**: `MEDIUM`
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
-- **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-23`
+- **Auto-Fix**: `Yes (unsafe)`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["OC-DEP-003", "deprecated autoshare field", "opencode", "validation",
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/config.json
 
 ## Test Coverage Metadata
 
@@ -38,15 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "autoshare": "manual"
-}
+{"autoshare": true}
 ```
 
 ### Valid
 
 ```json
-{
-  "share": "manual"
-}
+{"share": "auto"}
 ```

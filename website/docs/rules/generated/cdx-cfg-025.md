@@ -13,7 +13,7 @@ keywords: ["CDX-CFG-025", "invalid service tier value", "codex cli", "validation
 - **Category**: `Codex CLI`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["CDX-CFG-025", "invalid service tier value", "codex cli", "validation
 
 ## Evidence Sources
 
-- https://developers.openai.com/codex/
+- https://learn.chatgpt.com/docs/config-file/config-reference
+- https://learn.chatgpt.com/docs/config-schema.json
 
 ## Test Coverage Metadata
 

@@ -13,7 +13,7 @@ keywords: ["OC-AG-007", "redundant steps and maxsteps", "opencode", "validation"
 - **Category**: `OpenCode`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["OC-AG-007", "redundant steps and maxsteps", "opencode", "validation"
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/agents/
 
 ## Test Coverage Metadata
 
@@ -38,15 +38,12 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "agent": { "a": { "steps": 10, "maxSteps": 20 } }
-}
+steps: 20
+maxSteps: 20
 ```
 
 ### Valid
 
 ```json
-{
-  "agent": { "a": { "steps": 20 } }
-}
+steps: 20
 ```

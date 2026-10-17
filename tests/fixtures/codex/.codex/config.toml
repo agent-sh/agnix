@@ -1,5 +1,7 @@
-model = "o4-mini"
-approvalMode = "suggest"
-fullAutoErrorMode = "ask-user"
-notify = true
+model = "gpt-5"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
 project_doc_max_bytes = 32768
+
+[sandbox_workspace_write]
+network_access = false

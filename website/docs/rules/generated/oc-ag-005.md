@@ -13,7 +13,7 @@ keywords: ["OC-AG-005", "top_p out of range", "opencode", "validation", "agnix",
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["OC-AG-005", "top_p out of range", "opencode", "validation", "agnix",
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/agents/
 
 ## Test Coverage Metadata
 
@@ -38,15 +38,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "agent": { "a": { "top_p": 1.5 } }
-}
+top_p: 1.5
 ```
 
 ### Valid
 
 ```json
-{
-  "agent": { "a": { "top_p": 0.9 } }
-}
+top_p: 0.9
 ```

@@ -2,18 +2,18 @@
 id: oc-ag-003
 title: "OC-AG-003: Temperature Out of Range - OpenCode"
 sidebar_label: "OC-AG-003"
-description: "agnix rule OC-AG-003 checks for temperature out of range in opencode files. Severity: HIGH. See examples and fix guidance."
+description: "agnix rule OC-AG-003 checks for temperature out of range in opencode files. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["OC-AG-003", "temperature out of range", "opencode", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `OC-AG-003`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `OpenCode`
-- **Normative Level**: `MUST`
+- **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["OC-AG-003", "temperature out of range", "opencode", "validation", "a
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/agents/
+- https://opencode.ai/config.json
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "agent": { "custom": { "temperature": 3.5 } }
-}
+temperature: 5
 ```
 
 ### Valid
 
 ```json
-{
-  "agent": { "custom": { "temperature": 0.7 } }
-}
+temperature: 0.1
 ```

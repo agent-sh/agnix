@@ -2,18 +2,18 @@
 id: cdx-ag-003
 title: "CDX-AG-003: Generic AGENTS.md Guidance for Codex - Codex CLI"
 sidebar_label: "CDX-AG-003"
-description: "agnix rule CDX-AG-003 checks for generic agents.md guidance for codex in codex cli files. Severity: MEDIUM. See examples and fix guidance."
+description: "agnix rule CDX-AG-003 checks for generic agents.md guidance for codex in codex cli files. Severity: LOW. See examples and fix guidance."
 keywords: ["CDX-AG-003", "generic agents.md guidance for codex", "codex cli", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `CDX-AG-003`
-- **Severity**: `MEDIUM`
+- **Severity**: `LOW`
 - **Category**: `Codex CLI`
-- **Normative Level**: `SHOULD`
+- **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CDX-AG-003", "generic agents.md guidance for codex", "codex cli", "v
 
 ## Evidence Sources
 
-- https://learn.chatgpt.com/docs/agent-configuration/agents-md
+- https://learn.chatgpt.com/guides/best-practices
 
 ## Test Coverage Metadata
 

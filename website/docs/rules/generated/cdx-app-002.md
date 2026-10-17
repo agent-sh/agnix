@@ -13,7 +13,7 @@ keywords: ["CDX-APP-002", "invalid skills configuration", "codex cli", "validati
 - **Category**: `Codex CLI`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,8 +23,8 @@ keywords: ["CDX-APP-002", "invalid skills configuration", "codex cli", "validati
 
 ## Evidence Sources
 
-- https://developers.openai.com/codex/config-reference
-- https://developers.openai.com/codex/config-schema.json
+- https://learn.chatgpt.com/docs/config-file/config-reference
+- https://learn.chatgpt.com/docs/config-schema.json
 
 ## Test Coverage Metadata
 

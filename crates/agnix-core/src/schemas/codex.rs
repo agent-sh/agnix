@@ -3,22 +3,11 @@
 //! Provides parsing and validation for `.codex/config.toml` configuration files.
 //!
 //! Validates:
-//! - `approvalMode` field values (suggest, auto-edit, full-auto)
-//! - `fullAutoErrorMode` field values (ask-user, ignore-and-continue)
 //! - Unknown config keys (CDX-004)
 //! - `project_doc_max_bytes` nonnegative integer type (CDX-005)
 //! - `project_doc_fallback_filenames` shape/content (CDX-006)
 
 use serde::{Deserialize, Serialize};
-
-/// Valid values for the `approvalMode` field
-pub const VALID_APPROVAL_MODES: &[&str] = &["suggest", "auto-edit", "full-auto"];
-
-/// Valid values for the `fullAutoErrorMode` field
-pub const VALID_FULL_AUTO_ERROR_MODES: &[&str] = &["ask-user", "ignore-and-continue"];
-
-/// Valid values for `sandbox_workspace_write.mode`
-pub const VALID_SANDBOX_WORKSPACE_WRITE_MODES: &[&str] = &["allowlist", "denylist", "all"];
 
 /// Valid values for `model_reasoning_summary`
 pub const VALID_MODEL_REASONING_SUMMARIES: &[&str] =
@@ -37,16 +26,18 @@ pub const VALID_MCP_OAUTH_STORES: &[&str] = &["file", "keyring", "auto", "epheme
 /// When catching up to a new Codex release, regenerate this list by diffing
 /// `codex-rs/core/config.schema.json` against these constants.
 ///
-/// The list is intentionally a lenient superset, with two classes of entries
+/// The list is intentionally a lenient superset with one class of entries
 /// that are *not* in the current schema and are kept deliberately:
-/// 1. Older-version tolerance - keys a real version once shipped but a newer
-///    schema dropped (e.g. `commit_attribution`,
-///    `experimental_use_freeform_apply_patch`, `windows_wsl_setup_acknowledged`,
-///    `experimental_thread_store_endpoint`, `model_supports_reasoning_summaries`,
-///    and `zsh_path` were in earlier releases and later removed by
-///    `rust-v0.133.0` through `rust-v0.145.0`).
-/// 2. Legacy camelCase keys (`approvalMode`, `fullAutoErrorMode`) - never in the
-///    (snake_case) schema, accepted from early Codex configs.
+/// older-version tolerance - keys a real version once shipped but a newer
+/// schema dropped (e.g. `commit_attribution`,
+/// `experimental_use_freeform_apply_patch`, `windows_wsl_setup_acknowledged`,
+/// `experimental_thread_store_endpoint`, `model_supports_reasoning_summaries`,
+/// and `zsh_path` were in earlier releases and later removed by
+/// `rust-v0.133.0` through `rust-v0.145.0`).
+///
+/// The camelCase `approvalMode` and `fullAutoErrorMode` of the retired
+/// TypeScript CLI are not known keys: the Rust CLI ignores them, so CDX-004
+/// reports them (CDX-001 and CDX-002 were retired).
 ///
 /// Leniency only weakens typo detection, never false-positives. Keys that no
 /// audited schema ever contained and have no such backwards-compat reason are
@@ -164,10 +155,6 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     // Added by the tagged rust-v0.154.0 configuration schema.
     "allow_symlinked_codex_home",
     "thread_unload_delay_secs",
-    // Legacy camelCase keys: never in `config.schema.json` (which is snake_case)
-    // but accepted from very early Codex configs for backwards compatibility.
-    "approvalMode",
-    "fullAutoErrorMode",
 ];
 
 /// Known valid TOML table names (sections like `[sandbox_workspace_write]`)
@@ -242,22 +229,11 @@ pub struct UnknownKey {
 
 /// Partial schema for .codex/config.toml (only fields we validate)
 ///
-/// Note: The actual TOML keys use camelCase (`approvalMode`, `fullAutoErrorMode`).
-/// We use manual `toml::Value` parsing in `parse_codex_toml` rather than serde
-/// deserialization so that type mismatches (e.g. `approvalMode = true`) are
-/// reported as CDX-001/CDX-002 diagnostics instead of generic parse errors.
-/// The `#[serde(rename)]` attributes are kept for documentation and in case
-/// the struct is ever deserialized directly.
+/// `parse_codex_toml` extracts these with manual `toml::Value` parsing rather
+/// than serde deserialization so that type mismatches are reported as
+/// CDX-005/CDX-006 diagnostics instead of generic parse errors.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CodexConfigSchema {
-    /// Approval mode for Codex CLI (TOML key: `approvalMode`)
-    #[serde(default, rename = "approvalMode")]
-    pub approval_mode: Option<String>,
-
-    /// Error handling mode for full-auto mode (TOML key: `fullAutoErrorMode`)
-    #[serde(default, rename = "fullAutoErrorMode")]
-    pub full_auto_error_mode: Option<String>,
-
     /// Maximum size for project documentation files in bytes
     #[serde(default)]
     pub project_doc_max_bytes: Option<i64>,
@@ -274,10 +250,6 @@ pub struct ParsedCodexConfig {
     pub schema: Option<CodexConfigSchema>,
     /// Parse error if TOML is invalid
     pub parse_error: Option<ParseError>,
-    /// Whether `approvalMode` key exists but has wrong type (not a string)
-    pub approval_mode_wrong_type: bool,
-    /// Whether `fullAutoErrorMode` key exists but has wrong type (not a string)
-    pub full_auto_error_mode_wrong_type: bool,
     /// Whether `project_doc_max_bytes` key exists but has wrong type (not an integer)
     pub project_doc_max_bytes_wrong_type: bool,
     /// Whether `project_doc_fallback_filenames` key exists but has wrong type (not an array)
@@ -302,8 +274,8 @@ pub struct ParseError {
 ///
 /// Uses a two-pass approach: first validates TOML syntax with `toml::Value`,
 /// then extracts the typed schema. This ensures that type mismatches (e.g.,
-/// `approvalMode = true`) are reported as CDX-001/CDX-002 issues rather than
-/// generic parse errors.
+/// `project_doc_max_bytes = "big"`) are reported as CDX-005/CDX-006 issues
+/// rather than generic parse errors.
 ///
 /// # Input size
 ///
@@ -347,8 +319,6 @@ pub fn parse_codex_toml(content: &str) -> ParsedCodexConfig {
                     line,
                     column,
                 }),
-                approval_mode_wrong_type: false,
-                full_auto_error_mode_wrong_type: false,
                 project_doc_max_bytes_wrong_type: false,
                 project_doc_fallback_filenames_wrong_type: false,
                 project_doc_fallback_filename_non_string_indices: Vec::new(),
@@ -359,20 +329,7 @@ pub fn parse_codex_toml(content: &str) -> ParsedCodexConfig {
     };
 
     // Second pass: extract typed fields permissively, tracking type mismatches
-    // TOML keys use camelCase: approvalMode, fullAutoErrorMode
     let table = Some(&parsed_table);
-
-    let approval_mode_value = table.and_then(|t| t.get("approvalMode"));
-    let approval_mode_wrong_type = approval_mode_value.is_some_and(|v| !v.is_str());
-    let approval_mode = approval_mode_value
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    let full_auto_error_mode_value = table.and_then(|t| t.get("fullAutoErrorMode"));
-    let full_auto_error_mode_wrong_type = full_auto_error_mode_value.is_some_and(|v| !v.is_str());
-    let full_auto_error_mode = full_auto_error_mode_value
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
 
     // Extract project_doc_max_bytes (CDX-005)
     let project_doc_max_bytes_value = table.and_then(|t| t.get("project_doc_max_bytes"));
@@ -415,14 +372,10 @@ pub fn parse_codex_toml(content: &str) -> ParsedCodexConfig {
 
     ParsedCodexConfig {
         schema: Some(CodexConfigSchema {
-            approval_mode,
-            full_auto_error_mode,
             project_doc_max_bytes,
             project_doc_fallback_filenames,
         }),
         parse_error: None,
-        approval_mode_wrong_type,
-        full_auto_error_mode_wrong_type,
         project_doc_max_bytes_wrong_type,
         project_doc_fallback_filenames_wrong_type,
         project_doc_fallback_filename_non_string_indices,
@@ -491,16 +444,14 @@ mod tests {
     fn test_parse_valid_config() {
         let content = r#"
 model = "o4-mini"
-approvalMode = "suggest"
-fullAutoErrorMode = "ask-user"
 notify = true
+project_doc_max_bytes = 65536
 "#;
         let result = parse_codex_toml(content);
-        assert!(result.schema.is_some());
         assert!(result.parse_error.is_none());
         let schema = result.schema.unwrap();
-        assert_eq!(schema.approval_mode, Some("suggest".to_string()));
-        assert_eq!(schema.full_auto_error_mode, Some("ask-user".to_string()));
+        assert_eq!(schema.project_doc_max_bytes, Some(65536));
+        assert!(result.unknown_keys.is_empty());
     }
 
     #[test]
@@ -510,8 +461,7 @@ notify = true
         assert!(result.schema.is_some());
         assert!(result.parse_error.is_none());
         let schema = result.schema.unwrap();
-        assert!(schema.approval_mode.is_none());
-        assert!(schema.full_auto_error_mode.is_none());
+        assert!(schema.project_doc_max_bytes.is_none());
         assert!(schema.project_doc_fallback_filenames.is_none());
     }
 
@@ -524,65 +474,19 @@ notify = true
     }
 
     #[test]
-    fn test_valid_approval_modes() {
-        for mode in VALID_APPROVAL_MODES {
-            let content = format!("approvalMode = \"{}\"", mode);
-            let result = parse_codex_toml(&content);
-            assert!(result.schema.is_some());
-            assert_eq!(result.schema.unwrap().approval_mode, Some(mode.to_string()));
-        }
-    }
-
-    #[test]
-    fn test_valid_full_auto_error_modes() {
-        for mode in VALID_FULL_AUTO_ERROR_MODES {
-            let content = format!("fullAutoErrorMode = \"{}\"", mode);
-            let result = parse_codex_toml(&content);
-            assert!(result.schema.is_some());
-            assert_eq!(
-                result.schema.unwrap().full_auto_error_mode,
-                Some(mode.to_string())
-            );
-        }
-    }
-
-    #[test]
-    fn test_parse_extra_fields_ignored() {
-        let content = r#"
-model = "o4-mini"
-approvalMode = "suggest"
-fullAutoErrorMode = "ask-user"
-notify = true
-provider = "openai"
-"#;
+    fn test_retired_typescript_cli_keys_are_unknown() {
+        // approvalMode and fullAutoErrorMode belong to the retired TypeScript
+        // CLI; the Rust CLI ignores them, so CDX-004 reports them.
+        let content = "approvalMode = \"suggest\"\nfullAutoErrorMode = \"ask-user\"\n";
         let result = parse_codex_toml(content);
-        assert!(result.schema.is_some());
-        assert!(result.parse_error.is_none());
-    }
-
-    #[test]
-    fn test_approval_mode_wrong_type() {
-        let content = "approvalMode = true";
-        let result = parse_codex_toml(content);
-        assert!(result.approval_mode_wrong_type);
-        assert!(!result.full_auto_error_mode_wrong_type);
-        assert!(result.schema.is_some());
-        assert!(result.schema.unwrap().approval_mode.is_none());
-    }
-
-    #[test]
-    fn test_full_auto_error_mode_wrong_type() {
-        let content = "fullAutoErrorMode = 123";
-        let result = parse_codex_toml(content);
-        assert!(!result.approval_mode_wrong_type);
-        assert!(result.full_auto_error_mode_wrong_type);
-        assert!(result.schema.is_some());
-        assert!(result.schema.unwrap().full_auto_error_mode.is_none());
+        let keys: Vec<_> = result.unknown_keys.iter().map(|u| u.key.as_str()).collect();
+        assert!(keys.contains(&"approvalMode"), "{keys:?}");
+        assert!(keys.contains(&"fullAutoErrorMode"), "{keys:?}");
     }
 
     #[test]
     fn test_parse_error_location() {
-        let content = "approvalMode = [unclosed";
+        let content = "model = [unclosed";
         let result = parse_codex_toml(content);
         assert!(result.parse_error.is_some());
         let err = result.parse_error.unwrap();
@@ -621,8 +525,6 @@ provider = "openai"
     fn test_known_keys_not_flagged() {
         let content = r#"
 model = "o4-mini"
-approvalMode = "suggest"
-fullAutoErrorMode = "ask-user"
 notify = true
 project_doc_max_bytes = 32768
 project_doc_fallback_filenames = ["AGENTS.md", "README.md"]

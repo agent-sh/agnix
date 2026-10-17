@@ -13,7 +13,7 @@ keywords: ["OC-AG-004", "steps not a positive integer", "opencode", "validation"
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["OC-AG-004", "steps not a positive integer", "opencode", "validation"
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/config.json
+- https://opencode.ai/v2/docs/agents/
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "agent": { "custom": { "steps": -5 } }
-}
+steps: 0
 ```
 
 ### Valid
 
 ```json
-{
-  "agent": { "custom": { "steps": 50 } }
-}
+steps: 8
 ```

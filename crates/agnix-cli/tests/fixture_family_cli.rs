@@ -120,35 +120,79 @@ make_cli_test!(
     ["GM-001", "GM-002", "GM-003"]
 );
 
+// CDX-001, CDX-002 and CDX-003 were retired (the TypeScript CLI keys are now
+// CDX-004 unknown keys; committed AGENTS.override.md files are a documented
+// pattern), so the fixture now covers the current Codex rules instead.
 make_cli_test!(
     test_cli_reports_codex_invalid_fixtures,
     "codex-invalid",
-    ["CDX-001", "CDX-002", "CDX-003"]
+    [
+        "CDX-004",
+        "CDX-AG-008",
+        "CDX-CFG-007",
+        "CDX-CFG-031",
+        "CDX-CFG-035",
+        "CDX-HK-000",
+        "CDX-HK-005",
+        "CDX-SUB-001",
+        "CDX-RL-002",
+        "CDX-DEP-001",
+        "CDX-REQ-002",
+        "CDX-PL-019",
+        "CX-SK-006"
+    ]
 );
 
 #[test]
 fn test_cli_codex_invalid_fixture_counts() {
     let path = workspace_root().join("tests/fixtures/codex-invalid");
     let json = run_json(&path);
-    // The codex-invalid fixture has exactly one of each CDX rule:
-    // CDX-001 from approvalMode = "yolo", CDX-002 from fullAutoErrorMode = "crash",
-    // CDX-003 from AGENTS.override.md
+    // The fixture has exactly one approvalMode key (CDX-004), one
+    // AGENTS.md shadowed by AGENTS.override.md (CDX-AG-008), and two
+    // invalid permission-profile names (CDX-CFG-035: default_permissions
+    // and permissions.dev.extends).
     assert_eq!(
-        count_rule(&json, "CDX-001"),
+        count_rule(&json, "CDX-004"),
         1,
-        "Expected exactly 1 CDX-001"
+        "Expected exactly 1 CDX-004"
     );
     assert_eq!(
-        count_rule(&json, "CDX-002"),
+        count_rule(&json, "CDX-AG-008"),
         1,
-        "Expected exactly 1 CDX-002"
+        "Expected exactly 1 CDX-AG-008"
     );
     assert_eq!(
-        count_rule(&json, "CDX-003"),
-        1,
-        "Expected exactly 1 CDX-003"
+        count_rule(&json, "CDX-CFG-035"),
+        2,
+        "Expected exactly 2 CDX-CFG-035"
     );
+    for retired in ["CDX-001", "CDX-002", "CDX-003"] {
+        assert_eq!(count_rule(&json, retired), 0, "{retired} is retired");
+    }
 }
+
+// OpenCode: an OpenCode 1 shaped root config, an OpenCode 2 shaped nested
+// config, Markdown agents and commands, a custom tool, instruction files and
+// a skill defined in two sources.
+make_cli_test!(
+    test_cli_reports_opencode_invalid_fixtures,
+    "opencode-invalid",
+    [
+        "OC-001",
+        "OC-004",
+        "OC-PM-003",
+        "OC-CFG-015",
+        "OC-DEP-009",
+        "OC-PM-005",
+        "OC-POL-001",
+        "OC-AG-010",
+        "OC-CMD-001",
+        "OC-TOOL-001",
+        "OC-AGM-002",
+        "OC-AGM-003",
+        "OC-SK-002"
+    ]
+);
 
 #[test]
 fn test_cli_reports_pe_fixtures() {

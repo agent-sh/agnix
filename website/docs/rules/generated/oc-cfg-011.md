@@ -13,7 +13,7 @@ keywords: ["OC-CFG-011", "invalid mcp timeout", "opencode", "validation", "agnix
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,9 @@ keywords: ["OC-CFG-011", "invalid mcp timeout", "opencode", "validation", "agnix
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/mcp-servers/
+- https://opencode.ai/v2/docs/mcp-servers/
+- https://opencode.ai/config.json
 
 ## Test Coverage Metadata
 
@@ -38,15 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "mcp": { "srv": { "timeout": -5 } }
-}
+{"mcp": {"x": {"type": "local", "command": ["x"], "timeout": -5}}}
 ```
 
 ### Valid
 
 ```json
-{
-  "mcp": { "srv": { "timeout": 5000 } }
-}
+{"mcp": {"x": {"type": "local", "command": ["x"], "timeout": 5000}}}
 ```

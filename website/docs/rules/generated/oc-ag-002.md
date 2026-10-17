@@ -13,7 +13,7 @@ keywords: ["OC-AG-002", "invalid color format", "opencode", "validation", "agnix
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["OC-AG-002", "invalid color format", "opencode", "validation", "agnix
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/config.json
+- https://opencode.ai/v2/docs/agents/
 
 ## Test Coverage Metadata
 
@@ -38,15 +39,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "agent": { "custom": { "color": "red" } }
-}
+color: "#f00"
 ```
 
 ### Valid
 
 ```json
-{
-  "agent": { "custom": { "color": "#ff0000" } }
-}
+color: "#ff6b6b"
 ```

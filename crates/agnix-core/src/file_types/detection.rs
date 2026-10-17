@@ -283,6 +283,62 @@ fn has_clinerules_ancestor(path: &Path) -> bool {
 }
 
 // ============================================================================
+// Codex CLI and OpenCode
+// ============================================================================
+
+/// The subdirectory directly below the nearest OpenCode configuration
+/// directory in `path`'s parent chain: the project `.opencode/`, the global
+/// `~/.config/opencode/`, or a system directory (`/etc/opencode`,
+/// `/Library/Application Support/opencode`, `%ProgramData%\opencode`), which
+/// "loads agents/, commands/, skills/, and plugins/" like the global one.
+fn opencode_subdir(path: &Path) -> Option<&str> {
+    let dirs = normal_components(path.parent()?);
+    let root = dirs.iter().enumerate().rev().find_map(|(index, dir)| {
+        let system_or_global = *dir == "opencode"
+            && index > 0
+            && matches!(
+                dirs[index - 1],
+                ".config" | "etc" | "Application Support" | "ProgramData"
+            );
+        (*dir == ".opencode" || system_or_global).then_some(index)
+    })?;
+    dirs.get(root + 1).copied()
+}
+
+/// OpenCode directory-based files: Markdown agents (`agents/`, and the legacy
+/// `agent/`, `modes/` and `mode/`), Markdown commands (`commands/`, legacy
+/// `command/`), and TypeScript or JavaScript custom tools and plugins
+/// (`tools/`, `plugins/`, legacy `tool/`, `plugin/`). Nested paths are part of
+/// the agent or command ID, so any depth counts.
+fn detect_opencode_dir_file(path: &Path, filename: &str) -> Option<FileType> {
+    let subdir = opencode_subdir(path)?;
+    let is_markdown = filename.ends_with(".md");
+    let is_module = [".ts", ".js", ".mts", ".mjs", ".cts", ".cjs"]
+        .iter()
+        .any(|ext| filename.ends_with(ext));
+    match subdir {
+        "agents" | "agent" | "modes" | "mode" if is_markdown => Some(FileType::OpenCodeAgent),
+        "commands" | "command" if is_markdown => Some(FileType::OpenCodeCommand),
+        "tools" | "tool" if is_module => Some(FileType::OpenCodeTool),
+        "plugins" | "plugin" if is_module => Some(FileType::OpenCodePlugin),
+        _ => None,
+    }
+}
+
+/// Codex skill interface metadata: `agents/openai.yaml` inside a skill
+/// directory, which lives under a `skills/` directory (`.agents/skills/<name>/`,
+/// `~/.codex/skills/<name>/`, or a plugin's `skills/<name>/`).
+fn is_codex_skill_metadata(path: &Path, filename: &str, parent: Option<&str>) -> bool {
+    filename == "openai.yaml"
+        && parent == Some("agents")
+        && path
+            .parent()
+            .and_then(Path::parent)
+            .and_then(Path::parent)
+            .is_some_and(|dir| normal_components(dir).contains(&"skills"))
+}
+
+// ============================================================================
 // Kiro CLI
 // ============================================================================
 //
@@ -882,6 +938,21 @@ pub fn detect_file_type(path: &Path) -> FileType {
         return file_type;
     }
 
+    // OpenCode agents, commands, custom tools and plugins live in fixed
+    // directories under `.opencode/` or `~/.config/opencode/`; the directory
+    // decides the type even for AGENTS.md or README.md file names, which
+    // OpenCode loads as agents or commands like any other Markdown file.
+    if let Some(file_type) = detect_opencode_dir_file(path, filename) {
+        return file_type;
+    }
+
+    // Codex custom prompts (`~/.codex/prompts/*.md`), deprecated in favor of
+    // skills.
+    if filename.ends_with(".md") && path_contains_consecutive_components(path, ".codex", "prompts")
+    {
+        return FileType::CodexPrompt;
+    }
+
     // Gemini CLI local agent markdown files live under `.gemini/agents/`.
     // They have YAML frontmatter with `kind: local`, a `mcp_servers` map,
     // and a system_prompt. Schema documented via the gemini-cli source at
@@ -1080,6 +1151,27 @@ pub fn detect_file_type(path: &Path) -> FileType {
         "requirements.toml" if parent_eq_ignore_ascii_case(parent, "codex") => {
             FileType::CodexRequirements
         }
+        // Codex CLI lifecycle hooks next to the project or user config layer
+        // (`.codex/hooks.json`, `~/.codex/hooks.json`).
+        "hooks.json" if parent == Some(".codex") => FileType::CodexHooks,
+        // Codex CLI custom agents (`.codex/agents/*.toml`, `~/.codex/agents/*.toml`).
+        name if name.ends_with(".toml")
+            && parent == Some("agents")
+            && grandparent == Some(".codex") =>
+        {
+            FileType::CodexAgent
+        }
+        // Codex CLI command rules in a config layer's `rules/` folder
+        // (`.codex/rules/*.rules`, `~/.codex/rules/*.rules`, `/etc/codex/rules/`).
+        name if name.ends_with(".rules")
+            && parent == Some("rules")
+            && (grandparent == Some(".codex")
+                || parent_eq_ignore_ascii_case(grandparent, "codex")) =>
+        {
+            FileType::CodexRules
+        }
+        // Codex skill interface metadata (`<skill>/agents/openai.yaml`).
+        name if is_codex_skill_metadata(path, name, parent) => FileType::CodexSkillMetadata,
         name if name.ends_with(".md") => {
             // Agent directories take precedence over filename exclusions.
             // Files like agents/README.md should be validated as agent configs.
@@ -1818,6 +1910,118 @@ mod tests {
         assert_ne!(
             detect_file_type(Path::new("requirements.toml")),
             FileType::CodexRequirements
+        );
+    }
+
+    #[test]
+    fn detect_codex_hooks_agents_rules_prompts_and_skill_metadata() {
+        for (path, expected) in [
+            (".codex/hooks.json", FileType::CodexHooks),
+            ("/home/me/.codex/hooks.json", FileType::CodexHooks),
+            (".codex/agents/reviewer.toml", FileType::CodexAgent),
+            (
+                "/home/me/.codex/agents/pr-explorer.toml",
+                FileType::CodexAgent,
+            ),
+            (".codex/rules/default.rules", FileType::CodexRules),
+            ("/etc/codex/rules/team.rules", FileType::CodexRules),
+            ("/home/me/.codex/prompts/draftpr.md", FileType::CodexPrompt),
+            (
+                ".agents/skills/sora/agents/openai.yaml",
+                FileType::CodexSkillMetadata,
+            ),
+            (
+                "/home/me/.codex/skills/.system/imagegen/agents/openai.yaml",
+                FileType::CodexSkillMetadata,
+            ),
+            (
+                "plugin/skills/a/agents/openai.yaml",
+                FileType::CodexSkillMetadata,
+            ),
+        ] {
+            assert_eq!(detect_file_type(Path::new(path)), expected, "{path}");
+        }
+        // Not Codex files: other tools' hooks.json, TOML outside .codex/agents,
+        // and an openai.yaml that is not inside a skill.
+        assert_eq!(
+            detect_file_type(Path::new("plugin/hooks/hooks.json")),
+            FileType::Hooks
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".cursor/hooks.json")),
+            FileType::CursorHooks
+        );
+        for path in [
+            "agents/reviewer.toml",
+            ".codex/reviewer.toml",
+            "rules/default.rules",
+            "agents/openai.yaml",
+            "project/agents/openai.yaml",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::Unknown,
+                "{path}"
+            );
+        }
+    }
+
+    #[test]
+    fn detect_opencode_agents_commands_tools_and_plugins() {
+        for (path, expected) in [
+            (".opencode/agents/review.md", FileType::OpenCodeAgent),
+            (".opencode/agents/team/reviewer.md", FileType::OpenCodeAgent),
+            (".opencode/agent/review.md", FileType::OpenCodeAgent),
+            (".opencode/modes/focus.md", FileType::OpenCodeAgent),
+            (".opencode/agents/AGENTS.md", FileType::OpenCodeAgent),
+            (
+                "/home/me/.config/opencode/agents/review.md",
+                FileType::OpenCodeAgent,
+            ),
+            ("/etc/opencode/agents/review.md", FileType::OpenCodeAgent),
+            (".opencode/commands/review.md", FileType::OpenCodeCommand),
+            (
+                ".opencode/command/team/review.md",
+                FileType::OpenCodeCommand,
+            ),
+            (
+                "/home/me/.config/opencode/commands/audit.md",
+                FileType::OpenCodeCommand,
+            ),
+            (".opencode/tools/database.ts", FileType::OpenCodeTool),
+            (".opencode/tool/math.js", FileType::OpenCodeTool),
+            (".opencode/plugins/notify.ts", FileType::OpenCodePlugin),
+            (
+                "/home/me/.config/opencode/plugin/agentsys.ts",
+                FileType::OpenCodePlugin,
+            ),
+        ] {
+            assert_eq!(detect_file_type(Path::new(path)), expected, "{path}");
+        }
+        // Skills, configs and unrelated files keep their types.
+        assert_eq!(
+            detect_file_type(Path::new(".opencode/skills/git-release/SKILL.md")),
+            FileType::Skill
+        );
+        assert_eq!(
+            detect_file_type(Path::new(".opencode/opencode.jsonc")),
+            FileType::OpenCodeConfig
+        );
+        assert_eq!(
+            detect_file_type(Path::new(
+                "/home/me/.config/opencode/node_modules/x/README.md"
+            )),
+            FileType::Unknown
+        );
+        // Claude subagents are unaffected.
+        assert_eq!(
+            detect_file_type(Path::new(".claude/agents/review.md")),
+            FileType::Agent
+        );
+        // A tools/ directory outside OpenCode is not a custom tool.
+        assert_eq!(
+            detect_file_type(Path::new("src/tools/database.ts")),
+            FileType::Unknown
         );
     }
 

@@ -13,7 +13,7 @@ keywords: ["OC-CFG-006", "invalid mcp server structure", "opencode", "validation
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-23`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,9 @@ keywords: ["OC-CFG-006", "invalid mcp server structure", "opencode", "validation
 
 ## Evidence Sources
 
-- https://opencode.ai/docs/config
+- https://opencode.ai/docs/mcp-servers/
+- https://opencode.ai/v2/docs/mcp-servers/
+- https://opencode.ai/config.json
 
 ## Test Coverage Metadata
 
@@ -38,15 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{
-  "mcp": { "server": { "type": "invalid" } }
-}
+{"mcp": {"pw": {"command": ["npx", "@playwright/mcp"]}}}
 ```
 
 ### Valid
 
 ```json
-{
-  "mcp": { "server": { "type": "local", "command": ["node"] } }
-}
+{"mcp": {"servers": {"pw": {"type": "local", "command": ["npx", "@playwright/mcp"]}}}}
 ```

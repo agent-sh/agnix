@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 88;
+const EXPECTED_BUILTIN_COUNT: usize = 109;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -472,8 +472,9 @@ impl ValidatorProvider for ClaudeProvider {
                 Some("PromptValidator"),
                 prompt_validator,
             ),
-            // CodexValidator on ClaudeMd catches AGENTS.override.md files (CDX-003).
-            // The validator early-returns for all other ClaudeMd filenames.
+            // CodexValidator on ClaudeMd runs the Codex AGENTS.md checks
+            // (CDX-AG-*) on AGENTS.md and AGENTS.override.md; it returns early
+            // for all other ClaudeMd filenames.
             (FileType::ClaudeMd, Some("CodexValidator"), codex_validator),
             (FileType::Agent, Some("AgentValidator"), agent_validator),
             (FileType::Agent, Some("XmlValidator"), xml_validator),
@@ -757,6 +758,58 @@ impl ValidatorProvider for MiscProvider {
                 Some("OpenCodeValidator"),
                 opencode_validator,
             ),
+            (
+                FileType::OpenCodeAgent,
+                Some("OpenCodeAgentValidator"),
+                opencode_agent_validator,
+            ),
+            // OpenCode agent bodies were Claude-agent files (XmlValidator)
+            // before they had their own type; keep the XML checks.
+            (FileType::OpenCodeAgent, Some("XmlValidator"), xml_validator),
+            (
+                FileType::OpenCodeCommand,
+                Some("OpenCodeCommandValidator"),
+                opencode_command_validator,
+            ),
+            // OpenCode command files were GenericMarkdown before they had
+            // their own type; keep the generic Markdown checks.
+            (
+                FileType::OpenCodeCommand,
+                Some("CrossPlatformValidator"),
+                cross_platform_validator,
+            ),
+            (
+                FileType::OpenCodeCommand,
+                Some("XmlValidator"),
+                xml_validator,
+            ),
+            (
+                FileType::OpenCodeCommand,
+                Some("ImportsValidator"),
+                imports_validator,
+            ),
+            (
+                FileType::OpenCodeTool,
+                Some("OpenCodeModuleValidator"),
+                opencode_module_validator,
+            ),
+            (
+                FileType::OpenCodePlugin,
+                Some("OpenCodeModuleValidator"),
+                opencode_module_validator,
+            ),
+            // OpenCode AGENTS.md and CLAUDE.md checks (OC-AGM-*); returns
+            // early for other instruction files.
+            (
+                FileType::ClaudeMd,
+                Some("OpenCodeInstructionValidator"),
+                opencode_instruction_validator,
+            ),
+            (
+                FileType::Skill,
+                Some("OpenCodeSkillValidator"),
+                opencode_skill_validator,
+            ),
             (FileType::AmpSettings, Some("AmpValidator"), amp_validator),
             (
                 FileType::CodexConfig,
@@ -772,6 +825,63 @@ impl ValidatorProvider for MiscProvider {
                 FileType::CodexRequirements,
                 Some("CodexRequirementsValidator"),
                 codex_requirements_validator,
+            ),
+            (
+                FileType::CodexHooks,
+                Some("CodexHooksValidator"),
+                codex_hooks_validator,
+            ),
+            // Codex plugin `hooks/hooks.json` files are detected as Hooks; the
+            // validator acts only when the plugin root has .codex-plugin/.
+            (
+                FileType::Hooks,
+                Some("CodexHooksValidator"),
+                codex_hooks_validator,
+            ),
+            (
+                FileType::CodexAgent,
+                Some("CodexAgentValidator"),
+                codex_agent_validator,
+            ),
+            (
+                FileType::CodexRules,
+                Some("CodexRulesValidator"),
+                codex_rules_validator,
+            ),
+            (
+                FileType::CodexPrompt,
+                Some("CodexPromptValidator"),
+                codex_prompt_validator,
+            ),
+            // Codex prompt files were GenericMarkdown before they had their
+            // own type; keep the generic Markdown checks.
+            (
+                FileType::CodexPrompt,
+                Some("CrossPlatformValidator"),
+                cross_platform_validator,
+            ),
+            (FileType::CodexPrompt, Some("XmlValidator"), xml_validator),
+            (
+                FileType::CodexPrompt,
+                Some("ImportsValidator"),
+                imports_validator,
+            ),
+            (
+                FileType::Skill,
+                Some("CodexSkillValidator"),
+                codex_skill_validator,
+            ),
+            (
+                FileType::CodexSkillMetadata,
+                Some("CodexSkillValidator"),
+                codex_skill_validator,
+            ),
+            // CDX-PL-019: MCP config bundled in a Codex plugin; returns early
+            // for MCP files outside a Codex plugin root.
+            (
+                FileType::Mcp,
+                Some("CodexPluginMcpValidator"),
+                codex_plugin_mcp_validator,
             ),
             (
                 FileType::KiroSteering,
@@ -1020,6 +1130,50 @@ fn codex_plugin_validator() -> Box<dyn Validator> {
 
 fn codex_requirements_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::codex_requirements::CodexRequirementsValidator)
+}
+
+fn codex_hooks_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::codex_hooks::CodexHooksValidator)
+}
+
+fn codex_agent_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::codex_agent::CodexAgentValidator)
+}
+
+fn codex_rules_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::codex_files::CodexRulesValidator)
+}
+
+fn codex_prompt_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::codex_files::CodexPromptValidator)
+}
+
+fn codex_skill_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::codex_files::CodexSkillValidator)
+}
+
+fn codex_plugin_mcp_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::codex_plugin::CodexPluginMcpValidator)
+}
+
+fn opencode_agent_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::opencode_files::OpenCodeAgentValidator)
+}
+
+fn opencode_command_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::opencode_files::OpenCodeCommandValidator)
+}
+
+fn opencode_module_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::opencode_files::OpenCodeModuleValidator)
+}
+
+fn opencode_instruction_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::opencode_files::OpenCodeInstructionValidator)
+}
+
+fn opencode_skill_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::opencode_files::OpenCodeSkillValidator)
 }
 
 fn roo_validator() -> Box<dyn Validator> {
@@ -1327,8 +1481,10 @@ mod tests {
     fn validators_for_returns_all_when_none_disabled() {
         let registry = ValidatorRegistry::with_defaults();
         let skill_validators = registry.validators_for(FileType::Skill);
-        // Skill has: SkillValidator, PerClientSkillValidator, XmlValidator, ImportsValidator
-        assert_eq!(skill_validators.len(), 4);
+        // Skill has: SkillValidator, PerClientSkillValidator, XmlValidator,
+        // ImportsValidator, plus the Codex (CX-SK-004/007) and OpenCode skill
+        // validators added for the Codex and OpenCode skill directory checks.
+        assert_eq!(skill_validators.len(), 6);
     }
 
     #[test]
@@ -1385,6 +1541,8 @@ mod tests {
             .without_validator("PerClientSkillValidator")
             .without_validator("XmlValidator")
             .without_validator("ImportsValidator")
+            .without_validator("CodexSkillValidator")
+            .without_validator("OpenCodeSkillValidator")
             .build();
 
         assert!(
@@ -1523,6 +1681,10 @@ mod tests {
             FileType::ClineRules,
             FileType::ClineRulesFolder,
             FileType::OpenCodeConfig,
+            FileType::OpenCodeAgent,
+            FileType::OpenCodeCommand,
+            FileType::OpenCodeTool,
+            FileType::OpenCodePlugin,
             FileType::GeminiMd,
             FileType::GeminiSettings,
             FileType::AmpSettings,
@@ -1530,6 +1692,11 @@ mod tests {
             FileType::GeminiIgnore,
             FileType::CodexConfig,
             FileType::CodexPlugin,
+            FileType::CodexHooks,
+            FileType::CodexAgent,
+            FileType::CodexRules,
+            FileType::CodexPrompt,
+            FileType::CodexSkillMetadata,
             FileType::RooRules,
             FileType::RooModes,
             FileType::RooIgnore,
@@ -1580,6 +1747,10 @@ mod tests {
                 | FileType::ClineRules
                 | FileType::ClineRulesFolder
                 | FileType::OpenCodeConfig
+                | FileType::OpenCodeAgent
+                | FileType::OpenCodeCommand
+                | FileType::OpenCodeTool
+                | FileType::OpenCodePlugin
                 | FileType::GeminiMd
                 | FileType::GeminiSettings
                 | FileType::AmpSettings
@@ -1588,6 +1759,11 @@ mod tests {
                 | FileType::CodexConfig
                 | FileType::CodexPlugin
                 | FileType::CodexRequirements
+                | FileType::CodexHooks
+                | FileType::CodexAgent
+                | FileType::CodexRules
+                | FileType::CodexPrompt
+                | FileType::CodexSkillMetadata
                 | FileType::RooRules
                 | FileType::RooModes
                 | FileType::RooIgnore
@@ -1834,10 +2010,12 @@ mod tests {
             .iter()
             .filter(|(_, name, _)| *name == Some("XmlValidator"))
             .count();
-        // 12 since Kiro power steering (KiroPowerSteering) runs XmlValidator.
+        // 12 since Kiro power steering (KiroPowerSteering) runs XmlValidator;
+        // 15 since OpenCode agents, OpenCode commands and Codex custom prompts
+        // (Markdown prompt files) run it too.
         assert_eq!(
-            xml_occurrences, 12,
-            "Expected XmlValidator in 12 BuiltinProvider entries"
+            xml_occurrences, 15,
+            "Expected XmlValidator in 15 BuiltinProvider entries"
         );
         let total_after = registry.total_validator_count();
         assert_eq!(
@@ -2181,7 +2359,10 @@ mod tests {
         // 38: Kiro hooks and powers dropped four Imports/CrossPlatform entries
         // and gained power plugin, power steering, workflow, ignore-file,
         // not-loaded and Kiro AGENTS.md entries.
-        assert_eq!(MiscProvider.named_validators().len(), 38);
+        // 59: Codex hooks, custom agents, rules, prompts, skill metadata and
+        // plugin MCP files, and OpenCode agents, commands, tools, plugins,
+        // instruction files and skills added 21 entries.
+        assert_eq!(MiscProvider.named_validators().len(), 59);
     }
 
     #[test]
@@ -2247,20 +2428,21 @@ mod tests {
 
     #[test]
     fn claude_provider_includes_codex_on_claude_md() {
-        // CDX-003: CodexValidator on ClaudeMd catches AGENTS.override.md files.
+        // CDX-AG-*: CodexValidator on ClaudeMd checks AGENTS.md and
+        // AGENTS.override.md for Codex.
         let entries = ClaudeProvider.named_validators();
         let has_codex_on_claude_md = entries
             .iter()
             .any(|(ft, name, _)| *ft == FileType::ClaudeMd && *name == Some("CodexValidator"));
         assert!(
             has_codex_on_claude_md,
-            "ClaudeProvider must include CodexValidator on ClaudeMd (CDX-003)"
+            "ClaudeProvider must include CodexValidator on ClaudeMd (CDX-AG-*)"
         );
     }
 
     #[test]
     fn codex_validator_only_on_expected_file_types() {
-        // CodexValidator must only appear on ClaudeMd (CDX-003 and CDX-AG-*).
+        // CodexValidator must only appear on ClaudeMd (CDX-AG-*).
         let entries = BuiltinProvider.named_validators();
         for (ft, name, _) in &entries {
             if *name == Some("CodexValidator") {

@@ -1,4 +1,4 @@
-//! Codex CLI managed-requirements validation (CDX-REQ-000, CDX-REQ-001).
+//! Codex CLI managed-requirements validation (CDX-REQ-000 to CDX-REQ-004).
 //!
 //! Validates Codex's admin-written `requirements.toml` (system location:
 //! `/etc/codex/requirements.toml` on Unix, `%ProgramData%\OpenAI\Codex\
@@ -7,15 +7,28 @@
 //! crucially, has **no** `#[serde(deny_unknown_fields)]` - so a typo in a
 //! top-level key is silently ignored by Codex and the intended constraint is
 //! never enforced. CDX-REQ-001 surfaces those typos; CDX-REQ-000 reports
-//! invalid TOML syntax.
+//! invalid TOML syntax. CDX-REQ-002 checks `[rules].prefix_rules` decisions,
+//! CDX-REQ-003 managed hook script paths and CDX-REQ-004 the
+//! `[experimental_network]` domain settings. Inline `[hooks]` also get the
+//! CDX-HK-* hook checks.
 use crate::{
     config::PerFileLintConfig,
     diagnostics::Diagnostic,
+    rules::codex_hooks::{HookCheck, HookLayer, HookSpans, check_hook_events},
+    rules::config_span::{Seg, TomlSpans, line_col},
     rules::{Validator, ValidatorMetadata},
 };
+use rust_i18n::t;
+use serde_json::Value;
 use std::path::Path;
 
-const RULE_IDS: &[&str] = &["CDX-REQ-000", "CDX-REQ-001"];
+const RULE_IDS: &[&str] = &[
+    "CDX-REQ-000",
+    "CDX-REQ-001",
+    "CDX-REQ-002",
+    "CDX-REQ-003",
+    "CDX-REQ-004",
+];
 
 /// Known top-level keys of `requirements.toml`, sourced from
 /// `ConfigRequirementsToml` @ openai/codex rust-v0.146.0. Both `features`
@@ -124,10 +137,226 @@ impl Validator for CodexRequirementsValidator {
             }
         }
 
+        let spans = TomlSpans::parse(content);
+        let pos = |segs: &[Seg<'_>]| {
+            spans
+                .as_ref()
+                .and_then(|spans| spans.offset(segs))
+                .map_or((1, 1), |offset| line_col(content, offset))
+        };
+        let root = serde_json::to_value(&table).unwrap_or(Value::Null);
+
+        // CDX-REQ-002: "requirements rules must specify `decision`, and that
+        // decision must be `"prompt"` or `"forbidden"` (not `"allow"`)."
+        if config.is_rule_enabled("CDX-REQ-002")
+            && let Some(rules) = root
+                .get("rules")
+                .and_then(|rules| rules.get("prefix_rules"))
+                .and_then(Value::as_array)
+        {
+            for (index, rule) in rules.iter().enumerate() {
+                let decision = rule.get("decision");
+                let problem = match decision.and_then(Value::as_str) {
+                    Some("prompt" | "forbidden") => None,
+                    Some(other) => Some(t!("rules.cdx_req_002.invalid", value = other)),
+                    None if decision.is_some() => Some(t!("rules.cdx_req_002.not_string")),
+                    None => Some(t!("rules.cdx_req_002.missing")),
+                };
+                if let Some(problem) = problem {
+                    let mut segs = vec![
+                        Seg::Key("rules"),
+                        Seg::Key("prefix_rules"),
+                        Seg::Index(index),
+                    ];
+                    if decision.is_some() {
+                        segs.push(Seg::Key("decision"));
+                    }
+                    let (line, column) = pos(&segs);
+                    diagnostics.push(
+                        Diagnostic::error(
+                            path.to_path_buf(),
+                            line,
+                            column,
+                            "CDX-REQ-002",
+                            t!(
+                                "rules.cdx_req_002.message",
+                                index = index + 1,
+                                problem = problem.to_string()
+                            ),
+                        )
+                        .with_suggestion(t!("rules.cdx_req_002.suggestion")),
+                    );
+                }
+            }
+        }
+
+        if let Some(hooks) = root.get("hooks") {
+            // CDX-HK-*: managed hooks use the same event structure.
+            if let Some(spans) = spans.as_ref() {
+                let check = HookCheck {
+                    path,
+                    content,
+                    spans: HookSpans::Toml(spans),
+                    layer: HookLayer::RequirementsToml,
+                };
+                check_hook_events(
+                    hooks,
+                    &[Seg::Key("hooks")],
+                    &check,
+                    config,
+                    &mut diagnostics,
+                );
+            }
+            // CDX-REQ-003: "Managed hook commands should use absolute script
+            // paths under the configured managed directory."
+            if config.is_rule_enabled("CDX-REQ-003") {
+                managed_hook_paths(hooks, &pos, path, &mut diagnostics);
+            }
+        }
+
+        // CDX-REQ-004: "Do not combine the canonical `domains` map with the
+        // legacy `allowed_domains` or `denied_domains` lists", and use
+        // `managed_allowed_domains_only = true` "only when you also define
+        // administrator-owned "allow" entries".
+        if config.is_rule_enabled("CDX-REQ-004")
+            && let Some(network) = root.get("experimental_network").and_then(Value::as_object)
+        {
+            let domains = network.get("domains").and_then(Value::as_object);
+            for legacy in ["allowed_domains", "denied_domains"] {
+                if domains.is_some() && network.contains_key(legacy) {
+                    let (line, column) = pos(&[Seg::Key("experimental_network"), Seg::Key(legacy)]);
+                    diagnostics.push(
+                        Diagnostic::info(
+                            path.to_path_buf(),
+                            line,
+                            column,
+                            "CDX-REQ-004",
+                            t!("rules.cdx_req_004.mixed", key = legacy),
+                        )
+                        .with_suggestion(t!("rules.cdx_req_004.suggestion")),
+                    );
+                }
+            }
+            let has_allow = domains.is_some_and(|domains| {
+                domains
+                    .values()
+                    .any(|effect| effect.as_str() == Some("allow"))
+            }) || network
+                .get("allowed_domains")
+                .and_then(Value::as_array)
+                .is_some_and(|items| !items.is_empty());
+            if network
+                .get("managed_allowed_domains_only")
+                .and_then(Value::as_bool)
+                == Some(true)
+                && !has_allow
+            {
+                let (line, column) = pos(&[
+                    Seg::Key("experimental_network"),
+                    Seg::Key("managed_allowed_domains_only"),
+                ]);
+                diagnostics.push(
+                    Diagnostic::info(
+                        path.to_path_buf(),
+                        line,
+                        column,
+                        "CDX-REQ-004",
+                        t!("rules.cdx_req_004.no_allow"),
+                    )
+                    .with_suggestion(t!("rules.cdx_req_004.suggestion")),
+                );
+            }
+        }
+
         // `toml::Table` is a BTreeMap, so `keys()` yields keys in lexical
         // order rather than file order. Sort so diagnostics read top-to-bottom.
         diagnostics.sort_by_key(|d| (d.line, d.column));
         diagnostics
+    }
+}
+
+/// CDX-REQ-003: command hooks whose script is not an absolute path under
+/// `managed_dir` (or `windows_managed_dir` for `command_windows`).
+fn managed_hook_paths(
+    hooks: &Value,
+    pos: &dyn Fn(&[Seg<'_>]) -> (usize, usize),
+    path: &Path,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let Some(hooks) = hooks.as_object() else {
+        return;
+    };
+    let managed_dir = hooks.get("managed_dir").and_then(Value::as_str);
+    let windows_dir = hooks.get("windows_managed_dir").and_then(Value::as_str);
+    let under = |command: &str, dir: &str| {
+        let dir = dir.trim_end_matches(['/', '\\']);
+        command
+            .split_whitespace()
+            .map(|token| token.trim_matches(|c| c == '"' || c == '\''))
+            .any(|token| {
+                token.len() > dir.len()
+                    && token.starts_with(dir)
+                    && token[dir.len()..].starts_with(['/', '\\'])
+            })
+    };
+    for (event, groups) in hooks {
+        let Some(groups) = groups.as_array() else {
+            continue;
+        };
+        for (group_index, group) in groups.iter().enumerate() {
+            let Some(handlers) = group.get("hooks").and_then(Value::as_array) else {
+                continue;
+            };
+            for (index, handler) in handlers.iter().enumerate() {
+                if handler.get("type").and_then(Value::as_str) != Some("command") {
+                    continue;
+                }
+                for (field, dir_key, dir) in [
+                    ("command", "managed_dir", managed_dir),
+                    ("command_windows", "windows_managed_dir", windows_dir),
+                ] {
+                    let Some(command) = handler
+                        .get(field)
+                        .or_else(|| {
+                            (field == "command_windows")
+                                .then(|| handler.get("commandWindows"))
+                                .flatten()
+                        })
+                        .and_then(Value::as_str)
+                    else {
+                        continue;
+                    };
+                    let message = match dir {
+                        Some(dir) if under(command, dir) => continue,
+                        Some(dir) => t!(
+                            "rules.cdx_req_003.outside",
+                            event = event.as_str(),
+                            dir = dir
+                        ),
+                        None if field == "command" => {
+                            t!(
+                                "rules.cdx_req_003.no_dir",
+                                event = event.as_str(),
+                                key = dir_key
+                            )
+                        }
+                        None => continue,
+                    };
+                    let (line, column) = pos(&[
+                        Seg::Key("hooks"),
+                        Seg::Key(event.as_str()),
+                        Seg::Index(group_index),
+                        Seg::Key("hooks"),
+                        Seg::Index(index),
+                        Seg::Key(field),
+                    ]);
+                    diagnostics.push(
+                        Diagnostic::info(path.to_path_buf(), line, column, "CDX-REQ-003", message)
+                            .with_suggestion(t!("rules.cdx_req_003.suggestion")),
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -218,6 +447,87 @@ mod tests {
             .filter(|d| d.rule == code)
             .map(|d| d.message)
             .collect()
+    }
+
+    #[test]
+    fn documented_requirements_examples_are_clean() {
+        let content = r#"allow_managed_hooks_only = true
+
+[features]
+hooks = true
+
+[hooks]
+managed_dir = "/enterprise/hooks"
+windows_managed_dir = 'C:\enterprise\hooks'
+
+[[hooks.PreToolUse]]
+matcher = "^Bash$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "python3 /enterprise/hooks/pre_tool_use_policy.py"
+command_windows = 'py -3 C:\enterprise\hooks\pre_tool_use_policy.py'
+timeout = 30
+statusMessage = "Checking managed Bash command"
+
+[rules]
+prefix_rules = [
+  { pattern = [{ token = "rm" }], decision = "forbidden", justification = "Use git clean -fd instead." },
+  { pattern = [{ token = "git" }, { any_of = ["push", "commit"] }], decision = "prompt", justification = "Require review before mutating history." },
+]
+
+[experimental_network]
+enabled = true
+managed_allowed_domains_only = true
+
+[experimental_network.domains]
+"api.openai.com" = "allow"
+"blocked.example.com" = "deny"
+"#;
+        let diagnostics = validate(content);
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    }
+
+    #[test]
+    fn cdx_req_002_requires_prompt_or_forbidden() {
+        let content = "[rules]\nprefix_rules = [\n  { pattern = [{ token = \"rm\" }] },\n  { pattern = [{ token = \"ls\" }], decision = \"allow\" },\n]\n";
+        let diagnostics: Vec<_> = validate(content)
+            .into_iter()
+            .filter(|d| d.rule == "CDX-REQ-002")
+            .collect();
+        assert_eq!(diagnostics.len(), 2);
+        assert_eq!(diagnostics[0].line, 3);
+        assert_eq!(diagnostics[1].line, 4);
+        assert!(diagnostics[1].message.contains("allow"));
+    }
+
+    #[test]
+    fn cdx_req_003_and_004_and_managed_hook_checks() {
+        let content = r#"[hooks]
+managed_dir = "/enterprise/hooks"
+
+[[hooks.SessionEnd]]
+[[hooks.SessionEnd.hooks]]
+type = "command"
+command = "python3 ./scripts/end.py"
+timeout = 10
+
+[experimental_network]
+managed_allowed_domains_only = true
+allowed_domains = []
+
+[experimental_network.domains]
+"x.example.com" = "deny"
+"#;
+        let diagnostics = validate(content);
+        let summary: Vec<_> = diagnostics
+            .iter()
+            .map(|d| (d.rule.as_str(), d.line))
+            .collect();
+        assert!(summary.contains(&("CDX-REQ-003", 7)), "{summary:?}");
+        assert!(summary.contains(&("CDX-HK-001", 8)), "{summary:?}");
+        assert!(summary.contains(&("CDX-REQ-004", 11)), "{summary:?}");
+        assert!(summary.contains(&("CDX-REQ-004", 12)), "{summary:?}");
     }
 
     #[test]
