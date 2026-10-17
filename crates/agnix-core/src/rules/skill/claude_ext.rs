@@ -176,6 +176,15 @@ impl ValidationContext<'_> {
         {
             return;
         }
+        // Outside Claude Code's own skill directories AS-003 reports a missing
+        // description (the Agent Skills spec requires it); this note would
+        // report the same missing field a second time.
+        if self.client != SkillClient::ClaudeCode
+            && self.config.is_rule_enabled("AS-003")
+            && frontmatter.description.is_none()
+        {
+            return;
+        }
         let has_description = frontmatter
             .description
             .as_deref()
@@ -757,6 +766,26 @@ mod validator_tests {
                 .expect(name);
             assert_eq!(hit.level, DiagnosticLevel::Warning);
         }
+    }
+
+    /// Outside `.claude/skills` an unscoped skill without a description got
+    /// AS-003 (the Agent Skills spec requires it) and CC-SK-024 on the same
+    /// missing field. AS-003 now reports it alone; CC-SK-024 stays for
+    /// Claude Code skills, where AS-003 does not run.
+    #[test]
+    fn cc_sk_024_left_to_as_003_outside_claude_skills() {
+        let content = "---\nname: x\n---\nDo things.\n";
+        let diagnostics = validate("skills/x/SKILL.md", content);
+        assert_eq!(count(&diagnostics, "AS-003"), 1, "{diagnostics:?}");
+        assert_eq!(count(&diagnostics, "CC-SK-024"), 0, "{diagnostics:?}");
+        let diagnostics = validate(".claude/skills/x/SKILL.md", content);
+        assert_eq!(count(&diagnostics, "AS-003"), 0, "{diagnostics:?}");
+        assert_eq!(count(&diagnostics, "CC-SK-024"), 1, "{diagnostics:?}");
+        // With AS-003 disabled, CC-SK-024 reports the generic skill again.
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["AS-003".to_string()];
+        let diagnostics = SkillValidator.validate(Path::new("skills/x/SKILL.md"), content, &config);
+        assert_eq!(count(&diagnostics, "CC-SK-024"), 1, "{diagnostics:?}");
     }
 
     #[test]

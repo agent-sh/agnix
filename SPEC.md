@@ -10,7 +10,7 @@
 | Skills | SKILL.md | 50 |
 | Hooks | settings.json | 32 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 15 |
-| Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 7 |
+| Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 6 |
 | Agents | agents/*.md | 21 |
 | Plugins | plugin.json | 23 |
 | Claude Marketplaces | .claude-plugin/marketplace.json | 5 |
@@ -172,7 +172,7 @@ All rules in `knowledge-base/VALIDATION-RULES.md`
 | CC-HK-009 | WARN | Dangerous command pattern |
 | CC-MEM-004 | WARN | Invalid command reference |
 | PE-005 | WARN | Redundant generic instruction detected |
-| AGM-003 | WARN | Windsurf character limit exceeded (12000 chars, when Windsurf is in scope) |
+| WS-011 | WARN | AGENTS.md over Windsurf's 12000-character rule limit (when Windsurf is in scope) |
 | PE-002 | INFO | Chain-of-thought on simple task |
 | CC-AG-001 | ERROR | Missing agent name field |
 | CC-AG-002 | ERROR | Missing agent description field |

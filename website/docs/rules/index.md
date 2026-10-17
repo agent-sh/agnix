@@ -1,13 +1,12 @@
 # Rules Reference
 
-This section contains all `703` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `702` validation rules generated from `knowledge-base/rules.json`.
 `125` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
 | [AGM-001](./generated/agm-001.md) | Valid Markdown Structure | MEDIUM | AGENTS.md | Yes (unsafe) |
 | [AGM-002](./generated/agm-002.md) | Missing Section Headers | LOW | AGENTS.md | No |
-| [AGM-003](./generated/agm-003.md) | Character Limit (Windsurf) | MEDIUM | AGENTS.md | No |
 | [AGM-004](./generated/agm-004.md) | Missing Project Context | LOW | AGENTS.md | No |
 | [AGM-007](./generated/agm-007.md) | Root AGENTS.md Lists No Build or Test Command | LOW | AGENTS.md | No |
 | [AGM-008](./generated/agm-008.md) | Legacy AGENT.md Without AGENTS.md | LOW | AGENTS.md | No |

@@ -386,12 +386,13 @@ mod tests {
     }
 
     /// The coordinator's case: with `tools = ["kiro"]`, Windsurf's AGENTS.md
-    /// limit must not fire. (Codex's limits, XP-007 and XP-009, are retired.)
+    /// limit must not fire. AGM-003 is retired; WS-011 (the Windsurf family)
+    /// reports the limit. (Codex's limits, XP-007 and XP-009, are retired too.)
     #[test]
-    fn test_agm_003_not_enabled_for_kiro_only() {
+    fn test_windsurf_agents_md_limit_not_enabled_for_kiro_only() {
         let config = with_tools(&["kiro"]);
-        assert!(!config.is_rule_enabled("AGM-003"));
-        assert!(with_tools(&["windsurf"]).is_rule_enabled("AGM-003"));
+        assert!(!config.is_rule_enabled("WS-011"));
+        assert!(with_tools(&["windsurf"]).is_rule_enabled("WS-011"));
     }
 
     // ===== XP-008 =====

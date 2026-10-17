@@ -1100,6 +1100,20 @@ fn is_codex_plugin_root(root: &Path, config: &PerFileLintConfig<'_>) -> bool {
         })
 }
 
+/// Whether CDX-PL-019 reports `clientSecret` fields in the MCP file at
+/// `path` (a Codex plugin root's `.mcp.json` or `mcp.json`). MCP-028 leaves
+/// those fields to CDX-PL-019, which says why Codex rejects them.
+pub(crate) fn reports_client_secrets(path: &Path, config: &PerFileLintConfig<'_>) -> bool {
+    config.is_rule_enabled("CDX-PL-019")
+        && path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|name| matches!(name, ".mcp.json" | "mcp.json"))
+        && path
+            .parent()
+            .is_some_and(|root| is_codex_plugin_root(root, config))
+}
+
 fn find_secret_key(value: &serde_json::Value, trail: &mut Vec<String>) -> Option<Vec<String>> {
     match value {
         serde_json::Value::Object(map) => {
@@ -1188,9 +1202,19 @@ impl Validator for CodexPluginMcpValidator {
                 );
             }
             if let Some(headers) = settings.get("headers").and_then(|v| v.as_object()) {
+                // MCP-028 runs on this file too and owns literal credentials
+                // in server headers; only the headers it does not report
+                // (cookies, short tokens) are reported here.
+                let mcp_028 = config.is_rule_enabled("MCP-028");
                 for (header, header_value) in headers {
                     if is_credential_header(header)
-                        && header_value.as_str().is_some_and(is_literal_credential)
+                        && header_value.as_str().is_some_and(|value| {
+                            is_literal_credential(value)
+                                && !(mcp_028
+                                    && crate::rules::mcp_servers::is_literal_header_secret(
+                                        header, value,
+                                    ))
+                        })
                     {
                         let (line, column) = pos(&[
                             Seg::Key("mcpServers"),
@@ -2263,17 +2287,62 @@ mod tests {
             .iter()
             .map(|d| (d.rule.as_str(), d.line, d.level))
             .collect();
+        // The clientSecret is CDX-PL-019's (Codex rejects the field). The
+        // header credential is MCP-028's, which runs on this file too; both
+        // rules used to report it.
+        assert_eq!(
+            summary,
+            [("CDX-PL-019", 6, crate::diagnostics::DiagnosticLevel::Error)]
+        );
+        let mcp =
+            crate::rules::mcp::McpValidator.validate(&mcp_path, content, &LintConfig::default());
+        let mcp_028: Vec<_> = mcp.iter().filter(|d| d.rule == "MCP-028").collect();
+        assert_eq!(mcp_028.len(), 1, "{mcp:?}");
+        assert_eq!(mcp_028[0].line, 5);
+        // With MCP-028 disabled, CDX-PL-019 reports the header as before.
+        let mut no_mcp = LintConfig::default();
+        no_mcp.rules_mut().disabled_rules = vec!["MCP-028".to_string()];
+        let summary: Vec<_> = CodexPluginMcpValidator
+            .validate(&mcp_path, content, &no_mcp)
+            .iter()
+            .map(|d| (d.rule.clone(), d.line, d.level))
+            .collect();
         assert_eq!(
             summary,
             [
-                ("CDX-PL-019", 6, crate::diagnostics::DiagnosticLevel::Error),
                 (
-                    "CDX-PL-019",
+                    "CDX-PL-019".to_string(),
+                    6,
+                    crate::diagnostics::DiagnosticLevel::Error
+                ),
+                (
+                    "CDX-PL-019".to_string(),
                     5,
                     crate::diagnostics::DiagnosticLevel::Warning
                 ),
             ]
         );
+        // MCP-028 leaves an oauth.clientSecret in a Codex plugin's MCP file to
+        // CDX-PL-019, and reports it elsewhere.
+        let oauth = r#"{"mcpServers": {"o": {"url": "https://example.com/mcp", "oauth": {"clientId": "c", "clientSecret": "s3cr3t-value-123456"}}}}"#;
+        write_plugin(&mcp_path, oauth);
+        let rules_on = |path: &Path| -> Vec<String> {
+            let mut found: Vec<String> = crate::rules::mcp::McpValidator
+                .validate(path, oauth, &LintConfig::default())
+                .into_iter()
+                .chain(CodexPluginMcpValidator.validate(path, oauth, &LintConfig::default()))
+                .map(|d| d.rule)
+                .filter(|rule| rule == "MCP-028" || rule == "CDX-PL-019")
+                .collect();
+            found.sort();
+            found
+        };
+        assert_eq!(rules_on(&mcp_path), ["CDX-PL-019"]);
+        let plain = TempDir::new().unwrap();
+        let plain_mcp = plain.path().join(".mcp.json");
+        write_plugin(&plain_mcp, oauth);
+        assert_eq!(rules_on(&plain_mcp), ["MCP-028"]);
+        write_plugin(&mcp_path, content);
         // Not a Codex plugin: nothing to report.
         let other = TempDir::new().unwrap();
         let other_mcp = other.path().join(".mcp.json");

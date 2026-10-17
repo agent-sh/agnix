@@ -645,10 +645,6 @@ rules:
     message: AGENTS.md has %{lines} non-blank lines and no headings
     suggestion: Group related instructions under headings (for example '## Build and test', '## Code style') so agents can
       find them
-  agm_003:
-    message: '%{filename} is %{chars} characters; Windsurf limits rule files to %{limit} characters, and it processes AGENTS.md
-      with the same rules engine'
-    suggestion: Move directory-specific guidance into nested AGENTS.md files or trim the file below %{limit} characters
   agm_004:
     message: Root AGENTS.md has no project overview
     suggestion: Add a short overview of what the project is and its tech stack, a popular AGENTS.md section

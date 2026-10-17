@@ -161,7 +161,8 @@ const AMP_SKILL_FIELDS: &[&str] = &["mcpServers", "builtin-tools"];
 
 /// Devin CLI SKILL.md fields (docs.devin.ai/cli creating-skills "All
 /// Frontmatter Fields"), read from `.devin/skills/`, the directory Devin
-/// Desktop prefers too.
+/// Desktop prefers too, and from the legacy `.windsurf/skills/`, which Devin
+/// CLI imports ("Skills | `.windsurf/skills/` (project)", cli read-config-from).
 const DEVIN_SKILL_FIELDS: &[&str] = &[
     "argument-hint",
     "model",
@@ -180,7 +181,10 @@ fn client_skill_fields(client: SkillClient, path: &Path) -> &'static [&'static s
         SkillClient::Copilot => COPILOT_SKILL_FIELDS,
         SkillClient::OpenCode => OPENCODE_SKILL_FIELDS,
         SkillClient::Amp => AMP_SKILL_FIELDS,
-        SkillClient::Windsurf if path_has_component_pair(path, ".devin", "skills") => {
+        SkillClient::Windsurf
+            if path_has_component_pair(path, ".devin", "skills")
+                || path_has_component_pair(path, ".windsurf", "skills") =>
+        {
             DEVIN_SKILL_FIELDS
         }
         _ => &[],
@@ -921,6 +925,11 @@ impl Validator for PerClientSkillValidator {
         let entries = yaml_top_level_entries(&parts.frontmatter);
         let line_starts = compute_line_starts(content);
         let client_name = client_display_name(client);
+        // CC-SK-017 reports fields Claude Code does not know on skills the
+        // Claude skill rules cover (an unscoped skill outside any client
+        // directory); XP-SK-001 leaves those fields to it.
+        let claude_reports_unknown =
+            config.is_rule_enabled("CC-SK-017") && claude_skill_rules_apply(client, config);
 
         for (key, value) in mapping {
             let Some(field) = key.as_str() else {
@@ -936,10 +945,8 @@ impl Validator for PerClientSkillValidator {
             let (line_num, col) = line_col_at(offset, &line_starts);
 
             // Per-client rule: the client ignores this field.
-            if has_per_client
-                && !supported
-                && let Some(rule_id) = per_client_rule
-            {
+            let reported_by_client_rule = has_per_client && !supported && per_client_rule.is_some();
+            if reported_by_client_rule && let Some(rule_id) = per_client_rule {
                 let diagnostic = if client == SkillClient::Codex && field == "compatibility" {
                     // A spec field: Codex's runtime ignores it and its skill
                     // validator rejects it. Other clients may read it, so no
@@ -1011,7 +1018,18 @@ impl Validator for PerClientSkillValidator {
 
             // XP-SK-001: cross-platform portability note for any skill with
             // non-universal fields, except Claude Code (which supports all).
-            if has_xp && !universal && client != SkillClient::ClaudeCode {
+            // A field the reading client's own rule reports (the per-client
+            // rule, or CC-SK-017 for Claude Code) is reported once, by that
+            // rule: "client X ignores this field" says more than "not part of
+            // the spec". XP-SK-001 keeps the fields the client does read.
+            let reported_by_claude_rule =
+                claude_reports_unknown && !crate::rules::skill::is_known_claude_skill_field(field);
+            if has_xp
+                && !universal
+                && client != SkillClient::ClaudeCode
+                && !reported_by_client_rule
+                && !reported_by_claude_rule
+            {
                 diagnostics.push(
                     Diagnostic::info(
                         path.to_path_buf(),
@@ -1501,6 +1519,26 @@ mod tests {
         assert!(oc_diags[0].message.contains("argument-hint"));
     }
 
+    /// Devin CLI imports `.windsurf/skills/` and reads its own fields there,
+    /// as in `.devin/skills/`; WS-SK-001 used to call them ignored.
+    #[test]
+    fn test_windsurf_legacy_skills_accept_devin_cli_fields() {
+        let content = make_skill(
+            "name: my-skill\ndescription: A test\nargument-hint: \"[file]\"\nmodel: swe\nsubagent: true\nagent: reviewer\npermissions:\n  allow: [read]\ntriggers: [user]",
+            "Body",
+        );
+        for path in [
+            ".windsurf/skills/my-skill/SKILL.md",
+            ".devin/skills/my-skill/SKILL.md",
+        ] {
+            let diags = validate(path, &content);
+            assert!(
+                diags.iter().all(|d| d.rule != "WS-SK-001"),
+                "{path}: {diags:?}"
+            );
+        }
+    }
+
     #[test]
     fn test_windsurf_unsupported_user_invocable() {
         let content = make_skill(
@@ -1847,15 +1885,106 @@ mod tests {
         );
     }
 
+    /// XP-SK-001 used to fire on every non-universal field, so a field the
+    /// client ignores got CR-SK-001 and XP-SK-001 on the same key. The
+    /// per-client rule now reports those fields alone; XP-SK-001 keeps the
+    /// non-universal fields the client does read.
     #[test]
     fn test_xp_sk_001_fires_for_non_claude() {
-        let content = make_skill("name: my-skill\ndescription: A test\nmodel: opus", "Body");
+        let content = make_skill(
+            "name: my-skill\ndescription: A test\nmodel: opus\npaths: src/**",
+            "Body",
+        );
         let diags = validate(".cursor/skills/my-skill/SKILL.md", &content);
         let xp_diags: Vec<_> = diags.iter().filter(|d| d.rule == "XP-SK-001").collect();
         assert_eq!(
             xp_diags.len(),
             1,
-            "Expected 1 XP-SK-001 for extension field in non-Claude skill"
+            "Expected 1 XP-SK-001 for the Cursor field 'paths': {diags:?}"
+        );
+        assert!(xp_diags[0].message.contains("'paths'"));
+        let cr_diags: Vec<_> = diags.iter().filter(|d| d.rule == "CR-SK-001").collect();
+        assert_eq!(cr_diags.len(), 1);
+        assert!(cr_diags[0].message.contains("'model'"));
+    }
+
+    #[test]
+    fn test_xp_sk_001_skips_fields_the_client_rule_reports() {
+        let content = make_skill(
+            "name: my-skill\ndescription: A test\nversion: 1.0.0\nmodel: opus",
+            "Body",
+        );
+        for path in [
+            ".cursor/skills/my-skill/SKILL.md",
+            ".cline/skills/my-skill/SKILL.md",
+            ".github/skills/my-skill/SKILL.md",
+            ".codex/skills/my-skill/SKILL.md",
+            ".opencode/skills/my-skill/SKILL.md",
+        ] {
+            let diags = validate(path, &content);
+            let per_client = diags.iter().filter(|d| d.rule != "XP-SK-001").count();
+            assert_eq!(per_client, 2, "{path}: {diags:?}");
+            assert!(
+                diags.iter().all(|d| d.rule != "XP-SK-001"),
+                "{path}: {diags:?}"
+            );
+        }
+        // With the per-client rule disabled, XP-SK-001 reports the fields.
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CR-SK-001".to_string()];
+        let diags = PerClientSkillValidator.validate(
+            Path::new(".cursor/skills/my-skill/SKILL.md"),
+            &content,
+            &config,
+        );
+        assert_eq!(
+            diags.iter().filter(|d| d.rule == "XP-SK-001").count(),
+            2,
+            "{diags:?}"
+        );
+    }
+
+    /// An unscoped skill outside any client directory gets the Claude skill
+    /// rules; CC-SK-017 reports a field Claude Code does not know, so
+    /// XP-SK-001 leaves it alone. A field Claude Code reads (`model`) is
+    /// still a portability note.
+    #[test]
+    fn test_xp_sk_001_skips_fields_cc_sk_017_reports() {
+        let content = make_skill(
+            "name: my-skill\ndescription: A test\nversion: 1.0.0\nmodel: opus",
+            "Body",
+        );
+        let diags = validate("skills/my-skill/SKILL.md", &content);
+        let xp: Vec<_> = diags.iter().filter(|d| d.rule == "XP-SK-001").collect();
+        assert_eq!(xp.len(), 1, "{diags:?}");
+        assert!(xp[0].message.contains("'model'"));
+
+        // Without Claude Code in scope CC-SK-017 does not run, so XP-SK-001
+        // reports both fields.
+        let mut config = LintConfig::default();
+        config.set_tools(vec!["codex".to_string(), "cursor".to_string()]);
+        let diags = PerClientSkillValidator.validate(
+            Path::new("skills/my-skill/SKILL.md"),
+            &content,
+            &config,
+        );
+        assert_eq!(
+            diags.iter().filter(|d| d.rule == "XP-SK-001").count(),
+            2,
+            "{diags:?}"
+        );
+        // CC-SK-017 disabled: XP-SK-001 reports both fields again.
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CC-SK-017".to_string()];
+        let diags = PerClientSkillValidator.validate(
+            Path::new("skills/my-skill/SKILL.md"),
+            &content,
+            &config,
+        );
+        assert_eq!(
+            diags.iter().filter(|d| d.rule == "XP-SK-001").count(),
+            2,
+            "{diags:?}"
         );
     }
 
@@ -1969,17 +2098,27 @@ mod tests {
 
     #[test]
     fn test_unknown_custom_field_xp_fires() {
-        // XP-SK-001 should fire for any non-universal field, including unknown ones
+        // XP-SK-001 fires for any non-universal field, including unknown ones,
+        // when no client rule reports it. Unscoped, CC-SK-017 reports a field
+        // Claude Code does not know, so XP-SK-001 needs a scope without
+        // Claude Code here (it used to report the same key as CC-SK-017).
         let content = make_skill(
             "name: my-skill\ndescription: A test\nmy-custom-field: value",
             "Body",
         );
-        let diags = validate("SKILL.md", &content);
+        let mut config = LintConfig::default();
+        config.set_tools(vec!["codex".to_string(), "cursor".to_string()]);
+        let diags = PerClientSkillValidator.validate(Path::new("SKILL.md"), &content, &config);
         let xp_diags: Vec<_> = diags.iter().filter(|d| d.rule == "XP-SK-001").collect();
         assert_eq!(
             xp_diags.len(),
             1,
             "XP-SK-001 should fire for unknown custom field"
+        );
+        let unscoped = validate("SKILL.md", &content);
+        assert!(
+            unscoped.iter().all(|d| d.rule != "XP-SK-001"),
+            "{unscoped:?}"
         );
     }
 
@@ -2149,7 +2288,11 @@ mod tests {
         ] {
             let diags = validate(path, content);
             let rule_hits = rule_diags(&diags, rule);
-            assert_eq!(rule_hits.len(), 4, "{path}: {diags:?}");
+            // Devin CLI reads `model` in `.windsurf/skills/` (it imports
+            // those skills in its own SKILL.md format), so WS-SK-001 reports
+            // three fields there.
+            let expected = if rule == "WS-SK-001" { 3 } else { 4 };
+            assert_eq!(rule_hits.len(), expected, "{path}: {diags:?}");
             let version = rule_hits
                 .iter()
                 .find(|d| d.message.contains("'version'"))
@@ -2188,10 +2331,15 @@ mod tests {
             );
             let value = frontmatter_of(&current);
             assert_eq!(value["name"], "s");
-            assert_eq!(
-                value["metadata"]["model"], "opus",
-                "{path}: single-line field moved"
-            );
+            if rule == "WS-SK-001" {
+                // Devin CLI reads `model`; it stays at the top level.
+                assert_eq!(value["model"], "opus", "{path}: Devin field kept");
+            } else {
+                assert_eq!(
+                    value["metadata"]["model"], "opus",
+                    "{path}: single-line field moved"
+                );
+            }
         }
     }
 

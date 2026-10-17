@@ -408,9 +408,16 @@ impl Validator for McpValidator {
             return diagnostics;
         }
 
-        // Client configs that embed MCP servers (OpenCode, Gemini, Amp,
-        // Codex, Copilot agents) get only the server-level checks.
-        let file_type = crate::file_types::detect_file_type(path);
+        // Client configs that embed MCP servers (OpenCode, Gemini settings,
+        // extensions and agents, Amp settings and skills, Codex, Copilot
+        // agents) get only the server-level checks. The sibling refinement
+        // matters here: a Gemini extension's `agents/*.md` is a Gemini agent
+        // only next to its `gemini-extension.json`.
+        let file_type = crate::file_types::refine_file_type(
+            path,
+            crate::file_types::detect_file_type(path),
+            config.fs().as_ref(),
+        );
         if crate::rules::mcp_servers::is_client_config_with_mcp(file_type) {
             return crate::rules::mcp_servers::validate_client_config(
                 file_type, path, content, config,
@@ -2113,6 +2120,26 @@ fn is_kiro_power_mcp_file(path: &Path, config: &PerFileLintConfig<'_>) -> bool {
     })
 }
 
+/// MCP-024: an entry with nothing in it. With the raw entry at hand, every
+/// field must be blank (null, an empty string, array or object), so an entry
+/// that holds only `headers` or another field is not "empty" (MCP-009 or
+/// MCP-010 reports what it lacks).
+fn is_empty_server_entry(server: &McpServerConfig, raw_server: Option<&serde_json::Value>) -> bool {
+    if has_meaningful_server_config(server) {
+        return false;
+    }
+    let Some(fields) = raw_server.and_then(serde_json::Value::as_object) else {
+        return true;
+    };
+    fields.values().all(|value| match value {
+        serde_json::Value::Null => true,
+        serde_json::Value::String(text) => text.trim().is_empty(),
+        serde_json::Value::Array(items) => items.is_empty(),
+        serde_json::Value::Object(map) => map.is_empty(),
+        _ => false,
+    })
+}
+
 fn has_meaningful_server_config(server: &McpServerConfig) -> bool {
     let has_type = server
         .server_type
@@ -2294,8 +2321,12 @@ fn validate_server(
     }
 
     // MCP-009: Missing command for stdio server
-    // Treat null and empty string/array as missing (not a usable command)
-    if config.is_rule_enabled("MCP-009") && effective_type == "stdio" {
+    // Treat null and empty string/array as missing (not a usable command).
+    // An entry with nothing in it is MCP-024's finding; MCP-009 used to
+    // report the same entry a second time.
+    let empty_entry =
+        config.is_rule_enabled("MCP-024") && is_empty_server_entry(server, raw_server);
+    if config.is_rule_enabled("MCP-009") && effective_type == "stdio" && !empty_entry {
         if !has_usable_command(server) {
             // Without a `type` the entry is stdio by default; say so, and for
             // a `url` entry give the client's own advice ("add "type":
@@ -2479,7 +2510,7 @@ fn validate_server(
         diagnostics.push(diag);
     }
 
-    if config.is_rule_enabled("MCP-024") && !has_meaningful_server_config(server) {
+    if config.is_rule_enabled("MCP-024") && is_empty_server_entry(server, raw_server) {
         diagnostics.push(
             Diagnostic::error(
                 path.to_path_buf(),
@@ -2549,6 +2580,47 @@ mod tests {
             "{}",
             mcp_011[0].message
         );
+    }
+
+    /// `streamable-http` is documented by Claude Code for `.mcp.json` (also
+    /// in plugins), by Copilot CLI, Codex and Cursor for the Agent Plugins
+    /// root `mcp.json`, and listed by Cursor as a transport. No error on those
+    /// files, scoped to the client or not. Copilot's own files (VS Code
+    /// `.vscode/mcp.json`, `.github/mcp.json`, Copilot CLI's
+    /// `mcp-config.json`) document stdio/local/http/sse only.
+    #[test]
+    fn test_mcp_011_streamable_http_where_clients_document_it() {
+        let server = r#"{"type": "streamable-http", "url": "https://mcp.example.com/mcp"}"#;
+        let portable = format!(r#"{{"mcpServers": {{"s": {server}}}}}"#);
+        let agent_plugins = format!(
+            r#"{{"$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json", "mcpServers": {{"s": {server}}}}}"#
+        );
+        let mcp_011 = |path: &str, content: &str, tools: &[&str]| {
+            let mut config = LintConfig::default();
+            config.set_tools(tools.iter().map(|t| t.to_string()).collect());
+            let diagnostics = McpValidator.validate(Path::new(path), content, &config);
+            rules_of(&diagnostics, "MCP-011").len()
+        };
+        for (path, content, tools) in [
+            (".mcp.json", portable.as_str(), &[][..]),
+            (".mcp.json", portable.as_str(), &["claude-code"][..]),
+            (
+                "my-plugin/.mcp.json",
+                portable.as_str(),
+                &["claude-code"][..],
+            ),
+            ("my-plugin/mcp.json", agent_plugins.as_str(), &[][..]),
+            (
+                "my-plugin/mcp.json",
+                agent_plugins.as_str(),
+                &["github-copilot"][..],
+            ),
+            (".cursor/mcp.json", portable.as_str(), &["cursor"][..]),
+        ] {
+            assert_eq!(mcp_011(path, content, tools), 0, "{path} {tools:?}");
+        }
+        let vscode = format!(r#"{{"servers": {{"s": {server}}}}}"#);
+        assert_eq!(mcp_011(".vscode/mcp.json", &vscode, &[]), 1);
     }
 
     #[test]
@@ -2622,6 +2694,34 @@ mod tests {
         assert_eq!(
             rules_of(&validate_path(".mcp.json", content), "MCP-007").len(),
             1
+        );
+    }
+
+    /// An empty entry (`{}`, or a blank command) got both MCP-009 and MCP-024;
+    /// MCP-024 reports it alone, and MCP-009 still reports a stdio entry
+    /// that has other fields but no command.
+    #[test]
+    fn test_empty_server_reported_once_by_mcp_024() {
+        let content = r#"{"mcpServers": {"none": {}, "blank": {"command": ""}, "argsonly": {"args": ["x"]}, "headersonly": {"headers": {"X-Trace": "on"}}}}"#;
+        let diagnostics = validate_path(".mcp.json", content);
+        let mcp_024 = rules_of(&diagnostics, "MCP-024");
+        assert_eq!(mcp_024.len(), 2, "{diagnostics:?}");
+        let mut mcp_009: Vec<_> = rules_of(&diagnostics, "MCP-009")
+            .iter()
+            .map(|d| d.message.clone())
+            .collect();
+        mcp_009.sort();
+        // An entry with only headers is not empty: MCP-009 says what it lacks.
+        assert_eq!(mcp_009.len(), 2, "{diagnostics:?}");
+        assert!(mcp_009[0].contains("'argsonly'") && mcp_009[1].contains("'headersonly'"));
+        // With MCP-024 disabled, MCP-009 reports the empty entries again.
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["MCP-024".to_string()];
+        let diagnostics = McpValidator.validate(Path::new(".mcp.json"), content, &config);
+        assert_eq!(
+            rules_of(&diagnostics, "MCP-009").len(),
+            4,
+            "{diagnostics:?}"
         );
     }
 

@@ -740,7 +740,12 @@ impl Cx<'_, '_, '_> {
                     shell_variables(&mut self.out, settings, 0);
                 }
                 if let Some(headers) = entry.at("headers") {
-                    secret_headers(&mut self.out, headers, &format!("provider '{id}'"));
+                    secret_headers(
+                        &mut self.out,
+                        headers,
+                        &format!("provider '{id}'"),
+                        |_, _| false,
+                    );
                     shell_variables(&mut self.out, headers, 0);
                 }
                 if !v2 {
@@ -963,9 +968,16 @@ impl Cx<'_, '_, '_> {
                         t!("rules.oc_cfg_007.suggestion_environment"),
                     );
                 }
+                // MCP-018 owns literal secrets in MCP server environments; the
+                // ones it reports are not reported again here.
+                let mcp_018 = self.out.config.is_rule_enabled("MCP-018");
                 for var in environment.obj().unwrap_or_default() {
                     if is_credential_name(&var.key)
                         && var.value.str().is_some_and(is_literal_secret)
+                        && !(mcp_018
+                            && var.value.str().is_some_and(|value| {
+                                crate::rules::mcp_servers::is_literal_env_secret(&var.key, value)
+                            }))
                     {
                         self.out.warn(
                             "OC-CFG-005",
@@ -1010,7 +1022,17 @@ impl Cx<'_, '_, '_> {
                 }
             }
             if let Some(headers) = server.at("headers") {
-                secret_headers(&mut self.out, headers, &format!("MCP server '{name}'"));
+                // MCP-028 owns literal credentials in MCP server headers.
+                let mcp_028 = self.out.config.is_rule_enabled("MCP-028");
+                secret_headers(
+                    &mut self.out,
+                    headers,
+                    &format!("MCP server '{name}'"),
+                    |header, value| {
+                        mcp_028
+                            && crate::rules::mcp_servers::is_literal_header_secret(header, value)
+                    },
+                );
                 shell_variables(&mut self.out, headers, 0);
             }
         }
@@ -1208,6 +1230,12 @@ impl Cx<'_, '_, '_> {
                 );
             } else if (key == "clientSecret" || key == "client_secret")
                 && field.value.str().is_some_and(is_literal_secret)
+                // MCP-028 owns literal OAuth client secrets of MCP servers.
+                && !(self.out.config.is_rule_enabled("MCP-028")
+                    && field
+                        .value
+                        .str()
+                        .is_some_and(crate::rules::mcp_servers::is_literal_oauth_secret))
             {
                 self.out.warn(
                     "OC-CFG-005",
@@ -1618,10 +1646,20 @@ fn is_literal_api_key(value: &str) -> bool {
     is_literal_secret(value)
 }
 
-/// OC-CFG-005 for header maps.
-fn secret_headers(out: &mut Out<'_, '_>, headers: &Node, owner: &str) {
+/// OC-CFG-005 for header maps. `reported_elsewhere` names the headers
+/// another rule already reports (MCP-028 for MCP servers).
+fn secret_headers(
+    out: &mut Out<'_, '_>,
+    headers: &Node,
+    owner: &str,
+    reported_elsewhere: impl Fn(&str, &str) -> bool,
+) {
     for header in headers.obj().unwrap_or_default() {
-        if is_credential_name(&header.key) && header.value.str().is_some_and(is_literal_secret) {
+        if is_credential_name(&header.key)
+            && header.value.str().is_some_and(|value| {
+                is_literal_secret(value) && !reported_elsewhere(&header.key, value)
+            })
+        {
             out.warn(
                 "OC-CFG-005",
                 header.value.pos,
@@ -4103,13 +4141,36 @@ mod tests {
   }
 }"#;
         let diagnostics = validate(content);
+        // The provider key. The MCP header and environment secrets are
+        // MCP-018 and MCP-028 findings (they used to be reported twice).
+        let oc005: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "OC-CFG-005")
+            .collect();
+        assert_eq!(oc005.len(), 1, "{diagnostics:?}");
+        assert!(oc005[0].message.contains("Provider 'a'"), "{oc005:?}");
+        // The MCP validator reports them once each; with MCP-018 and MCP-028
+        // disabled OC-CFG-005 reports them again.
+        let mcp = crate::rules::mcp::McpValidator.validate(
+            Path::new("opencode.json"),
+            content,
+            &LintConfig::default(),
+        );
+        let mut mcp_rules: Vec<_> = mcp
+            .iter()
+            .map(|d| d.rule.as_str())
+            .filter(|rule| matches!(*rule, "MCP-018" | "MCP-028"))
+            .collect();
+        mcp_rules.sort();
+        assert_eq!(mcp_rules, ["MCP-018", "MCP-028"], "{mcp:?}");
+        let mut no_mcp = LintConfig::default();
+        no_mcp.rules_mut().disabled_rules = vec!["MCP-018".to_string(), "MCP-028".to_string()];
         assert_eq!(
-            diagnostics
+            validate_with_config(content, &no_mcp)
                 .iter()
                 .filter(|d| d.rule == "OC-CFG-005")
                 .count(),
-            3,
-            "{diagnostics:?}"
+            3
         );
         let shell: Vec<_> = diagnostics
             .iter()

@@ -9,7 +9,8 @@
 //! leaf directory, at most one file per directory, `AGENTS.override.md`
 //! before `AGENTS.md`). Each over-cap chain is reported once, on its largest
 //! file, which is the one edit that fixes every chain sharing it. A chain of
-//! one file is left to CDX-AG-009.
+//! one file, or a chain whose largest file is over the cap by itself, is left
+//! to CDX-AG-009, which reports that file.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -48,12 +49,25 @@ pub(crate) fn chain_diagnostics(
         {
             continue;
         }
-        let Some((culprit, _)) = sizes
+        let Some((culprit, culprit_size)) = sizes
             .iter()
             .max_by_key(|(path, size)| (*size, std::cmp::Reverse(path.components().count())))
         else {
             continue;
         };
+        // The largest file alone is over the cap: CDX-AG-009 already reports
+        // that file, and trimming it is the same edit this rule would ask
+        // for, so the chain is not reported a second time on it.
+        let culprit_is_agents_md = culprit
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| matches!(name, "AGENTS.md" | "AGENTS.override.md"));
+        if *culprit_size > CODEX_BYTE_LIMIT
+            && culprit_is_agents_md
+            && config.for_path(culprit).is_rule_enabled("CDX-AG-009")
+        {
+            continue;
+        }
         reported
             .entry(culprit.clone())
             .and_modify(|entry| {
@@ -90,6 +104,27 @@ mod tests {
     use super::*;
     use crate::fs::MockFileSystem;
     use std::sync::Arc;
+
+    /// A chain whose largest file is over the cap by itself got CDX-AG-009
+    /// and CDX-AG-010 on the same file; CDX-AG-009 reports it alone.
+    #[test]
+    fn chain_with_an_oversized_file_is_left_to_cdx_ag_009() {
+        let fs = MockFileSystem::new();
+        fs.add_file("/repo/AGENTS.md", "a".repeat(100));
+        fs.add_file("/repo/pkg/AGENTS.md", "b".repeat(CODEX_BYTE_LIMIT + 10));
+        let mut config = LintConfig::default();
+        config.set_fs(Arc::new(fs));
+        let paths = vec![
+            PathBuf::from("/repo/AGENTS.md"),
+            PathBuf::from("/repo/pkg/AGENTS.md"),
+        ];
+        assert!(chain_diagnostics(&paths, &config, Path::new("/repo")).is_empty());
+        // With CDX-AG-009 disabled the chain is reported again.
+        config.rules_mut().disabled_rules = vec!["CDX-AG-009".to_string()];
+        let diagnostics = chain_diagnostics(&paths, &config, Path::new("/repo"));
+        assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+        assert_eq!(diagnostics[0].file, PathBuf::from("/repo/pkg/AGENTS.md"));
+    }
 
     #[test]
     fn chain_over_the_cap_is_reported_on_its_largest_file() {

@@ -146,7 +146,7 @@ pub fn get_rule_security(id: &str) -> Option<RuleSecurityMetadata> {
 /// Returns the tool a rule names in `evidence.applies_to.tool`, if any.
 ///
 /// Unlike [`get_tool_for_prefix`], this answers per rule, so a vendor rule in
-/// a mixed prefix (AGM-003 names Windsurf, AS-009 names Codex) still reports
+/// a mixed prefix (AS-009 names Codex, AS-015 names Claude Code) still reports
 /// its tool. Returns `None` for generic rules and unknown IDs.
 ///
 /// # Example
@@ -288,7 +288,7 @@ mod tests {
         // generic rules.
         assert_eq!(get_tool_for_prefix("AS-"), None);
         assert_eq!(get_rule_tool("AS-009"), Some("codex"));
-        assert_eq!(get_rule_tool("AGM-003"), Some("windsurf"));
+        assert_eq!(get_rule_tool("AS-015"), Some("claude-code"));
         assert_eq!(get_rule_tool("AGM-001"), None);
         assert_eq!(get_rule_tool("NONEXISTENT-999"), None);
     }

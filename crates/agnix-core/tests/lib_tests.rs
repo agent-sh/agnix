@@ -367,9 +367,11 @@ fn test_validators_for_skill() {
     let validators = registry.validators_for(FileType::Skill);
     // 10: the Copilot, Cursor and Cline validators act on their own skill
     // folders (CP-SK-002, CUR-023, CL-SK-004), the Codex (CX-SK-004/007) and
-    // OpenCode skill directory validators run on SKILL.md too, and
-    // AmpSkillValidator joined for the Amp skill checks.
-    assert_eq!(validators.len(), 10);
+    // OpenCode skill directory validators run on SKILL.md too,
+    // AmpSkillValidator joined for the Amp skill checks, and McpValidator
+    // checks the skill's `mcpServers` frontmatter (MCP-018/028), making 11.
+    assert_eq!(validators.len(), 11);
+    assert!(validators.iter().any(|v| v.name() == "McpValidator"));
 }
 
 #[test]
@@ -1867,25 +1869,37 @@ fn test_agm_001_unclosed_code_block() {
     assert!(!agm_001.is_empty(), "Should detect unclosed code block");
 }
 
+/// AGM-003 (Windsurf's 12,000-character limit) was retired in 0.59.0 for
+/// WS-011, which reported the same AGENTS.md files. WS-011 must still report
+/// every file AGM-003 did, and only when Windsurf is in scope.
 #[test]
-fn test_agm_003_over_char_limit() {
+fn test_agm_003_retired_ws_011_reports_windsurf_limit() {
     let temp = tempfile::TempDir::new().unwrap();
 
     let content = format!("# Project\n\n{}", "x".repeat(13000));
     std::fs::write(temp.path().join("AGENTS.md"), content).unwrap();
+    let count = |result: &agnix_core::ValidationResult, rule: &str| {
+        result.diagnostics.iter().filter(|d| d.rule == rule).count()
+    };
 
     // Not Windsurf's file: an unscoped run without Windsurf configuration.
     let config = LintConfig::default();
     let result = validate_project(temp.path(), &config).unwrap();
-    assert!(result.diagnostics.iter().all(|d| d.rule != "AGM-003"));
+    assert_eq!(count(&result, "WS-011"), 0);
 
-    // A `.windsurf/` directory puts Windsurf in scope.
+    // A `.windsurf/` directory puts Windsurf in scope; one finding, from WS-011.
     std::fs::create_dir(temp.path().join(".windsurf")).unwrap();
     let result = validate_project(temp.path(), &config).unwrap();
-    assert!(
-        result.diagnostics.iter().any(|d| d.rule == "AGM-003"),
-        "Should detect character limit exceeded"
-    );
+    assert_eq!(count(&result, "WS-011"), 1, "{:?}", result.diagnostics);
+    assert_eq!(count(&result, "AGM-003"), 0);
+
+    // Selecting windsurf reports it as well.
+    let windsurf = LintConfig::builder()
+        .tools(vec!["windsurf".to_string()])
+        .build()
+        .unwrap();
+    let result = validate_project(temp.path(), &windsurf).unwrap();
+    assert_eq!(count(&result, "WS-011"), 1, "{:?}", result.diagnostics);
 
     // With tools = ["kiro"] the Windsurf and Codex limits do not apply.
     let kiro = LintConfig::builder()
@@ -1899,7 +1913,10 @@ fn test_agm_003_over_char_limit() {
     .unwrap();
     let result = validate_project(temp.path(), &kiro).unwrap();
     assert!(
-        result.diagnostics.iter().all(|d| d.rule != "AGM-003"),
+        result
+            .diagnostics
+            .iter()
+            .all(|d| d.rule != "WS-011" && d.rule != "AGM-003"),
         "{:?}",
         result.diagnostics
     );
@@ -5835,4 +5852,88 @@ fn test_cc_hk_008_exec_form_checks_only_the_executed_script() {
         assert_eq!(hits.len(), 1, "{command} {args:?}: {hits:?}");
         assert!(hits[0].message.contains("scripts/missing."));
     }
+}
+
+/// MCP-018 and MCP-028 cover the MCP servers of Gemini agents (including an
+/// extension's `agents/*.md`, typed by its `gemini-extension.json`), SKILL.md
+/// `mcpServers` and a skill's `mcp.json`. XP-SK-003 scans skill files as text
+/// and used to be the only report there; a token in a server it now shares
+/// with MCP-018 is reported once, by MCP-018.
+#[test]
+fn test_mcp_secret_rules_cover_agents_and_skills_once() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let root = temp.path();
+    let token = "ghp_abcdefghijklmnopqrstuvwxyz0123456789";
+    let write = |rel: &str, content: &str| {
+        let path = root.join(rel);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, content).unwrap();
+    };
+    write(
+        "ext/gemini-extension.json",
+        r#"{"name": "ext", "version": "1.0.0", "description": "Example extension"}"#,
+    );
+    write(
+        "ext/agents/helper.md",
+        &format!(
+            "---\nname: helper\ndescription: Helps\ntools: [read_file]\nmcp_servers:\n  docs:\n    command: docs-mcp\n    env:\n      DOCS_TOKEN: {token}\n---\nHelp.\n"
+        ),
+    );
+    write(
+        ".agents/skills/web/SKILL.md",
+        &format!(
+            "---\nname: web\ndescription: Reads pages. Use when asked to read a page.\nmcpServers:\n  web:\n    command: web-mcp\n    env:\n      WEB_TOKEN: {token}\n---\nRead it.\n"
+        ),
+    );
+    write(
+        ".agents/skills/files/SKILL.md",
+        "---\nname: files\ndescription: Reads files. Use when asked to read a file.\n---\nRead it.\n",
+    );
+    write(
+        ".agents/skills/files/mcp.json",
+        &format!(r#"{{"files": {{"command": "files-mcp", "env": {{"FILES_TOKEN": "{token}"}}}}}}"#),
+    );
+    // A token outside any MCP server is still XP-SK-003's.
+    write(
+        ".agents/skills/notes/SKILL.md",
+        &format!(
+            "---\nname: notes\ndescription: Takes notes. Use when asked to take notes.\n---\nToken: {token}\n"
+        ),
+    );
+
+    let result = validate_project(root, &LintConfig::default()).unwrap();
+    let rules_for = |part: &str| -> Vec<&str> {
+        let mut rules: Vec<&str> = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.file.to_string_lossy().contains(part))
+            .filter(|d| matches!(d.rule.as_str(), "MCP-018" | "MCP-028" | "XP-SK-003"))
+            .map(|d| d.rule.as_str())
+            .collect();
+        rules.sort();
+        rules
+    };
+    assert_eq!(rules_for("ext/agents/helper.md"), ["MCP-018"]);
+    assert_eq!(rules_for("skills/web/SKILL.md"), ["MCP-018"]);
+    assert_eq!(rules_for("skills/files/mcp.json"), ["MCP-018"]);
+    assert_eq!(rules_for("skills/notes/SKILL.md"), ["XP-SK-003"]);
+    // No MCP rule reads a Markdown agent as MCP JSON.
+    assert!(
+        result.diagnostics.iter().all(|d| d.rule != "MCP-007"),
+        "{:?}",
+        result.diagnostics
+    );
+
+    // With MCP-018 disabled, XP-SK-003 reports the skill tokens again.
+    let config = LintConfig::builder()
+        .disable_rule("MCP-018")
+        .build()
+        .unwrap();
+    let result = validate_project(root, &config).unwrap();
+    let xp: Vec<_> = result
+        .diagnostics
+        .iter()
+        .filter(|d| d.rule == "XP-SK-003")
+        .collect();
+    assert_eq!(xp.len(), 3, "{xp:?}");
 }

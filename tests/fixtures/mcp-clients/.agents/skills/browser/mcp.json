@@ -1,0 +1,8 @@
+{
+  "browser": {
+    "command": "browser-mcp",
+    "args": ["--headless"],
+    "env": { "BROWSER_API_TOKEN": "literal-token-value-456" },
+    "includeTools": ["navigate"]
+  }
+}

@@ -517,7 +517,7 @@ fn test_default_config_enables_agm_rules() {
 
     assert!(config.is_rule_enabled("AGM-001"));
     assert!(config.is_rule_enabled("AGM-002"));
-    assert!(config.is_rule_enabled("AGM-003"));
+    assert!(config.is_rule_enabled("AGM-007"));
     assert!(config.is_rule_enabled("AGM-004"));
     assert!(config.is_rule_enabled("AGM-005"));
 }
@@ -529,7 +529,7 @@ fn test_category_disabled_agents_md() {
 
     assert!(!config.is_rule_enabled("AGM-001"));
     assert!(!config.is_rule_enabled("AGM-002"));
-    assert!(!config.is_rule_enabled("AGM-003"));
+    assert!(!config.is_rule_enabled("AGM-007"));
     assert!(!config.is_rule_enabled("AGM-004"));
     assert!(!config.is_rule_enabled("AGM-005"));
 
@@ -575,7 +575,7 @@ fn test_disabled_specific_agm_rule() {
 
     assert!(!config.is_rule_enabled("AGM-001"));
     assert!(config.is_rule_enabled("AGM-002"));
-    assert!(config.is_rule_enabled("AGM-003"));
+    assert!(config.is_rule_enabled("AGM-007"));
     assert!(config.is_rule_enabled("AGM-004"));
     assert!(config.is_rule_enabled("AGM-005"));
 }
@@ -1544,11 +1544,11 @@ fn test_tools_array_kiro_only() {
 /// their ID prefix also holds generic rules. Before 0.59 the filter read only
 /// TOOL_RULE_PREFIXES, so AGM-003 (Windsurf), AS-009 (Codex), AS-015 and
 /// MCP-025/MCP-026 (Claude Code) ran for every tool. (XP-007 and XP-009, the
-/// Codex byte limits, were gated the same way until they were retired.)
+/// Codex byte limits, and AGM-003 were gated the same way until they were
+/// retired.)
 #[test]
 fn test_tools_array_gates_vendor_rules_in_mixed_prefixes() {
     let vendor_rules = [
-        ("AGM-003", "windsurf"),
         ("AS-009", "codex"),
         ("AS-015", "claude-code"),
         ("MCP-025", "claude-code"),
@@ -1593,12 +1593,13 @@ fn test_target_gates_vendor_rules_in_mixed_prefixes() {
     let mut codex = LintConfig::default();
     dm(&mut codex).target = TargetTool::Codex;
     assert!(codex.is_rule_enabled("AS-009"));
-    assert!(!codex.is_rule_enabled("AGM-003"));
+    // AGM-003 (Windsurf) was retired for WS-011; AS-015 is Claude Code's.
+    assert!(!codex.is_rule_enabled("AS-015"));
 
     let mut cursor = LintConfig::default();
     dm(&mut cursor).target = TargetTool::Cursor;
     assert!(!cursor.is_rule_enabled("AS-009"));
-    assert!(!cursor.is_rule_enabled("AGM-003"));
+    assert!(!cursor.is_rule_enabled("AS-015"));
 }
 
 #[test]

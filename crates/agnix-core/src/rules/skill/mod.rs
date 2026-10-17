@@ -457,6 +457,12 @@ const KNOWN_FRONTMATTER_FIELDS: &[&str] = &[
     "shell",
 ];
 
+/// Whether Claude Code knows `field` as a skill frontmatter field (the
+/// CC-SK-017 list). XP-SK-001 skips fields CC-SK-017 already reports.
+pub(crate) fn is_known_claude_skill_field(field: &str) -> bool {
+    KNOWN_FRONTMATTER_FIELDS.contains(&field)
+}
+
 /// Convert a name to kebab-case format.
 /// - Lowercase the name
 /// - Replace underscores with hyphens

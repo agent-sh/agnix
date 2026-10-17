@@ -1600,6 +1600,10 @@ fn validate_mcp_file(
     let Some(entries) = mcp_servers.and_then(|m| m.value.value.as_object()) else {
         return cx.diagnostics;
     };
+    // MCP-012 reports an SSE server in every MCP file (COP-026, the old
+    // Copilot SSE check, was retired into it); the SSE `type` is reported
+    // here only while MCP-012 is off, so the same value is not reported twice.
+    let sse_reported_elsewhere = config.is_rule_enabled("MCP-012");
     for server in entries {
         let name = server.key.as_str();
         let Some(fields) = server.value.value.as_object() else {
@@ -1610,7 +1614,9 @@ fn validate_mcp_file(
                 "envFile" => true,
                 "cwd" => kind == McpFile::WorkspacePortable,
                 "type" => {
-                    kind == McpFile::WorkspacePortable && field.value.value.as_str() == Some("sse")
+                    kind == McpFile::WorkspacePortable
+                        && field.value.value.as_str() == Some("sse")
+                        && !sse_reported_elsewhere
                 }
                 _ => false,
             };
@@ -4213,14 +4219,16 @@ mod survey_tests {
         let portable =
             r#"{ "mcpServers": { "a": { "type": "sse", "url": "https://x", "cwd": "tools" } } }"#;
         assert!(validate_at(".mcp.json", portable).is_empty());
-        assert_eq!(
-            rule(
-                &validate_with_tools(".mcp.json", portable, &["copilot"]),
-                "COP-035"
-            )
-            .len(),
-            2
-        );
+        // `cwd`; the SSE `type` is MCP-012's finding (both used to report it).
+        let copilot = validate_with_tools(".mcp.json", portable, &["copilot"]);
+        let cop_035 = rule(&copilot, "COP-035");
+        assert_eq!(cop_035.len(), 1, "{copilot:#?}");
+        assert!(cop_035[0].message.contains("'cwd'"), "{cop_035:#?}");
+        let mut no_mcp_012 = LintConfig::default();
+        no_mcp_012.set_tools(vec!["copilot".to_string()]);
+        no_mcp_012.rules_mut().disabled_rules = vec!["MCP-012".to_string()];
+        let diagnostics = CopilotValidator.validate(Path::new(".mcp.json"), portable, &no_mcp_012);
+        assert_eq!(rule(&diagnostics, "COP-035").len(), 2, "{diagnostics:#?}");
     }
 
     #[test]

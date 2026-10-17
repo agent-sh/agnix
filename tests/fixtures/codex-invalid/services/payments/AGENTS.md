@@ -1,6 +1,6 @@
 # Payments service guidance
 
-This file is over the 32 KiB project_doc_max_bytes default on purpose (CDX-AG-009, CDX-AG-010).
+This file is over the 32 KiB project_doc_max_bytes default on purpose (CDX-AG-009). The chain through it is CDX-AG-009's finding too, since this file alone is over the cap; services/billing/AGENTS.md holds the CDX-AG-010 case.
 
 - Rule 1: run `make test-payments` and check `services/payments/README.md` conventions before changing handler 1.
 - Rule 2: run `make test-payments` and check `services/payments/README.md` conventions before changing handler 2.

@@ -88,6 +88,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 `CC-SK-009`, `CC-SK-012`, and `CC-HK-004` were retired in 0.57.0. There is no documented three-injection cap, arguments are appended when no placeholder receives them, and CC-HK-018 covers ignored matchers.
 
+`AGM-003` was retired in 0.59.0: Windsurf's 12,000-character limit belongs to the Windsurf family, and WS-011 reports the same AGENTS.md files in projects that use Devin Desktop.
+
 `CC-SK-011` was retired in 0.56.5. A user-typed inline `/skill-name` mention can authorize Claude to invoke a skill with both `user-invocable: false` and `disable-model-invocation: true`. The flags still restrict direct slash invocation and automatic model invocation, respectively. No reachability diagnostic or permission-changing auto-fix is emitted. See [Claude Code skill invocation](https://code.claude.com/docs/en/skills#where-you-write-the-skills-name).
 
 ### Example Evidence Block
@@ -408,7 +410,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-sk-024"></a>
 ### CC-SK-024 [LOW] Skill Without Description
 **Requirement**: A Claude Code skill SHOULD have a `description` (or `when_to_use`). Vendor text: "All fields are optional. Only `description` is recommended so Claude knows when to use the skill." and `description` "If omitted, uses the first non-empty line of the markdown content." (skills, "Frontmatter reference")
-**Detection**: neither `description` nor `when_to_use` is set, and `disable-model-invocation` is not true (info)
+**Detection**: neither `description` nor `when_to_use` is set, and `disable-model-invocation` is not true (info). Outside `.claude/skills/` (a skill the Claude rules cover in an unscoped run) a missing `description` is AS-003's finding, so this rule does not repeat it while AS-003 is enabled.
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/skills
 
@@ -787,10 +789,10 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="ws-sk-001"></a>
 ### WS-SK-001 [MEDIUM] Windsurf Skill Uses Unsupported Field
-**Requirement**: Skills in `.devin/skills/` and `.windsurf/skills/` SHOULD use only the frontmatter fields Windsurf (Devin Desktop) reads: the Agent Skills fields; in `.devin/skills/`, also the Devin CLI fields `argument-hint`, `model`, `subagent`, `agent`, `permissions` and `triggers` (Devin CLI "All Frontmatter Fields").
+**Requirement**: Skills in `.devin/skills/` and `.windsurf/skills/` SHOULD use only the frontmatter fields Windsurf (Devin Desktop) and Devin CLI read: the Agent Skills fields and the Devin CLI fields `argument-hint`, `model`, `subagent`, `agent`, `permissions` and `triggers` (Devin CLI "All Frontmatter Fields"). Devin CLI reads `.devin/skills/` and imports `.windsurf/skills/` ("Skills | `.windsurf/skills/` (project)"; "Copilot skills use the same `SKILL.md` format as Devin skills, so they are read in place").
 **Detection**: Top-level keys of the parsed frontmatter (unparseable frontmatter is left to AS-016). A field another skill client acts on is a warning; plain extra data (`version`, `tags`, `author`, ...) is info.
 **Fix**: [AUTO-FIX, safe/unsafe] Move a single-line scalar field under `metadata` (into an existing block mapping, or by creating the block in place), quoting numbers and booleans so `metadata` stays a string map; safe for plain data no skill client reads, unsafe for another client's field. Other values (lists, maps, multi-line scalars) are an unsafe deletion of the whole entry. Every fix is applied to a copy and re-parsed and is offered only when the frontmatter parses to the intended mapping (the old fix deleted only the key line, leaving list items behind).
-**Source**: docs.devin.ai/desktop/cascade/skills, docs.devin.ai/cli/extensibility/skills/creating-skills
+**Source**: docs.devin.ai/desktop/cascade/skills, docs.devin.ai/cli/extensibility/skills/creating-skills, docs.devin.ai/cli/reference/configuration/read-config-from
 
 <a id="kr-sk-001"></a>
 ### KR-SK-001 [MEDIUM] Kiro Skill Uses Unsupported Field
@@ -1685,13 +1687,6 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Fix**: Add headings for the main sections
 **Source**: agents.md, code.claude.com/docs/en/memory
 
-<a id="agm-003"></a>
-### AGM-003 [MEDIUM] Character Limit (Windsurf)
-**Requirement**: When Windsurf (Devin Desktop) reads AGENTS.md, it SHOULD stay under 12,000 characters. Windsurf states the limit for workspace rule files ("Limited to 12,000 characters per file.") and processes AGENTS.md by "the same Rules engine"; applying the limit to AGENTS.md is an inference, since Windsurf states no AGENTS.md limit. Runs only when Windsurf is in scope: selected with `tools`, or unscoped with `.devin/`, `.windsurf/` or `.windsurfrules` next to the file or above it.
-**Detection**: `AGENTS.md` only (Windsurf does not read the Codex `.local`/`.override` variants); `content.chars().count() > 12000`, counting characters as Windsurf states, not UTF-8 bytes
-**Fix**: Move directory-specific guidance into nested AGENTS.md files or trim the file
-**Source**: docs.devin.ai/desktop/cascade/memories, docs.devin.ai/desktop/cascade/agents-md
-
 <a id="agm-004"></a>
 ### AGM-004 [LOW] Missing Project Context
 **Requirement**: The repository-root AGENTS.md SHOULD describe the project: "Project overview" is among the agents.md "Popular choices"; Copilot: "Provide an overview of the project you're working on, including its purpose, goals, and any relevant background information." Nested AGENTS.md files describe a package and are not checked.
@@ -1988,7 +1983,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="mcp-009"></a>
 ### MCP-009 [HIGH] Missing command for stdio server
 **Requirement**: Stdio MCP servers MUST have a `command`. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Cursor: "**command** | Yes | Command to start the server executable."; Claude Code: "Claude Code reads an entry with no `type` as a stdio server, so a `url` entry without a `type` fails."
-**Detection**: Server entry has `type: "stdio"` (or Copilot's `local`), or omits `type` and has no usable `command`. A URL-only entry is read as remote in `.cursor/mcp.json` (Cursor's documented remote form), inline servers of `.cursor-plugin/plugin.json` (Cursor Plugins "infer the transport from `command` or `url`"), a Kiro power `mcp.json`, an Amp skill's sibling `mcp.json`, and a Codex plugin's `.mcp.json` (next to `.codex-plugin/plugin.json`, not in a Claude Code plugin). Without a `type`, the message says the entry defaults to stdio, and for a `url` entry asks for a `type`.
+**Detection**: Server entry has `type: "stdio"` (or Copilot's `local`), or omits `type` and has no usable `command`. A URL-only entry is read as remote in `.cursor/mcp.json` (Cursor's documented remote form), inline servers of `.cursor-plugin/plugin.json` (Cursor Plugins "infer the transport from `command` or `url`"), a Kiro power `mcp.json`, an Amp skill's sibling `mcp.json`, and a Codex plugin's `.mcp.json` (next to `.codex-plugin/plugin.json`, not in a Claude Code plugin). Without a `type`, the message says the entry defaults to stdio, and for a `url` entry asks for a `type`. An empty entry (every field blank) is MCP-024's finding and is not reported here while MCP-024 is enabled.
 **Fix**: Add a `command` field specifying the executable to run
 **Source**: code.claude.com/docs/en/mcp, cursor.com/docs/mcp, code.visualstudio.com MCP configuration, geminicli.com/docs/tools/mcp-server
 
@@ -2051,7 +2046,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="mcp-018"></a>
 ### MCP-018 [MEDIUM] Potential Plaintext Secret in MCP Env
 **Requirement**: Secret-like env vars SHOULD NOT hold literal secrets: "**Keep long-lived secrets out of plaintext config.**" and "**Pass secrets per server, not globally.**"; Cursor: "Use environment variables for secrets, never hardcode them".
-**Detection**: In a local server's `env` (`environment` in OpenCode), keys containing `API_KEY`, `APIKEY`, `SECRET`, `TOKEN`, `PASSWORD`, `PASSWD`, `PRIVATE_KEY`, `ACCESS_KEY` or `CREDENTIAL` with a literal value. References (`${VAR}`, `${env:VAR}`, `{env:VAR}`, `$VAR`, `%VAR%`, `${input:...}`, `${{ secrets.X }}`), variable names, values under 8 characters and placeholders are skipped. Runs on generic MCP files and on the MCP servers in OpenCode, Gemini (settings and extensions), Amp settings, Codex `config.toml` and Copilot custom agents.
+**Detection**: In a local server's `env` (`environment` in OpenCode), keys containing `API_KEY`, `APIKEY`, `SECRET`, `TOKEN`, `PASSWORD`, `PASSWD`, `PRIVATE_KEY`, `ACCESS_KEY` or `CREDENTIAL` with a literal value. References (`${VAR}`, `${env:VAR}`, `{env:VAR}`, `$VAR`, `%VAR%`, `${input:...}`, `${{ secrets.X }}`), variable names, values under 8 characters and placeholders are skipped. Runs on generic MCP files and on the MCP servers in OpenCode, Gemini (settings, extensions and agent frontmatter `mcpServers`/`mcp_servers`), Amp settings, Amp skills (SKILL.md `mcpServers` and the skill's `mcp.json`), Codex `config.toml` and Copilot custom agents. XP-SK-003 does not repeat a credential this rule or MCP-028 reports in a skill's servers.
 **Fix**: Reference an environment variable or secret store
 **Source**: modelcontextprotocol.io/docs/2026-07-28/tutorials/security/local-server-security, cursor.com/docs/mcp
 
@@ -2093,7 +2088,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="mcp-024"></a>
 ### MCP-024 [HIGH] Empty MCP Server Configuration
 **Requirement**: Each MCP server entry MUST define a transport. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Gemini requires "one of the following" (`command`, `url`, `httpUrl`); Claude Code reads an entry with no `type` as stdio, so an empty entry has nothing to start.
-**Detection**: Flag empty objects in `mcpServers`
+**Detection**: Flag server entries in `mcpServers` with nothing in them: no fields, or only blank ones (`null`, `""`, `[]`, `{}`). An entry that holds another field, such as only `headers`, is not empty; MCP-009 or MCP-010 reports what it lacks.
 **Fix**: Add at least one meaningful field (`type`, `command`, `url`, `args`, `env`)
 **Source**: code.claude.com/docs/en/mcp, geminicli.com/docs/tools/mcp-server
 
@@ -2148,7 +2143,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="mcp-028"></a>
 ### MCP-028 [MEDIUM] Plaintext Credential in MCP Server Headers, URL or OAuth Secret
 **Requirement**: Remote MCP server credentials SHOULD NOT be literals in the config: "**Keep long-lived secrets out of plaintext config.**"; Cursor: "Use environment variables for Client ID and Client Secret instead of hardcoding them."; VS Code: "Do not commit tokens, passwords, or populated authentication headers."; Kiro: "Never hardcode API keys or tokens in configuration files"; OpenCode V2: "Store secrets in environment variables rather than in the file"; Gemini: "you should avoid hardcoding secrets".
-**Detection**: `Authorization`/`Proxy-Authorization` headers of the form `Bearer|Basic|Token <12+ characters>`; headers named like api-key, token, secret or password with a literal of 16+ characters; URL `user:password@` or credential query parameters (`api_key`, `token`, `access_token`, `key`, `secret`, ...) with literal values; literal OAuth client secrets (`oauth.clientSecret`, `oauth.client_secret`, Cursor `auth.CLIENT_SECRET`) and Codex `bearer_token`. Reference syntaxes and placeholders are skipped as for MCP-018. Same files as MCP-018.
+**Detection**: `Authorization`/`Proxy-Authorization` headers of the form `Bearer|Basic|Token <12+ characters>`; headers named like api-key, token, secret or password with a literal of 16+ characters; URL `user:password@` or credential query parameters (`api_key`, `token`, `access_token`, `key`, `secret`, ...) with literal values; literal OAuth client secrets (`oauth.clientSecret`, `oauth.client_secret`, Cursor `auth.CLIENT_SECRET`) and Codex `bearer_token`. Reference syntaxes and placeholders are skipped as for MCP-018. Same files as MCP-018. A `clientSecret` in a Codex plugin's MCP file is left to CDX-PL-019, which reports that Codex rejects the field.
 **Fix**: No auto-fix - reference an environment variable, input or secret store
 **Source**: modelcontextprotocol.io/docs/2026-07-28/tutorials/security/local-server-security, cursor.com/docs/mcp, code.visualstudio.com MCP configuration
 
@@ -2390,7 +2385,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="cop-035"></a>
 ### COP-035 [MEDIUM] MCP File Uses Unsupported Feature or Wrong Server Key
 **Requirement**: MCP files SHOULD use the features their format supports: "Portable files use a top-level `mcpServers` object. The VS Code format uses `servers`." and "Portable configurations don't support VS Code input variables or environment files. Servers requiring interactive inputs aren't forwarded to Copilot harness sessions." Workspace-root `.mcp.json` supports "stdio and HTTP" transports and no working directory.
-**Detection**: `.vscode/mcp.json` with `mcpServers` and no `servers`; `~/.copilot/mcp-config.json` with `servers` and no `mcpServers`, `envFile`, or `${input:...}`; workspace `.mcp.json` (only when the run targets Copilot, since it is also Claude Code's file) with `servers`, `envFile`, `cwd`, `type: "sse"` or `${input:...}`
+**Detection**: `.vscode/mcp.json` with `mcpServers` and no `servers`; `~/.copilot/mcp-config.json` with `servers` and no `mcpServers`, `envFile`, or `${input:...}`; workspace `.mcp.json` (only when the run targets Copilot, since it is also Claude Code's file) with `servers`, `envFile`, `cwd`, `type: "sse"` (only while MCP-012, which reports SSE servers in every MCP file, is disabled) or `${input:...}`
 **Fix**: Manual
 **Source**: code.visualstudio.com/docs/agents/reference/mcp-configuration ("Configuration file"), code.visualstudio.com/docs/agent-customization/mcp-servers ("Choose a configuration destination")
 
@@ -2895,7 +2890,7 @@ OpenCode 1 (`opencode-ai`) and OpenCode 2 (`@opencode/cli`, released 2026-09-11)
 <a id="oc-cfg-005"></a>
 ### OC-CFG-005 [MEDIUM] Hardcoded Secret in Config
 **Requirement**: Secrets SHOULD stay out of the config file: "Use configuration for other options. Store secrets in environment variables rather than in the file" (OpenCode 2 MCP servers); the config docs show `"apiKey": "{env:ANTHROPIC_API_KEY}"` and `"apiKey": "{file:~/.secrets/openai-key}"`.
-**Detection**: Warning (formerly an error) for a literal provider `apiKey` (`provider.<id>.options`, `providers.<id>.settings`), credential headers of providers and MCP servers, credential-named MCP `environment` variables, and OAuth `clientSecret`/`client_secret`. `{env:...}` and `{file:...}` (formerly reported), shell variables, all-caps placeholders such as `Bearer MY_API_KEY` and short dummy keys (`"ollama"`) are not reported; a value is literal when it has a known token prefix or 16 or more characters (agnix heuristic).
+**Detection**: Warning (formerly an error) for a literal provider `apiKey` (`provider.<id>.options`, `providers.<id>.settings`), credential headers of providers and MCP servers, credential-named MCP `environment` variables, and OAuth `clientSecret`/`client_secret`. `{env:...}` and `{file:...}` (formerly reported), shell variables, all-caps placeholders such as `Bearer MY_API_KEY` and short dummy keys (`"ollama"`) are not reported; a value is literal when it has a known token prefix or 16 or more characters (agnix heuristic). MCP-018 and MCP-028 run on the MCP servers of OpenCode configs; the MCP `environment`, header and OAuth secrets they report are not reported again here.
 **Fix**: No auto-fix
 **Source**: opencode.ai/v2/docs/mcp-servers, opencode.ai/docs/config
 
@@ -3252,7 +3247,7 @@ OpenCode 1 (`opencode-ai`) and OpenCode 2 (`@opencode/cli`, released 2026-09-11)
 <a id="oc-agm-002"></a>
 ### OC-AGM-002 [MEDIUM] Secrets in AGENTS.md
 **Requirement**: AGENTS.md SHOULD NOT contain credentials: "Commit project instruction files so everyone working in the repository receives the same guidance." / "You should commit your project's `AGENTS.md` file to Git." OpenCode does not reject such a file (formerly HIGH/MUST).
-**Detection**: Warning at each line of an AGENTS.md in an OpenCode project (an `opencode.json(c)` or `.opencode/` in the file's directory or an ancestor) or in the global config directory that contains a known credential prefix (`sk-ant-`, `sk-proj-`, `xoxb-`, `xoxp-`, `AKIA`, `AIza` (formerly the never-matching `AIZA`), `ghp_`, `gho_`, `github_pat_`); it no longer runs on every AGENTS.md
+**Detection**: Warning at each line of an AGENTS.md in an OpenCode project (an `opencode.json(c)` or `.opencode/` in the file's directory or an ancestor) or in the global config directory that contains a known credential prefix (`sk-ant-`, `sk-proj-`, `xoxb-`, `xoxp-`, `AKIA`, `AIza` (formerly the never-matching `AIZA`), `ghp_`, `gho_`, `github_pat_`); it no longer runs on every AGENTS.md. The line CDX-AG-002 reports (Codex reads the same file) is skipped while CDX-AG-002 is enabled, so a secret is reported once.
 **Fix**: No auto-fix
 **Source**: opencode.ai/v2/docs/instructions, opencode.ai/docs/rules
 
@@ -3635,7 +3630,7 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 <a id="cdx-cfg-010"></a>
 ### CDX-CFG-010 [HIGH] Hardcoded Secret in Codex Config
 **Requirement**: Codex config MUST NOT hardcode credentials (API keys/tokens/secrets/passwords)
-**Detection**: Scan config string values and key names for hardcoded secret patterns while allowing environment variable references
+**Detection**: Scan config string values and key names for hardcoded secret patterns while allowing environment variable references. In `config.toml`, the `[mcp_servers.<name>]` secrets MCP-018 or MCP-028 report (`env`, `http_headers`, `bearer_token`) are left to them, so they are reported once.
 **Fix**: No auto-fix (replace with environment variable references)
 **Source**: developers.openai.com/codex/config-reference
 
@@ -3867,7 +3862,7 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 <a id="cdx-ag-010"></a>
 ### CDX-AG-010 [MEDIUM] Codex Instruction Chain Exceeds project_doc_max_bytes
 **Requirement**: The combined instruction chain SHOULD fit `project_doc_max_bytes`: Codex "stops adding files once the combined size reaches the limit" (32 KiB by default), walking from the project root to the working directory with at most one file per directory (`AGENTS.override.md`, then `AGENTS.md`).
-**Detection**: Project-level: one chain per leaf directory; a chain over 32768 bytes is reported once, on its largest file. A chain of one file is left to CDX-AG-009. Fallback names from the user's Codex config are not visible, so the check can under-report. Codex-family twin of XP-009.
+**Detection**: Project-level: one chain per leaf directory; a chain over 32768 bytes is reported once, on its largest file. A chain of one file, or a chain whose largest file is over 32768 bytes by itself, is left to CDX-AG-009, which reports that file. Fallback names from the user's Codex config are not visible, so the check can under-report. Codex-family twin of XP-009.
 **Fix**: No auto-fix (trim the largest file, nest guidance deeper, or raise `project_doc_max_bytes`)
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
@@ -4016,7 +4011,7 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 <a id="cdx-pl-019"></a>
 ### CDX-PL-019 [HIGH] Secret in Plugin MCP Configuration
 **Requirement**: A plugin package MUST NOT contain credentials: "Keep the client secret out of the package. The manifest doesn't accept a `clientSecret` field; supply it through the connection setup flow." and "Don't embed a token in server `headers` to work around this limitation: public submission rejects nonempty server headers."
-**Detection**: In the plugin root's `.mcp.json` or `mcp.json` (when the plugin has `.codex-plugin/plugin.json` or OpenAI extension settings): error at a non-empty `clientSecret` / `client_secret` under a server; warning at a credential header (`Authorization`, names with token, api-key, secret, password or cookie) whose value is a literal credential. `${VAR}` references and placeholder values are not reported.
+**Detection**: In the plugin root's `.mcp.json` or `mcp.json` (when the plugin has `.codex-plugin/plugin.json` or OpenAI extension settings): error at a non-empty `clientSecret` / `client_secret` under a server; warning at a credential header (`Authorization`, names with token, api-key, secret, password or cookie) whose value is a literal credential, unless MCP-028 (which runs on the same file) reports it. `${VAR}` references and placeholder values are not reported.
 **Fix**: No auto-fix
 **Source**: developers.openai.com/plugins/build/plugins, developers.openai.com/plugins/deploy/submission
 
@@ -4221,7 +4216,7 @@ Windsurf is now documented as Devin Desktop (docs.windsurf.com redirects to docs
 
 <a id="ws-011"></a>
 ### WS-011 [MEDIUM] AGENTS.md Exceeds Windsurf Rule Character Limit (Inferred)
-**Requirement**: AGENTS.md SHOULD stay within the 12,000-character workspace-rule limit in projects that use Devin Desktop. This is an agnix inference: the docs state no AGENTS.md limit, but AGENTS.md is "Processed by the same Rules engine — root-level = always-on, subdirectory = auto-glob for that directory." and Devin Desktop "feeds it into the same Rules engine that powers `.devin/rules/`". Devin CLI also advises "**Rules and AGENTS should be kept as small as possible.**" Windsurf-side twin of AGM-003, which the cross-cutting rules apply to every AGENTS.md.
+**Requirement**: AGENTS.md SHOULD stay within the 12,000-character workspace-rule limit in projects that use Devin Desktop. This is an agnix inference: the docs state no AGENTS.md limit, but AGENTS.md is "Processed by the same Rules engine — root-level = always-on, subdirectory = auto-glob for that directory." and Devin Desktop "feeds it into the same Rules engine that powers `.devin/rules/`". Devin CLI also advises "**Rules and AGENTS should be kept as small as possible.**" Replaces AGM-003 (retired in 0.59.0), which reported the same files from the cross-tool AGENTS.md family.
 **Detection**: Warning, at the first character past the limit, for a file named `AGENTS.md` (not CLAUDE.md, AGENTS.local.md or AGENTS.override.md) over 12,000 characters, when windsurf is among the configured `tools`, or no tools are configured, the target is generic, and the project shows Windsurf use: `.devin/rules/`, `.devin/workflows/`, `.devin/hooks.json`, a `.windsurf/` directory or `.windsurfrules` next to the file or in a parent directory up to the project root. `.devin/` alone is not enough (it is also the Devin CLI config directory). Devin Desktop also reads a lowercase `agents.md`; agnix does not detect that name.
 **Fix**: Move directory-specific guidance into nested AGENTS.md files, rules with their own activation into `.devin/rules/`, or procedures into skills
 **Source**: docs.devin.ai/desktop/cascade/memories ("Rules"), docs.devin.ai/desktop/cascade/agents-md ("How It Works")
@@ -5068,7 +5063,7 @@ Rules for `.kiroignore` (workspace root or any subdirectory; Kiro CLI V3 and IDE
 <a id="xml-001"></a>
 ### XML-001 [MEDIUM] Unclosed XML Tag
 **Requirement**: XML tags used to structure a prompt SHOULD be closed. Anthropic recommends tags as structure ("Use consistent, descriptive tag names across your prompts." / "Nest tags when content has a natural hierarchy"); no tool rejects an unbalanced tag, but an unclosed one leaves the rest of the file inside it.
-**Detection**: Parse tags, check balance with stack
+**Detection**: Parse tags, check balance with stack. Crossed tags (`<a><b></a></b>`) are one XML-002 finding: the out-of-order closing tag closes its own opening tag, which is not reported as unclosed.
 **Fix**: [AUTO-FIX, unsafe] Insert the matching closing tag at the end of the content
 **Source**: platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices; developers.openai.com/api/docs/guides/prompt-engineering ("XML tags can help delineate where one piece of content (like a supporting document used for reference) begins and ends")
 
@@ -5209,7 +5204,7 @@ agent: reviewer
 <a id="xp-sk-001"></a>
 ### XP-SK-001 [LOW] Skill Uses Client-Specific Features
 **Requirement**: Skills SHOULD keep client-specific frontmatter out of the top level for portability: the spec defines `metadata` so "Clients can use this to store additional properties not defined by the Agent Skills spec", and the reference validator (skills-ref) reports "Unexpected fields in frontmatter" for any other top-level key.
-**Detection**: Skill frontmatter uses a top-level field outside the Agent Skills set (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`). Not reported on Claude Code skills, nor on Kiro skills while KR-SK-001 is enabled, which reports the same fields.
+**Detection**: Skill frontmatter uses a top-level field outside the Agent Skills set (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`). Not reported on Claude Code skills, nor on Kiro skills while KR-SK-001 is enabled, which reports the same fields. A field the reading client's own rule reports is reported once, by that rule: the per-client rule (CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, AMP-SK-001) for a field the client ignores, and CC-SK-017 for a field Claude Code does not know on a skill outside any client directory (since 0.59.0; both used to report the same key).
 **Fix**: No auto-fix - remove the field or move it under `metadata`
 **Source**: agentskills.io/specification, agentskills/agentskills skills-ref validator.py
 
@@ -5223,7 +5218,7 @@ agent: reviewer
 <a id="xp-sk-003"></a>
 ### XP-SK-003 [MEDIUM] Hardcoded Secret in Skill Files
 **Requirement**: Skill files SHOULD NOT contain credentials. Gemini: "**Avoid hardcoded secrets**: Never include API keys or passwords in your skill's scripts or documentation." Cline: "Keep secrets out of the repo."
-**Detection**: SKILL.md and the text files bundled in the skill directory (Markdown, scripts, JSON/YAML/TOML, `.env`): well-known token formats (`ghp_`, `gho_`, `github_pat_`, `glpat-`, `sk-ant-`, `sk-proj-`, Slack `xox*-`, AWS `AKIA...`, Google `AIza...`) and private key blocks. Reported on the file and line.
+**Detection**: SKILL.md and the text files bundled in the skill directory (Markdown, scripts, JSON/YAML/TOML, `.env`): well-known token formats (`ghp_`, `gho_`, `github_pat_`, `glpat-`, `sk-ant-`, `sk-proj-`, Slack `xox*-`, AWS `AKIA...`, Google `AIza...`) and private key blocks. Reported on the file and line. A credential inside an MCP server entry that MCP-018 or MCP-028 reports (SKILL.md `mcpServers`, the skill's `mcp.json`) is left to that rule.
 **Fix**: No auto-fix - remove the secret and read it from an environment variable or secret store at run time
 **Source**: geminicli.com/docs/cli/skills-best-practices, docs.cline.bot/getting-started/config
 
@@ -5421,7 +5416,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Category | Total Rules | HIGH | MEDIUM | LOW | Auto-Fixable |
 |----------|-------------|------|--------|-----|--------------|
 | Agent Skills | 22 | 11 | 6 | 5 | 7 |
-| AGENTS.md | 7 | 0 | 2 | 5 | 1 |
+| AGENTS.md | 6 | 0 | 1 | 5 | 1 |
 | Amp Checks | 9 | 4 | 4 | 1 | 3 |
 | Amp Skills | 3 | 0 | 2 | 1 | 1 |
 | Claude Agents | 21 | 10 | 10 | 1 | 7 |
@@ -5463,7 +5458,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 16 | 4 | 7 | 5 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **703** | **255** | **314** | **134** | **125** |
+| **TOTAL** | **702** | **255** | **313** | **134** | **125** |
 
 
 ---
@@ -5491,8 +5486,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 703 validation rules across 43 categories
+**Total Coverage**: 702 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 255 HIGH, 314 MEDIUM, 134 LOW
+**Certainty**: 255 HIGH, 313 MEDIUM, 134 LOW
 **Auto-Fixable**: 125 rules (18%)

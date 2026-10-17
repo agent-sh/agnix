@@ -798,50 +798,19 @@ fn validate_codex_markdown_rules(
         );
     }
 
-    if config.is_rule_enabled("CDX-AG-002") {
-        for (line_no, line) in content.lines().enumerate() {
-            // Quick pre-check: only lowercase if the line might contain a marker.
-            let might_have_marker = line.bytes().any(|b| {
-                matches!(
-                    b.to_ascii_lowercase(),
-                    b'a' | b's' | b't' | b'p' | b'b' | b'g' | b'x'
-                )
-            });
-            if !might_have_marker {
-                continue;
-            }
-            let lower = line.to_ascii_lowercase();
-            // Sensitive keywords only count when they appear in an assignment
-            // context (e.g., "token=abc", "secret: xyz"), not as prose words
-            // like "Token efficiency" or "save tokens". The keyword must be
-            // directly followed by optional whitespace then = or :.
-            let has_sensitive_key = ["api_key", "apikey", "secret", "token", "password", "bearer"]
-                .iter()
-                .any(|needle| has_keyword_assignment(&lower, needle));
-            let contains_key_prefix = has_sk_token_prefix(line)
-                || has_token_prefix(line, "ghp_")
-                || has_token_prefix(line, "gho_")
-                || has_token_prefix(line, "AKIA")
-                || has_token_prefix(line, "xoxb-")
-                || has_token_prefix(line, "xoxp-")
-                || has_token_prefix(line, "glpat-")
-                || has_token_prefix(line, "sk-ant-")
-                || has_token_prefix(line, "sk-proj-");
-            let has_interpolation = line.contains("${") || line.contains("$(");
-            if (has_sensitive_key || contains_key_prefix) && !has_interpolation {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        path.to_path_buf(),
-                        line_no + 1,
-                        0,
-                        "CDX-AG-002",
-                        t!("rules.cdx_ag_002.message"),
-                    )
-                    .with_suggestion(t!("rules.cdx_ag_002.suggestion")),
-                );
-                break;
-            }
-        }
+    if config.is_rule_enabled("CDX-AG-002")
+        && let Some(line_no) = agents_md_secret_line(content)
+    {
+        diagnostics.push(
+            Diagnostic::warning(
+                path.to_path_buf(),
+                line_no,
+                0,
+                "CDX-AG-002",
+                t!("rules.cdx_ag_002.message"),
+            )
+            .with_suggestion(t!("rules.cdx_ag_002.suggestion")),
+        );
     }
 
     if config.is_rule_enabled("CDX-AG-003") {
@@ -1034,6 +1003,47 @@ fn find_backtick_file_refs(line: &str) -> Vec<&str> {
 /// Check if `haystack` contains `word` at a word boundary followed (with optional whitespace)
 /// by `=` or `:`. Used by CDX-AG-002 to distinguish secret assignments like `token=abc`
 /// from prose like "Token efficiency".
+/// CDX-AG-002: the first line (1-based) of an AGENTS.md that looks like it
+/// holds a secret: a credential prefix, or a sensitive key in an assignment
+/// (`token=abc`, `secret: xyz`), without an interpolation. OC-AGM-002 skips
+/// this line so a secret is not reported twice on the same file.
+pub(crate) fn agents_md_secret_line(content: &str) -> Option<usize> {
+    for (line_no, line) in content.lines().enumerate() {
+        // Quick pre-check: only lowercase if the line might contain a marker.
+        let might_have_marker = line.bytes().any(|b| {
+            matches!(
+                b.to_ascii_lowercase(),
+                b'a' | b's' | b't' | b'p' | b'b' | b'g' | b'x'
+            )
+        });
+        if !might_have_marker {
+            continue;
+        }
+        let lower = line.to_ascii_lowercase();
+        // Sensitive keywords only count when they appear in an assignment
+        // context (e.g., "token=abc", "secret: xyz"), not as prose words
+        // like "Token efficiency" or "save tokens". The keyword must be
+        // directly followed by optional whitespace then = or :.
+        let has_sensitive_key = ["api_key", "apikey", "secret", "token", "password", "bearer"]
+            .iter()
+            .any(|needle| has_keyword_assignment(&lower, needle));
+        let contains_key_prefix = has_sk_token_prefix(line)
+            || has_token_prefix(line, "ghp_")
+            || has_token_prefix(line, "gho_")
+            || has_token_prefix(line, "AKIA")
+            || has_token_prefix(line, "xoxb-")
+            || has_token_prefix(line, "xoxp-")
+            || has_token_prefix(line, "glpat-")
+            || has_token_prefix(line, "sk-ant-")
+            || has_token_prefix(line, "sk-proj-");
+        let has_interpolation = line.contains("${") || line.contains("$(");
+        if (has_sensitive_key || contains_key_prefix) && !has_interpolation {
+            return Some(line_no + 1);
+        }
+    }
+    None
+}
+
 fn has_keyword_assignment(haystack: &str, word: &str) -> bool {
     let bytes = haystack.as_bytes();
     let word_bytes = word.as_bytes();
@@ -1538,6 +1548,16 @@ fn validate_codex_config_rules(
         collect_hardcoded_secret_paths(&root, "", &mut secret_paths);
         secret_paths.sort();
         secret_paths.dedup();
+        // MCP-018 and MCP-028 run on the MCP servers of a TOML config and
+        // own literal secrets there; CDX-CFG-010 keeps the rest of the file.
+        let is_toml = path
+            .extension()
+            .and_then(OsStr::to_str)
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"));
+        if is_toml {
+            secret_paths
+                .retain(|secret_path| !mcp_server_secret_reported(&root, secret_path, config));
+        }
         for secret_path in secret_paths {
             diagnostics.push(
                 Diagnostic::error(
@@ -2872,6 +2892,29 @@ fn collect_unknown_codex_keys(root: &Value, cdx_cfg_028_active: bool) -> Vec<Str
     unknown.sort();
     unknown.dedup();
     unknown
+}
+
+/// Whether a CDX-CFG-010 path (`mcp_servers.<name>.env.<KEY>`, ...) is a
+/// secret that MCP-018 or MCP-028 already reports on that server.
+fn mcp_server_secret_reported(
+    root: &Value,
+    secret_path: &str,
+    config: &PerFileLintConfig<'_>,
+) -> bool {
+    let Some(rest) = secret_path.strip_prefix("mcp_servers.") else {
+        return false;
+    };
+    let Some(servers) = root.get("mcp_servers").and_then(Value::as_object) else {
+        return false;
+    };
+    servers.iter().any(|(name, server)| {
+        rest.strip_prefix(name.as_str())
+            .and_then(|field| field.strip_prefix('.'))
+            .is_some_and(|field| {
+                let field: Vec<&str> = field.split('.').collect();
+                crate::rules::mcp_servers::mcp_reports_server_secret(name, server, &field, config)
+            })
+    })
 }
 
 fn collect_hardcoded_secret_paths(value: &Value, path: &str, out: &mut Vec<String>) {
@@ -5010,6 +5053,49 @@ hide_full_access_warning = true
 "#;
         let diagnostics = validate_config(content);
         assert!(diagnostics.iter().any(|d| d.rule == "CDX-CFG-007"));
+    }
+
+    /// CDX-CFG-010 and MCP-018/MCP-028 reported the same MCP server secrets
+    /// in config.toml. The MCP rules own them; CDX-CFG-010 keeps secrets
+    /// elsewhere in the file, and the MCP ones when the MCP rules are off.
+    #[test]
+    fn test_cdx_cfg_010_leaves_mcp_server_secrets_to_mcp_rules() {
+        let content = r#"api_key = "sk-test-secret-value-123456"
+
+[mcp_servers.db]
+command = "db-server"
+env = { DB_PASSWORD = "sk-live-4f9a8b7c6d5e4f3a2b1c" }
+
+[mcp_servers.remote]
+url = "https://mcp.example.com/mcp"
+bearer_token = "sk-live-4f9a8b7c6d5e4f3a2b1c"
+http_headers = { Authorization = "Bearer sk-live-4f9a8b7c6d5e4f3a2b1c" }
+"#;
+        let cdx_010 = |diagnostics: &[Diagnostic]| -> Vec<String> {
+            diagnostics
+                .iter()
+                .filter(|d| d.rule == "CDX-CFG-010")
+                .map(|d| d.message.clone())
+                .collect()
+        };
+        let diagnostics = validate_config(content);
+        let found = cdx_010(&diagnostics);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains("'api_key'"), "{found:?}");
+        let mcp = crate::rules::mcp::McpValidator.validate(
+            Path::new(".codex/config.toml"),
+            content,
+            &LintConfig::default(),
+        );
+        let mut mcp_rules: Vec<_> = mcp.iter().map(|d| d.rule.as_str()).collect();
+        mcp_rules.sort();
+        assert_eq!(mcp_rules, ["MCP-018", "MCP-028", "MCP-028"], "{mcp:?}");
+
+        let mut no_mcp = LintConfig::default();
+        no_mcp.rules_mut().disabled_rules = vec!["MCP-018".to_string(), "MCP-028".to_string()];
+        let diagnostics =
+            CodexValidator.validate(Path::new(".codex/config.toml"), content, &no_mcp);
+        assert_eq!(cdx_010(&diagnostics).len(), 4, "{diagnostics:?}");
     }
 
     // M13: CDX-CFG-010 env-var exclusion

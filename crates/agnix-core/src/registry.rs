@@ -397,7 +397,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 143;
+const EXPECTED_BUILTIN_COUNT: usize = 146;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -872,6 +872,11 @@ impl ValidatorProvider for MiscProvider {
             (FileType::AmpSettings, Some("McpValidator"), mcp_validator),
             (FileType::CodexConfig, Some("McpValidator"), mcp_validator),
             (FileType::CopilotAgent, Some("McpValidator"), mcp_validator),
+            // Gemini agent frontmatter and Amp skill servers (SKILL.md
+            // `mcpServers` and the skill's `mcp.json`).
+            (FileType::GeminiAgent, Some("McpValidator"), mcp_validator),
+            (FileType::Skill, Some("McpValidator"), mcp_validator),
+            (FileType::AmpSkillMcp, Some("McpValidator"), mcp_validator),
             // Servers declared inline in a plugin manifest's `mcpServers`
             // get the server-level MCP checks; ClaudeMcpValidator adds the
             // CC-MCP rules for `.claude-plugin/plugin.json`.
@@ -1670,9 +1675,10 @@ mod tests {
         // Skill has: SkillValidator, PerClientSkillValidator, XmlValidator,
         // ImportsValidator, the Copilot, Cursor and Cline validators, which
         // act only on their own skill folders (CP-SK-002, CUR-023, CL-SK-004),
-        // the Codex (CX-SK-004/007) and OpenCode skill validators, and
-        // AmpSkillValidator (AMP-005, AMP-SK-002/003).
-        assert_eq!(skill_validators.len(), 10);
+        // the Codex (CX-SK-004/007) and OpenCode skill validators,
+        // AmpSkillValidator (AMP-005, AMP-SK-002/003), and McpValidator for
+        // servers in the skill's `mcpServers` frontmatter (MCP-018/028).
+        assert_eq!(skill_validators.len(), 11);
     }
 
     #[test]
@@ -1746,6 +1752,8 @@ mod tests {
             .without_validator("OpenCodeSkillValidator")
             // Added with the Amp skill checks (AMP-005, AMP-SK-002/003).
             .without_validator("AmpSkillValidator")
+            // MCP-018/028 on the skill's `mcpServers` frontmatter.
+            .without_validator("McpValidator")
             .build();
 
         assert!(
@@ -2602,8 +2610,9 @@ mod tests {
         // embed MCP servers added 6; McpValidator on the three plugin manifest
         // types and ClaudeMcpValidator on Claude plugin manifests (inline
         // `mcpServers`) added 4; AmpSkillValidator on Skill and AmpSkillMcp
-        // added 2.
-        assert_eq!(MiscProvider.named_validators().len(), 76);
+        // added 2; McpValidator on Gemini agents, skills and Amp skill
+        // `mcp.json` (MCP-018/028 coverage) added 3.
+        assert_eq!(MiscProvider.named_validators().len(), 79);
     }
 
     #[test]
