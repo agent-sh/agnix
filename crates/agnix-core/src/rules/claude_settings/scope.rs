@@ -300,6 +300,16 @@ fn env_value_turns_telemetry_off(name: &str, value: Option<&str>) -> bool {
     }
 }
 
+/// Marker in [`IgnoredKeys`] for `mask` entries of `sandbox.credentials`:
+/// "Claude Code honors `mask` entries, `allowPlaintextInject`, `awsPairs`,
+/// and `sigv4` only from user settings, managed settings, and the
+/// `--settings` flag."
+pub(super) const MASK_ENTRIES_KEY: &str = "sandbox.credentials.(mask entries)";
+
+/// `spinnerTipsOverride` fields project and local settings can't set: "from
+/// project and local settings it reads plain string tips only".
+const SPINNER_TIPS_REPOSITORY_IGNORED: &[&str] = &["tipsFile", "label", "excludeDefault"];
+
 /// What CC-SET-034 found: the dotted key paths Claude Code ignores in this
 /// file. Type checks skip them, so the scope finding is reported instead of
 /// a type error on a value that has no effect.
@@ -413,6 +423,85 @@ pub(super) fn check_ignored_at_scope(
                 )
                 .to_string(),
                 t!("rules.cc_set_034.true_ignored_suggestion", key = *key).to_string(),
+            );
+        }
+
+        // `mask` credential entries
+        for array in ["files", "envVars"] {
+            let Some(member) = member_at(root, &format!("sandbox.credentials.{array}")) else {
+                continue;
+            };
+            let Some(entries) = member.value.value.as_array() else {
+                continue;
+            };
+            for entry in entries {
+                let Some(mode) = entry.value.get("mode") else {
+                    continue;
+                };
+                if mode.value.value.as_str() != Some("mask") {
+                    continue;
+                }
+                ignored.0.insert(MASK_ENTRIES_KEY.to_string());
+                push(
+                    mode.value.start,
+                    t!(
+                        "rules.cc_set_034.mask_entry_message",
+                        array = array,
+                        file = file.as_str()
+                    )
+                    .to_string(),
+                    t!("rules.cc_set_034.mask_entry_suggestion").to_string(),
+                );
+            }
+        }
+
+        // `spinnerTipsOverride`: plain string tips only
+        if let Some(member) = member_at(root, "spinnerTipsOverride") {
+            for field in SPINNER_TIPS_REPOSITORY_IGNORED {
+                if let Some(field_member) = member.value.value.get(field) {
+                    push(
+                        field_member.key_start,
+                        t!(
+                            "rules.cc_set_034.spinner_tips_message",
+                            field = *field,
+                            file = file.as_str()
+                        )
+                        .to_string(),
+                        t!("rules.cc_set_034.spinner_tips_suggestion").to_string(),
+                    );
+                }
+            }
+            if let Some(tips) = member.value.value.get("tips")
+                && let Some(items) = tips.value.value.as_array()
+                && let Some(object) = items.iter().find(|item| item.value.as_object().is_some())
+            {
+                push(
+                    object.start,
+                    t!(
+                        "rules.cc_set_034.spinner_tips_message",
+                        field = "tips (object entries)",
+                        file = file.as_str()
+                    )
+                    .to_string(),
+                    t!("rules.cc_set_034.spinner_tips_suggestion").to_string(),
+                );
+            }
+        }
+
+        // "For a self-hosted environment ID, user or managed settings, or the
+        // `--settings` flag only."
+        if let Some(member) = member_at(root, "remote.defaultEnvironmentId")
+            && let Some(id) = member.value.value.as_str()
+            && id.starts_with("ccpool_")
+        {
+            push(
+                member.value.start,
+                t!(
+                    "rules.cc_set_034.self_hosted_environment_message",
+                    file = file.as_str()
+                )
+                .to_string(),
+                t!("rules.cc_set_034.self_hosted_environment_suggestion").to_string(),
             );
         }
 

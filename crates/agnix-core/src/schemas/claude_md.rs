@@ -15,7 +15,11 @@ static GENERIC_PATTERNS: OnceLock<Vec<Regex>> = OnceLock::new();
 static_regex!(fn npm_run_pattern, r"npm\s+run\s+([a-zA-Z0-9_:-]+)");
 static_regex!(fn emphasis_token_pattern, r"\b(IMPORTANT|CRITICAL|MUST|NEVER|ALWAYS|MANDATORY|DO NOT)\b");
 static_regex!(fn rfc_keywords_pattern, r"(?i)\bRFC\s*(2119|8174)\b");
-static_regex!(fn agents_md_deferral_pattern, r"(?i)\b(read|see|follow|consult|check|refer\s+to|look\s+at)\b[^.\n]{0,60}?(?:\bthe\s+)?`?(?:\./)?AGENTS\.md`?");
+// An instruction to the reader: the verb starts the line, list item or
+// sentence ("Read AGENTS.md first", "- See the `AGENTS.md` file", "Please
+// follow AGENTS.md"), not prose about other tools ("for tools that read
+// `AGENTS.md`").
+static_regex!(fn agents_md_deferral_pattern, r"(?i)(?:^|[.!:;]\s+)\s*(?:[-*+]\s+|\d+[.)]\s+)?(?:\*\*)?(?:please\s+|always\s+|first,?\s+|you\s+(?:must|should)\s+|claude\s+(?:must|should)\s+)?(?P<ask>(?:read|see|follow|consult|check|refer\s+to|look\s+at)\b[^.\n]{0,60}?`?(?:\./)?AGENTS\.md`?)");
 static_regex!(fn file_listing_item_pattern, r"^\s{0,6}[-*+]\s+(?:\*\*)?`?[A-Za-z0-9_.\-]+(?:/[A-Za-z0-9_.\-]+)*/?`?(?:\*\*)?\s*(?:-|–|—|:)\s+\S");
 static_regex!(fn quoted_import_pattern, r#"(^|[\s(\[])@("([^"\n]+)"|'([^'\n]+)')"#);
 static_regex!(fn spaced_import_pattern, r"(^|[\s(\[])@([A-Za-z0-9_.~/-]+)((?: [^\s@]+){1,4})");
@@ -348,7 +352,7 @@ pub fn find_agents_md_deferral(content: &str) -> Option<AgentsMdDeferral> {
         if masked_line.trim().is_empty() {
             return None;
         }
-        let found = pattern.find(line)?;
+        let found = pattern.captures(line)?.name("ask")?;
         // `@AGENTS.md` is the import the docs recommend, not prose.
         if line[..found.end()].contains("@AGENTS.md") || line.contains("@./AGENTS.md") {
             return None;
@@ -718,6 +722,15 @@ mod tests {
         assert!(find_agents_md_deferral("Follow @AGENTS.md for conventions.\n").is_none());
         assert!(find_agents_md_deferral("```\nread AGENTS.md\n```\n").is_none());
         assert!(find_agents_md_deferral("AGENTS.md is generated from this file.\n").is_none());
+        // Describing other tools is not an instruction to Claude.
+        assert!(
+            find_agents_md_deferral(
+                "- `AGENTS.md` is a copy of `CLAUDE.md` for tools that read `AGENTS.md`.\n"
+            )
+            .is_none()
+        );
+        assert!(find_agents_md_deferral("Setup done. Please read AGENTS.md.\n").is_some());
+        assert!(find_agents_md_deferral("1. **Follow AGENTS.md** for style.\n").is_some());
     }
 
     // ===== CC-MEM-019 =====

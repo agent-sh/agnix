@@ -526,3 +526,50 @@ fn cc_os_007_custom_style_case() {
     assert_eq!(found.len(), 1);
     assert!(found[0].message.contains("'Diagrams First'"));
 }
+
+#[test]
+fn cc_set_034_partial_scopes() {
+    // "Claude Code honors `mask` entries ... only from user settings, managed
+    // settings, and the `--settings` flag."
+    let content = r#"{"sandbox": {"credentials": {
+        "files": [{"path": "~/.netrc", "mode": "mask", "extract": 42}, {"path": "~/.ssh", "mode": "deny"}]
+    }}}"#;
+    let diagnostics = project(content);
+    assert_eq!(hits(&diagnostics, "CC-SET-034").len(), 1, "{diagnostics:?}");
+    // The mask entry's options are not type-checked where it is ignored.
+    assert!(
+        hits(&diagnostics, "CC-SET-012").is_empty(),
+        "{diagnostics:?}"
+    );
+    let managed = at(".claude/managed-settings.json", content);
+    assert!(hits(&managed, "CC-SET-034").is_empty());
+    assert!(!hits(&managed, "CC-SET-012").is_empty());
+
+    // "from project and local settings it reads plain string tips only"
+    let tips = r#"{"spinnerTipsOverride": {"tips": ["plain", {"id": "a", "text": "obj"}], "label": "Team"}}"#;
+    assert_eq!(hits(&project(tips), "CC-SET-034").len(), 2);
+    assert!(
+        hits(
+            &project(r#"{"spinnerTipsOverride": {"tips": ["plain"]}}"#),
+            "CC-SET-034"
+        )
+        .is_empty()
+    );
+
+    // Self-hosted environment IDs: user or managed settings only.
+    assert_eq!(
+        hits(
+            &project(r#"{"remote": {"defaultEnvironmentId": "ccpool_abc"}}"#),
+            "CC-SET-034"
+        )
+        .len(),
+        1
+    );
+    assert!(
+        hits(
+            &project(r#"{"remote": {"defaultEnvironmentId": "env_abc"}}"#),
+            "CC-SET-034"
+        )
+        .is_empty()
+    );
+}

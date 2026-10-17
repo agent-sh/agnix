@@ -2048,6 +2048,12 @@ rules:
     env_repository_suggestion: "Set '%{var}' in your shell, ~/.claude/settings.json, or managed settings."
     env_everywhere_message: "env variable '%{var}' has no effect in %{file}: Claude Code ignores it in every settings file and reads it only from the launch environment"
     env_everywhere_suggestion: "Remove '%{var}' from env."
+    mask_entry_message: "mask entry in sandbox.credentials.%{array} has no effect in %{file}: Claude Code honors mask entries only from user settings, managed settings, and --settings"
+    mask_entry_suggestion: "Move the mask entry to ~/.claude/settings.json or managed settings; deny entries still apply from the repository."
+    spinner_tips_message: "spinnerTipsOverride.%{field} has no effect in %{file}: from project and local settings Claude Code reads plain string tips only"
+    spinner_tips_suggestion: "Use plain string tips here, or move tip objects, tipsFile, label and excludeDefault to ~/.claude/settings.json."
+    self_hosted_environment_message: "A self-hosted remote.defaultEnvironmentId (ccpool_...) has no effect in %{file}: Claude Code reads it only from user or managed settings, or --settings"
+    self_hosted_environment_suggestion: "Set the self-hosted environment ID in ~/.claude/settings.json, or pick it with /remote-env."
   cc_set_035:
     malformed_message: "Permission rule '%{rule}' is malformed, so Claude Code skips it: rules take the form Tool or Tool(content) and must end at the closing parenthesis"
     malformed_suggestion: "Rewrite the rule so it ends at its closing parenthesis, for example Bash(ls *) instead of Bash(ls) x."

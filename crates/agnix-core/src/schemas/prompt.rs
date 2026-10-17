@@ -20,6 +20,12 @@ use crate::regex_util::static_regex;
 static_regex!(fn cot_phrase_pattern, r"(?i)\b(think\s+step\s+by\s+step|let'?s\s+think|reason\s+through|break\s+(?:it\s+)?down\s+into\s+steps|work\s+through\s+this\s+(?:step\s+by\s+step|systematically))\b");
 static_regex!(fn simple_task_indicator_pattern, r"(?i)\b(read\s+(?:the\s+)?file|write\s+(?:the\s+)?file|copy\s+(?:the\s+)?file|move\s+(?:the\s+)?file|delete\s+(?:the\s+)?file|list\s+files|run\s+(?:the\s+)?(?:command|script)|execute\s+(?:the\s+)?(?:command|script)|format\s+(?:the\s+)?(?:code|output)|rename\s+(?:the\s+)?file|create\s+(?:a\s+)?(?:file|directory|folder)|check\s+(?:if|whether)\s+(?:file|directory)\s+exists)\b");
 static_regex!(fn ambiguous_term_pattern, r"(?i)\b(usually|sometimes|if\s+possible|when\s+appropriate|as\s+needed|often|occasionally|generally|typically|normally|frequently|regularly|commonly)\b");
+// A line reads as an instruction when it has a directive word, or when it
+// starts (after a list marker and an optional leading hedge) with an
+// imperative verb. Descriptions such as "tests often fail on CI" are not
+// instructions, and PE-004's sources are about instructions.
+static_regex!(fn directive_word_pattern, r"(?i)\b(should|must|need(?:s)?\s+to|have\s+to|always|never|prefer|avoid|make\s+sure|ensure|do\s+not|don't|try\s+to)\b");
+static_regex!(fn imperative_start_pattern, r"(?i)^\s*(?:[-*+]\s+|\d+[.)]\s+)?(?:\*\*)?(?:(?:usually|sometimes|often|occasionally|generally|typically|normally|frequently|regularly|commonly|if\s+possible|when\s+appropriate|as\s+needed),?\s+)?(?:add|apply|ask|call|check|commit|create|do|document|follow|format|handle|include|keep|leave|limit|log|make|move|name|open|pin|place|put|read|remove|return|run|set|split|start|stop|test|update|use|verify|wrap|write)\b");
 
 // ============================================================================
 // PE-002: Chain-of-Thought on Simple Tasks
@@ -162,8 +168,15 @@ pub fn find_ambiguous_instructions(content: &str) -> Vec<AmbiguousInstruction> {
             continue;
         }
 
-        // Skip comment lines and shebang
-        if trimmed.starts_with("//") || trimmed.starts_with("#!") {
+        // Skip comment lines, shebang, headings and table rows
+        if trimmed.starts_with("//")
+            || trimmed.starts_with("#!")
+            || trimmed.starts_with('#')
+            || trimmed.starts_with('|')
+        {
+            continue;
+        }
+        if !directive_word_pattern().is_match(line) && !imperative_start_pattern().is_match(line) {
             continue;
         }
 
@@ -309,6 +322,31 @@ pub struct NegativeOnlyInstruction {
     pub text: String,
 }
 
+/// True when `rest` holds a second clause of at least two words after a
+/// clause separator.
+fn has_second_clause(rest: &str) -> bool {
+    [
+        " - ",
+        " — ",
+        " – ",
+        "; ",
+        ": ",
+        ". ",
+        ", instead",
+        ", so ",
+        " because ",
+    ]
+    .iter()
+    .filter_map(|separator| rest.find(separator).map(|i| &rest[i + separator.len()..]))
+    .any(|clause| {
+        clause
+            .split_whitespace()
+            .filter(|w| w.chars().any(char::is_alphanumeric))
+            .count()
+            >= 2
+    })
+}
+
 /// Find negative instructions that lack a positive alternative
 ///
 /// Instructions are more effective when they tell the LLM what to do
@@ -342,6 +380,13 @@ pub fn find_negative_only_instructions(content: &str) -> Vec<NegativeOnlyInstruc
         }
 
         if let Some(mat) = neg_pattern.find(line) {
+            // A second clause after a dash, semicolon, colon or full stop
+            // gives the alternative or the reason ("NEVER assume - always
+            // verify with tests"; "Don't add fallbacks. Fail loud."), which
+            // is what the guidance asks for.
+            if has_second_clause(&line[mat.end()..]) {
+                continue;
+            }
             // Check current line and next 2 lines for positive alternative,
             // but skip lines inside fenced code blocks
             let window_end = (line_num + 3).min(lines.len());
@@ -379,6 +424,8 @@ mod tests {
         let _ = cot_phrase_pattern();
         let _ = simple_task_indicator_pattern();
         let _ = ambiguous_term_pattern();
+        let _ = directive_word_pattern();
+        let _ = imperative_start_pattern();
         let _ = redundant_instruction_pattern();
         let _ = list_marker_pattern();
         let _ = filler_word_pattern();
@@ -511,7 +558,9 @@ Never include sensitive data.
 
     #[test]
     fn test_ambiguous_context_captured() {
-        let content = "This rule is generally applicable to all files.";
+        // An instruction: "This rule is generally applicable" alone is a
+        // description and is not reported any more.
+        let content = "Apply this rule generally to all files.";
         let results = find_ambiguous_instructions(content);
         assert_eq!(results.len(), 1);
         assert!(results[0].context.contains("generally"));
@@ -637,6 +686,46 @@ Never include sensitive data.
         assert!(!is_only_redundant_instruction(
             "Be precise about file paths: use absolute paths."
         ));
+    }
+
+    #[test]
+    fn test_ambiguous_terms_only_in_instructions() {
+        // Descriptions and tables are not instructions.
+        for content in [
+            "Integration tests generally require running Valkey services.",
+            "| \"skill fires too often\" | best-practices.md |",
+            "## Usually asked questions",
+            "That can typically be done without any performance cost.",
+        ] {
+            assert!(find_ambiguous_instructions(content).is_empty(), "{content}");
+        }
+        for content in [
+            "- Commit frequently with meaningful messages",
+            "Usually format output as JSON.",
+            "If possible, write tests.",
+            "You should usually run the linter.",
+        ] {
+            assert_eq!(find_ambiguous_instructions(content).len(), 1, "{content}");
+        }
+    }
+
+    #[test]
+    fn test_negative_with_reason_or_alternative_clause() {
+        for content in [
+            "- NEVER assume - always verify with tests and benchmarks",
+            "- Don't add fallback paths. Fail loud on upload errors.",
+            "Do not edit generated files; regenerate them with make gen.",
+            "Never push to main because CI deploys it immediately.",
+        ] {
+            assert!(
+                find_negative_only_instructions(content).is_empty(),
+                "{content}"
+            );
+        }
+        assert_eq!(
+            find_negative_only_instructions("- Don't add compatibility shims.").len(),
+            1
+        );
     }
 
     #[test]

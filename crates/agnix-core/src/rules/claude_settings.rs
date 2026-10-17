@@ -1231,11 +1231,13 @@ fn validate_sandbox_credentials(
         );
     }
 
+    let mask_honored = !ignored.covers(scope::MASK_ENTRIES_KEY);
     validate_sandbox_credential_entries(
         path,
         content,
         credentials_obj.get("files"),
         SandboxCredentialKind::File,
+        mask_honored,
         diagnostics,
     );
     validate_sandbox_credential_entries(
@@ -1243,6 +1245,7 @@ fn validate_sandbox_credentials(
         content,
         credentials_obj.get("envVars"),
         SandboxCredentialKind::EnvironmentVariable,
+        mask_honored,
         diagnostics,
     );
     // AWS re-signing is read only from user, --settings or managed settings;
@@ -1294,6 +1297,7 @@ fn validate_sandbox_credential_entries(
     content: &str,
     value: Option<&serde_json::Value>,
     kind: SandboxCredentialKind,
+    mask_honored: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let Some(value) = value else {
@@ -1480,8 +1484,10 @@ fn validate_sandbox_credential_entries(
         }
 
         // Claude Code accepts these fields on deny entries but removes and
-        // ignores them before schema validation. Only mask entries use them.
-        if mode != Some("deny") {
+        // ignores them before schema validation. Only mask entries use them,
+        // and mask entries apply only where Claude Code honors them (CC-SET-034
+        // reports them in project and local settings).
+        if mode != Some("deny") && mask_honored {
             validate_sandbox_credential_inject_hosts(
                 path,
                 line,
