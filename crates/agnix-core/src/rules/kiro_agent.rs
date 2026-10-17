@@ -365,6 +365,37 @@ fn agents_location(path: &Path) -> Option<(PathBuf, Vec<String>)> {
     (!rest.is_empty()).then_some((dir, rest))
 }
 
+/// The engines that read an agent file, from its path alone (the same rule
+/// as `file_types::kiro_agent_loaders` on the detection side): CLI 2.x reads
+/// only top-level `.json` files of `.kiro/agents/` or of its
+/// `.amazonq/cli-agents/` fallback; V3 reads `.json` and `.md` at any depth
+/// under `.kiro/agents/` and never reads `.amazonq`. Paths outside both
+/// directories are assumed to be read by both.
+fn agent_loaders(path: &Path) -> KiroEngines {
+    let markdown = is_markdown(path);
+    if let Some((_, rest)) = agents_location(path) {
+        return KiroEngines {
+            v2: rest.len() == 1 && !markdown,
+            v3: true,
+        };
+    }
+    let components: Vec<Component<'_>> = path.components().collect();
+    let in_amazonq = components.windows(2).any(|pair| {
+        matches!(
+            (pair[0], pair[1]),
+            (Component::Normal(amazonq), Component::Normal(agents))
+                if amazonq.eq_ignore_ascii_case(".amazonq") && agents.eq_ignore_ascii_case("cli-agents")
+        )
+    });
+    if in_amazonq {
+        return KiroEngines {
+            v2: !markdown,
+            v3: false,
+        };
+    }
+    KiroEngines::BOTH
+}
+
 /// V3's path-derived agent id: the path below `.kiro/agents`, `/`-separated,
 /// without a final `.md` or `.json`.
 fn path_agent_id(rest: &[String]) -> String {
@@ -3956,9 +3987,12 @@ impl Validator for KiroAgentValidator {
         let pinned = pinned_engine(config);
         let markdown = is_markdown(path);
         let nested = agents_location(path).is_some_and(|(_, rest)| rest.len() > 1);
+        let loaders = agent_loaders(path);
 
-        // CLI 2.x loads only top-level JSON agents.
-        if pinned == Some(KiroEngine::V2) && (markdown || nested) {
+        // A pinned engine that does not read this file at all.
+        if let Some(engine) = pinned
+            && !loaders.includes(engine)
+        {
             let looks_like_agent = if markdown {
                 let parts = split_frontmatter(content);
                 parts.has_frontmatter && parts.has_closing && !parts.frontmatter.trim().is_empty()
@@ -3966,7 +4000,9 @@ impl Validator for KiroAgentValidator {
                 serde_json::from_str::<Value>(content).is_ok_and(|value| value.is_object())
             };
             if looks_like_agent && config.is_rule_enabled("KR-AG-028") {
-                let key = if markdown {
+                let key = if engine == KiroEngine::V3 {
+                    "rules.kr_ag_028.amazonq"
+                } else if markdown {
                     "rules.kr_ag_028.markdown"
                 } else {
                     "rules.kr_ag_028.nested"
@@ -3992,18 +4028,34 @@ impl Validator for KiroAgentValidator {
             }
         };
 
-        let engines = if markdown || nested {
+        // Never blame an engine that does not read the file.
+        let engines = if !loaders.v2 {
             KiroEngines::V3_ONLY
+        } else if !loaders.v3 {
+            KiroEngines::V2_ONLY
         } else {
             let (v2, v3) = engine_markers(&doc.root);
             engines_for(config, v2, v3)
         };
+        // `.amazonq/cli-agents` is a CLI 2.x fallback that V3 never reads.
+        if pinned.is_none() && !loaders.v3 && config.is_rule_enabled("KR-AG-028") {
+            out.push(
+                Diagnostic::warning(
+                    path.to_path_buf(),
+                    1,
+                    1,
+                    "KR-AG-028",
+                    t!("rules.kr_ag_028.amazonq_migration"),
+                )
+                .with_suggestion(t!("rules.kr_ag_028.amazonq_suggestion")),
+            );
+        }
         let ctx = Ctx {
             doc,
             config,
             engines,
             pinned,
-            migration: pinned.is_none() && !markdown && !nested && engines == KiroEngines::V2_ONLY,
+            migration: pinned.is_none() && loaders.v3 && !nested && engines == KiroEngines::V2_ONLY,
             siblings: OnceCell::new(),
         };
         if let Some(offset) = jsonc_offset {
@@ -4190,6 +4242,37 @@ mod tests {
         assert_eq!(nested.rules(), ["KR-AG-028"]);
         // Unpinned, a nested JSON agent targets V3 only, so a missing name is fine.
         check("team/a.json", r#"{"description": "x"}"#).none("KR-AG-019");
+    }
+
+    #[test]
+    fn amazonq_fallback_agents_are_cli_2x_only() {
+        let config = |kiro: Option<&str>| {
+            LintConfig::builder()
+                .tool_versions(ToolVersions {
+                    kiro: kiro.map(ToString::to_string),
+                    ..ToolVersions::default()
+                })
+                .build()
+                .unwrap()
+        };
+        let path = Path::new("/w/.amazonq/cli-agents/a.json");
+        let content = r#"{"name": "a", "description": "Reviews code before merging", "permissions": {"rules": [{"capability": "shell"}]}}"#;
+        let unpinned = KiroAgentValidator.validate(path, content, &config(None));
+        let rules: Vec<_> = unpinned.iter().map(|d| d.rule.as_str()).collect();
+        // V3 never reads the fallback, so its permissions are not checked.
+        assert_eq!(rules, ["KR-AG-028", "KR-AG-001"], "{unpinned:#?}");
+        let pinned_v3 = KiroAgentValidator.validate(path, content, &config(Some("3.0")));
+        assert_eq!(pinned_v3.len(), 1);
+        assert!(pinned_v3[0].message.contains(".amazonq"));
+        assert_eq!(
+            agent_loaders(Path::new("/w/.kiro/agents/a.json")),
+            KiroEngines::BOTH
+        );
+        assert_eq!(
+            agent_loaders(Path::new("/w/.kiro/agents/t/a.json")),
+            KiroEngines::V3_ONLY
+        );
+        assert_eq!(agent_loaders(path), KiroEngines::V2_ONLY);
     }
 
     #[test]

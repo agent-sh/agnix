@@ -827,10 +827,10 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Source**: kiro.dev/docs/hooks, kiro.dev/docs/cli/2x-reference, kiro.dev/docs/cli/v3/hooks-migration
 
 <a id="kr-ag-028"></a>
-### KR-AG-028 [MEDIUM] Agent File Not Loaded by Kiro CLI 2.x
-**Requirement**: With `[tool_versions] kiro` pinned to 2.x, agents SHOULD be top-level JSON files
-**Detection**: A Markdown agent with frontmatter, or a JSON agent in a subdirectory of `.kiro/agents/`, when the project pins Kiro CLI 2.x (V2 loads neither); no other rule runs on these files then
-**Fix**: Use a top-level JSON agent, or pin `kiro = "3.x"` if you use V3
+### KR-AG-028 [MEDIUM] Agent File Not Loaded by a Targeted Kiro Engine
+**Requirement**: An agent file SHOULD sit where the engines it is meant for read it
+**Detection**: Kiro CLI 2.x reads only top-level `.json` files of `.kiro/agents/` (or of the `.amazonq/cli-agents/` fallback); V3 reads `.json` and `.md` at any depth under `.kiro/agents/` and never reads `.amazonq/cli-agents/`. Pinned to 2.x, a Markdown agent with frontmatter or a nested JSON agent is reported; pinned to 3.x, or unpinned (V3 becomes the default in CLI 3.0), an agent in `.amazonq/cli-agents/` is reported. When the pinned engine does not read the file no other rule runs on it, and findings never name an engine that does not read the file
+**Fix**: Move the agent to `.kiro/agents/` as a top-level JSON file, or pin the engine you use
 **Source**: kiro.dev/docs/cli/2x-reference, kiro.dev/docs/custom-agents, kiro.dev/docs/cli/v3/agent-config
 
 <a id="kr-ag-029"></a>

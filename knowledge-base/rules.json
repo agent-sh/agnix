@@ -9467,7 +9467,7 @@
     },
     {
       "id": "KR-AG-028",
-      "name": "Agent File Not Loaded by Kiro CLI 2.x",
+      "name": "Agent File Not Loaded by a Targeted Kiro Engine",
       "severity": "MEDIUM",
       "category": "kiro-agents",
       "evidence": {
@@ -9479,8 +9479,7 @@
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
-          "tool": "kiro",
-          "version_range": "<3.0.0"
+          "tool": "kiro"
         },
         "normative_level": "SHOULD",
         "tests": {

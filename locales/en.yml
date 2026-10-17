@@ -1265,6 +1265,9 @@ rules:
   kr_ag_028:
     markdown: Kiro CLI 2.x does not load Markdown agents; this agent is available only in Kiro CLI V3
     nested: Kiro CLI 2.x loads only agent files directly in .kiro/agents; this nested agent is available only in Kiro CLI V3
+    amazonq: Kiro CLI V3 does not read .amazonq/cli-agents; this agent is available only in Kiro CLI 2.x
+    amazonq_migration: Kiro CLI V3, the default from CLI 3.0, does not read .amazonq/cli-agents; this agent is available only in Kiro CLI 2.x
+    amazonq_suggestion: Move the agent to .kiro/agents (Kiro CLI 2.x also reads it there)
     suggestion: Use a top-level JSON agent for Kiro CLI 2.x, or pin [tool_versions] kiro = "3.x" if you use V3
   kr_ag_029:
     message: 'Kiro agent resource ''%{resource}'' loads every file in the workspace into context on each request'

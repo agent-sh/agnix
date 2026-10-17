@@ -331,7 +331,7 @@ This section contains all `487` validation rules generated from `knowledge-base/
 | [KR-AG-025](./generated/kr-ag-025.md) | Agent Hook Matcher Never Fires in Kiro CLI 2.x | MEDIUM | Kiro Agents | No |
 | [KR-AG-026](./generated/kr-ag-026.md) | Kiro Agent Hook Timeout Field or Unit Mismatch | MEDIUM | Kiro Agents | No |
 | [KR-AG-027](./generated/kr-ag-027.md) | Kiro Agent Hook Field Ignored | MEDIUM | Kiro Agents | No |
-| [KR-AG-028](./generated/kr-ag-028.md) | Agent File Not Loaded by Kiro CLI 2.x | MEDIUM | Kiro Agents | No |
+| [KR-AG-028](./generated/kr-ag-028.md) | Agent File Not Loaded by a Targeted Kiro Engine | MEDIUM | Kiro Agents | No |
 | [KR-AG-029](./generated/kr-ag-029.md) | Overly Broad Kiro Agent Resource Glob | LOW | Kiro Agents | No |
 | [KR-AG-030](./generated/kr-ag-030.md) | Sub-agent Description Missing or Too Short | LOW | Kiro Agents | No |
 | [KR-HK-001](./generated/kr-hk-001.md) | Invalid Kiro IDE Hook Event Type | HIGH | Kiro Hooks | Yes (unsafe) |

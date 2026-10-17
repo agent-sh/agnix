@@ -1,9 +1,9 @@
 ---
 id: kr-ag-028
-title: "KR-AG-028: Agent File Not Loaded by Kiro CLI 2.x"
+title: "KR-AG-028: Agent File Not Loaded by a Targeted Kiro Engine"
 sidebar_label: "KR-AG-028"
-description: "agnix rule KR-AG-028 checks for agent file not loaded by kiro cli 2.x in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["KR-AG-028", "agent file not loaded by kiro cli 2.x", "kiro agents", "validation", "agnix", "linter"]
+description: "agnix rule KR-AG-028 checks for agent file not loaded by a targeted kiro engine in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["KR-AG-028", "agent file not loaded by a targeted kiro engine", "kiro agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -18,7 +18,7 @@ keywords: ["KR-AG-028", "agent file not loaded by kiro cli 2.x", "kiro agents", 
 ## Applicability
 
 - **Tool**: `kiro`
-- **Version Range**: `<3.0.0`
+- **Version Range**: `unspecified`
 - **Spec Revision**: `unspecified`
 
 ## Evidence Sources
