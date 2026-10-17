@@ -186,7 +186,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="as-013"></a>
 ### AS-013 [MEDIUM] Reference Chain Too Deep
 **Requirement**: File references SHOULD be one level deep from SKILL.md ("Keep file references one level deep from `SKILL.md`. Avoid deeply nested reference chains."); Anthropic: "All reference files should link directly from SKILL.md". A direct link into a subdirectory (`references/api/errors.md`) is one level of reference.
-**Detection**: For each bundled Markdown file SKILL.md references (`references/`, `scripts/`, `assets/` paths, `./` and `${CLAUDE_SKILL_DIR}/` prefixes accepted), read the file and collect the bundled files it references (skill-root paths and relative Markdown links). Warn at the SKILL.md reference when the file links a bundled file that exists and that SKILL.md does not reference.
+**Detection**: For each bundled Markdown file SKILL.md references (`references/`, `scripts/`, `assets/` paths, `./` and `${CLAUDE_SKILL_DIR}/` prefixes accepted), read the file and collect the bundled files it references (skill-root paths and relative Markdown links). Warn at the SKILL.md reference when the file links a bundled document (Markdown or plain text) that exists and that SKILL.md does not reference. A script the file runs and a link back to SKILL.md are not chains.
 **Fix**: Link the deeper file directly from SKILL.md and say when to read it
 **Source**: agentskills.io/specification, platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
 
@@ -213,8 +213,8 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="as-020"></a>
 ### AS-020 [LOW] Skill Description Lacks a When-to-Use Trigger
-**Requirement**: A skill description SHOULD say what the skill does and when to use it (agentskills.io: "Should describe both what the skill does and when to use it"; "Use imperative phrasing. Frame the description as an instruction to the agent: \"Use this skill when...\""). Anthropic, Codex, Cursor, VS Code, Cline, Devin Desktop and Gemini say the same.
-**Detection**: The trimmed `description` (Claude Code: skipped when `when_to_use` is set) contains no trigger phrase (`use when`, `use this`, `use for`, `when`, `whenever`, `if the user`, `trigger`, `invoke`, `asks for`, `mentions`, ...). Skipped for `disable-model-invocation: true` and for text that is mostly not ASCII letters (the phrase list is English). An agnix heuristic; info level.
+**Requirement**: A skill description SHOULD say what the skill does and when to use it (agentskills.io: "Should describe both what the skill does and when to use it"; "Use imperative phrasing. Frame the description as an instruction to the agent: 'Use this skill when...'"). Anthropic, Codex, Cursor, VS Code, Cline, Devin Desktop and Gemini say the same.
+**Detection**: The trimmed `description` (Claude Code: skipped when `when_to_use` is set) contains no trigger phrase (`use when`, `use this`, `use for`, `use as`, `load for`, `when`, `whenever`, `if the user`, `trigger`, `invoke`, `asks for`, `mentions`, ...). Skipped for `disable-model-invocation: true` and for text that is mostly not ASCII letters (the phrase list is English). When the body has a "When to use" heading, the suggestion says to move that guidance into the description, since agents choose skills from the description. An agnix heuristic; info level.
 **Fix**: No auto-fix - add a trigger such as "Use when ..."
 **Source**: agentskills.io/specification, agentskills.io/skill-creation/optimizing-descriptions
 
@@ -242,20 +242,20 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="as-024"></a>
 ### AS-024 [LOW] Unpinned Package-Runner Command in Skill
 **Requirement**: One-off package-runner commands in a skill SHOULD pin a version: "**Pin versions** (e.g., `npx eslint@9.0.0`) so the command behaves the same over time."
-**Detection**: In SKILL.md code spans and fences: `npx`, `bunx`, `pnpm dlx`, `yarn dlx`, `uvx`, `uv tool run`, `pipx run` running a package without an exact version (or with a floating tag or range), and `go run <module>` without `@version` (the page accepts `@latest` for go run). Packages a `package.json` next to the skill or at the project root depends on, and binaries in `node_modules/.bin`, are local and skipped. Info level.
+**Detection**: In SKILL.md code spans and fences: `npx`, `bunx`, `pnpm dlx`, `yarn dlx`, `uvx`, `uv tool run`, `pipx run` running a package without an exact version (or with a floating tag or range), and `go run <module>` without `@version` (the page accepts `@latest` for go run). Packages a `package.json` in the skill directory or an ancestor up to the repository root (or the lint root) depends on or defines (its `name` and `bin` commands), and binaries in `node_modules/.bin`, are local and skipped. Plain `npx`/`bunx` on a project build or test tool (`tsc`, `tsx`, `jest`, `vitest`, `mocha`, `playwright`, `wrangler`, `vite`, ...) is skipped too: npx runs the project's installed copy, which a pinned version would bypass. Info level.
 **Fix**: No auto-fix - pin a version (for example `npx eslint@9.0.0`)
 **Source**: agentskills.io/skill-creation/using-scripts
 
 <a id="as-025"></a>
 ### AS-025 [LOW] Duplicate Skill Name Across Skill Roots
 **Requirement**: One client SHOULD NOT see two different skills with the same name: clients resolve the collision in their own order ("either first-found or last-found is acceptable"; "Log a warning when a collision occurs so the user knows a skill was shadowed."). OpenCode: "Ensure skill names are unique across all locations".
-**Detection**: Project-level: skills (frontmatter `name`, else directory name) in the project skill roots (`.claude/skills`, `.agents/skills`, `.codex/skills`, `.cursor/skills`, `.github/skills`, `.opencode/skills`, `.cline/skills`, `.clinerules/skills`, `.windsurf/skills`, `.devin/skills`, `.kiro/skills`, `.gemini/skills`). Reported on the later copy when two roots that one selected client reads hold the same name with different content. Byte-identical copies (mirrored skills) are not reported. Info level.
+**Detection**: Project-level: skills (frontmatter `name`, else directory name) in the project skill roots (`.claude/skills`, `.agents/skills`, `.codex/skills`, `.cursor/skills`, `.github/skills`, `.opencode/skills`, `.cline/skills`, `.clinerules/skills`, `.windsurf/skills`, `.devin/skills`, `.kiro/skills`, `.gemini/skills`). Reported on the later copy when two roots that one selected client reads hold the same name with different content. Byte-identical copies (mirrored skills), and a stub that names the other copy's location (`.agents/skills/<skill>`), are not reported. Info level.
 **Fix**: No auto-fix - rename one skill or keep a single copy, unless the override is intended
 **Source**: agentskills.io/client-implementation/adding-skills-support, opencode.ai/docs/skills
 
 <a id="as-026"></a>
 ### AS-026 [LOW] Generic Reference Pointer Without Load Condition
-**Requirement**: Tell the agent when to load each reference rather than pointing at a folder: "Read `references/api-errors.md` if the API returns a non-200 status code" "is more useful than a generic \"see references/ for details.\""
+**Requirement**: Tell the agent when to load each reference rather than pointing at a folder: "Read `references/api-errors.md` if the API returns a non-200 status code" "is more useful than a generic 'see references/ for details.'"
 **Detection**: A line in the SKILL.md body (outside code) that ends with "see references/" or "see the docs folder" (optionally "for details") with no condition word (`if`, `when`, `before`, `after`, `unless`, `while`) in the same sentence. An agnix heuristic; info level.
 **Fix**: No auto-fix - name the file and the condition
 **Source**: agentskills.io/skill-creation/best-practices
@@ -1446,7 +1446,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="agm-007"></a>
 ### AGM-007 [LOW] Root AGENTS.md Lists No Build or Test Command
 **Requirement**: The repository-root AGENTS.md SHOULD list the commands agents run: "Build and test commands" is among the agents.md "Popular choices", and agents run the checks a file lists ("Yes—if you list them."). Amp: "Amp looks in `AGENTS.md` files for guidance on codebase structure, build/test commands, and conventions."
-**Detection**: Root AGENTS.md (the lint root or a directory holding `.git`) with no heading about build, test, setup, commands or development, no common runner command (`npm test`, `cargo test`, `pytest`, `make`, `go test`, ...) and no link or @-mention of CONTRIBUTING.md, DEVELOPMENT.md, a Makefile or package.json. Empty files are left to other rules. Info level.
+**Detection**: Root AGENTS.md (the lint root or a directory holding `.git`) next to a build manifest or task file (`package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, a Makefile or justfile, `pom.xml`, a `.sln`, ...; a notes or knowledge-base repository has nothing to build) with no heading about build, test, setup, commands or development, no common runner command (`npm test`, `cargo test`, `pytest`, `make`, `go test`, ...) and no link or @-mention of CONTRIBUTING.md, DEVELOPMENT.md, a Makefile or package.json. Empty files are left to other rules. Info level.
 **Fix**: No auto-fix - add a Build and test section
 **Source**: agents.md, ampcode.com/docs/customize/agents-md
 
@@ -1659,7 +1659,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="mcp-011"></a>
 ### MCP-011 [HIGH] Invalid MCP server type
-**Requirement**: An MCP server `type` MUST be one the client that reads the file accepts. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Claude Code: stdio, http, `streamable-http` ("accepts `streamable-http` as an alias for `http`"), sse, ws; GitHub Copilot: "accepts `local`, `stdio`, `http`, or `sse`"; Codex plugins: stdio, http, streamable-http; Cursor: stdio, http, sse, streamable-http; Cline: `streamableHttp`, sse. Claude Code "skips a `\"type\": \"sdk\"` entry" (only an Agent SDK host registers it), a warning.
+**Requirement**: An MCP server `type` MUST be one the client that reads the file accepts. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Claude Code: stdio, http, `streamable-http` ("accepts `streamable-http` as an alias for `http`"), sse, ws; GitHub Copilot: "accepts `local`, `stdio`, `http`, or `sse`"; Codex plugins: stdio, http, streamable-http; Cursor: stdio, http, sse, streamable-http; Cline: `streamableHttp`, sse. Claude Code "skips a `"type": "sdk"` entry" (only an Agent SDK host registers it), a warning.
 **Detection**: The valid set is the union of the types the file's readers accept: `.mcp.json` (Claude Code, Copilot, Codex plugins), `.cursor/mcp.json` (Cursor), `.vscode/mcp.json`, `.github/mcp.json` and `mcp-config.json` (Copilot), narrowed to the selected tools when `tools` names some of them. A file no specific client owns accepts every client's values.
 **Fix**: [AUTO-FIX, unsafe] Replace with the closest valid type
 **Source**: code.claude.com/docs/en/mcp, docs.github.com Copilot MCP servers, code.visualstudio.com MCP configuration, cursor.com/docs/mcp, docs.cline.bot/mcp/mcp-overview
@@ -1806,14 +1806,14 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="mcp-032"></a>
 ### MCP-032 [LOW] Deprecated MCP Capability Declared
-**Requirement**: New implementations SHOULD NOT add Roots, Sampling or Logging: "Deprecate the Roots, Sampling, and Logging features" ... "new implementations should not add support for them". The registry also deprecates `includeContext: "thisServer"` and `"allServers"` ("Omit the field or use `\"none\"`"); removal is eligible from revisions released on or after 2027-07-28.
+**Requirement**: New implementations SHOULD NOT add Roots, Sampling or Logging: "Deprecate the Roots, Sampling, and Logging features" ... "new implementations should not add support for them". The registry also deprecates `includeContext: "thisServer"` and `"allServers"` ("Omit the field or use `"none"`"); removal is eligible from revisions released on or after 2027-07-28.
 **Detection**: `roots`, `sampling` or `logging` under `capabilities` (top level, `params` or `result`), and `params.includeContext` set to `thisServer` or `allServers`. Skipped when the project pins an MCP revision older than 2026-07-28. Info level.
 **Fix**: No auto-fix - follow the deprecated-features registry
 **Source**: modelcontextprotocol.io/specification/2026-07-28/changelog, modelcontextprotocol.io/specification/2026-07-28/deprecated
 
 <a id="mcp-033"></a>
 ### MCP-033 [LOW] No-Parameter Tool Accepts Arbitrary Properties
-**Requirement**: A tool without parameters SHOULD say so: "`{ \"type\": \"object\", \"additionalProperties\": false }` - **Recommended**: explicitly accepts only empty objects". `{ "type": "object" }` is valid but accepts any object.
+**Requirement**: A tool without parameters SHOULD say so: "`{ "type": "object", "additionalProperties": false }` - **Recommended**: explicitly accepts only empty objects". `{ "type": "object" }` is valid but accepts any object.
 **Detection**: `inputSchema` that is exactly `{ "type": "object" }`. Info level.
 **Fix**: No auto-fix - add `"additionalProperties": false`
 **Source**: modelcontextprotocol.io/specification/2026-07-28/server/tools
@@ -4158,7 +4158,7 @@ Known asymmetry with XP-009: this is a per-file validator, so it has no view of 
 <a id="xp-sk-004"></a>
 ### XP-SK-004 [LOW] Backslash Path in Skill
 **Requirement**: Paths in a skill SHOULD use forward slashes. Anthropic: "Always use forward slashes in file paths, even on Windows"; "Unix-style paths work across all platforms, while Windows-style paths cause errors on Unix systems." VS Code: "Use Unix-style `/` path separators to keep skills portable across operating systems."
-**Detection**: A backslash path into a bundled directory (`scripts\`, `references\`, `assets\`, `templates\`, `examples\`, `resources\`) in the SKILL.md body. Fences marked as PowerShell, batch or cmd show Windows commands and are skipped. Info level.
+**Detection**: A backslash path into a bundled directory (`scripts\`, `references\`, `assets\`, `templates\`, `examples\`, `resources\`) in the SKILL.md body (lowercase directory name, not inside a longer path such as `.venv\Scripts\`). Fences marked as PowerShell, batch or cmd show Windows commands and are skipped, and so are lines that name Windows or PowerShell or mark a counterexample ("Avoid", "Don't", a cross mark). Info level.
 **Fix**: No auto-fix - write the path with `/`
 **Source**: platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices, code.visualstudio.com/docs/agent-customization/agent-skills
 

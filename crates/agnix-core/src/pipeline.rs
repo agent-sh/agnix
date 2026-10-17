@@ -912,10 +912,11 @@ pub fn validate_project_rules(root: &Path, config: &LintConfig) -> LintResult<Ve
             continue;
         }
 
-        // Collect AGENTS.md and legacy AGENT.md paths for AGM-008/AGM-009
+        // Collect AGENTS.md, legacy AGENT.md and SKILL.md paths for the
+        // project-level AGM-008/AGM-009 and AS-025 checks
         if matches!(
             file_path.file_name().and_then(|n| n.to_str()),
-            Some("AGENTS.md" | "AGENT.md")
+            Some("AGENTS.md" | "AGENT.md" | "SKILL.md")
         ) {
             agents_md_paths.push(file_path.clone());
         }
@@ -1130,11 +1131,12 @@ pub fn validate_paths_with_registry(
                     }
                 }
 
-                // Collect AGENTS.md and legacy AGENT.md paths for AGM-008/AGM-009
-                // (thread-local, no lock).
+                // Collect AGENTS.md, legacy AGENT.md and SKILL.md paths for the
+                // project-level AGM-008/AGM-009 and AS-025 checks (thread-local,
+                // no lock).
                 if matches!(
                     file_path.file_name().and_then(|n| n.to_str()),
-                    Some("AGENTS.md" | "AGENT.md")
+                    Some("AGENTS.md" | "AGENT.md" | "SKILL.md")
                 ) {
                     agents.push(file_path.clone());
                 }

@@ -44,6 +44,38 @@ where
     }))
 }
 
+/// Deserialize `argument-hint` from a string or a YAML list. Claude Code
+/// documents hints such as `[issue-number]`, and written unquoted
+/// (`argument-hint: [issue-number]`) YAML reads that as a list; each item is
+/// put back in brackets so the hint reads as written. Returns `None` when the
+/// field is absent or null.
+fn de_argument_hint<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Hint {
+        Str(String),
+        Seq(Vec<serde_yaml::Value>),
+    }
+    let value = Option::<Hint>::deserialize(deserializer)?;
+    Ok(value.map(|hint| match hint {
+        Hint::Str(s) => s,
+        Hint::Seq(items) => items
+            .iter()
+            .map(|item| match item {
+                serde_yaml::Value::String(s) => format!("[{s}]"),
+                other => format!(
+                    "[{}]",
+                    serde_yaml::to_string(other).unwrap_or_default().trim()
+                ),
+            })
+            .collect::<Vec<_>>()
+            .join(" "),
+    }))
+}
+
 fn de_metadata_value<'de, D>(deserializer: D) -> Result<Option<serde_yaml::Value>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -82,7 +114,11 @@ struct SkillFrontmatter {
         deserialize_with = "de_string_or_space_seq"
     )]
     disallowed_tools: Option<String>,
-    #[serde(rename = "argument-hint")]
+    #[serde(
+        rename = "argument-hint",
+        default,
+        deserialize_with = "de_argument_hint"
+    )]
     argument_hint: Option<String>,
     #[serde(
         rename = "arguments",

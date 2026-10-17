@@ -28,9 +28,9 @@ use crate::schemas::cross_platform::CODEX_BYTE_LIMIT;
 /// - AGM-009: Nested AGENTS.md without a root AGENTS.md
 /// - AS-025: The same skill name in two skill roots one client reads
 ///
-/// `agents_md_paths` holds every AGENTS.md and AGENT.md the walk found. Both
-/// it and `instruction_file_paths` must be pre-sorted for deterministic
-/// output ordering.
+/// `agents_md_paths` holds every AGENTS.md, AGENT.md and SKILL.md the walk
+/// found. Both it and `instruction_file_paths` must be pre-sorted for
+/// deterministic output ordering.
 pub(crate) fn run_project_level_checks(
     agents_md_paths: &[PathBuf],
     instruction_file_paths: &[PathBuf],
@@ -240,7 +240,7 @@ pub(crate) fn run_project_level_checks(
     }
 
     check_agents_md_layout(agents_md_paths, config, root_dir, &mut diagnostics);
-    check_duplicate_skill_names(config, root_dir, &mut diagnostics);
+    check_duplicate_skill_names(agents_md_paths, config, &mut diagnostics);
 
     // VER-001: Warn when no tool/spec versions are explicitly pinned
     if config.is_rule_enabled("VER-001") {
@@ -474,11 +474,12 @@ const SKILL_ROOTS: &[(&str, &[&str])] = &[
 /// AS-025: one skill name in two skill roots that a single client reads.
 /// Clients resolve such a collision in their own order (the Agent Skills
 /// client guide: "either first-found or last-found is acceptable"), so one
-/// copy is silently shadowed. Byte-identical copies (mirrored skills) are not
-/// reported.
+/// copy is silently shadowed. Skills are grouped by project: the directory
+/// that holds the skill roots (`<project>/.claude/skills/<name>/SKILL.md`).
+/// Byte-identical copies (mirrored skills) are not reported.
 fn check_duplicate_skill_names(
+    walked_paths: &[PathBuf],
     config: &LintConfig,
-    root_dir: &Path,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     if !config.is_rule_enabled("AS-025") {
@@ -493,62 +494,89 @@ fn check_duplicate_skill_names(
                 .any(|t| t.eq_ignore_ascii_case(client) || LintConfig::is_tool_alias(t, client))
     };
 
-    // (root, skill name, SKILL.md path, content)
-    let mut skills: Vec<(&str, String, PathBuf, String)> = Vec::new();
-    for (root, _) in SKILL_ROOTS {
-        let dir = root_dir.join(root);
-        let Ok(entries) = fs.read_dir(&dir) else {
+    struct SkillEntry {
+        project: PathBuf,
+        root: &'static str,
+        readers: &'static [&'static str],
+        name: String,
+        path: PathBuf,
+        /// `<root>/<skill directory>`, such as `.agents/skills/review`.
+        location: String,
+        content: String,
+    }
+    let mut skills: Vec<SkillEntry> = Vec::new();
+    for skill_md in walked_paths
+        .iter()
+        .filter(|p| p.file_name().and_then(|n| n.to_str()) == Some("SKILL.md"))
+    {
+        // <project>/<root>/<skill>/SKILL.md, where <root> is two components.
+        let Some(root_path) = skill_md.parent().and_then(Path::parent) else {
             continue;
         };
-        let mut entries: Vec<_> = entries.into_iter().filter(|e| e.metadata.is_dir).collect();
-        entries.sort_by(|a, b| a.path.cmp(&b.path));
-        for entry in entries {
-            let skill_md = entry.path.join("SKILL.md");
-            let Ok(content) = fs.read_to_string(&skill_md) else {
-                continue;
-            };
-            if let Some(name) = crate::rules::skill::skill_name(&skill_md, &content) {
-                skills.push((root, name, skill_md, content));
-            }
+        let Some((root, readers)) = SKILL_ROOTS
+            .iter()
+            .find(|(root, _)| root_path.ends_with(root))
+        else {
+            continue;
+        };
+        let Some(project) = root_path.parent().and_then(Path::parent) else {
+            continue;
+        };
+        let Ok(content) = fs.read_to_string(skill_md) else {
+            continue;
+        };
+        let skill_dir = skill_md
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|n| n.to_str())
+            .unwrap_or_default();
+        if let Some(name) = crate::rules::skill::skill_name(skill_md, &content) {
+            skills.push(SkillEntry {
+                project: project.to_path_buf(),
+                root,
+                readers,
+                name,
+                path: skill_md.clone(),
+                location: format!("{root}/{skill_dir}"),
+                content,
+            });
         }
     }
 
     let mut reported: std::collections::BTreeSet<PathBuf> = std::collections::BTreeSet::new();
-    for (i, (root_a, name_a, path_a, content_a)) in skills.iter().enumerate() {
-        for (root_b, name_b, path_b, content_b) in skills.iter().skip(i + 1) {
-            if root_a == root_b || name_a != name_b || content_a == content_b {
+    for (i, a) in skills.iter().enumerate() {
+        for b in skills.iter().skip(i + 1) {
+            if a.project != b.project
+                || a.root == b.root
+                || a.name != b.name
+                || a.content == b.content
+                // A stub that sends the agent to the other copy
+                // ("Read `.agents/skills/review/SKILL.md`") is one skill.
+                || a.content.contains(&b.location)
+                || b.content.contains(&a.location)
+            {
                 continue;
             }
-            let readers_a = SKILL_ROOTS
-                .iter()
-                .find(|(r, _)| r == root_a)
-                .map(|(_, c)| *c);
-            let readers_b = SKILL_ROOTS
-                .iter()
-                .find(|(r, _)| r == root_b)
-                .map(|(_, c)| *c);
-            let (Some(readers_a), Some(readers_b)) = (readers_a, readers_b) else {
-                continue;
-            };
-            let shared: Vec<&str> = readers_a
+            let shared: Vec<&str> = a
+                .readers
                 .iter()
                 .copied()
-                .filter(|client| readers_b.contains(client) && in_scope(client))
+                .filter(|client| b.readers.contains(client) && in_scope(client))
                 .collect();
-            if shared.is_empty() || !reported.insert(path_b.clone()) {
+            if shared.is_empty() || !reported.insert(b.path.clone()) {
                 continue;
             }
-            if config.for_path(path_b).is_rule_enabled("AS-025") {
+            if config.for_path(&b.path).is_rule_enabled("AS-025") {
                 diagnostics.push(
                     Diagnostic::info(
-                        path_b.clone(),
+                        b.path.clone(),
                         1,
                         0,
                         "AS-025",
                         t!(
                             "rules.as_025.message",
-                            name = name_a.as_str(),
-                            other = path_a.display().to_string(),
+                            name = a.name.as_str(),
+                            other = a.path.display().to_string(),
                             clients = shared.join(", ")
                         ),
                     )
@@ -834,11 +862,22 @@ mod tests {
         let agents = write(".agents/skills", "review", "Generic copy");
         // Kiro reads neither of the others.
         write(".kiro/skills", "review", "Kiro copy");
+        let skills = |temp: &tempfile::TempDir| -> Vec<PathBuf> {
+            let mut paths: Vec<PathBuf> = [".claude/skills", ".agents/skills", ".kiro/skills"]
+                .iter()
+                .map(|root| temp.path().join(root).join("review/SKILL.md"))
+                .collect();
+            paths.sort();
+            paths
+        };
 
-        let diagnostics = run_project_level_checks(&[], &[], &LintConfig::default(), temp.path());
+        let diagnostics =
+            run_project_level_checks(&skills(&temp), &[], &LintConfig::default(), temp.path());
         let as_025: Vec<_> = diagnostics.iter().filter(|d| d.rule == "AS-025").collect();
         assert_eq!(as_025.len(), 1, "{diagnostics:?}");
-        assert_eq!(as_025[0].file, agents);
+        // Reported on the later path in walk order, naming the other copy.
+        assert!(as_025[0].file.ends_with(".claude/skills/review/SKILL.md"));
+        assert!(as_025[0].message.contains(&agents.display().to_string()));
         assert!(
             as_025[0].message.contains("cursor"),
             "{}",
@@ -850,15 +889,30 @@ mod tests {
             .tools(vec!["claude-code".to_string(), "codex".to_string()])
             .build()
             .unwrap();
-        let diagnostics = run_project_level_checks(&[], &[], &config, temp.path());
+        let diagnostics = run_project_level_checks(&skills(&temp), &[], &config, temp.path());
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "AS-025"),
+            "{diagnostics:?}"
+        );
+
+        // A stub that sends the agent to the other copy is one skill.
+        write(
+            ".claude/skills",
+            "review",
+            "Read `.agents/skills/review/SKILL.md` in full and follow it.",
+        );
+        let diagnostics =
+            run_project_level_checks(&skills(&temp), &[], &LintConfig::default(), temp.path());
         assert!(
             diagnostics.iter().all(|d| d.rule != "AS-025"),
             "{diagnostics:?}"
         );
 
         // Mirrored, identical copies are not a collision.
+        write(".claude/skills", "review", "Claude copy");
         write(".agents/skills", "review", "Claude copy");
-        let diagnostics = run_project_level_checks(&[], &[], &LintConfig::default(), temp.path());
+        let diagnostics =
+            run_project_level_checks(&skills(&temp), &[], &LintConfig::default(), temp.path());
         assert!(
             diagnostics.iter().all(|d| d.rule != "AS-025"),
             "{diagnostics:?}"

@@ -2970,6 +2970,24 @@ Body content"#;
 }
 
 #[test]
+fn test_as_016_unquoted_bracket_argument_hint_parses() {
+    // Claude Code documents hints such as `[issue-number]`; written unquoted,
+    // YAML reads `argument-hint: [issue-number]` as a list. That used to fail
+    // the typed parse and trip AS-016.
+    let content = "---\nname: fix-issue\ndescription: Use when fixing a GitHub issue by number\nargument-hint: [issue-number]\n---\nFix issue $ARGUMENTS.\n";
+    for path in [
+        "/p/.claude/skills/fix-issue/SKILL.md",
+        "/p/.agents/skills/fix-issue/SKILL.md",
+    ] {
+        let diagnostics = SkillValidator.validate(Path::new(path), content, &LintConfig::default());
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "AS-016"),
+            "{path}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
 fn test_as_016_disabled() {
     let mut config = LintConfig::default();
     config.rules_mut().disabled_rules = vec!["AS-016".to_string()];
@@ -5160,6 +5178,30 @@ fn test_as_013_ignores_non_markdown_targets() {
     );
 }
 
+#[test]
+fn test_as_013_scripts_and_back_links_are_not_chains() {
+    // A reference that runs a script, or links back to SKILL.md, starts no
+    // chain: the script is executed, not read, and SKILL.md is the skill.
+    let temp = tempfile::tempdir().unwrap();
+    let skill = temp.path().join("test-skill");
+    fs::create_dir_all(skill.join("references")).unwrap();
+    fs::create_dir_all(skill.join("scripts")).unwrap();
+    fs::write(
+        skill.join("references/discover.md"),
+        "Run `scripts/discover.sh`.\n\nSee [SKILL.md](../SKILL.md) for the file list.\n",
+    )
+    .unwrap();
+    fs::write(skill.join("scripts/discover.sh"), "#!/bin/sh\n").unwrap();
+    let content = "---\nname: test-skill\ndescription: Use when testing reference chains\n---\nFollow [discovery](references/discover.md).\n";
+    let file = skill.join("SKILL.md");
+    fs::write(&file, content).unwrap();
+    let diagnostics = SkillValidator.validate(&file, content, &LintConfig::default());
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "AS-013"),
+        "{diagnostics:?}"
+    );
+}
+
 /// One level deep stays clean for the newly covered prefixes.
 #[test]
 fn test_as_013_allows_one_level_scripts_and_assets() {
@@ -5378,6 +5420,17 @@ fn test_as_020_description_without_trigger() {
         let diagnostics = validator.validate(path, ok, &LintConfig::default());
         assert!(rules_named(&diagnostics, "AS-020").is_empty(), "{ok}");
     }
+    // A "When to use" body section points at the description.
+    let section = "---\nname: pdf\ndescription: Helps with PDFs.\n---\n## When to use\n\nWhen the user attaches a PDF.\n";
+    let diagnostics = validator.validate(path, section, &LintConfig::default());
+    let as_020 = rules_named(&diagnostics, "AS-020");
+    assert!(
+        as_020[0]
+            .suggestion
+            .as_deref()
+            .unwrap()
+            .contains("into the description")
+    );
     // Claude Code's when_to_use carries the trigger.
     let claude = "---\nname: pdf\ndescription: Helps with PDFs.\nwhen_to_use: the user attaches a PDF\n---\nBody";
     let diagnostics = validator.validate(
@@ -5460,6 +5513,32 @@ fn test_as_024_unpinned_runner_in_code() {
     assert_eq!(packages.len(), 2, "{packages:?}");
     assert!(packages.iter().any(|m| m.contains("'eslint'")));
     assert!(packages.iter().any(|m| m.contains("'ruff'")));
+}
+
+#[test]
+fn test_as_024_skips_project_tools_prose_and_repository_dependencies() {
+    // A project skill under `.agents/skills/` runs the repository's tools:
+    // `c8` comes from the repository-root package.json two levels up.
+    let temp = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(temp.path().join(".git")).unwrap();
+    std::fs::write(
+        temp.path().join("package.json"),
+        r#"{"name": "probe-kit", "bin": {"probe-dev": "./bin/dev.js"}, "devDependencies": {"c8": "10.1.2"}}"#,
+    )
+    .unwrap();
+    let skill = temp.path().join(".agents/skills/probe");
+    std::fs::create_dir_all(&skill).unwrap();
+    let content = "---\nname: probe\ndescription: Use when probing runtime behavior\n---\nRun `npx c8 node probe.js`, `npx probe-dev bump 1.2.3`, then `npx tsc --noEmit` and `npx wrangler deploy`.\n\n```bash\ncommand -v npx >/dev/null 2>&1\npnpm dlx wrangler deploy\n```\n\n```json\n{\"reason\": \"npx not found on PATH\"}\n```\n";
+    let file = skill.join("SKILL.md");
+    std::fs::write(&file, content).unwrap();
+    let diagnostics = SkillValidator.validate(&file, content, &LintConfig::default());
+    let messages: Vec<_> = rules_named(&diagnostics, "AS-024")
+        .iter()
+        .map(|d| d.message.clone())
+        .collect();
+    // Only `pnpm dlx`, which always downloads, is reported.
+    assert_eq!(messages.len(), 1, "{messages:?}");
+    assert!(messages[0].contains("'wrangler'"), "{messages:?}");
 }
 
 #[test]

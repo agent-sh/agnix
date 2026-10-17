@@ -1,0 +1,7 @@
+[mcp_servers.context]
+command = "uvx"
+args = ["context-mcp"]
+
+[mcp_servers.remote]
+url = "https://mcp.example.com/mcp"
+http_headers = { "X-API-Key" = "key_0123456789abcdef0123" }

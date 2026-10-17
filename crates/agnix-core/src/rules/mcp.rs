@@ -653,10 +653,12 @@ fn extract_mcp_servers(raw_value: &serde_json::Value) -> Vec<(String, McpServerC
     }
 
     // VS Code `.vscode/mcp.json` "defines servers in a top-level `servers`
-    // object" (next to `inputs`).
+    // object" (next to `inputs`). Every entry must look like a server (it
+    // has `command` or `url`): other JSON files named like MCP configs use a
+    // `servers` key for other records, such as a tool cache keyed by server.
     if let Some(servers_obj) = raw_value.get("servers").and_then(|v| v.as_object())
         && !servers_obj.is_empty()
-        && servers_obj.values().all(|v| v.is_object())
+        && servers_obj.values().all(looks_like_mcp_server_config)
     {
         return parse_server_map(servers_obj);
     }
@@ -2489,6 +2491,17 @@ mod tests {
             rules_of(&validate_path(".mcp.json", content), "MCP-007").len(),
             1
         );
+    }
+
+    #[test]
+    fn test_servers_map_of_non_server_records_is_not_read_as_servers() {
+        // A tool cache keyed by server name (pi's mcp-cache.json) is not a
+        // VS Code server map: no entry has `command` or `url`.
+        let content = r#"{"version": 1, "servers": {"docs": {"configHash": "abc", "tools": [], "cachedAt": 1}}}"#;
+        let diagnostics = validate_path("mcp-cache.json", content);
+        for rule in ["MCP-009", "MCP-024"] {
+            assert!(rules_of(&diagnostics, rule).is_empty(), "{diagnostics:?}");
+        }
     }
 
     #[test]

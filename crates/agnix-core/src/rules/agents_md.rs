@@ -61,6 +61,83 @@ pub(crate) fn is_repository_root_file(path: &Path, config: &LintConfig) -> bool 
     config.fs().exists(&dir.join(".git"))
 }
 
+/// Build manifests and task files that show a project has commands to run.
+/// AGM-007 asks for build and test commands only where they exist: a notes or
+/// knowledge-base repository has nothing to build.
+const BUILD_MANIFESTS: &[&str] = &[
+    "package.json",
+    "deno.json",
+    "deno.jsonc",
+    "Cargo.toml",
+    "go.mod",
+    "pyproject.toml",
+    "setup.py",
+    "setup.cfg",
+    "requirements.txt",
+    "Pipfile",
+    "tox.ini",
+    "noxfile.py",
+    "Makefile",
+    "makefile",
+    "GNUmakefile",
+    "justfile",
+    "Justfile",
+    ".justfile",
+    "Taskfile.yml",
+    "Taskfile.yaml",
+    "CMakeLists.txt",
+    "meson.build",
+    "build.zig",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "settings.gradle",
+    "settings.gradle.kts",
+    "build.sbt",
+    "Gemfile",
+    "Rakefile",
+    "composer.json",
+    "mix.exs",
+    "Package.swift",
+    "pubspec.yaml",
+    "stack.yaml",
+    "dune-project",
+    "rebar.config",
+    "MODULE.bazel",
+    "WORKSPACE",
+    "WORKSPACE.bazel",
+    "BUILD.bazel",
+    "flake.nix",
+];
+
+/// Project file extensions that show the same (.NET, Haskell, Ruby gems).
+const BUILD_MANIFEST_EXTENSIONS: &[&str] =
+    &["sln", "csproj", "fsproj", "vbproj", "cabal", "gemspec"];
+
+/// Whether the directory holding `path` has a build manifest. A file with no
+/// directory, or a directory that cannot be read, counts as buildable so the
+/// rule still runs on a file validated on its own.
+fn has_build_manifest(path: &Path, config: &LintConfig) -> bool {
+    let Some(dir) = path.parent().filter(|dir| !dir.as_os_str().is_empty()) else {
+        return true;
+    };
+    let Ok(entries) = config.fs().read_dir(dir) else {
+        return true;
+    };
+    entries.iter().any(|entry| {
+        let name = entry
+            .path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        BUILD_MANIFESTS.contains(&name)
+            || Path::new(name)
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .is_some_and(|ext| BUILD_MANIFEST_EXTENSIONS.contains(&ext))
+    })
+}
+
 /// Project markers that show Windsurf (Devin Desktop) is used: its
 /// configuration directories (`.devin/` preferred, `.windsurf/` legacy) and
 /// the legacy `.windsurfrules` file.
@@ -213,6 +290,7 @@ impl Validator for AgentsMdValidator {
             && config.is_rule_enabled("AGM-007")
             && !content.trim().is_empty()
             && !lists_build_or_test_commands(content)
+            && has_build_manifest(path, config)
         {
             diagnostics.push(
                 Diagnostic::info(
@@ -471,7 +549,9 @@ mod tests {
     fn test_agm_004_and_007_skip_nested_files() {
         let fs = MockFileSystem::new();
         fs.add_dir("/repo");
+        fs.add_file("/repo/package.json", "{}");
         fs.add_dir("/repo/pkg");
+        fs.add_file("/repo/pkg/package.json", "{}");
         let mut config = LintConfig::default();
         config.set_fs(Arc::new(fs));
         config.set_root_dir(std::path::PathBuf::from("/repo"));
@@ -497,6 +577,32 @@ mod tests {
         assert!(rules(&validate(&with_commands), "AGM-007").is_empty());
         // An empty file is OC-AGM-001's finding, not this one.
         assert!(rules(&validate(""), "AGM-007").is_empty());
+    }
+
+    #[test]
+    fn test_agm_007_needs_a_build_manifest() {
+        // A notes or knowledge-base repository has no commands to list.
+        let fs = MockFileSystem::new();
+        fs.add_dir("/notes");
+        fs.add_file("/notes/AGENTS.md", "");
+        fs.add_file("/notes/guide.md", "");
+        fs.add_dir("/app");
+        fs.add_file("/app/AGENTS.md", "");
+        fs.add_file("/app/package.json", "{}");
+        fs.add_dir("/dotnet");
+        fs.add_file("/dotnet/AGENTS.md", "");
+        fs.add_file("/dotnet/App.sln", "");
+        let mut config = LintConfig::default();
+        config.set_fs(Arc::new(fs));
+        let content = "# Project\n\nA date parser.\n\n## Style\n\nUse tabs.\n";
+        for (path, expected) in [
+            ("/notes/AGENTS.md", 0),
+            ("/app/AGENTS.md", 1),
+            ("/dotnet/AGENTS.md", 1),
+        ] {
+            let diagnostics = AgentsMdValidator.validate(Path::new(path), content, &config);
+            assert_eq!(rules(&diagnostics, "AGM-007").len(), expected, "{path}");
+        }
     }
 
     // ===== AGM-005 retirement =====

@@ -95,8 +95,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# Main Title\n\nSome content here.\n\n## Section\n\nMore content.",
-      "bad_example": "Just plain text without any headers.\nNo structure at all.\nHard to navigate."
+      "good_example": "# Conventions\n\n## Changes\n\n- Keep changes small and covered by a test.\n\n## Reviews\n\n- Ask for a review before merging.",
+      "bad_example": "Follow these conventions.\n- Convention 1: keep changes small and covered by a test.\n- Convention 2: keep changes small and covered by a test.\n- Convention 3: keep changes small and covered by a test.\n- Convention 4: keep changes small and covered by a test.\n- Convention 5: keep changes small and covered by a test.\n- Convention 6: keep changes small and covered by a test.\n- Convention 7: keep changes small and covered by a test.\n- Convention 8: keep changes small and covered by a test.\n- Convention 9: keep changes small and covered by a test.\n- Convention 10: keep changes small and covered by a test.\n- Convention 11: keep changes small and covered by a test.\n- Convention 12: keep changes small and covered by a test.\n- Convention 13: keep changes small and covered by a test.\n- Convention 14: keep changes small and covered by a test.\n- Convention 15: keep changes small and covered by a test.\n- Convention 16: keep changes small and covered by a test.\n- Convention 17: keep changes small and covered by a test.\n- Convention 18: keep changes small and covered by a test.\n- Convention 19: keep changes small and covered by a test.\n- Convention 20: keep changes small and covered by a test.\n- Convention 21: keep changes small and covered by a test.\n- Convention 22: keep changes small and covered by a test.\n- Convention 23: keep changes small and covered by a test.\n- Convention 24: keep changes small and covered by a test.\n- Convention 25: keep changes small and covered by a test.\n- Convention 26: keep changes small and covered by a test.\n- Convention 27: keep changes small and covered by a test.\n- Convention 28: keep changes small and covered by a test.\n- Convention 29: keep changes small and covered by a test.\n- Convention 30: keep changes small and covered by a test.\n- Convention 31: keep changes small and covered by a test.\n- Convention 32: keep changes small and covered by a test.\n- Convention 33: keep changes small and covered by a test.\n- Convention 34: keep changes small and covered by a test.\n- Convention 35: keep changes small and covered by a test.\n- Convention 36: keep changes small and covered by a test.\n- Convention 37: keep changes small and covered by a test.\n- Convention 38: keep changes small and covered by a test.\n- Convention 39: keep changes small and covered by a test.\n- Convention 40: keep changes small and covered by a test.\n- Convention 41: keep changes small and covered by a test.\n- Convention 42: keep changes small and covered by a test.\n- Convention 43: keep changes small and covered by a test.\n- Convention 44: keep changes small and covered by a test.\n- Convention 45: keep changes small and covered by a test.\n- Convention 46: keep changes small and covered by a test.\n- Convention 47: keep changes small and covered by a test.\n- Convention 48: keep changes small and covered by a test.\n- Convention 49: keep changes small and covered by a test.\n- Convention 50: keep changes small and covered by a test.\n- Convention 51: keep changes small and covered by a test.\n"
     },
     {
       "id": "AGM-003",
@@ -679,8 +679,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nname: read-config\ndescription: Use when reading project configuration\n---\nSee references/config.md for details.",
-      "bad_example": "---\nname: read-config\ndescription: Use when reading project configuration\n---\nSee references/deep/nested/config.md for details."
+      "good_example": "---\nname: read-config\ndescription: Use when reading project configuration\n---\nSee [the guide](references/guide.md) for details.\nRead [the schema](references/schema.md) when checking a key.",
+      "bad_example": "---\nname: read-config\ndescription: Use when reading project configuration\n---\nSee [the guide](references/guide.md) for details.\n\n(references/guide.md links references/schema.md, which SKILL.md never names)"
     },
     {
       "id": "AS-015",
@@ -14212,8 +14212,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# Project Memory\n\n## Build Commands\n\n### Testing\n\nRun tests with npm test.",
-      "bad_example": "Just plain text without any markdown headers or structure."
+      "good_example": "# Project\n\n## Testing\n\nRun tests with npm test.",
+      "bad_example": "# Project\n\n### Testing\n\nRun tests with npm test."
     },
     {
       "id": "XP-003",
@@ -14237,8 +14237,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# Configuration\n\nUse environment variables for all platform-specific settings.\nSee ./src/config.ts for defaults.",
-      "bad_example": "# Configuration\n\n- Claude: .claude/settings.json\n- Cursor: .cursor/rules/\n- Config: ~/.config/my-tool/config.yaml"
+      "good_example": "# Configuration\n\n- Deploy script: ./scripts/deploy.sh\n- Cache: $HOME/.cache/app/",
+      "bad_example": "# Configuration\n\n- Deploy script: /Users/alice/src/app/scripts/deploy.sh\n- Cache: /home/alice/.cache/app/"
     },
     {
       "id": "XP-004",
@@ -14406,8 +14406,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# CLAUDE.md\n\n## Claude Code\n\ncontext: fork\nagent: reviewer\n\n## General\n\nKeep code clean and well-tested.",
-      "bad_example": "# CLAUDE.md\n\ncontext: fork\nagent: reviewer\nallowed-tools: Read Write"
+      "good_example": "# CLAUDE.md\n\n## Style\n\n- Use two-space indentation.\n- Run npm test before committing.\n\n## Claude Code\n\n@docs/claude-workflows.md",
+      "bad_example": "# CLAUDE.md\n\n@docs/style-guide.md\n@docs/testing.md\n\n(.cursor/ exists, so Cursor reads this file but does not inline the imports)"
     },
     {
       "id": "XP-SK-001",

@@ -36,8 +36,14 @@ fn trigger_pattern() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     regex(
         &RE,
-        r"(?i)\b(?:use (?:this|it|when|whenever|for|if|after|before|to|on|in|with)|when\b|whenever|if (?:the user|you|a user|asked)|for (?:tasks|requests|questions)\b|trigger|invoke|activat|appl(?:y|ies) (?:to|when)|asks? (?:for|to|about)|mentions?\b|requests?\b)",
+        r"(?i)\b(?:use (?:this|it|when|whenever|for|if|after|before|to|on|in|with|as)|load(?:ed)? (?:this|it|when|whenever|for|if|on)\b|when\b|whenever|if (?:the user|you|a user|asked)|for (?:tasks|requests|questions)\b|trigger|invoke|activat|appl(?:y|ies) (?:to|when)|asks? (?:for|to|about)|mentions?\b|requests?\b)",
     )
+}
+
+/// A "When to use" heading in a skill body (AS-020).
+fn when_to_use_heading_pattern() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    regex(&RE, r"(?im)^\s{0,3}#{1,6}\s+when\s+to\s+use\b")
 }
 
 /// Unfinished scaffold placeholders (AS-027), as Codex's quick_validate.py
@@ -71,8 +77,27 @@ fn backslash_path_pattern() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     regex(
         &RE,
-        r"(?i)\b(?:scripts|references?|assets|templates|examples|resources)\\[A-Za-z0-9_.\\-]+",
+        r"\b(?:scripts|references?|assets|templates|examples|resources)\\[A-Za-z0-9_.\\-]+",
     )
+}
+
+/// A line that gives a Windows-only command or shows a path as the wrong
+/// form (XP-SK-004): "(Windows: `.venv\Scripts\pip`)", "Avoid: `scripts\x.py`".
+fn windows_or_counterexample_line(line: &str) -> bool {
+    let lower = line.to_lowercase();
+    [
+        "windows",
+        "powershell",
+        "cmd.exe",
+        "avoid",
+        "don't",
+        "do not",
+        "wrong",
+        "bad:",
+    ]
+    .iter()
+    .any(|marker| lower.contains(marker))
+        || line.contains(['\u{274C}', '\u{2717}', '\u{2718}'])
 }
 
 /// Interactive input in a bundled script (AS-022).
@@ -162,7 +187,18 @@ fn code_only(content: &str) -> String {
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
-/// Package names a `package.json` at `dir` depends on.
+/// Whether a bundled path names a document the agent reads (Markdown or
+/// plain text) rather than a script or an asset (AS-013).
+fn is_document_path(path: &str) -> bool {
+    let lower = path.to_ascii_lowercase();
+    [".md", ".mdx", ".markdown", ".txt", ".rst"]
+        .iter()
+        .any(|ext| lower.ends_with(ext))
+}
+
+/// Package and command names a `package.json` at `dir` makes local: its
+/// dependencies, and the package's own name and `bin` commands (a skill in
+/// a CLI's repository runs that CLI with `npx <bin>`).
 fn package_json_dependencies(dir: &Path, fs: &dyn crate::fs::FileSystem) -> HashSet<String> {
     let Ok(text) = fs.read_to_string(&dir.join("package.json")) else {
         return HashSet::new();
@@ -170,7 +206,7 @@ fn package_json_dependencies(dir: &Path, fs: &dyn crate::fs::FileSystem) -> Hash
     let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) else {
         return HashSet::new();
     };
-    [
+    let mut names: HashSet<String> = [
         "dependencies",
         "devDependencies",
         "peerDependencies",
@@ -179,7 +215,14 @@ fn package_json_dependencies(dir: &Path, fs: &dyn crate::fs::FileSystem) -> Hash
     .iter()
     .filter_map(|key| json.get(*key).and_then(|v| v.as_object()))
     .flat_map(|deps| deps.keys().cloned())
-    .collect()
+    .collect();
+    if let Some(name) = json.get("name").and_then(|v| v.as_str()) {
+        names.insert(name.to_string());
+    }
+    if let Some(bins) = json.get("bin").and_then(|v| v.as_object()) {
+        names.extend(bins.keys().cloned());
+    }
+    names
 }
 
 /// The package name of an npm spec (`@scope/pkg@1.0.0` -> `@scope/pkg`).
@@ -201,6 +244,75 @@ const NPM_BIN_PACKAGES: &[(&str, &str)] = &[
     ("vue-cli-service", "@vue/cli-service"),
     ("playwright", "@playwright/test"),
     ("biome", "@biomejs/biome"),
+];
+
+/// Build and test tools a project installs and configures itself. `npx`
+/// and `bunx` run the project's installed copy, which a pinned version
+/// would bypass, so `npx tsc` or `npx wrangler deploy` is not reported.
+/// (`pnpm dlx`, `yarn dlx` and `uvx` always download, so they still are.)
+const PROJECT_TOOLS: &[&str] = &[
+    "tsc",
+    "tsserver",
+    "tsx",
+    "ts-node",
+    "tsd",
+    "jest",
+    "vitest",
+    "mocha",
+    "playwright",
+    "cypress",
+    "wrangler",
+    "esbuild",
+    "vite",
+    "webpack",
+    "rollup",
+    "next",
+    "nuxi",
+    "astro",
+    "ng",
+    "turbo",
+    "nx",
+    "prisma",
+    "drizzle-kit",
+    "storybook",
+    "changeset",
+    "husky",
+    "lint-staged",
+];
+
+/// Words that follow a runner name in prose or messages ("npx not found"),
+/// not package names.
+const PROSE_WORDS: &[&str] = &[
+    "not",
+    "is",
+    "isn't",
+    "and",
+    "or",
+    "to",
+    "for",
+    "with",
+    "can",
+    "cannot",
+    "will",
+    "must",
+    "should",
+    "may",
+    "was",
+    "has",
+    "the",
+    "a",
+    "an",
+    "on",
+    "in",
+    "if",
+    "itself",
+    "command",
+    "binary",
+    "found",
+    "missing",
+    "available",
+    "installed",
+    "version",
 ];
 
 /// True when the runner resolves `package` to a local install: a dependency
@@ -274,11 +386,16 @@ impl ValidationContext<'_> {
                     nested.push(normalize_reference(&format!("{file_dir}/{url}")));
                 }
             }
+            // Only documents the agent reads count: a script the reference
+            // runs (`scripts/discover.sh`) is executed, not read, and a link
+            // back to SKILL.md is the skill itself.
             if let Some(deeper) = nested.into_iter().find(|n| {
                 *n != relative
                     && !direct.contains(n)
                     && !n.is_empty()
                     && !n.starts_with("..")
+                    && is_document_path(n)
+                    && !n.eq_ignore_ascii_case("SKILL.md")
                     && fs.is_file(&dir.join(n))
             }) {
                 found.push((body_start + reference.start, relative, deeper));
@@ -349,6 +466,10 @@ impl ValidationContext<'_> {
         if trigger_pattern().is_match(description) {
             return;
         }
+        // A "When to use" section in the body is read only after the skill is
+        // chosen; the trigger belongs in the description.
+        let (_, body) = self.body();
+        let body_section = when_to_use_heading_pattern().is_match(body);
         let (line, col) = self.frontmatter_key_line_col("description");
         self.diagnostics.push(
             Diagnostic::info(
@@ -358,7 +479,11 @@ impl ValidationContext<'_> {
                 "AS-020",
                 t!("rules.as_020.message"),
             )
-            .with_suggestion(t!("rules.as_020.suggestion")),
+            .with_suggestion(if body_section {
+                t!("rules.as_020.body_section_suggestion")
+            } else {
+                t!("rules.as_020.suggestion")
+            }),
         );
     }
 
@@ -495,19 +620,31 @@ impl ValidationContext<'_> {
         let code = code_only(body);
         let mut local: HashSet<String> = HashSet::new();
         let fs = self.config.fs();
+        // The skill's directory and its ancestors up to the repository root
+        // (a directory holding `.git`) or the lint root: a project skill
+        // under `.agents/skills/` runs the repository's own tools.
         let mut dirs: Vec<&Path> = Vec::new();
-        if let Some(dir) = self.path.parent() {
+        let root = self.config.root_dir();
+        for dir in self.path.ancestors().skip(1).take(8) {
+            if dir.as_os_str().is_empty() {
+                break;
+            }
             local.extend(package_json_dependencies(dir, fs.as_ref()));
             dirs.push(dir);
+            if fs.exists(&dir.join(".git")) || root.is_some_and(|r| r.as_path() == dir) {
+                break;
+            }
         }
-        if let Some(root) = self.config.root_dir() {
+        if let Some(root) = root
+            && !dirs.contains(&root.as_path())
+        {
             local.extend(package_json_dependencies(root, fs.as_ref()));
             dirs.push(root.as_path());
         }
         static RUNNER: OnceLock<Regex> = OnceLock::new();
         let runner = regex(
             &RUNNER,
-            r"\b(?:npx|bunx|pnpx|pnpm\s+dlx|yarn\s+dlx|uvx|uv\s+tool\s+run|pipx\s+run|go\s+run)\s[^\n`|;&]*",
+            r#"\b(?:npx|bunx|pnpx|pnpm\s+dlx|yarn\s+dlx|uvx|uv\s+tool\s+run|pipx\s+run|go\s+run)\s[^\n`|;&<>"']*"#,
         );
         let mut hits = Vec::new();
         for m in runner.find_iter(&code) {
@@ -525,8 +662,13 @@ impl ValidationContext<'_> {
                     })
                     .cloned()
             } else {
+                let prefers_local = matches!(argv[0].as_str(), "npx" | "bunx" | "pnpx");
                 crate::rules::mcp_servers::unpinned_package(&argv)
                     .map(|found| found.package)
+                    .filter(|package| !PROSE_WORDS.contains(&package.as_str()))
+                    .filter(|package| {
+                        !(prefers_local && PROJECT_TOOLS.contains(&npm_package_name(package)))
+                    })
                     .filter(|package| !is_local_npm_package(package, &local, &dirs, fs.as_ref()))
             };
             if let Some(package) = package {
@@ -578,8 +720,13 @@ impl ValidationContext<'_> {
                         "powershell" | "ps1" | "pwsh" | "bat" | "batch" | "cmd" | "dos"
                     );
                 }
-            } else if !windows_fence {
+            } else if !windows_fence && !windows_or_counterexample_line(text) {
                 for m in backslash_path_pattern().find_iter(text) {
+                    // `.venv\scripts\pip` is a path inside another directory,
+                    // not a bundled one.
+                    if matches!(text[..m.start()].chars().last(), Some('\\' | '/' | '.')) {
+                        continue;
+                    }
                     hits.push((body_start + offset + m.start(), m.as_str().to_string()));
                 }
             }
@@ -904,6 +1051,8 @@ mod tests {
             "Formats code. Use this skill for Rust files.",
             "Invoked whenever the user asks about deploys",
             "Generates release notes when a tag is pushed",
+            "Navigate code with LSP. Use as PRIMARY for code intelligence.",
+            "MemoryDB architecture. Load for ANY ticket from the MemoryDB queue.",
         ] {
             assert!(trigger_pattern().is_match(text), "{text}");
         }
@@ -932,6 +1081,17 @@ mod tests {
         assert!(!secret_pattern().is_match("token: ${GITHUB_TOKEN}"));
         assert!(backslash_path_pattern().is_match("run scripts\\setup.py"));
         assert!(!backslash_path_pattern().is_match("my\\_file.md"));
+        // The capitalised venv directory is not a bundled one.
+        assert!(!backslash_path_pattern().is_match("venv\\Scripts\\pip"));
+        assert!(windows_or_counterexample_line(
+            "- **pip**: `.venv/bin/pip` (Windows: `.venv\\Scripts\\pip`)"
+        ));
+        assert!(windows_or_counterexample_line(
+            "- \u{274C} Avoid: `scripts\\helper.py`"
+        ));
+        assert!(!windows_or_counterexample_line(
+            "Run `scripts\\setup.py` first."
+        ));
     }
 
     #[test]

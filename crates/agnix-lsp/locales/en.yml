@@ -126,6 +126,8 @@ rules:
   as_020:
     message: Skill description says what the skill does but not when to use it
     suggestion: Add a trigger such as 'Use when ...' so the agent knows when to load the skill
+    body_section_suggestion: Move the 'When to use' guidance from the body into the description; agents pick skills from the
+      description and read the body only after loading the skill
   as_021:
     message: SKILL.md body is about %{tokens} tokens; the Agent Skills spec recommends instructions under %{limit} tokens
     suggestion: Move detail into references/ files and say when to read each one

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "search": {
+      "httpUrl": "https://mcp.example.com/mcp?api_key=abcdef0123456789abcdef",
+      "timeout": 30000
+    }
+  }
+}
