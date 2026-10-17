@@ -36,20 +36,12 @@ rules:
   as_003:
     message: Al frontmatter del skill le falta el campo requerido 'description'
     suggestion: 'Agrega ''description: Usar cuando...'' al frontmatter'
-  as_004:
-    message: El nombre '%{name}' debe tener 1-64 caracteres por segmento, con letras minúsculas, dígitos y guiones, como skill-name o plugin:skill-name
-    suggestion: Convierte a minúsculas y recorta cada segmento del nombre, reemplaza espacios y '_' con '-', colapsa multiples '-' en uno,
-      elimina caracteres inválidos y trunca cada segmento a 64 caracteres
-    fix: 'Convertir nombre a kebab-case: ''%{name}'''
   as_005:
     message: El nombre '%{name}' no puede comenzar ni terminar con guion
     suggestion: Elimina los guiones iniciales/finales del nombre
   as_006:
     message: El nombre '%{name}' no puede contener guiones consecutivos
     suggestion: Reemplaza '--' con '-' en el nombre
-  as_008:
-    message: La descripción debe tener 1-%{max} caracteres, tiene %{len}
-    suggestion: Recorta la descripción a %{max} caracteres o menos
   as_009:
     message: La descripción no debe contener etiquetas XML
     suggestion: Elimina las etiquetas XML de la descripción
@@ -59,9 +51,6 @@ rules:
   as_012:
     message: El contenido del skill excede 500 lineas (tiene %{count})
     suggestion: Mueve contenido extra a references/
-  as_013:
-    message: La referencia de archivo '%{path}' tiene mas de un nivel de profundidad
-    suggestion: Aplana la estructura del directorio references/
   as_015:
     message: "El directorio supera el limite de carga de 30MB de la API de Claude (%{size} bytes); Claude Code local no tiene un limite documentado"
     suggestion: "Reduce los recursos antes de cargar el skill a la API de Claude"
@@ -104,30 +93,6 @@ rules:
   cc_sk_017:
     message: Campo de frontmatter desconocido '%{field}'
     suggestion: Elimina campos no soportados o corrige errores tipograficos en claves del frontmatter
-  cr_sk_001:
-    message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
-    suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
-  cl_sk_001:
-    message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
-    suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
-  cp_sk_001:
-    message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
-    suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
-  cx_sk_001:
-    message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
-    suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
-  oc_sk_001:
-    message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
-    suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
-  ws_sk_001:
-    message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
-    suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
-  amp_sk_001:
-    message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
-    suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
-  rc_sk_001:
-    message: El campo '%{field}' no es soportado por %{client} -- sera ignorado
-    suggestion: Elimina '%{field}' o mueve este skill a un cliente que lo soporte
   xp_sk_001:
     message: El skill usa el campo '%{field}' especifico del cliente que no es parte de la especificacion universal de Agent
       Skills
@@ -204,10 +169,6 @@ rules:
   mcp_005:
     message: '%{prefix}La herramienta carece de mecanismo de consentimiento (no tiene campo ''requiresApproval'' ni ''confirmation'')'
     suggestion: 'Considera agregar ''requiresApproval: true'' para herramientas que modifican datos o tienen efectos secundarios'
-  mcp_006:
-    message: '%{prefix}La herramienta tiene anotaciones que deben validarse antes de confiar'
-    suggestion: Verifica los valores de anotacion independientemente -- las anotaciones son informadas por el servidor y pueden
-      ser inexactas o maliciosas
   mcp_007:
     message: 'Error al analizar la configuracion MCP: %{error}'
     suggestion: Valida la sintaxis JSON -- verifica comas faltantes, corchetes o claves sin comillas
@@ -279,18 +240,6 @@ rules:
     message: Clave desconocida '%{key}' en frontmatter de archivo .claude/rules
     suggestion: Solo 'paths' es una clave reconocida en frontmatter de .claude/rules/*.md. Elimina '%{key}' o verifica errores
       de escritura.
-  agm_001:
-    message: 'Markdown invalido: %{description}'
-    suggestion: Corrige el error de sintaxis markdown -- verifica etiquetas sin cerrar, encabezados no coincidentes, o sintaxis
-      de enlace invalida
-  agm_002: null
-  agm_003:
-    message: '%{filename} excede el limite de caracteres (%{chars} caracteres, maximo %{limit} para compatibilidad con Windsurf)'
-    suggestion: Divide el contenido en multiples archivos o reduce la longitud del contenido
-  agm_004: null
-  agm_005:
-    suggestion: Agrega un encabezado de seccion de guardia de plataforma como '## %{platform} Specific' antes del contenido
-      especifico de plataforma
   agm_006: null
   xml_001:
     message: Etiqueta XML sin cerrar '<%{tag}>'
@@ -326,14 +275,8 @@ rules:
       con datos recuperados, pero los resultados pueden estar desactualizados.
   file_panic_error: 'La validación entró en pánico al procesar este archivo: %{error}'
   file_panic_error_suggestion: Reporta esto como bug con el tipo de archivo y el contexto de la regla
-  xp_001:
-    message: 'Caracteristica especifica de Claude ''%{feature}'' en %{filename}: %{description}'
-    suggestion: Mueve a CLAUDE.md o envuelve en una seccion especifica de Claude (ej., '## Claude Code Specific')
   xp_002:
     message: 'Problema de estructura en %{filename}: %{issue}'
-  xp_003:
-    message: Ruta de %{platform} codificada '%{path}' puede causar problemas de portabilidad
-    suggestion: Usa variables de entorno o rutas relativas para mejor portabilidad
   xp_004:
     message: 'Gestores de paquetes en conflicto: %{file1} usa %{mgr1} pero %{file2} usa %{mgr2} para comandos %{cmd_type}'
     suggestion: Estandariza en un solo gestor de paquetes en todos los archivos de instrucciones
@@ -341,8 +284,6 @@ rules:
     message: 'Restricciones de herramienta en conflicto: ''%{tool}'' esta permitido en %{allow_file} pero no permitido en
       %{disallow_file}'
     suggestion: Resuelve el conflicto permitiendo o prohibiendo la herramienta consistentemente
-  xp_006:
-    suggestion: Documenta que archivo tiene precedencia (ej., 'CLAUDE.md tiene precedencia sobre AGENTS.md')
   cop_001:
     message_empty: El archivo de instrucciones de Copilot esta vacio
     message_no_content: El archivo de instrucciones de Copilot no tiene contenido despues del frontmatter

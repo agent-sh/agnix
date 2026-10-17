@@ -89,10 +89,10 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 
 | Prefix | Rules | Current IDs |
 |--------|-------|-------------|
-| `AGM-` | 5 | AGM-001 through AGM-005 |
+| `AGM-` | 7 | AGM-001 through AGM-004, AGM-007 through AGM-009 |
 | `AMP-` | 4 | AMP-001 through AMP-004 |
 | `AMP-SK-` | 1 | AMP-SK-001 |
-| `AS-` | 14 | AS-001 through AS-006, AS-008 through AS-009, AS-011 through AS-013, AS-015 through AS-017 |
+| `AS-` | 22 | AS-001 through AS-006, AS-008 through AS-009, AS-011 through AS-013, AS-015 through AS-017, AS-020 through AS-027 |
 | `CC-AG-` | 17 | CC-AG-001 through CC-AG-015, CC-AG-017, CC-AG-019 |
 | `CC-HK-` | 28 | CC-HK-001 through CC-HK-028 |
 | `CC-MEM-` | 13 | CC-MEM-001 through CC-MEM-012, CC-MEM-014 |
@@ -122,7 +122,7 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `KR-PW-` | 8 | KR-PW-001 through KR-PW-008 |
 | `KR-SET-` | 3 | KR-SET-001 through KR-SET-003 |
 | `KR-SK-` | 1 | KR-SK-001 |
-| `MCP-` | 26 | MCP-001 through MCP-026 |
+| `MCP-` | 32 | MCP-001 through MCP-004, MCP-006 through MCP-033 |
 | `OC-` | 8 | OC-001 through OC-004, OC-006 through OC-009 |
 | `OC-AG-` | 9 | OC-AG-001 through OC-AG-009 |
 | `OC-AGM-` | 2 | OC-AGM-001 through OC-AGM-002 |
@@ -133,15 +133,14 @@ Rule IDs follow the format `[PREFIX]-[NUMBER]` where the prefix indicates the ru
 | `OC-SK-` | 1 | OC-SK-001 |
 | `OC-TUI-` | 3 | OC-TUI-001 through OC-TUI-003 |
 | `PE-` | 6 | PE-001 through PE-006 |
-| `RC-SK-` | 1 | RC-SK-001 |
 | `REF-` | 3 | REF-001 through REF-003 |
 | `ROO-` | 6 | ROO-001 through ROO-006 |
 | `VER-` | 1 | VER-001 |
 | `WS-` | 4 | WS-001 through WS-004 |
 | `WS-SK-` | 1 | WS-SK-001 |
 | `XML-` | 3 | XML-001 through XML-003 |
-| `XP-` | 8 | XP-001 through XP-008 |
-| `XP-SK-` | 2 | XP-SK-001 through XP-SK-002 |
+| `XP-` | 9 | XP-001 through XP-009 |
+| `XP-SK-` | 4 | XP-SK-001 through XP-SK-004 |
 
 To find the next available number for a prefix, check `knowledge-base/rules.json` for the highest existing number in that prefix group and increment by one.
 

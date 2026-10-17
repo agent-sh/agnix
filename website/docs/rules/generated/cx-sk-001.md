@@ -13,7 +13,7 @@ keywords: ["CX-SK-001", "codex skill uses unsupported field", "codex skills", "v
 - **Category**: `Codex Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe/unsafe)`
-- **Verified On**: `2026-07-31`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["CX-SK-001", "codex skill uses unsupported field", "codex skills", "v
 
 ## Evidence Sources
 
-- https://learn.chatgpt.com/docs/agent-configuration/agents-md
+- https://learn.chatgpt.com/docs/build-skills
+- https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/skill-creator/scripts/quick_validate.py
 
 ## Test Coverage Metadata
 

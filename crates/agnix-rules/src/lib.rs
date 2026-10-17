@@ -143,6 +143,27 @@ pub fn get_rule_security(id: &str) -> Option<RuleSecurityMetadata> {
         )
 }
 
+/// Returns the tool a rule names in `evidence.applies_to.tool`, if any.
+///
+/// Unlike [`get_tool_for_prefix`], this answers per rule, so a vendor rule in
+/// a mixed prefix (AGM-003 names Windsurf, XP-007 names Codex) still reports
+/// its tool. Returns `None` for generic rules and unknown IDs.
+///
+/// # Example
+/// ```
+/// use agnix_rules::get_rule_tool;
+///
+/// assert_eq!(get_rule_tool("CC-HK-001"), Some("claude-code"));
+/// assert_eq!(get_rule_tool("XP-007"), Some("codex"));
+/// assert_eq!(get_rule_tool("AS-001"), None);
+/// ```
+pub fn get_rule_tool(id: &str) -> Option<&'static str> {
+    RULE_TOOLS
+        .binary_search_by(|(rule_id, _)| (*rule_id).cmp(id))
+        .ok()
+        .map(|idx| RULE_TOOLS[idx].1)
+}
+
 /// Returns the tool name for a given rule ID prefix, if any.
 ///
 /// Only returns a tool if ALL rules with that prefix have the same tool.
@@ -245,6 +266,31 @@ mod tests {
         ids.sort();
         ids.dedup();
         assert_eq!(ids.len(), original_len, "Should have no duplicate rule IDs");
+    }
+
+    // ===== RULE_TOOLS Tests =====
+
+    #[test]
+    fn test_rule_tools_sorted_and_match_metadata() {
+        assert!(
+            RULE_TOOLS.windows(2).all(|pair| pair[0].0 < pair[1].0),
+            "RULE_TOOLS must be sorted by id with no duplicates"
+        );
+        for (id, _, _, tool) in RULES_METADATA {
+            let expected = (!tool.is_empty()).then_some(*tool);
+            assert_eq!(get_rule_tool(id), expected, "{id}");
+        }
+    }
+
+    #[test]
+    fn test_get_rule_tool_answers_per_rule_in_mixed_prefixes() {
+        // The prefix table cannot gate these: their prefixes also hold
+        // generic rules.
+        assert_eq!(get_tool_for_prefix("XP-"), None);
+        assert_eq!(get_rule_tool("XP-007"), Some("codex"));
+        assert_eq!(get_rule_tool("AGM-003"), Some("windsurf"));
+        assert_eq!(get_rule_tool("AGM-001"), None);
+        assert_eq!(get_rule_tool("NONEXISTENT-999"), None);
     }
 
     // ===== RULES_METADATA Tests =====

@@ -317,16 +317,20 @@ fn test_validators_for_gemini_md() {
 fn test_validators_for_gemini_settings() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::GeminiSettings);
-    assert_eq!(validators.len(), 1);
+    // McpValidator runs the server-level MCP checks on `mcpServers`.
+    assert_eq!(validators.len(), 2);
     assert_eq!(validators[0].name(), "GeminiSettingsValidator");
+    assert_eq!(validators[1].name(), "McpValidator");
 }
 
 #[test]
 fn test_validators_for_gemini_extension() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::GeminiExtension);
-    assert_eq!(validators.len(), 1);
+    // McpValidator runs the server-level MCP checks on `mcpServers`.
+    assert_eq!(validators.len(), 2);
     assert_eq!(validators[0].name(), "GeminiExtensionValidator");
+    assert_eq!(validators[1].name(), "McpValidator");
 }
 
 #[test]
@@ -1014,57 +1018,59 @@ agent: Explore
 
 #[test]
 fn test_validate_agents_md_no_headers() {
+    // A short AGENTS.md without headings is fine (agents.md: "Use any headings
+    // you like"). XP-002 used to warn on it and AGM-002 repeated the warning;
+    // now only AGM-002 reports, and only for a long file.
     let temp = tempfile::TempDir::new().unwrap();
-
-    // Create AGENTS.md with no headers
     std::fs::write(
         temp.path().join("AGENTS.md"),
         "Just plain text without any markdown headers.",
     )
     .unwrap();
-
     let config = LintConfig::default();
     let result = validate_project(temp.path(), &config).unwrap();
-
-    // Should detect XP-002 warning for missing headers
-    let xp_002: Vec<_> = result
-        .diagnostics
-        .iter()
-        .filter(|d| d.rule == "XP-002")
-        .collect();
     assert!(
-        !xp_002.is_empty(),
-        "Expected XP-002 warning for missing headers in AGENTS.md"
+        result
+            .diagnostics
+            .iter()
+            .all(|d| d.rule != "XP-002" && d.rule != "AGM-002"),
+        "{:?}",
+        result.diagnostics
     );
+
+    let long = (0..60)
+        .map(|i| format!("- instruction {i}"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    std::fs::write(temp.path().join("AGENTS.md"), long).unwrap();
+    let result = validate_project(temp.path(), &config).unwrap();
+    assert!(result.diagnostics.iter().any(|d| d.rule == "AGM-002"));
+    assert!(result.diagnostics.iter().all(|d| d.rule != "XP-002"));
 }
 
 #[test]
 fn test_validate_agents_md_hard_coded_paths() {
+    // XP-003 no longer reports tool directories, which vendors document by
+    // name; a hard-coded home directory still does not resolve elsewhere.
     let temp = tempfile::TempDir::new().unwrap();
-
-    // Create AGENTS.md with hard-coded platform paths
     std::fs::write(
         temp.path().join("AGENTS.md"),
         r#"# Config
 Check .claude/settings.json and .cursor/rules/ for configuration.
+Run /Users/alice/bin/setup.sh and C:\Users\bob\tools\x.exe first.
 "#,
     )
     .unwrap();
 
     let config = LintConfig::default();
     let result = validate_project(temp.path(), &config).unwrap();
-
-    // Should detect XP-003 warnings for hard-coded paths
     let xp_003: Vec<_> = result
         .diagnostics
         .iter()
         .filter(|d| d.rule == "XP-003")
         .collect();
-    assert_eq!(
-        xp_003.len(),
-        2,
-        "Expected 2 XP-003 warnings for hard-coded paths"
-    );
+    assert_eq!(xp_003.len(), 2, "{xp_003:?}");
+    assert!(xp_003.iter().all(|d| d.line == 3));
 }
 
 #[test]
@@ -1828,42 +1834,53 @@ fn test_agm_003_over_char_limit() {
     let content = format!("# Project\n\n{}", "x".repeat(13000));
     std::fs::write(temp.path().join("AGENTS.md"), content).unwrap();
 
+    // Not Windsurf's file: an unscoped run without Windsurf configuration.
     let config = LintConfig::default();
     let result = validate_project(temp.path(), &config).unwrap();
+    assert!(result.diagnostics.iter().all(|d| d.rule != "AGM-003"));
 
-    let agm_003: Vec<_> = result
-        .diagnostics
-        .iter()
-        .filter(|d| d.rule == "AGM-003")
-        .collect();
+    // A `.windsurf/` directory puts Windsurf in scope.
+    std::fs::create_dir(temp.path().join(".windsurf")).unwrap();
+    let result = validate_project(temp.path(), &config).unwrap();
     assert!(
-        !agm_003.is_empty(),
+        result.diagnostics.iter().any(|d| d.rule == "AGM-003"),
         "Should detect character limit exceeded"
+    );
+
+    // With tools = ["kiro"] the Windsurf and Codex limits do not apply.
+    let kiro = LintConfig::builder()
+        .tools(vec!["kiro".to_string()])
+        .build()
+        .unwrap();
+    std::fs::write(
+        temp.path().join("AGENTS.md"),
+        format!("# Project\n\n{}", "x".repeat(40_000)),
+    )
+    .unwrap();
+    let result = validate_project(temp.path(), &kiro).unwrap();
+    assert!(
+        result
+            .diagnostics
+            .iter()
+            .all(|d| d.rule != "AGM-003" && d.rule != "XP-007" && d.rule != "XP-009"),
+        "{:?}",
+        result.diagnostics
     );
 }
 
 #[test]
-fn test_agm_005_unguarded_platform_features() {
+fn test_agm_005_retired_xp_001_reports_inert_config() {
+    // AGM-005 reported the same lines as XP-001; it is retired.
     let temp = tempfile::TempDir::new().unwrap();
-
     std::fs::write(
         temp.path().join("AGENTS.md"),
         "# Project\n\n- type: PreToolExecution\n  command: echo test",
     )
     .unwrap();
-
     let config = LintConfig::default();
     let result = validate_project(temp.path(), &config).unwrap();
-
-    let agm_005: Vec<_> = result
-        .diagnostics
-        .iter()
-        .filter(|d| d.rule == "AGM-005")
-        .collect();
-    assert!(
-        !agm_005.is_empty(),
-        "Should detect unguarded platform features"
-    );
+    assert!(result.diagnostics.iter().all(|d| d.rule != "AGM-005"));
+    assert!(result.diagnostics.iter().any(|d| d.rule == "XP-001"));
 }
 
 #[test]

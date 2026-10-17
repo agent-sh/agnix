@@ -1,15 +1,17 @@
 # Rules Reference
 
-This section contains all `535` validation rules generated from `knowledge-base/rules.json`.
-`136` rules have automatic fixes.
+This section contains all `553` validation rules generated from `knowledge-base/rules.json`.
+`135` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
-| [AGM-001](./generated/agm-001.md) | Valid Markdown Structure | HIGH | AGENTS.md | Yes (safe) |
-| [AGM-002](./generated/agm-002.md) | Missing Section Headers | MEDIUM | AGENTS.md | No |
+| [AGM-001](./generated/agm-001.md) | Valid Markdown Structure | MEDIUM | AGENTS.md | Yes (unsafe) |
+| [AGM-002](./generated/agm-002.md) | Missing Section Headers | LOW | AGENTS.md | No |
 | [AGM-003](./generated/agm-003.md) | Character Limit (Windsurf) | MEDIUM | AGENTS.md | No |
-| [AGM-004](./generated/agm-004.md) | Missing Project Context | MEDIUM | AGENTS.md | No |
-| [AGM-005](./generated/agm-005.md) | Platform-Specific Features Without Guard | MEDIUM | AGENTS.md | No |
+| [AGM-004](./generated/agm-004.md) | Missing Project Context | LOW | AGENTS.md | No |
+| [AGM-007](./generated/agm-007.md) | Root AGENTS.md Lists No Build or Test Command | LOW | AGENTS.md | No |
+| [AGM-008](./generated/agm-008.md) | Legacy AGENT.md Without AGENTS.md | LOW | AGENTS.md | No |
+| [AGM-009](./generated/agm-009.md) | Nested AGENTS.md Without a Root AGENTS.md | LOW | AGENTS.md | No |
 | [AMP-001](./generated/amp-001.md) | Invalid Amp Check Frontmatter | HIGH | Amp Checks | Yes (safe) |
 | [AMP-002](./generated/amp-002.md) | Invalid Amp severity-default | MEDIUM | Amp Checks | Yes (safe) |
 | [AMP-003](./generated/amp-003.md) | Invalid AGENTS.md globs Frontmatter for Amp | MEDIUM | Amp Checks | No |
@@ -25,10 +27,18 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [AS-009](./generated/as-009.md) | Description Contains Angle Brackets (Codex) | HIGH | Agent Skills | Yes (safe) |
 | [AS-011](./generated/as-011.md) | Invalid Compatibility Length | HIGH | Agent Skills | No |
 | [AS-012](./generated/as-012.md) | Content Exceeds 500 Lines | MEDIUM | Agent Skills | No |
-| [AS-013](./generated/as-013.md) | File Reference Too Deep | MEDIUM | Agent Skills | No |
+| [AS-013](./generated/as-013.md) | Reference Chain Too Deep | MEDIUM | Agent Skills | No |
 | [AS-015](./generated/as-015.md) | Claude API Upload Size Exceeds 30MB | MEDIUM | Agent Skills | No |
 | [AS-016](./generated/as-016.md) | Skill Parse Error | HIGH | Agent Skills | No |
 | [AS-017](./generated/as-017.md) | Name Must Match Parent Directory | HIGH | Agent Skills | No |
+| [AS-020](./generated/as-020.md) | Skill Description Lacks a When-to-Use Trigger | LOW | Agent Skills | No |
+| [AS-021](./generated/as-021.md) | SKILL.md Body Exceeds 5,000 Tokens | MEDIUM | Agent Skills | No |
+| [AS-022](./generated/as-022.md) | Bundled Script Prompts for Interactive Input | MEDIUM | Agent Skills | No |
+| [AS-023](./generated/as-023.md) | Bundled File Not Mentioned in the Skill | LOW | Agent Skills | No |
+| [AS-024](./generated/as-024.md) | Unpinned Package-Runner Command in Skill | LOW | Agent Skills | No |
+| [AS-025](./generated/as-025.md) | Duplicate Skill Name Across Skill Roots | LOW | Agent Skills | No |
+| [AS-026](./generated/as-026.md) | Generic Reference Pointer Without Load Condition | LOW | Agent Skills | No |
+| [AS-027](./generated/as-027.md) | Unfinished TODO Scaffold Placeholder in Skill | MEDIUM | Agent Skills | No |
 | [CC-AG-001](./generated/cc-ag-001.md) | Missing Name Field | HIGH | Claude Agents | Yes (safe) |
 | [CC-AG-002](./generated/cc-ag-002.md) | Missing Description Field | HIGH | Claude Agents | Yes (safe) |
 | [CC-AG-003](./generated/cc-ag-003.md) | Invalid Model Value | HIGH | Claude Agents | Yes (unsafe) |
@@ -422,27 +432,34 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [MCP-002](./generated/mcp-002.md) | Missing Required Tool Field | HIGH | MCP | No |
 | [MCP-003](./generated/mcp-003.md) | Invalid JSON Schema | HIGH | MCP | No |
 | [MCP-004](./generated/mcp-004.md) | Missing Tool Description | LOW | MCP | No |
-| [MCP-006](./generated/mcp-006.md) | Untrusted Annotations | HIGH | MCP | No |
+| [MCP-006](./generated/mcp-006.md) | Unknown Tool Annotation Key | LOW | MCP | No |
 | [MCP-007](./generated/mcp-007.md) | MCP Parse Error | HIGH | MCP | No |
 | [MCP-008](./generated/mcp-008.md) | Protocol Version Mismatch | MEDIUM | MCP | Yes (unsafe) |
 | [MCP-009](./generated/mcp-009.md) | Missing command for stdio server | HIGH | MCP | No |
-| [MCP-010](./generated/mcp-010.md) | Missing url for http/sse server | HIGH | MCP | No |
+| [MCP-010](./generated/mcp-010.md) | Missing url for remote server | HIGH | MCP | No |
 | [MCP-011](./generated/mcp-011.md) | Invalid MCP server type | HIGH | MCP | Yes (unsafe) |
-| [MCP-012](./generated/mcp-012.md) | Deprecated SSE transport | HIGH | MCP | Yes (unsafe) |
-| [MCP-013](./generated/mcp-013.md) | Invalid Tool Name Format | HIGH | MCP | Yes (safe) |
+| [MCP-012](./generated/mcp-012.md) | Deprecated SSE transport | MEDIUM | MCP | Yes (unsafe) |
+| [MCP-013](./generated/mcp-013.md) | Invalid Tool Name Format | MEDIUM | MCP | Yes (unsafe) |
 | [MCP-014](./generated/mcp-014.md) | Invalid outputSchema Definition | HIGH | MCP | No |
 | [MCP-015](./generated/mcp-015.md) | Missing Resource Required Fields | HIGH | MCP | No |
 | [MCP-016](./generated/mcp-016.md) | Missing Prompt Required Name | HIGH | MCP | No |
-| [MCP-017](./generated/mcp-017.md) | Non-HTTPS Remote HTTP Server URL | HIGH | MCP | Yes (safe) |
+| [MCP-017](./generated/mcp-017.md) | Non-HTTPS Remote HTTP Server URL | MEDIUM | MCP | Yes (unsafe) |
 | [MCP-018](./generated/mcp-018.md) | Potential Plaintext Secret in MCP Env | MEDIUM | MCP | No |
 | [MCP-019](./generated/mcp-019.md) | Potentially Dangerous Stdio Command | MEDIUM | MCP | No |
 | [MCP-020](./generated/mcp-020.md) | Unknown Capability Declaration Key | MEDIUM | MCP | No |
-| [MCP-021](./generated/mcp-021.md) | Wildcard HTTP Interface Binding | MEDIUM | MCP | Yes (safe) |
+| [MCP-021](./generated/mcp-021.md) | Wildcard HTTP Interface Binding | MEDIUM | MCP | Yes (unsafe) |
 | [MCP-022](./generated/mcp-022.md) | Invalid args Array Type | HIGH | MCP | No |
 | [MCP-023](./generated/mcp-023.md) | Duplicate MCP Server Names | HIGH | MCP | No |
 | [MCP-024](./generated/mcp-024.md) | Empty MCP Server Configuration | HIGH | MCP | No |
 | [MCP-025](./generated/mcp-025.md) | Non-boolean alwaysLoad in MCP Server Config | MEDIUM | MCP | Yes (unsafe) |
 | [MCP-026](./generated/mcp-026.md) | Reserved MCP Server Name | HIGH | MCP | No |
+| [MCP-027](./generated/mcp-027.md) | Unpinned Stdio MCP Server Package | MEDIUM | MCP | No |
+| [MCP-028](./generated/mcp-028.md) | Plaintext Credential in MCP Server Headers, URL or OAuth Secret | MEDIUM | MCP | No |
+| [MCP-029](./generated/mcp-029.md) | MCP Server Given the Home Directory or Filesystem Root | MEDIUM | MCP | No |
+| [MCP-030](./generated/mcp-030.md) | Duplicate Tool Names Within a Server | MEDIUM | MCP | No |
+| [MCP-031](./generated/mcp-031.md) | Invalid x-mcp-header Annotation | HIGH | MCP | No |
+| [MCP-032](./generated/mcp-032.md) | Deprecated MCP Capability Declared | LOW | MCP | No |
+| [MCP-033](./generated/mcp-033.md) | No-Parameter Tool Accepts Arbitrary Properties | LOW | MCP | No |
 | [OC-001](./generated/oc-001.md) | Invalid Share Mode | HIGH | OpenCode | Yes (unsafe) |
 | [OC-002](./generated/oc-002.md) | Invalid Instruction Path | HIGH | OpenCode | No |
 | [OC-003](./generated/oc-003.md) | opencode.json Parse Error | HIGH | OpenCode | No |
@@ -458,10 +475,9 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [PE-004](./generated/pe-004.md) | Ambiguous Instructions | MEDIUM | Prompt Engineering | No |
 | [PE-005](./generated/pe-005.md) | Redundant Generic Instructions | MEDIUM | Prompt Engineering | Yes (safe) |
 | [PE-006](./generated/pe-006.md) | Negative-Only Instructions | MEDIUM | Prompt Engineering | No |
-| [RC-SK-001](./generated/rc-sk-001.md) | Roo Code Skill Uses Unsupported Field | MEDIUM | Roo Code Skills | Yes (safe/unsafe) |
 | [REF-001](./generated/ref-001.md) | Import File Not Found | HIGH | References | No |
 | [REF-002](./generated/ref-002.md) | Broken Markdown Link | HIGH | References | No |
-| [REF-003](./generated/ref-003.md) | Duplicate Import | MEDIUM | References | Yes (safe) |
+| [REF-003](./generated/ref-003.md) | Duplicate Import | LOW | References | Yes (unsafe) |
 | [ROO-001](./generated/roo-001.md) | Empty Roo Code Rule File | HIGH | Roo Code | No |
 | [ROO-002](./generated/roo-002.md) | Invalid .roomodes Configuration | HIGH | Roo Code | No |
 | [ROO-003](./generated/roo-003.md) | Invalid .rooignore File | MEDIUM | Roo Code | No |
@@ -477,17 +493,19 @@ This section contains all `535` validation rules generated from `knowledge-base/
 | [XML-001](./generated/xml-001.md) | Unclosed XML Tag | HIGH | XML | Yes (unsafe) |
 | [XML-002](./generated/xml-002.md) | Mismatched Closing Tag | HIGH | XML | Yes (unsafe) |
 | [XML-003](./generated/xml-003.md) | Unmatched Closing Tag | HIGH | XML | Yes (unsafe) |
-| [XP-001](./generated/xp-001.md) | Platform-Specific Feature in Generic Config | LOW | Cross-Platform | No |
-| [XP-002](./generated/xp-002.md) | AGENTS.md Platform Compatibility | MEDIUM | Cross-Platform | No |
-| [XP-003](./generated/xp-003.md) | Hard-Coded Platform Paths | MEDIUM | Cross-Platform | No |
+| [XP-001](./generated/xp-001.md) | Inert or Partly Supported Content in AGENTS.md | LOW | Cross-Platform | No |
+| [XP-002](./generated/xp-002.md) | AGENTS.md Heading Hierarchy | LOW | Cross-Platform | No |
+| [XP-003](./generated/xp-003.md) | Hard-Coded User Home Path | MEDIUM | Cross-Platform | No |
 | [XP-004](./generated/xp-004.md) | Conflicting Build/Test Commands | MEDIUM | Cross-Platform | No |
-| [XP-005](./generated/xp-005.md) | Conflicting Tool Constraints | HIGH | Cross-Platform | No |
-| [XP-006](./generated/xp-006.md) | Multiple Layers Without Documented Precedence | MEDIUM | Cross-Platform | No |
+| [XP-005](./generated/xp-005.md) | Conflicting Tool Constraints | MEDIUM | Cross-Platform | No |
+| [XP-006](./generated/xp-006.md) | Several Tools' Instruction Files Without a Note | LOW | Cross-Platform | No |
 | [XP-007](./generated/xp-007.md) | AGENTS.md Exceeds Codex Byte Limit | MEDIUM | Cross-Platform | No |
 | [XP-009](./generated/xp-009.md) | Codex Instruction Chain Exceeds project_doc_max_bytes | MEDIUM | Cross-Platform | No |
-| [XP-008](./generated/xp-008.md) | Claude-specific Features in CLAUDE.md for Cursor | MEDIUM | Cross-Platform | No |
+| [XP-008](./generated/xp-008.md) | CLAUDE.md @-Imports Cursor Does Not Inline | MEDIUM | Cross-Platform | No |
 | [XP-SK-001](./generated/xp-sk-001.md) | Skill Uses Client-Specific Features | LOW | Cross-Platform | No |
 | [XP-SK-002](./generated/xp-sk-002.md) | Hardcoded User Directory Path In Skill | MEDIUM | Cross-Platform | No |
+| [XP-SK-003](./generated/xp-sk-003.md) | Hardcoded Secret in Skill Files | MEDIUM | Cross-Platform | No |
+| [XP-SK-004](./generated/xp-sk-004.md) | Backslash Path in Skill | LOW | Cross-Platform | No |
 | [OC-CFG-001](./generated/oc-cfg-001.md) | Invalid Model Format | HIGH | OpenCode | No |
 | [OC-CFG-002](./generated/oc-cfg-002.md) | Invalid autoupdate value | HIGH | OpenCode | No |
 | [OC-CFG-003](./generated/oc-cfg-003.md) | Unknown Top-level Config Field | MEDIUM | OpenCode | No |

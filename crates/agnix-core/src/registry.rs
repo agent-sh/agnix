@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 88;
+const EXPECTED_BUILTIN_COUNT: usize = 94;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -737,6 +737,28 @@ impl ValidatorProvider for MiscProvider {
                 codex_plugin_validator,
             ),
             (FileType::Mcp, Some("McpValidator"), mcp_validator),
+            // MCP servers embedded in other clients' config files get the
+            // server-level MCP checks (MCP-018/019/027/028/029); McpValidator
+            // dispatches on the file type, and the clients' own validators
+            // check the rest of each file.
+            (
+                FileType::OpenCodeConfig,
+                Some("McpValidator"),
+                mcp_validator,
+            ),
+            (
+                FileType::GeminiSettings,
+                Some("McpValidator"),
+                mcp_validator,
+            ),
+            (
+                FileType::GeminiExtension,
+                Some("McpValidator"),
+                mcp_validator,
+            ),
+            (FileType::AmpSettings, Some("McpValidator"), mcp_validator),
+            (FileType::CodexConfig, Some("McpValidator"), mcp_validator),
+            (FileType::CopilotAgent, Some("McpValidator"), mcp_validator),
             (
                 FileType::ClineRules,
                 Some("ClineValidator"),
@@ -2180,8 +2202,9 @@ mod tests {
     fn misc_provider_count() {
         // 38: Kiro hooks and powers dropped four Imports/CrossPlatform entries
         // and gained power plugin, power steering, workflow, ignore-file,
-        // not-loaded and Kiro AGENTS.md entries.
-        assert_eq!(MiscProvider.named_validators().len(), 38);
+        // not-loaded and Kiro AGENTS.md entries. 44: McpValidator on the six
+        // client configs that embed MCP servers.
+        assert_eq!(MiscProvider.named_validators().len(), 44);
     }
 
     #[test]

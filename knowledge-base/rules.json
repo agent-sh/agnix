@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 535,
+  "total_rules": 553,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -48,18 +48,17 @@
     {
       "id": "AGM-001",
       "name": "Valid Markdown Structure",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "agents-md",
       "evidence": {
-        "source_type": "community",
+        "source_type": "spec",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-          "https://cursor.com/docs/rules",
-          "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]"
+          "https://agents.md/",
+          "https://spec.commonmark.org/0.31.2/#fenced-code-blocks"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {},
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -68,7 +67,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "# Project\n\n```python\ndef hello():\n    print(\"world\")\n```\n\nSee [docs](https://example.com) for more.",
       "bad_example": "# Project\n\n```python\ndef hello():\n    print(\"world\")\n\nThis code block is never closed."
@@ -76,17 +75,17 @@
     {
       "id": "AGM-002",
       "name": "Missing Section Headers",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "agents-md",
       "evidence": {
-        "source_type": "community",
+        "source_type": "spec",
         "source_urls": [
-          "https://cursor.com/docs/rules",
-          "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]"
+          "https://agents.md/",
+          "https://code.claude.com/docs/en/memory"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-10-17",
         "applies_to": {},
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -107,9 +106,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/memories",
+          "https://docs.devin.ai/desktop/cascade/agents-md"
         ],
-        "verified_on": "2026-02-09",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
@@ -129,15 +129,15 @@
     {
       "id": "AGM-004",
       "name": "Missing Project Context",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "agents-md",
       "evidence": {
-        "source_type": "community",
+        "source_type": "spec",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-          "https://cursor.com/docs/rules"
+          "https://agents.md/",
+          "https://docs.github.com/en/copilot/concepts/prompting/response-customization"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {},
         "normative_level": "BEST_PRACTICE",
         "tests": {
@@ -153,19 +153,19 @@
       "bad_example": "# Build Commands\n\nRun npm install and npm build.\n\n## Testing\n\nUse npm test."
     },
     {
-      "id": "AGM-005",
-      "name": "Platform-Specific Features Without Guard",
-      "severity": "MEDIUM",
+      "id": "AGM-007",
+      "name": "Root AGENTS.md Lists No Build or Test Command",
+      "severity": "LOW",
       "category": "agents-md",
       "evidence": {
-        "source_type": "community",
+        "source_type": "spec",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-          "https://cursor.com/docs/rules"
+          "https://agents.md/",
+          "https://ampcode.com/docs/customize/agents-md"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {},
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -175,8 +175,59 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "# Project\n\nThis project uses various tools.\n\n## Claude Code Specific\n\n- type: PreToolExecution\n  command: echo \"lint\"\n\ncontext: fork\nagent: security-reviewer",
-      "bad_example": "# Project\n\nThis project uses hooks.\n\n- type: PreToolExecution\n  command: echo \"test\"\n\ncontext: fork\nagent: reviewer\nallowed-tools: Read Write"
+      "good_example": "# Project\n\nA date parser.\n\n## Build and test\n\n- cargo test\n",
+      "bad_example": "# Project\n\nA date parser.\n\n## Style\n\nUse tabs.\n"
+    },
+    {
+      "id": "AGM-008",
+      "name": "Legacy AGENT.md Without AGENTS.md",
+      "severity": "LOW",
+      "category": "agents-md",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://agents.md/",
+          "https://ampcode.com/docs/customize/agents-md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "AGENTS.md (and AGENT.md as a symbolic link to it)",
+      "bad_example": "AGENT.md alone"
+    },
+    {
+      "id": "AGM-009",
+      "name": "Nested AGENTS.md Without a Root AGENTS.md",
+      "severity": "LOW",
+      "category": "agents-md",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://agents.md/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "AGENTS.md at the root, packages/api/AGENTS.md for the package",
+      "bad_example": "packages/api/AGENTS.md only"
     },
     {
       "id": "AMP-001",
@@ -298,9 +349,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://ampcode.com/manual#agent-skills"
+          "https://ampcode.com/docs/customize/skills"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "amp"
         },
@@ -328,7 +379,7 @@
         "source_urls": [
           "https://agentskills.io/specification"
         ],
-        "verified_on": "2026-08-05",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -354,9 +405,10 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -382,9 +434,10 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -410,9 +463,11 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://code.claude.com/docs/en/skills",
+          "https://platform.claude.com/docs/en/build-with-claude/skills-guide"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -440,7 +495,7 @@
         "source_urls": [
           "https://agentskills.io/specification"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -468,7 +523,7 @@
         "source_urls": [
           "https://agentskills.io/specification"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -494,9 +549,12 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://code.claude.com/docs/en/skills",
+          "https://code.claude.com/docs/en/settings-reference",
+          "https://platform.claude.com/docs/en/build-with-claude/skills-guide"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -523,7 +581,7 @@
         "source_urls": [
           "https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/skill-creator/scripts/quick_validate.py"
         ],
-        "verified_on": "2026-05-24",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -551,7 +609,7 @@
         "source_urls": [
           "https://agentskills.io/specification"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -576,9 +634,10 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-05-24",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -597,15 +656,16 @@
     },
     {
       "id": "AS-013",
-      "name": "File Reference Too Deep",
+      "name": "Reference Chain Too Deep",
       "severity": "MEDIUM",
       "category": "agent-skills",
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -632,7 +692,7 @@
         "source_urls": [
           "https://platform.claude.com/docs/en/build-with-claude/skills-guide"
         ],
-        "verified_on": "2026-10-08",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -670,9 +730,12 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://agentskills.io/client-implementation/adding-skills-support",
+          "https://code.claude.com/docs/en/skills",
+          "https://kiro.dev/docs/skills/"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -700,7 +763,7 @@
           "https://agentskills.io/specification",
           "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "1.0"
         },
@@ -716,6 +779,222 @@
       },
       "good_example": "---\nname: code-review\ndescription: Use when reviewing pull requests\n---\nReview changed files and report findings.",
       "bad_example": "---\nname: deploy-helper\ndescription: Use when validating deployment checks\n---\nThis file is stored in code-review/SKILL.md."
+    },
+    {
+      "id": "AS-020",
+      "name": "Skill Description Lacks a When-to-Use Trigger",
+      "severity": "LOW",
+      "category": "agent-skills",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://agentskills.io/specification",
+          "https://agentskills.io/skill-creation/optimizing-descriptions",
+          "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices",
+          "https://learn.chatgpt.com/docs/build-skills",
+          "https://cursor.com/docs/skills",
+          "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+          "https://docs.cline.bot/customization/skills",
+          "https://docs.devin.ai/desktop/cascade/skills",
+          "https://geminicli.com/docs/cli/skills-best-practices"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: pdf-tools\ndescription: Extract text and tables from PDF files. Use when the user mentions PDFs or forms.\n---\n",
+      "bad_example": "---\nname: pdf-tools\ndescription: Helps with PDFs.\n---\n"
+    },
+    {
+      "id": "AS-021",
+      "name": "SKILL.md Body Exceeds 5,000 Tokens",
+      "severity": "MEDIUM",
+      "category": "agent-skills",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://agentskills.io/specification",
+          "https://agentskills.io/skill-creation/best-practices",
+          "https://docs.cline.bot/customization/skills",
+          "https://code.claude.com/docs/en/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: focused\ndescription: Use when formatting release notes.\n---\nShort instructions; details live in references/format.md.\n",
+      "bad_example": "(a SKILL.md body of about 25,000 characters in under 500 lines)"
+    },
+    {
+      "id": "AS-022",
+      "name": "Bundled Script Prompts for Interactive Input",
+      "severity": "MEDIUM",
+      "category": "agent-skills",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://agentskills.io/skill-creation/using-scripts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "#!/bin/sh\nanswer=\"${CONFIRM:-no}\"\n",
+      "bad_example": "#!/bin/sh\nread -p \"Continue? \" answer\n"
+    },
+    {
+      "id": "AS-023",
+      "name": "Bundled File Not Mentioned in the Skill",
+      "severity": "LOW",
+      "category": "agent-skills",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://agentskills.io/skill-creation/using-scripts",
+          "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+          "https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/skill-creator/SKILL.md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "Run scripts/extract.py to pull the tables.\n",
+      "bad_example": "(scripts/extract.py exists, but no skill file mentions it)"
+    },
+    {
+      "id": "AS-024",
+      "name": "Unpinned Package-Runner Command in Skill",
+      "severity": "LOW",
+      "category": "agent-skills",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://agentskills.io/skill-creation/using-scripts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "Run `npx eslint@9.0.0 .`\n",
+      "bad_example": "Run `npx eslint .`\n"
+    },
+    {
+      "id": "AS-025",
+      "name": "Duplicate Skill Name Across Skill Roots",
+      "severity": "LOW",
+      "category": "agent-skills",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://agentskills.io/client-implementation/adding-skills-support",
+          "https://opencode.ai/docs/skills/",
+          "https://opencode.ai/v2/docs/skills/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "(one copy of review/SKILL.md, or identical mirrors)",
+      "bad_example": "(.claude/skills/review/SKILL.md and .agents/skills/review/SKILL.md with different content)"
+    },
+    {
+      "id": "AS-026",
+      "name": "Generic Reference Pointer Without Load Condition",
+      "severity": "LOW",
+      "category": "agent-skills",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://agentskills.io/skill-creation/best-practices"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "Read references/api-errors.md if the API returns a non-200 status.\n",
+      "bad_example": "See references/ for details.\n"
+    },
+    {
+      "id": "AS-027",
+      "name": "Unfinished TODO Scaffold Placeholder in Skill",
+      "severity": "MEDIUM",
+      "category": "agent-skills",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/skill-creator/scripts/quick_validate.py",
+          "https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/skills/builtin/skill-creator/scripts/validate_skill.cjs"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: report\ndescription: Use when writing weekly reports.\n---\n",
+      "bad_example": "---\nname: report\ndescription: \"[TODO: describe the skill]\"\n---\n"
     },
     {
       "id": "CC-AG-001",
@@ -6361,9 +6640,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]"
+          "https://docs.cline.bot/customization/skills",
+          "https://github.com/cline/cline/blob/main/sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cline"
         },
@@ -7331,9 +7611,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions"
+          "https://code.visualstudio.com/docs/agent-customization/agent-skills",
+          "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "github-copilot"
         },
@@ -7359,9 +7640,9 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://cursor.com/docs/context/skills"
+          "https://cursor.com/docs/skills"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -7947,9 +8228,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
+          "https://learn.chatgpt.com/docs/build-skills",
+          "https://github.com/openai/codex/blob/main/codex-rs/skills/src/assets/samples/skill-creator/scripts/quick_validate.py"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -11989,11 +12271,11 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification"
+          "https://modelcontextprotocol.io/specification/2026-07-28/basic"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2025-11-25, 2026-07-28"
         },
         "normative_level": "MUST",
         "tests": {
@@ -12044,11 +12326,12 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification"
+          "https://modelcontextprotocol.io/specification/2026-07-28/basic",
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2025-11-25, 2026-07-28"
         },
         "normative_level": "MUST",
         "tests": {
@@ -12092,19 +12375,20 @@
     },
     {
       "id": "MCP-006",
-      "name": "Untrusted Annotations",
-      "severity": "HIGH",
+      "name": "Unknown Tool Annotation Key",
+      "severity": "LOW",
       "category": "mcp",
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/docs/concepts/tools"
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+          "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/2026-07-28/schema.ts"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2025-11-25, 2026-07-28"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -12138,9 +12422,11 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification"
+          "https://modelcontextprotocol.io/specification/2026-07-28/basic",
+          "https://code.claude.com/docs/en/mcp",
+          "https://cursor.com/docs/mcp"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "2025-11-25"
         },
@@ -12192,15 +12478,15 @@
       "severity": "HIGH",
       "category": "mcp",
       "evidence": {
-        "source_type": "spec",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification",
-          "https://cursor.com/docs/mcp"
+          "https://code.claude.com/docs/en/mcp",
+          "https://cursor.com/docs/mcp",
+          "https://code.visualstudio.com/docs/agents/reference/mcp-configuration",
+          "https://geminicli.com/docs/tools/mcp-server"
         ],
-        "verified_on": "2026-08-01",
-        "applies_to": {
-          "spec_revision": "2025-11-25"
-        },
+        "verified_on": "2026-10-17",
+        "applies_to": {},
         "normative_level": "MUST",
         "tests": {
           "unit": true,
@@ -12216,19 +12502,18 @@
     },
     {
       "id": "MCP-010",
-      "name": "Missing url for http/sse server",
+      "name": "Missing url for remote server",
       "severity": "HIGH",
       "category": "mcp",
       "evidence": {
-        "source_type": "spec",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification",
-          "https://cursor.com/docs/mcp"
+          "https://code.claude.com/docs/en/mcp",
+          "https://cursor.com/docs/mcp",
+          "https://code.visualstudio.com/docs/agents/reference/mcp-configuration"
         ],
-        "verified_on": "2026-08-01",
-        "applies_to": {
-          "spec_revision": "2025-11-25"
-        },
+        "verified_on": "2026-10-17",
+        "applies_to": {},
         "normative_level": "MUST",
         "tests": {
           "unit": true,
@@ -12248,14 +12533,16 @@
       "severity": "HIGH",
       "category": "mcp",
       "evidence": {
-        "source_type": "spec",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification"
+          "https://code.claude.com/docs/en/mcp",
+          "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/configure-mcp-servers",
+          "https://code.visualstudio.com/docs/agents/reference/mcp-configuration",
+          "https://cursor.com/docs/mcp",
+          "https://docs.cline.bot/mcp/mcp-overview"
         ],
-        "verified_on": "2026-02-13",
-        "applies_to": {
-          "spec_revision": "2025-11-25"
-        },
+        "verified_on": "2026-10-17",
+        "applies_to": {},
         "normative_level": "MUST",
         "tests": {
           "unit": true,
@@ -12273,16 +12560,16 @@
     {
       "id": "MCP-012",
       "name": "Deprecated SSE transport",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "mcp",
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification"
+          "https://modelcontextprotocol.io/specification/2026-07-28/deprecated"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2026-07-28"
         },
         "normative_level": "SHOULD",
         "tests": {
@@ -12301,18 +12588,18 @@
     {
       "id": "MCP-013",
       "name": "Invalid Tool Name Format",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "mcp",
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/server/tools"
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2025-11-25, 2026-07-28"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -12321,7 +12608,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"tools\": [{\n    \"name\": \"read_file.v2\",\n    \"description\": \"Reads file contents\",\n    \"inputSchema\": { \"type\": \"object\" }\n  }]\n}",
       "bad_example": "{\n  \"tools\": [{\n    \"name\": \"read file\",\n    \"description\": \"Reads file contents\",\n    \"inputSchema\": { \"type\": \"object\" }\n  }]\n}"
@@ -12334,11 +12621,12 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/server/tools"
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+          "https://modelcontextprotocol.io/specification/2026-07-28/basic"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2025-11-25, 2026-07-28"
         },
         "normative_level": "MUST",
         "tests": {
@@ -12361,11 +12649,11 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/server/resources"
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/resources"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2025-11-25, 2026-07-28"
         },
         "normative_level": "MUST",
         "tests": {
@@ -12388,11 +12676,11 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/server/prompts"
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/prompts"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2025-11-25, 2026-07-28"
         },
         "normative_level": "MUST",
         "tests": {
@@ -12410,18 +12698,19 @@
     {
       "id": "MCP-017",
       "name": "Non-HTTPS Remote HTTP Server URL",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "mcp",
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/basic/transports"
+          "https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices",
+          "https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization/security-considerations"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2025-11-25, 2026-07-28"
         },
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -12430,7 +12719,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"mcpServers\": {\n    \"remote\": {\n      \"type\": \"http\",\n      \"url\": \"https://api.example.com/mcp\"\n    }\n  }\n}",
       "bad_example": "{\n  \"mcpServers\": {\n    \"remote\": {\n      \"type\": \"http\",\n      \"url\": \"http://api.example.com/mcp\"\n    }\n  }\n}",
@@ -12456,12 +12745,12 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices"
+          "https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/local-server-security",
+          "https://cursor.com/docs/mcp",
+          "https://kiro.dev/docs/mcp/security"
         ],
-        "verified_on": "2026-02-13",
-        "applies_to": {
-          "spec_revision": "2025-11-25"
-        },
+        "verified_on": "2026-10-17",
+        "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
@@ -12496,12 +12785,10 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices"
+          "https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices"
         ],
-        "verified_on": "2026-02-13",
-        "applies_to": {
-          "spec_revision": "2025-11-25"
-        },
+        "verified_on": "2026-10-17",
+        "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
@@ -12536,10 +12823,11 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
+          "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/main/schema/2026-07-28/schema.ts",
           "https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle",
           "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "spec_revision": "2025-11-25, 2026-07-28"
         },
@@ -12564,11 +12852,11 @@
       "evidence": {
         "source_type": "spec",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices"
+          "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http"
         ],
-        "verified_on": "2026-02-13",
+        "verified_on": "2026-10-17",
         "applies_to": {
-          "spec_revision": "2025-11-25"
+          "spec_revision": "2025-11-25, 2026-07-28"
         },
         "normative_level": "SHOULD",
         "tests": {
@@ -12579,7 +12867,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "{\n  \"mcpServers\": {\n    \"local\": {\n      \"type\": \"http\",\n      \"url\": \"http://localhost:3000/mcp\"\n    }\n  }\n}",
       "bad_example": "{\n  \"mcpServers\": {\n    \"wild\": {\n      \"type\": \"http\",\n      \"url\": \"http://0.0.0.0:3000/mcp\"\n    }\n  }\n}",
@@ -12605,14 +12893,14 @@
       "severity": "HIGH",
       "category": "mcp",
       "evidence": {
-        "source_type": "spec",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/basic/transports"
+          "https://geminicli.com/docs/tools/mcp-server",
+          "https://cursor.com/docs/mcp",
+          "https://code.visualstudio.com/docs/agents/reference/mcp-configuration"
         ],
-        "verified_on": "2026-02-13",
-        "applies_to": {
-          "spec_revision": "2025-11-25"
-        },
+        "verified_on": "2026-10-17",
+        "applies_to": {},
         "normative_level": "MUST",
         "tests": {
           "unit": true,
@@ -12632,15 +12920,14 @@
       "severity": "HIGH",
       "category": "mcp",
       "evidence": {
-        "source_type": "spec",
+        "source_type": "community",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/basic/transports"
+          "https://www.rfc-editor.org/rfc/rfc8259#section-4",
+          "https://code.visualstudio.com/docs/agents/reference/mcp-configuration"
         ],
-        "verified_on": "2026-02-13",
-        "applies_to": {
-          "spec_revision": "2025-11-25"
-        },
-        "normative_level": "MUST",
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -12659,14 +12946,13 @@
       "severity": "HIGH",
       "category": "mcp",
       "evidence": {
-        "source_type": "spec",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://modelcontextprotocol.io/specification/2025-11-25/basic/transports"
+          "https://code.claude.com/docs/en/mcp",
+          "https://geminicli.com/docs/tools/mcp-server"
         ],
-        "verified_on": "2026-02-13",
-        "applies_to": {
-          "spec_revision": "2025-11-25"
-        },
+        "verified_on": "2026-10-17",
+        "applies_to": {},
         "normative_level": "MUST",
         "tests": {
           "unit": true,
@@ -12736,6 +13022,236 @@
       },
       "good_example": "{\n  \"mcpServers\": {\n    \"fs\": {\"type\": \"stdio\", \"command\": \"node\"}\n  }\n}",
       "bad_example": "{\n  \"mcpServers\": {\n    \"workspace\": {\"type\": \"stdio\", \"command\": \"node\"}\n  }\n}"
+    },
+    {
+      "id": "MCP-027",
+      "name": "Unpinned Stdio MCP Server Package",
+      "severity": "MEDIUM",
+      "category": "mcp",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/local-server-security"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\": {\"github\": {\"command\": \"npx\", \"args\": [\"-y\", \"@modelcontextprotocol/server-github@2025.4.8\"]}}}",
+      "bad_example": "{\"mcpServers\": {\"github\": {\"command\": \"npx\", \"args\": [\"-y\", \"@modelcontextprotocol/server-github\"]}}}",
+      "security": {
+        "cwe": [
+          "CWE-1357"
+        ],
+        "owasp": [
+          "A06:2021"
+        ],
+        "vulnerability_class": "supply-chain",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
+    },
+    {
+      "id": "MCP-028",
+      "name": "Plaintext Credential in MCP Server Headers, URL or OAuth Secret",
+      "severity": "MEDIUM",
+      "category": "mcp",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/local-server-security",
+          "https://cursor.com/docs/mcp",
+          "https://code.visualstudio.com/docs/agents/reference/mcp-configuration",
+          "https://code.claude.com/docs/en/mcp",
+          "https://kiro.dev/docs/mcp/security",
+          "https://opencode.ai/v2/docs/mcp-servers/",
+          "https://geminicli.com/docs/tools/mcp-server"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"mcpServers\": {\"api\": {\"type\": \"http\", \"url\": \"https://mcp.example.com/mcp\", \"headers\": {\"Authorization\": \"Bearer ${API_TOKEN}\"}}}}",
+      "bad_example": "{\"mcpServers\": {\"api\": {\"type\": \"http\", \"url\": \"https://mcp.example.com/mcp\", \"headers\": {\"Authorization\": \"Bearer sk_live_...\"}}}}",
+      "security": {
+        "cwe": [
+          "CWE-798"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "hardcoded-secret",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
+    },
+    {
+      "id": "MCP-029",
+      "name": "MCP Server Given the Home Directory or Filesystem Root",
+      "severity": "MEDIUM",
+      "category": "mcp",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/local-server-security"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "\"args\": [\"-y\", \"@modelcontextprotocol/server-filesystem@2025.8.21\", \"/Users/alice/projects/app\"]",
+      "bad_example": "\"args\": [\"-y\", \"@modelcontextprotocol/server-filesystem@2025.8.21\", \"/Users/alice\"]",
+      "security": {
+        "cwe": [
+          "CWE-732"
+        ],
+        "owasp": [
+          "A01:2021"
+        ],
+        "vulnerability_class": "excessive-permission",
+        "subcategory": "audit",
+        "confidence": "MEDIUM",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
+    },
+    {
+      "id": "MCP-030",
+      "name": "Duplicate Tool Names Within a Server",
+      "severity": "MEDIUM",
+      "category": "mcp",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "spec_revision": "2025-11-25, 2026-07-28"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"tools\": [{\"name\": \"search\"}, {\"name\": \"fetch\"}]}",
+      "bad_example": "{\"tools\": [{\"name\": \"search\"}, {\"name\": \"search\"}]}"
+    },
+    {
+      "id": "MCP-031",
+      "name": "Invalid x-mcp-header Annotation",
+      "severity": "HIGH",
+      "category": "mcp",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
+          "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "spec_revision": "2026-07-28"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "\"region\": {\"type\": \"string\", \"x-mcp-header\": \"Region\"}",
+      "bad_example": "\"limit\": {\"type\": \"number\", \"x-mcp-header\": \"Limit\"}"
+    },
+    {
+      "id": "MCP-032",
+      "name": "Deprecated MCP Capability Declared",
+      "severity": "LOW",
+      "category": "mcp",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://modelcontextprotocol.io/specification/2026-07-28/changelog",
+          "https://modelcontextprotocol.io/specification/2026-07-28/deprecated"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "spec_revision": "2026-07-28"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"capabilities\": {\"tools\": {}}}",
+      "bad_example": "{\"capabilities\": {\"logging\": {}}}"
+    },
+    {
+      "id": "MCP-033",
+      "name": "No-Parameter Tool Accepts Arbitrary Properties",
+      "severity": "LOW",
+      "category": "mcp",
+      "evidence": {
+        "source_type": "spec",
+        "source_urls": [
+          "https://modelcontextprotocol.io/specification/2026-07-28/server/tools"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "spec_revision": "2026-07-28"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "\"inputSchema\": {\"type\": \"object\", \"additionalProperties\": false}",
+      "bad_example": "\"inputSchema\": {\"type\": \"object\"}"
     },
     {
       "id": "OC-001",
@@ -12989,9 +13505,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://opencode.ai/docs/rules"
+          "https://opencode.ai/docs/skills/",
+          "https://opencode.ai/v2/docs/skills/"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "opencode"
         },
@@ -13164,45 +13681,19 @@
       "bad_example": "# Rules\n\nDon't use global variables.\nNever use console.log.\nAvoid inline styles."
     },
     {
-      "id": "RC-SK-001",
-      "name": "Roo Code Skill Uses Unsupported Field",
-      "severity": "MEDIUM",
-      "category": "roo-code-skills",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://docs.roocode.com/features/custom-instructions"
-        ],
-        "verified_on": "2026-02-07",
-        "applies_to": {
-          "tool": "roo-code"
-        },
-        "normative_level": "SHOULD",
-        "tests": {
-          "unit": true,
-          "fixtures": true,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "safe/unsafe"
-      },
-      "good_example": "---\nname: my-skill\ndescription: A useful development skill\n---\n# My Skill\n\nSkill instructions here.",
-      "bad_example": "---\nname: my-skill\ndescription: A useful development skill\ndisable-model-invocation: false\n---\n# My Skill\n\nSkill instructions here."
-    },
-    {
       "id": "REF-001",
       "name": "Import File Not Found",
       "severity": "HIGH",
       "category": "references",
       "evidence": {
-        "source_type": "community",
+        "source_type": "vendor_docs",
         "source_urls": [
           "https://code.claude.com/docs/en/memory",
-          "https://agentskills.io"
+          "https://geminicli.com/docs/reference/memport",
+          "https://ampcode.com/docs/customize/agents-md",
+          "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {},
         "normative_level": "MUST",
         "tests": {
@@ -13227,7 +13718,7 @@
         "source_urls": [
           "https://spec.commonmark.org/"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
@@ -13246,16 +13737,16 @@
       "id": "REF-003",
       "name": "Duplicate Import",
       "description": "Detects when the same file is @imported multiple times, which wastes context window tokens and may cause confusion.",
-      "severity": "MEDIUM",
+      "severity": "LOW",
       "category": "references",
       "evidence": {
         "source_type": "community",
         "source_urls": [
           "https://code.claude.com/docs/en/memory"
         ],
-        "verified_on": "2025-05-01",
+        "verified_on": "2026-10-17",
         "applies_to": {},
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -13264,7 +13755,7 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
       "good_example": "# Project\n\n@docs/coding-standards.md\n@docs/testing-guide.md",
       "bad_example": "# Project\n\n@docs/coding-standards.md\n@docs/testing-guide.md\n@docs/coding-standards.md"
@@ -13441,7 +13932,7 @@
         "source_urls": [
           "https://github.com/avifenesh/agnix/issues/104"
         ],
-        "verified_on": "2026-02-04",
+        "verified_on": "2026-10-17",
         "applies_to": {},
         "normative_level": "BEST_PRACTICE",
         "tests": {
@@ -13572,9 +14063,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.windsurf.com/windsurf/cascade/memories"
+          "https://docs.devin.ai/desktop/cascade/skills",
+          "https://docs.devin.ai/cli/extensibility/skills/creating-skills"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "windsurf"
         },
@@ -13672,18 +14164,19 @@
     },
     {
       "id": "XP-001",
-      "name": "Platform-Specific Feature in Generic Config",
+      "name": "Inert or Partly Supported Content in AGENTS.md",
       "severity": "LOW",
       "category": "cross-platform",
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-          "https://cursor.com/docs/rules"
+          "https://ampcode.com/docs/customize/agents-md",
+          "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions",
+          "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {},
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -13698,21 +14191,18 @@
     },
     {
       "id": "XP-002",
-      "name": "AGENTS.md Platform Compatibility",
-      "severity": "MEDIUM",
+      "name": "AGENTS.md Heading Hierarchy",
+      "severity": "LOW",
       "category": "cross-platform",
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-          "https://opencode.ai/docs/rules",
-          "https://cursor.com/docs/rules",
-          "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]",
-          "https://github.blog/changelog/2025-08-28-copilot-coding-agent-now-supports-agents-md-custom-instructions/"
+          "https://agents.md/",
+          "https://code.claude.com/docs/en/memory"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {},
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -13727,16 +14217,15 @@
     },
     {
       "id": "XP-003",
-      "name": "Hard-Coded Platform Paths",
+      "name": "Hard-Coded User Home Path",
       "severity": "MEDIUM",
       "category": "cross-platform",
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-          "https://cursor.com/docs/rules"
+          "https://agentskills.io/specification"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
@@ -13757,12 +14246,13 @@
       "severity": "MEDIUM",
       "category": "cross-platform",
       "evidence": {
-        "source_type": "community",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-          "https://cursor.com/docs/rules"
+          "https://docs.github.com/en/copilot/concepts/prompting/response-customization",
+          "https://code.visualstudio.com/docs/agent-customization/custom-instructions",
+          "https://code.claude.com/docs/en/memory"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
@@ -13780,17 +14270,18 @@
     {
       "id": "XP-005",
       "name": "Conflicting Tool Constraints",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "cross-platform",
       "evidence": {
-        "source_type": "community",
+        "source_type": "vendor_docs",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-          "https://cursor.com/docs/rules"
+          "https://docs.github.com/en/copilot/concepts/prompting/response-customization",
+          "https://code.visualstudio.com/docs/agent-customization/custom-instructions",
+          "https://code.claude.com/docs/en/memory"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {},
-        "normative_level": "MUST",
+        "normative_level": "SHOULD",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -13805,18 +14296,20 @@
     },
     {
       "id": "XP-006",
-      "name": "Multiple Layers Without Documented Precedence",
-      "severity": "MEDIUM",
+      "name": "Several Tools' Instruction Files Without a Note",
+      "severity": "LOW",
       "category": "cross-platform",
       "evidence": {
         "source_type": "community",
         "source_urls": [
-          "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
-          "https://cursor.com/docs/rules"
+          "https://code.visualstudio.com/docs/agent-customization/custom-instructions",
+          "https://code.claude.com/docs/en/memory",
+          "https://cursor.com/docs/rules",
+          "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {},
-        "normative_level": "SHOULD",
+        "normative_level": "BEST_PRACTICE",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -13832,7 +14325,7 @@
     {
       "id": "XP-007",
       "name": "AGENTS.md Exceeds Codex Byte Limit",
-      "description": "Codex CLI has a default project_doc_max_bytes limit of 32768 bytes for AGENTS.md. Files exceeding this limit will be silently truncated.",
+      "description": "Codex CLI stops adding AGENTS.md content once the combined size reaches project_doc_max_bytes (32 KiB by default), so a larger file is truncated.",
       "severity": "MEDIUM",
       "category": "cross-platform",
       "evidence": {
@@ -13840,7 +14333,7 @@
         "source_urls": [
           "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex"
         },
@@ -13867,7 +14360,7 @@
         "source_urls": [
           "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "codex",
           "file_types": [
@@ -13889,16 +14382,17 @@
     },
     {
       "id": "XP-008",
-      "name": "Claude-specific Features in CLAUDE.md for Cursor",
-      "description": "CLAUDE.md contains Claude-specific features that Cursor cannot interpret. When using Cursor as the target tool, Claude-specific directives like context:fork, agent fields, and allowed-tools will be ignored.",
+      "name": "CLAUDE.md @-Imports Cursor Does Not Inline",
+      "description": "Cursor reads CLAUDE.md the same way it reads AGENTS.md, but @-references there are pointers: the file's contents are not inlined, so content behind a Claude Code import is missing for Cursor.",
       "severity": "MEDIUM",
       "category": "cross-platform",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.cursor.com/context/rules-for-ai"
+          "https://cursor.com/help/customization/rules",
+          "https://cursor.com/docs/rules"
         ],
-        "verified_on": "2026-02-21",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cursor"
         },
@@ -13921,11 +14415,12 @@
       "severity": "LOW",
       "category": "cross-platform",
       "evidence": {
-        "source_type": "community",
+        "source_type": "spec",
         "source_urls": [
-          "https://agentskills.io/specification"
+          "https://agentskills.io/specification",
+          "https://raw.githubusercontent.com/agentskills/agentskills/main/skills-ref/src/skills_ref/validator.py"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-10-17",
         "applies_to": {},
         "normative_level": "BEST_PRACTICE",
         "tests": {
@@ -13964,6 +14459,71 @@
       },
       "good_example": "---\nname: build-helper\ndescription: Build the project\n---\nRun scripts/build.sh from the skill root.",
       "bad_example": "---\nname: build-helper\ndescription: Build the project\n---\nRun /home/alice/skills/build-helper/scripts/build.sh to compile."
+    },
+    {
+      "id": "XP-SK-003",
+      "name": "Hardcoded Secret in Skill Files",
+      "severity": "MEDIUM",
+      "category": "cross-platform",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://geminicli.com/docs/cli/skills-best-practices",
+          "https://docs.cline.bot/getting-started/config"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "TOKEN = os.environ[\"GITHUB_TOKEN\"]\n",
+      "bad_example": "TOKEN = \"ghp_...\"  # a literal token\n",
+      "security": {
+        "cwe": [
+          "CWE-798"
+        ],
+        "owasp": [
+          "A07:2021"
+        ],
+        "vulnerability_class": "hardcoded-secret",
+        "subcategory": "vuln",
+        "confidence": "HIGH",
+        "likelihood": "MEDIUM",
+        "impact": "HIGH"
+      }
+    },
+    {
+      "id": "XP-SK-004",
+      "name": "Backslash Path in Skill",
+      "severity": "LOW",
+      "category": "cross-platform",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices",
+          "https://code.visualstudio.com/docs/agent-customization/agent-skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {},
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "Run scripts/setup.py\n",
+      "bad_example": "Run scripts\\setup.py\n"
     },
     {
       "id": "OC-CFG-001",
@@ -15503,7 +16063,7 @@
   "categories": {
     "agent-skills": {
       "prefix": "AS",
-      "count": 14,
+      "count": 22,
       "description": "Agent Skills specification rules"
     },
     "claude-skills": {
@@ -15533,7 +16093,7 @@
     },
     "agents-md": {
       "prefix": "AGM",
-      "count": 5,
+      "count": 7,
       "description": "AGENTS.md cross-platform rules"
     },
     "claude-plugins": {
@@ -15543,7 +16103,7 @@
     },
     "mcp": {
       "prefix": "MCP",
-      "count": 25,
+      "count": 32,
       "description": "Model Context Protocol rules"
     },
     "copilot": {
@@ -15598,7 +16158,7 @@
     },
     "cross-platform": {
       "prefix": "XP",
-      "count": 11,
+      "count": 13,
       "description": "Cross-platform compatibility rules"
     },
     "cursor-skills": {
@@ -15650,11 +16210,6 @@
       "prefix": "AMP-SK",
       "count": 1,
       "description": "Amp per-client skill rules"
-    },
-    "roo-code-skills": {
-      "prefix": "RC-SK",
-      "count": 1,
-      "description": "Roo Code per-client skill rules"
     },
     "version-awareness": {
       "prefix": "VER",

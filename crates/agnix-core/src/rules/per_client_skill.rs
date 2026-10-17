@@ -16,11 +16,7 @@ use rust_i18n::t;
 use std::path::{Component, Path, PathBuf};
 
 /// Known clients that host SKILL.md files.
-///
-/// The `Amp` variant is defined for completeness (AMP-SK-001 exists in rules.json)
-/// but `.agents/` paths are mapped to `Codex` since both clients share that directory.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
 pub(crate) enum SkillClient {
     ClaudeCode,
     Cursor,
@@ -31,9 +27,28 @@ pub(crate) enum SkillClient {
     Windsurf,
     Kiro,
     Amp,
-    RooCode,
+    /// A skill directory several clients read (`.agents/skills/`), under a
+    /// scope that does not narrow it to one of them. The Agent Skills
+    /// baseline applies; no client's field list does, and neither do the
+    /// Claude Code rules (Claude Code does not read `.agents/skills/`).
+    Shared,
     Unknown,
 }
+
+/// Clients that read a project's `.agents/skills/` directory: Codex, Amp
+/// ("Project skills are saved under `.agents/skills/`"), Cline, Devin
+/// Desktop ("also discovers skills in `.agents/skills/`"), GitHub Copilot,
+/// OpenCode and Cursor. Gemini CLI reads it too but has no per-client skill
+/// rule.
+const AGENTS_SKILLS_READERS: &[SkillClient] = &[
+    SkillClient::Codex,
+    SkillClient::Amp,
+    SkillClient::Cline,
+    SkillClient::Windsurf,
+    SkillClient::Copilot,
+    SkillClient::OpenCode,
+    SkillClient::Cursor,
+];
 
 /// Universal frontmatter fields supported by the Agent Skills specification.
 /// These are safe to use in any client.
@@ -82,21 +97,130 @@ const OTHER_CLIENT_SKILL_FIELDS: &[&str] = &[
 /// applies at most one of them.
 const KIRO_CREATE_METADATA_GROUP: &str = "kr-sk-001-create-metadata";
 
-/// Check whether a client supports a given frontmatter field.
-///
-/// Claude Code supports all extension fields. Cursor additionally supports
-/// `disable-model-invocation`. All other clients only support universal fields.
-fn is_field_supported(client: SkillClient, field: &str) -> bool {
-    if client == SkillClient::Kiro {
-        return KIRO_SKILL_FIELDS.contains(&field);
-    }
-    if UNIVERSAL_FIELDS.contains(&field) {
-        return true;
-    }
+/// Groups the other per-client fixes that create a `metadata` block.
+const CREATE_METADATA_GROUP: &str = "per-client-skill-create-metadata";
+
+/// Claude Code skill frontmatter fields (code.claude.com/docs/en/skills).
+const CLAUDE_CODE_SKILL_FIELDS: &[&str] = &[
+    "when_to_use",
+    "arguments",
+    "display-name",
+    "display_name",
+    "displayName",
+    "default-enabled",
+    "default_enabled",
+    "defaultEnabled",
+    "fallback",
+    "disallowed-tools",
+    "argument-hint",
+    "disable-model-invocation",
+    "user-invocable",
+    "model",
+    "context",
+    "background",
+    "agent",
+    "hooks",
+    "effort",
+    "paths",
+    "shell",
+];
+
+/// Cursor skill fields beyond the Agent Skills set: the "Frontmatter
+/// fields" table (`paths`, `disable-model-invocation`, `icon`, `color`) and
+/// the legacy `globs` ("still accepted as a fallback for older skills").
+const CURSOR_SKILL_FIELDS: &[&str] = &[
+    "disable-model-invocation",
+    "paths",
+    "icon",
+    "color",
+    "globs",
+];
+
+/// Cline skill fields beyond the Agent Skills set: the SDK's
+/// `parseSkillConfigFromMarkdown` reads boolean `disabled` and `enabled`.
+const CLINE_SKILL_FIELDS: &[&str] = &["disabled", "enabled"];
+
+/// GitHub Copilot skill fields beyond the Agent Skills set (VS Code agent
+/// skills: `argument-hint`, `user-invocable`, `disable-model-invocation`,
+/// `context`).
+const COPILOT_SKILL_FIELDS: &[&str] = &[
+    "argument-hint",
+    "user-invocable",
+    "disable-model-invocation",
+    "context",
+];
+
+/// OpenCode skill fields beyond the Agent Skills set: V2 documents
+/// `disable-model-invocation` ("Set to true for the same effect as
+/// opencode/autoinvoke: false").
+const OPENCODE_SKILL_FIELDS: &[&str] = &["disable-model-invocation"];
+
+/// Amp skill fields beyond the Agent Skills set: `mcpServers` ("MCP Servers
+/// in Skills") and, for plugin-bundled skills, `builtin-tools`.
+const AMP_SKILL_FIELDS: &[&str] = &["mcpServers", "builtin-tools"];
+
+/// Devin CLI SKILL.md fields (docs.devin.ai/cli creating-skills "All
+/// Frontmatter Fields"), read from `.devin/skills/`, the directory Devin
+/// Desktop prefers too.
+const DEVIN_SKILL_FIELDS: &[&str] = &[
+    "argument-hint",
+    "model",
+    "subagent",
+    "agent",
+    "permissions",
+    "triggers",
+];
+
+/// Frontmatter fields `client` reads beyond the Agent Skills set, for the
+/// skill at `path`.
+fn client_skill_fields(client: SkillClient, path: &Path) -> &'static [&'static str] {
     match client {
+        SkillClient::Cursor => CURSOR_SKILL_FIELDS,
+        SkillClient::Cline => CLINE_SKILL_FIELDS,
+        SkillClient::Copilot => COPILOT_SKILL_FIELDS,
+        SkillClient::OpenCode => OPENCODE_SKILL_FIELDS,
+        SkillClient::Amp => AMP_SKILL_FIELDS,
+        SkillClient::Windsurf if path_has_component_pair(path, ".devin", "skills") => {
+            DEVIN_SKILL_FIELDS
+        }
+        _ => &[],
+    }
+}
+
+/// True when `path` has the two components `first`/`second` in a row.
+fn path_has_component_pair(path: &Path, first: &str, second: &str) -> bool {
+    let components: Vec<&str> = path
+        .components()
+        .filter_map(|c| c.as_os_str().to_str())
+        .collect();
+    components
+        .windows(2)
+        .any(|pair| pair[0] == first && pair[1] == second)
+}
+
+/// Whether some skill client acts on `field` at the top level, so moving it
+/// under `metadata` could change how that client treats the skill.
+fn is_known_client_field(field: &str) -> bool {
+    UNIVERSAL_FIELDS.contains(&field)
+        || CLAUDE_CODE_SKILL_FIELDS.contains(&field)
+        || CURSOR_SKILL_FIELDS.contains(&field)
+        || CLINE_SKILL_FIELDS.contains(&field)
+        || COPILOT_SKILL_FIELDS.contains(&field)
+        || AMP_SKILL_FIELDS.contains(&field)
+        || DEVIN_SKILL_FIELDS.contains(&field)
+}
+
+/// Check whether a client supports a given frontmatter field.
+fn is_field_supported(client: SkillClient, path: &Path, field: &str) -> bool {
+    match client {
+        SkillClient::Kiro => KIRO_SKILL_FIELDS.contains(&field),
         SkillClient::ClaudeCode => true,
-        SkillClient::Cursor => field == "disable-model-invocation",
-        _ => false,
+        // Codex's skill validator allows exactly name, description, license,
+        // allowed-tools and metadata (quick_validate.py `allowed_properties`).
+        SkillClient::Codex if field == "compatibility" => false,
+        _ => {
+            UNIVERSAL_FIELDS.contains(&field) || client_skill_fields(client, path).contains(&field)
+        }
     }
 }
 
@@ -148,7 +272,15 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
         ".cursor" => SkillClient::Cursor,
         ".cline" => SkillClient::Cline,
         ".github" => SkillClient::Copilot,
-        ".agents" => SkillClient::Codex, // NOTE: Amp also uses .agents; AMP-SK-001 unreachable without config context
+        // Codex, Amp, Cline, Devin Desktop, Copilot, OpenCode, Cursor and
+        // Gemini all read `.agents/skills/`; the configured tools
+        // pick the client (see `resolve_shared_skill_client`).
+        ".agents" => SkillClient::Shared,
+        // Cline's older skill layout ("`.clinerules/skills/`").
+        ".clinerules" => SkillClient::Cline,
+        // Devin Desktop's preferred skill directory ("`.devin/skills/`
+        // (preferred) or `.windsurf/skills/` (legacy)").
+        ".devin" => SkillClient::Windsurf,
         // `$CODEX_HOME/skills`, by default `~/.codex/skills`, including the
         // `.system` skills Codex installs there.
         ".codex" => SkillClient::Codex,
@@ -159,7 +291,6 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
         }
         ".windsurf" => SkillClient::Windsurf,
         ".kiro" => SkillClient::Kiro,
-        ".roo" => SkillClient::RooCode,
         _ => kiro_skill_client(&components),
     }
 }
@@ -279,7 +410,6 @@ fn skill_client_from_tool_str(tool: &str) -> Option<SkillClient> {
         "copilot" | "github-copilot" => SkillClient::Copilot,
         "windsurf" => SkillClient::Windsurf,
         "amp" => SkillClient::Amp,
-        "roo-code" => SkillClient::RooCode,
         _ => return None,
     })
 }
@@ -295,6 +425,9 @@ fn skill_client_from_tool_str(tool: &str) -> Option<SkillClient> {
 /// single-valued `target` is only consulted when `tools` names no client).
 pub(crate) fn resolve_skill_client(path: &Path, config: &LintConfig) -> SkillClient {
     let by_path = detect_client(path);
+    if by_path == SkillClient::Shared {
+        return resolve_shared_skill_client(config);
+    }
     if by_path != SkillClient::Unknown {
         return by_path;
     }
@@ -322,6 +455,34 @@ pub(crate) fn resolve_skill_client(path: &Path, config: &LintConfig) -> SkillCli
     }
 }
 
+/// The client for a skill in `.agents/skills/`: the one selected tool that
+/// reads the directory, or [`SkillClient::Shared`] when the scope names
+/// several readers (or none). Treating the directory as Codex-only reported
+/// Amp's documented `mcpServers` as "ignored" and offered to delete it.
+fn resolve_shared_skill_client(config: &LintConfig) -> SkillClient {
+    let tools = config.tools();
+    if !tools.is_empty() {
+        let mut readers: Vec<SkillClient> = tools
+            .iter()
+            .filter_map(|t| skill_client_from_tool_str(t))
+            .filter(|client| AGENTS_SKILLS_READERS.contains(client))
+            .collect();
+        readers.dedup();
+        let gemini = tools
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case("gemini-cli") || t.eq_ignore_ascii_case("gemini"));
+        return match readers.as_slice() {
+            [only] if !gemini && readers.iter().all(|c| c == only) => *only,
+            _ => SkillClient::Shared,
+        };
+    }
+    match config.target() {
+        TargetTool::Codex => SkillClient::Codex,
+        TargetTool::Cursor => SkillClient::Cursor,
+        _ => SkillClient::Shared,
+    }
+}
+
 /// Return the rule ID for a per-client unsupported-field warning.
 fn rule_id_for_client(client: SkillClient) -> Option<&'static str> {
     match client {
@@ -333,8 +494,7 @@ fn rule_id_for_client(client: SkillClient) -> Option<&'static str> {
         SkillClient::Windsurf => Some("WS-SK-001"),
         SkillClient::Kiro => Some("KR-SK-001"),
         SkillClient::Amp => Some("AMP-SK-001"),
-        SkillClient::RooCode => Some("RC-SK-001"),
-        SkillClient::ClaudeCode | SkillClient::Unknown => None,
+        SkillClient::ClaudeCode | SkillClient::Shared | SkillClient::Unknown => None,
     }
 }
 
@@ -350,24 +510,8 @@ fn client_display_name(client: SkillClient) -> &'static str {
         SkillClient::Windsurf => "Windsurf",
         SkillClient::Kiro => "Kiro",
         SkillClient::Amp => "Amp",
-        SkillClient::RooCode => "Roo Code",
+        SkillClient::Shared => "several clients",
         SkillClient::Unknown => "Unknown",
-    }
-}
-
-/// Return the i18n key prefix for a per-client rule.
-fn i18n_key_for_client(client: SkillClient) -> Option<&'static str> {
-    match client {
-        SkillClient::Cursor => Some("cr_sk_001"),
-        SkillClient::Cline => Some("cl_sk_001"),
-        SkillClient::Copilot => Some("cp_sk_001"),
-        SkillClient::Codex => Some("cx_sk_001"),
-        SkillClient::OpenCode => Some("oc_sk_001"),
-        SkillClient::Windsurf => Some("ws_sk_001"),
-        SkillClient::Kiro => Some("kr_sk_001"),
-        SkillClient::Amp => Some("amp_sk_001"),
-        SkillClient::RooCode => Some("rc_sk_001"),
-        SkillClient::ClaudeCode | SkillClient::Unknown => None,
     }
 }
 
@@ -398,25 +542,6 @@ fn line_col_at(offset: usize, line_starts: &[usize]) -> (usize, usize) {
     (low + 1, offset.saturating_sub(line_start) + 1)
 }
 
-/// Advance `fm_offset` past the current line and its newline terminator.
-fn advance_past_line(fm_offset: usize, line_len: usize, fm_bytes: &[u8]) -> usize {
-    let line_end = fm_offset + line_len;
-    if line_end < fm_bytes.len() {
-        if fm_bytes[line_end] == b'\n' {
-            line_end + 1
-        } else if line_end + 1 < fm_bytes.len()
-            && fm_bytes[line_end] == b'\r'
-            && fm_bytes[line_end + 1] == b'\n'
-        {
-            line_end + 2
-        } else {
-            line_end
-        }
-    } else {
-        line_end
-    }
-}
-
 const RULE_IDS: &[&str] = &[
     "AMP-SK-001",
     "CL-SK-001",
@@ -426,7 +551,6 @@ const RULE_IDS: &[&str] = &[
     "KR-SK-001",
     "KR-SK-002",
     "OC-SK-001",
-    "RC-SK-001",
     "WS-SK-001",
     "XP-SK-001",
 ];
@@ -512,20 +636,32 @@ fn kiro_movable_value(
     }
 }
 
-/// Build the KR-SK-001 fix for one unsupported top-level field: move it under
-/// `metadata` when it is a single-line scalar, otherwise delete the whole
-/// entry. Every candidate is applied to a copy and re-parsed; a fix is offered
-/// only when the frontmatter parses to exactly the intended mapping. Moves are
-/// safe for plain data fields (Kiro reads neither location); moving another
-/// client's field, and every deletion, is unsafe.
-fn kiro_field_fix(
+/// How to fix one unsupported top-level skill field.
+struct FieldFixPlan<'a> {
+    /// The client that ignores the field, for the fix description.
+    client: &'a str,
+    /// Whether moving the field under `metadata` is safe: true for plain data
+    /// that no skill client reads at the top level.
+    safe_move: bool,
+    /// Fix group for edits that create a `metadata` block.
+    group: &'static str,
+}
+
+/// Build the per-client fix for one unsupported top-level field (KR-SK-001
+/// and the other `*-SK-001` rules): move it under `metadata` when it is a
+/// single-line scalar, otherwise delete the whole entry (key, value lines and
+/// line break). Every candidate is applied to a copy and re-parsed; a fix is
+/// offered only when the frontmatter parses to exactly the intended mapping.
+/// Moves are safe for plain data fields (the client reads neither location);
+/// moving another client's field, and every deletion, is unsafe.
+fn skill_field_fix(
     content: &str,
     parts: &crate::parsers::frontmatter::FrontmatterParts,
     yaml: &serde_yaml::Value,
     entries: &[YamlTopLevelEntry],
     entry: &YamlTopLevelEntry,
     value: &serde_yaml::Value,
-    other_client_field: bool,
+    plan: &FieldFixPlan<'_>,
 ) -> Option<Fix> {
     let frontmatter = parts.frontmatter.as_str();
     let base = parts.frontmatter_start;
@@ -593,10 +729,10 @@ fn kiro_field_fix(
                 base + end,
                 replacement,
                 format!("Move '{}' under metadata", entry.key),
-                !other_client_field,
+                plan.safe_move,
             );
             if creates_metadata {
-                fix = fix.with_group(KIRO_CREATE_METADATA_GROUP);
+                fix = fix.with_group(plan.group);
             }
             return Some(fix);
         }
@@ -609,7 +745,7 @@ fn kiro_field_fix(
         Fix::delete(
             base + entry.start,
             end,
-            format!("Remove '{}', which Kiro ignores", entry.key),
+            format!("Remove '{}', which {} ignores", entry.key, plan.client),
             false,
         )
     })
@@ -638,7 +774,7 @@ fn validate_kiro_skill(
         let Some(field) = key.as_str() else {
             continue;
         };
-        if !unsupported_fields || is_field_supported(SkillClient::Kiro, field) {
+        if !unsupported_fields || is_field_supported(SkillClient::Kiro, path, field) {
             continue;
         }
         let entry = entries.iter().find(|entry| entry.key == field);
@@ -661,14 +797,18 @@ fn validate_kiro_skill(
         }
         .with_suggestion(suggestion);
         if let Some(entry) = entry
-            && let Some(fix) = kiro_field_fix(
+            && let Some(fix) = skill_field_fix(
                 content,
                 parts,
                 &yaml,
                 &entries,
                 entry,
                 value,
-                other_client_field,
+                &FieldFixPlan {
+                    client: "Kiro",
+                    safe_move: !other_client_field,
+                    group: KIRO_CREATE_METADATA_GROUP,
+                },
             )
         {
             diagnostic = diagnostic.with_fix(fix);
@@ -756,117 +896,120 @@ impl Validator for PerClientSkillValidator {
             return diagnostics;
         }
 
+        // Read the keys from the parsed mapping (AS-016 reports frontmatter
+        // that does not parse), so nested or continuation lines are never
+        // mistaken for fields and every fix is checked against a re-parse.
+        let Ok(yaml) = serde_yaml::from_str::<serde_yaml::Value>(&parts.frontmatter) else {
+            return diagnostics;
+        };
+        let Some(mapping) = yaml.as_mapping() else {
+            return diagnostics;
+        };
+        let entries = yaml_top_level_entries(&parts.frontmatter);
         let line_starts = compute_line_starts(content);
-        let frontmatter_str = &parts.frontmatter;
-        let fm_bytes = frontmatter_str.as_bytes();
-        let mut fm_offset = 0usize;
+        let client_name = client_display_name(client);
 
-        for line in frontmatter_str.lines() {
-            let trimmed = line.trim_start();
-            let leading_ws = line.len() - trimmed.len();
-
-            // Skip empty lines, comments, and indented lines (nested YAML values
-            // like sub-keys under `metadata:` are not top-level fields)
-            if trimmed.is_empty() || trimmed.starts_with('#') || leading_ws > 0 {
-                fm_offset = advance_past_line(fm_offset, line.len(), fm_bytes);
+        for (key, value) in mapping {
+            let Some(field) = key.as_str() else {
                 continue;
-            }
-
-            // Extract key from top-level "key: value" or "key:" pattern
-            let key = match trimmed.find(':') {
-                Some(colon_pos) => trimmed[..colon_pos].trim(),
-                None => {
-                    fm_offset = advance_past_line(fm_offset, line.len(), fm_bytes);
-                    continue;
-                }
             };
-
-            // Universal fields are safe everywhere - skip them
-            if UNIVERSAL_FIELDS.contains(&key) {
-                fm_offset = advance_past_line(fm_offset, line.len(), fm_bytes);
+            let universal = UNIVERSAL_FIELDS.contains(&field);
+            let supported = is_field_supported(client, path, field);
+            if universal && supported {
                 continue;
             }
+            let entry = entries.iter().find(|entry| entry.key == field);
+            let offset = parts.frontmatter_start + entry.map_or(0, |entry| entry.start);
+            let (line_num, col) = line_col_at(offset, &line_starts);
 
-            // Non-universal top-level key: check against client support
-            let abs_key_start = parts.frontmatter_start + fm_offset;
-            let (line_num, col) = line_col_at(abs_key_start, &line_starts);
-
-            // Compute byte range for the full line including trailing newline
-            let abs_line_start = parts.frontmatter_start + fm_offset;
-            let mut abs_line_end = abs_line_start + line.len();
-            if abs_line_end < content.len() && content.as_bytes()[abs_line_end] == b'\n' {
-                abs_line_end += 1;
-            } else if abs_line_end + 1 < content.len()
-                && content.as_bytes()[abs_line_end] == b'\r'
-                && content.as_bytes()[abs_line_end + 1] == b'\n'
+            // Per-client rule: the client ignores this field.
+            if has_per_client
+                && !supported
+                && let Some(rule_id) = per_client_rule
             {
-                abs_line_end += 2;
-            }
-
-            // Check whether the next line is indented (multi-line YAML value).
-            // If so, deleting only the key line would leave orphaned content,
-            // so the auto-fix is marked unsafe.
-            let next_line_indented = content
-                .get(abs_line_end..)
-                .and_then(|rest| rest.lines().next())
-                .is_some_and(|next| {
-                    let nxt = next.trim_start();
-                    !nxt.is_empty() && next.len() > nxt.len()
-                });
-            let fix_is_safe = !next_line_indented;
-
-            // Per-client rule: warn if client does not support this field
-            if has_per_client {
-                if let Some(rule_id) = per_client_rule {
-                    if !is_field_supported(client, key) {
-                        let i18n_key = i18n_key_for_client(client).unwrap_or("cr_sk_001");
-                        let msg_key = format!("rules.{}.message", i18n_key);
-                        let sug_key = format!("rules.{}.suggestion", i18n_key);
-
-                        diagnostics.push(
-                            Diagnostic::warning(
-                                path.to_path_buf(),
-                                line_num,
-                                col,
-                                rule_id,
-                                t!(&msg_key, field = key, client = client_display_name(client)),
-                            )
-                            .with_suggestion(t!(
-                                &sug_key,
-                                field = key,
-                                client = client_display_name(client)
-                            ))
-                            .with_fix(Fix::delete(
-                                abs_line_start,
-                                abs_line_end,
-                                format!(
-                                    "Remove unsupported field '{}' for {}",
-                                    key,
-                                    client_display_name(client)
-                                ),
-                                fix_is_safe,
-                            )),
-                        );
+                let diagnostic = if client == SkillClient::Codex && field == "compatibility" {
+                    // A spec field: Codex's runtime ignores it and its skill
+                    // validator rejects it. Other clients may read it, so no
+                    // fix is offered.
+                    Diagnostic::info(
+                        path.to_path_buf(),
+                        line_num,
+                        col,
+                        rule_id,
+                        t!("rules.per_client_skill.codex_compatibility"),
+                    )
+                    .with_suggestion(t!("rules.per_client_skill.codex_compatibility_suggestion"))
+                } else {
+                    let known_elsewhere = is_known_client_field(field);
+                    let mut diagnostic = if known_elsewhere {
+                        Diagnostic::warning(
+                            path.to_path_buf(),
+                            line_num,
+                            col,
+                            rule_id,
+                            t!(
+                                "rules.per_client_skill.other_client_field",
+                                field = field,
+                                client = client_name
+                            ),
+                        )
+                        .with_suggestion(t!(
+                            "rules.per_client_skill.other_client_field_suggestion",
+                            field = field
+                        ))
+                    } else {
+                        Diagnostic::info(
+                            path.to_path_buf(),
+                            line_num,
+                            col,
+                            rule_id,
+                            t!(
+                                "rules.per_client_skill.data_field",
+                                field = field,
+                                client = client_name
+                            ),
+                        )
+                        .with_suggestion(t!(
+                            "rules.per_client_skill.data_field_suggestion",
+                            field = field
+                        ))
+                    };
+                    if let Some(entry) = entry
+                        && let Some(fix) = skill_field_fix(
+                            content,
+                            &parts,
+                            &yaml,
+                            &entries,
+                            entry,
+                            value,
+                            &FieldFixPlan {
+                                client: client_name,
+                                safe_move: !known_elsewhere,
+                                group: CREATE_METADATA_GROUP,
+                            },
+                        )
+                    {
+                        diagnostic = diagnostic.with_fix(fix);
                     }
-                }
+                    diagnostic
+                };
+                diagnostics.push(diagnostic);
             }
 
-            // XP-SK-001: cross-platform portability warning for any skill
-            // with non-universal fields, except Claude Code (which supports all)
-            if has_xp && client != SkillClient::ClaudeCode {
+            // XP-SK-001: cross-platform portability note for any skill with
+            // non-universal fields, except Claude Code (which supports all).
+            if has_xp && !universal && client != SkillClient::ClaudeCode {
                 diagnostics.push(
                     Diagnostic::info(
                         path.to_path_buf(),
                         line_num,
                         col,
                         "XP-SK-001",
-                        t!("rules.xp_sk_001.message", field = key),
+                        t!("rules.xp_sk_001.message", field = field),
                     )
-                    .with_suggestion(t!("rules.xp_sk_001.suggestion", field = key)),
+                    .with_suggestion(t!("rules.xp_sk_001.suggestion", field = field)),
                 );
             }
-
-            fm_offset = advance_past_line(fm_offset, line.len(), fm_bytes);
         }
 
         diagnostics
@@ -918,10 +1061,19 @@ mod tests {
 
     #[test]
     fn test_detect_client_cline_alt() {
-        // .clinerules is for Cline rules files, not skills; skills should be under .cline/
+        // Cline documents `.clinerules/skills/` as a skill location next to
+        // the recommended `.cline/skills/` (this used to resolve to Unknown).
         assert_eq!(
             detect_client(Path::new(".clinerules/skills/my-skill/SKILL.md")),
-            SkillClient::Unknown
+            SkillClient::Cline
+        );
+    }
+
+    #[test]
+    fn test_detect_client_devin() {
+        assert_eq!(
+            detect_client(Path::new(".devin/skills/my-skill/SKILL.md")),
+            SkillClient::Windsurf
         );
     }
 
@@ -934,11 +1086,42 @@ mod tests {
     }
 
     #[test]
-    fn test_detect_client_codex() {
+    fn test_detect_client_agents_dir_is_shared() {
+        // `.agents/skills/` used to map to Codex. Amp, Cline, Devin
+        // Desktop, Copilot, OpenCode, Cursor and Gemini read it too, so the
+        // path alone names no client; the configured tools decide.
         assert_eq!(
             detect_client(Path::new(".agents/skills/my-skill/SKILL.md")),
-            SkillClient::Codex
+            SkillClient::Shared
         );
+    }
+
+    #[test]
+    fn test_resolve_agents_skills_follows_tools() {
+        let path = Path::new(".agents/skills/my-skill/SKILL.md");
+        let with = |tools: &[&str]| {
+            let mut config = LintConfig::default();
+            config.set_tools(tools.iter().map(|t| t.to_string()).collect());
+            resolve_skill_client(path, &config)
+        };
+        assert_eq!(with(&["amp"]), SkillClient::Amp);
+        assert_eq!(with(&["codex", "claude-code"]), SkillClient::Codex);
+        assert_eq!(with(&["cline"]), SkillClient::Cline);
+        assert_eq!(with(&["codex", "amp"]), SkillClient::Shared);
+        assert_eq!(with(&["codex", "gemini-cli"]), SkillClient::Shared);
+        assert_eq!(with(&["claude-code"]), SkillClient::Shared);
+        assert_eq!(
+            resolve_skill_client(path, &LintConfig::default()),
+            SkillClient::Shared
+        );
+        let mut codex = LintConfig::default();
+        codex.set_target(TargetTool::Codex);
+        assert_eq!(resolve_skill_client(path, &codex), SkillClient::Codex);
+        // Claude Code does not read `.agents/skills/`.
+        assert!(!claude_skill_rules_apply(
+            SkillClient::Shared,
+            &LintConfig::default()
+        ));
     }
 
     #[test]
@@ -1039,10 +1222,12 @@ mod tests {
     }
 
     #[test]
-    fn test_detect_client_roo_code() {
+    fn test_detect_client_roo_dir_is_not_a_client() {
+        // Roo Code shut down on 2026-05-15 and agnix no longer validates it;
+        // a skill under `.roo/` gets the Agent Skills baseline.
         assert_eq!(
             detect_client(Path::new(".roo/skills/my-skill/SKILL.md")),
-            SkillClient::RooCode
+            SkillClient::Unknown
         );
     }
 
@@ -1197,7 +1382,6 @@ mod tests {
                     || d.rule.starts_with("WS-SK-")
                     || d.rule.starts_with("KR-SK-")
                     || d.rule.starts_with("AMP-SK-")
-                    || d.rule.starts_with("RC-SK-")
                     || d.rule == "XP-SK-001"
             })
             .collect();
@@ -1286,7 +1470,7 @@ mod tests {
             "name: my-skill\ndescription: A test\nhooks: some-value",
             "Body",
         );
-        let diags = validate(".agents/skills/my-skill/SKILL.md", &content);
+        let diags = validate(".codex/skills/my-skill/SKILL.md", &content);
         let cx_diags: Vec<_> = diags.iter().filter(|d| d.rule == "CX-SK-001").collect();
         assert_eq!(cx_diags.len(), 1);
         assert!(cx_diags[0].message.contains("hooks"));
@@ -1338,6 +1522,28 @@ mod tests {
         fs.add_file(KIRO_PATH, content);
         crate::fixes::apply_fixes_with_fs(diagnostics, false, safe_only, Some(fs.clone())).unwrap();
         fs.read_to_string(Path::new(KIRO_PATH)).unwrap()
+    }
+
+    fn apply_fixes_at(
+        path: &str,
+        content: &str,
+        diagnostics: &[Diagnostic],
+        safe_only: bool,
+    ) -> String {
+        use crate::fs::{FileSystem, MockFileSystem};
+        let fs = std::sync::Arc::new(MockFileSystem::new());
+        fs.add_file(path, content);
+        let diagnostics: Vec<Diagnostic> = diagnostics
+            .iter()
+            .cloned()
+            .map(|mut d| {
+                d.file = std::path::PathBuf::from(path);
+                d
+            })
+            .collect();
+        crate::fixes::apply_fixes_with_fs(&diagnostics, false, safe_only, Some(fs.clone()))
+            .unwrap();
+        fs.read_to_string(Path::new(path)).unwrap()
     }
 
     fn frontmatter_of(content: &str) -> serde_yaml::Value {
@@ -1612,17 +1818,6 @@ mod tests {
     }
 
     #[test]
-    fn test_roo_code_unsupported_disable_model() {
-        let content = make_skill(
-            "name: my-skill\ndescription: A test\ndisable-model-invocation: false",
-            "Body",
-        );
-        let diags = validate(".roo/skills/my-skill/SKILL.md", &content);
-        let rc_diags: Vec<_> = diags.iter().filter(|d| d.rule == "RC-SK-001").collect();
-        assert_eq!(rc_diags.len(), 1);
-    }
-
-    #[test]
     fn test_multiple_unsupported_fields() {
         let content = make_skill(
             "name: my-skill\ndescription: A test\nmodel: opus\ncontext: fork\nagent: general-purpose",
@@ -1698,16 +1893,16 @@ mod tests {
 
     #[test]
     fn test_fix_attached_for_unsupported_field() {
+        // The fix used to delete the key line and was marked safe. Another
+        // client's field now moves under metadata, unsafely: a tool that
+        // reads this skill may act on it.
         let content = make_skill("name: my-skill\ndescription: A test\nmodel: opus", "Body");
         let diags = validate(".cursor/skills/my-skill/SKILL.md", &content);
         let cr_diag = diags.iter().find(|d| d.rule == "CR-SK-001").unwrap();
-        assert!(
-            cr_diag.has_fixes(),
-            "CR-SK-001 should have an auto-fix attached"
-        );
+        assert_eq!(cr_diag.level, crate::diagnostics::DiagnosticLevel::Warning);
         let fix = &cr_diag.fixes[0];
-        assert!(fix.is_deletion(), "Fix should be a line deletion");
-        assert!(fix.safe, "Fix should be safe");
+        assert!(!fix.is_deletion(), "{fix:?}");
+        assert!(!fix.safe, "moving another client's field is unsafe");
     }
 
     #[test]
@@ -1776,24 +1971,24 @@ mod tests {
     }
 
     #[test]
-    fn test_multiline_value_fix_marked_unsafe() {
-        // A field with multi-line YAML value (next line is indented) should
-        // have its auto-fix marked as unsafe since deleting only the key
-        // line would leave orphaned indented content.
+    fn test_single_line_data_field_moves_safely() {
+        // A single-line field no client reads moves under metadata safely,
+        // even after a multi-line universal field.
         let content = make_skill(
-            "name: my-skill\ndescription: A test\nallowed-tools:\n  - Read\n  - Write\nmodel: opus",
+            "name: my-skill\ndescription: A test\nallowed-tools:\n  - Read\n  - Write\nversion: 1.0.0",
             "Body",
         );
         let diags = validate(".cursor/skills/my-skill/SKILL.md", &content);
-        // 'model' is a single-line field -> safe fix
-        let model_diag = diags
+        let version = diags
             .iter()
-            .find(|d| d.rule == "CR-SK-001" && d.message.contains("model"))
-            .expect("Expected CR-SK-001 for model");
-        assert!(
-            model_diag.fixes[0].safe,
-            "Single-line field fix should be safe"
-        );
+            .find(|d| d.rule == "CR-SK-001" && d.message.contains("version"))
+            .expect("Expected CR-SK-001 for version");
+        assert_eq!(version.level, crate::diagnostics::DiagnosticLevel::Info);
+        assert!(version.fixes[0].safe, "moving plain data is safe");
+        let fixed = apply_fixes_at(".cursor/skills/my-skill/SKILL.md", &content, &diags, true);
+        let value = frontmatter_of(&fixed);
+        assert_eq!(value["metadata"]["version"], "1.0.0");
+        assert_eq!(value["allowed-tools"][1], "Write");
     }
 
     #[test]
@@ -1812,6 +2007,194 @@ mod tests {
             !ctx_diag.fixes[0].safe,
             "Multi-line field fix should be unsafe"
         );
+        // The deletion takes the whole value, so the YAML still parses (the
+        // old fix removed only the key line and left the list items behind).
+        let fixed = apply_fixes_at(".cursor/skills/my-skill/SKILL.md", &content, &diags, false);
+        let value = frontmatter_of(&fixed);
+        assert!(value.get("context").is_none(), "{fixed}");
+        assert_eq!(value["name"], "my-skill");
+    }
+
+    // ===== 0.59 vendor survey: field lists and fixes for every client =====
+
+    fn rule_diags<'a>(diags: &'a [Diagnostic], rule: &str) -> Vec<&'a Diagnostic> {
+        diags.iter().filter(|d| d.rule == rule).collect()
+    }
+
+    /// Fields each vendor documents, which the per-client rules used to
+    /// report as "ignored" with a safe fix that deleted them.
+    #[test]
+    fn test_documented_client_fields_are_not_reported() {
+        let cases: &[(&str, &str, &str)] = &[
+            (
+                ".cursor/skills/s/SKILL.md",
+                "CR-SK-001",
+                "paths: [\"src/**\"]\nicon: rocket\ncolor: blue\nglobs: \"*.ts\"\ndisable-model-invocation: true",
+            ),
+            (
+                ".cline/skills/s/SKILL.md",
+                "CL-SK-001",
+                "disabled: false\nenabled: true",
+            ),
+            (
+                ".clinerules/skills/s/SKILL.md",
+                "CL-SK-001",
+                "disabled: false",
+            ),
+            (
+                ".github/skills/s/SKILL.md",
+                "CP-SK-001",
+                "argument-hint: \"[file]\"\nuser-invocable: true\ndisable-model-invocation: false\ncontext: fork",
+            ),
+            (
+                ".opencode/skills/s/SKILL.md",
+                "OC-SK-001",
+                "disable-model-invocation: true",
+            ),
+            (
+                ".devin/skills/s/SKILL.md",
+                "WS-SK-001",
+                "argument-hint: \"[x]\"\nmodel: swe\nsubagent: true\ntriggers: [user]",
+            ),
+        ];
+        for (path, rule, extra) in cases {
+            let content = make_skill(&format!("name: s\ndescription: A test\n{extra}"), "Body");
+            let diags = validate(path, &content);
+            assert!(rule_diags(&diags, rule).is_empty(), "{path}: {diags:?}");
+        }
+    }
+
+    #[test]
+    fn test_amp_skill_in_agents_dir() {
+        let content = make_skill(
+            "name: s\ndescription: A test\nmcpServers:\n  linear:\n    url: https://mcp.linear.app/sse",
+            "Body",
+        );
+        let path = Path::new(".agents/skills/s/SKILL.md");
+        // Unscoped: shared directory, so no client's field list applies.
+        let unscoped = validate(".agents/skills/s/SKILL.md", &content);
+        assert!(
+            unscoped
+                .iter()
+                .all(|d| !d.rule.ends_with("-SK-001") || d.rule == "XP-SK-001"),
+            "{unscoped:?}"
+        );
+        assert_eq!(rule_diags(&unscoped, "XP-SK-001").len(), 1);
+        // Amp selected: mcpServers is an Amp field.
+        let mut amp = LintConfig::default();
+        amp.set_tools(vec!["amp".to_string()]);
+        let diags = PerClientSkillValidator.validate(path, &content, &amp);
+        assert!(rule_diags(&diags, "AMP-SK-001").is_empty(), "{diags:?}");
+        // AMP-SK-001 is reachable now: an Amp skill using a Claude-only field.
+        let claude_only = make_skill("name: s\ndescription: A test\ncontext: fork", "Body");
+        let diags = PerClientSkillValidator.validate(path, &claude_only, &amp);
+        assert_eq!(rule_diags(&diags, "AMP-SK-001").len(), 1, "{diags:?}");
+        // Codex selected: mcpServers is not a Codex field.
+        let mut codex = LintConfig::default();
+        codex.set_tools(vec!["codex".to_string()]);
+        let diags = PerClientSkillValidator.validate(path, &content, &codex);
+        let cx = rule_diags(&diags, "CX-SK-001");
+        assert_eq!(cx.len(), 1);
+        assert!(!cx[0].fixes[0].safe, "deleting a block is never safe");
+    }
+
+    #[test]
+    fn test_codex_compatibility_is_info_without_fix() {
+        let content = make_skill(
+            "name: s\ndescription: A test\ncompatibility: Requires git",
+            "Body",
+        );
+        let diags = validate(".codex/skills/s/SKILL.md", &content);
+        let cx = rule_diags(&diags, "CX-SK-001");
+        assert_eq!(cx.len(), 1);
+        assert_eq!(cx[0].level, crate::diagnostics::DiagnosticLevel::Info);
+        assert!(cx[0].fixes.is_empty());
+        assert!(
+            cx[0].message.contains("quick_validate.py"),
+            "{}",
+            cx[0].message
+        );
+        assert!(
+            rule_diags(&diags, "XP-SK-001").is_empty(),
+            "compatibility is a spec field"
+        );
+    }
+
+    /// Every per-client fix keeps the frontmatter parseable, safe-only runs
+    /// never delete anything, and repeated unsafe runs converge to a skill
+    /// without findings (the old line-delete fixes left list items behind).
+    #[test]
+    fn test_every_per_client_fix_keeps_yaml_valid() {
+        let content = "---\nname: s\ndescription: A test\nversion: 1.0.0\ntags:\n- a\n- b\nmodel: opus\nhooks:\n  PreToolUse: []\nmetadata:\n  author: me\n---\n# Body\n";
+        for (path, rule) in [
+            (".cursor/skills/s/SKILL.md", "CR-SK-001"),
+            (".cline/skills/s/SKILL.md", "CL-SK-001"),
+            (".github/skills/s/SKILL.md", "CP-SK-001"),
+            (".codex/skills/s/SKILL.md", "CX-SK-001"),
+            (".opencode/skills/s/SKILL.md", "OC-SK-001"),
+            (".windsurf/skills/s/SKILL.md", "WS-SK-001"),
+        ] {
+            let diags = validate(path, content);
+            let rule_hits = rule_diags(&diags, rule);
+            assert_eq!(rule_hits.len(), 4, "{path}: {diags:?}");
+            let version = rule_hits
+                .iter()
+                .find(|d| d.message.contains("'version'"))
+                .unwrap();
+            assert!(version.fixes[0].safe, "{path}");
+            for d in rule_hits
+                .iter()
+                .filter(|d| !d.message.contains("'version'"))
+            {
+                assert!(d.fixes.iter().all(|f| !f.safe), "{path}: {d:?}");
+            }
+
+            let safe = apply_fixes_at(path, content, &diags, true);
+            let value = frontmatter_of(&safe);
+            assert_eq!(value["metadata"]["version"], "1.0.0", "{path}");
+            assert_eq!(value["metadata"]["author"], "me", "{path}");
+            assert_eq!(value["tags"][0], "a", "{path}: safe mode keeps the list");
+            assert_eq!(
+                split_frontmatter(&safe).body,
+                split_frontmatter(content).body
+            );
+
+            let mut current = content.to_string();
+            for _ in 0..10 {
+                let diags = validate(path, &current);
+                let next = apply_fixes_at(path, &current, &diags, false);
+                frontmatter_of(&next);
+                if next == current {
+                    break;
+                }
+                current = next;
+            }
+            assert!(
+                rule_diags(&validate(path, &current), rule).is_empty(),
+                "{path}:\n{current}"
+            );
+            let value = frontmatter_of(&current);
+            assert_eq!(value["name"], "s");
+            assert_eq!(
+                value["metadata"]["model"], "opus",
+                "{path}: single-line field moved"
+            );
+        }
+    }
+
+    #[test]
+    fn test_per_client_messages_render() {
+        let content = make_skill("name: s\ndescription: A test\nmodel: x\nversion: 1", "Body");
+        for path in [".cursor/skills/s/SKILL.md", ".codex/skills/s/SKILL.md"] {
+            for d in validate(path, &content) {
+                assert!(
+                    !d.message.contains("%{") && !d.message.starts_with("rules."),
+                    "{}",
+                    d.message
+                );
+                assert!(!d.message.contains("--"), "{}", d.message);
+            }
+        }
     }
 
     #[test]

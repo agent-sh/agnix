@@ -22,6 +22,8 @@ use std::sync::OnceLock;
 
 mod helpers;
 use helpers::*;
+mod portable;
+pub(crate) use portable::skill_name;
 
 /// Deserialize `allowed-tools` from either a space-separated string or a YAML
 /// list (joined with spaces). Returns `None` when the field is absent or null.
@@ -55,6 +57,9 @@ where
 struct SkillFrontmatter {
     name: Option<String>,
     description: Option<String>,
+    /// Claude Code: "Appended to `description` in the skill listing and
+    /// counts toward the 1,536-character cap" (AS-008, AS-020).
+    when_to_use: Option<String>,
     license: Option<String>,
     compatibility: Option<String>,
     // Claude Code accepts a free-form YAML map; the generic Agent Skills
@@ -149,6 +154,76 @@ fn is_valid_skill_name(name: &str) -> bool {
     };
 
     parts.plugin.is_none_or(is_valid_name_segment) && is_valid_name_segment(parts.skill)
+}
+
+/// A character Claude Code refuses in a skill `name`, per the skills page:
+/// zero-width or control characters, private-use characters, characters that
+/// change text direction, blanks other than one plain space between words,
+/// and `<` or `>`. Returns a short description of the first one found.
+fn claude_refused_name_character(name: &str) -> Option<&'static str> {
+    if name.starts_with(char::is_whitespace) || name.ends_with(char::is_whitespace) {
+        return Some("a leading or trailing space");
+    }
+    if name.contains("  ") {
+        return Some("two spaces in a row");
+    }
+    for ch in name.chars() {
+        let code = ch as u32;
+        if ch == '<' || ch == '>' {
+            return Some("'<' or '>'");
+        }
+        if ch.is_control() || matches!(code, 0x200B..=0x200D | 0x2060 | 0xFEFF) {
+            return Some("a zero-width or control character");
+        }
+        if matches!(code, 0x200E | 0x200F | 0x061C | 0x202A..=0x202E | 0x2066..=0x2069) {
+            return Some("a character that changes text direction");
+        }
+        if matches!(code, 0xE000..=0xF8FF | 0xF0000..=0xFFFFD | 0x100000..=0x10FFFD) {
+            return Some("a private-use character");
+        }
+        if ch.is_whitespace() && ch != ' ' {
+            return Some("a blank other than a plain space");
+        }
+    }
+    None
+}
+
+/// Claude Code's skill listing cap for `description` plus `when_to_use`:
+/// `skillListingMaxDescChars` from the nearest `.claude/settings.local.json`
+/// or `.claude/settings.json` above the skill (the key has "Scope: Any
+/// file"), else the documented default of 1,536.
+fn claude_skill_listing_cap(path: &Path, config: &crate::config::LintConfig) -> usize {
+    const DEFAULT_CAP: usize = 1536;
+    let fs = config.fs();
+    let mut dirs: Vec<PathBuf> = path
+        .ancestors()
+        .skip(1)
+        .filter_map(|dir| {
+            if dir.file_name().and_then(|n| n.to_str()) == Some(".claude") {
+                Some(dir.to_path_buf())
+            } else {
+                let candidate = dir.join(".claude");
+                fs.is_dir(&candidate).then_some(candidate)
+            }
+        })
+        .collect();
+    dirs.dedup();
+    for dir in dirs {
+        for file in ["settings.local.json", "settings.json"] {
+            let Ok(text) = fs.read_to_string(&dir.join(file)) else {
+                continue;
+            };
+            if let Some(cap) = serde_json::from_str::<serde_json::Value>(&text)
+                .ok()
+                .and_then(|v| v.get("skillListingMaxDescChars").and_then(|c| c.as_u64()))
+                .and_then(|c| usize::try_from(c).ok())
+                .filter(|c| *c > 0)
+            {
+                return cap;
+            }
+        }
+    }
+    DEFAULT_CAP
 }
 
 fn skill_name_has_edge_hyphen(name: &str) -> bool {
@@ -508,7 +583,10 @@ impl<'a> ValidationContext<'a> {
                         let serde_yaml::Value::Mapping(entries) = metadata else {
                             return Err("metadata must be a YAML map".to_string());
                         };
-                        if self.client != SkillClient::ClaudeCode
+                        // Claude Code takes a free-form map, and the Kiro V3
+                        // engine checks only that `metadata` is an object, so
+                        // only the Agent Skills baseline requires strings.
+                        if !matches!(self.client, SkillClient::ClaudeCode | SkillClient::Kiro)
                             && entries.iter().any(|(key, value)| {
                                 !matches!(key, serde_yaml::Value::String(_))
                                     || !matches!(value, serde_yaml::Value::String(_))
@@ -622,21 +700,68 @@ impl<'a> ValidationContext<'a> {
         let (name_line, name_col) = self.frontmatter_key_line_col("name");
         let name_trimmed = name.trim();
 
-        // AS-004: Invalid name format
+        // AS-004: Invalid name format. The Agent Skills spec allows only
+        // lowercase letters, digits and hyphens. Claude Code is laxer: it
+        // refuses only specific characters (an error), and a non-kebab name
+        // it loads is still rejected by Claude API and claude.ai uploads (a
+        // warning). The `<plugin>:<skill>` form is a Claude Code plugin
+        // convention, so other clients get the plain spec check.
         if self.config.is_rule_enabled("AS-004") {
-            if !is_valid_skill_name(name_trimmed) {
+            let claude = self.client == SkillClient::ClaudeCode;
+            let refused = if claude {
+                claude_refused_name_character(name)
+            } else {
+                None
+            };
+            // The colon form is accepted where the skill may be Claude Code's
+            // (a Claude skill, or an unscoped one).
+            let spec_valid = if claude_skill_rules_apply(self.client, self.config) {
+                is_valid_skill_name(name_trimmed)
+            } else {
+                is_valid_name_segment(name_trimmed)
+            };
+            if let Some(what) = refused {
+                self.diagnostics.push(
+                    Diagnostic::error(
+                        self.path.to_path_buf(),
+                        name_line,
+                        name_col,
+                        "AS-004",
+                        t!(
+                            "rules.as_004.claude_refused",
+                            name = name_trimmed,
+                            what = what
+                        ),
+                    )
+                    .with_suggestion(t!("rules.as_004.suggestion")),
+                );
+            } else if !spec_valid {
                 let fixed_name = fixed_skill_name(name_trimmed);
-                let mut diagnostic = Diagnostic::error(
-                    self.path.to_path_buf(),
-                    name_line,
-                    name_col,
-                    "AS-004",
-                    t!("rules.as_004.message", name = name_trimmed),
-                )
+                let mut diagnostic = if claude {
+                    Diagnostic::warning(
+                        self.path.to_path_buf(),
+                        name_line,
+                        name_col,
+                        "AS-004",
+                        t!("rules.as_004.claude_upload", name = name_trimmed),
+                    )
+                } else {
+                    Diagnostic::error(
+                        self.path.to_path_buf(),
+                        name_line,
+                        name_col,
+                        "AS-004",
+                        t!("rules.as_004.message", name = name_trimmed),
+                    )
+                }
                 .with_suggestion(t!("rules.as_004.suggestion"));
 
-                // Add auto-fix if we can find the byte range and the fixed name is valid
+                // Add auto-fix if we can find the byte range and the fixed name
+                // is valid. A `plugin:skill` name outside Claude Code needs a
+                // manual rename.
                 if name_trimmed.is_ascii()
+                    && (claude_skill_rules_apply(self.client, self.config)
+                        || !name_trimmed.contains(':'))
                     && !fixed_name.is_empty()
                     && is_valid_skill_name(&fixed_name)
                 {
@@ -665,8 +790,15 @@ impl<'a> ValidationContext<'a> {
         }
 
         // AS-005: Name cannot start or end with hyphen
+        // Claude Code loads names with edge or doubled hyphens (and so do
+        // API uploads), so these spec checks are warnings for Claude skills.
+        let name_level = if self.client == SkillClient::ClaudeCode {
+            Diagnostic::warning
+        } else {
+            Diagnostic::error
+        };
         if self.config.is_rule_enabled("AS-005") && skill_name_has_edge_hyphen(name_trimmed) {
-            let mut diagnostic = Diagnostic::error(
+            let mut diagnostic = name_level(
                 self.path.to_path_buf(),
                 name_line,
                 name_col,
@@ -698,7 +830,7 @@ impl<'a> ValidationContext<'a> {
         // AS-006: Name cannot contain consecutive hyphens
         if self.config.is_rule_enabled("AS-006") && skill_name_has_consecutive_hyphen(name_trimmed)
         {
-            let mut diagnostic = Diagnostic::error(
+            let mut diagnostic = name_level(
                 self.path.to_path_buf(),
                 name_line,
                 name_col,
@@ -789,30 +921,56 @@ impl<'a> ValidationContext<'a> {
     }
 
     /// AS-008, AS-009: Validate description format and rules
-    fn validate_description_rules(&mut self, description: &str) {
+    fn validate_description_rules(&mut self, description: &str, when_to_use: Option<&str>) {
         let (description_line, description_col) = self.frontmatter_key_line_col("description");
         let description_trimmed = description.trim();
 
-        // AS-008: Description length. The agentskills.io baseline caps it at
-        // 1024 (a hard limit, matched by Codex/OpenCode/Kiro); Claude Code
-        // truncates at 1536 instead. Resolve the max per owning client.
+        // AS-008: Description length. The Agent Skills spec requires 1-1024
+        // characters. Claude Code does not reject longer text: "the combined
+        // `description` and `when_to_use` text is truncated at 1,536
+        // characters in the skill listing" (`skillListingMaxDescChars`), so a
+        // Claude skill gets a truncation warning, plus a note when the
+        // description alone passes the 1,024-character limit of Claude API and
+        // claude.ai uploads.
         if self.config.is_rule_enabled("AS-008") {
-            let max = if self.client == SkillClient::ClaudeCode {
-                1536
-            } else {
-                1024
-            };
             let len = description_trimmed.chars().count();
-            if !(1..=max).contains(&len) {
+            if self.client == SkillClient::ClaudeCode {
+                let when_to_use_len = when_to_use.map_or(0, |text| text.trim().chars().count());
+                let cap = claude_skill_listing_cap(self.path, self.config);
+                let combined = len + when_to_use_len;
+                if combined > cap {
+                    self.diagnostics.push(
+                        Diagnostic::warning(
+                            self.path.to_path_buf(),
+                            description_line,
+                            description_col,
+                            "AS-008",
+                            t!("rules.as_008.claude_truncated", len = combined, max = cap),
+                        )
+                        .with_suggestion(t!("rules.as_008.claude_truncated_suggestion", max = cap)),
+                    );
+                } else if len > 1024 {
+                    self.diagnostics.push(
+                        Diagnostic::info(
+                            self.path.to_path_buf(),
+                            description_line,
+                            description_col,
+                            "AS-008",
+                            t!("rules.as_008.claude_api", len = len),
+                        )
+                        .with_suggestion(t!("rules.as_008.suggestion", max = 1024)),
+                    );
+                }
+            } else if !(1..=1024).contains(&len) {
                 self.diagnostics.push(
                     Diagnostic::error(
                         self.path.to_path_buf(),
                         description_line,
                         description_col,
                         "AS-008",
-                        t!("rules.as_008.message", len = len, max = max),
+                        t!("rules.as_008.message", len = len, max = 1024),
                     )
-                    .with_suggestion(t!("rules.as_008.suggestion", max = max)),
+                    .with_suggestion(t!("rules.as_008.suggestion", max = 1024)),
                 );
             }
         }
@@ -1654,27 +1812,8 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // AS-013: File reference too deep
-        // AS-013 is a SHOULD-level agentskills.io guideline ("Keep file
-        // references one level deep") - emit a warning, not an error.
-        if self.config.is_rule_enabled("AS-013") {
-            let paths = extract_reference_paths(body_raw);
-            for ref_path in paths {
-                if reference_path_too_deep(&ref_path.path) {
-                    let (line, col) = self.line_col_at(self.parts.body_start + ref_path.start);
-                    self.diagnostics.push(
-                        Diagnostic::warning(
-                            self.path.to_path_buf(),
-                            line,
-                            col,
-                            "AS-013",
-                            t!("rules.as_013.message", path = ref_path.path.as_str()),
-                        )
-                        .with_suggestion(t!("rules.as_013.suggestion")),
-                    );
-                }
-            }
-        }
+        // AS-013: reference chains (see `portable`).
+        self.validate_reference_chains();
     }
 
     /// AS-015: Validate directory size
@@ -1867,6 +2006,13 @@ const RULE_IDS: &[&str] = &[
     "AS-015",
     "AS-016",
     "AS-017",
+    "AS-020",
+    "AS-021",
+    "AS-022",
+    "AS-023",
+    "AS-024",
+    "AS-026",
+    "AS-027",
     "CC-SK-001",
     "CC-SK-002",
     "CC-SK-004",
@@ -1887,6 +2033,8 @@ const RULE_IDS: &[&str] = &[
     "CC-SK-022",
     "CC-SK-023",
     "XP-SK-002",
+    "XP-SK-003",
+    "XP-SK-004",
 ];
 
 pub struct SkillValidator;
@@ -1964,7 +2112,7 @@ impl Validator for SkillValidator {
 
         // Phase 4: Description validation (AS-008, AS-009)
         if let Some(description) = frontmatter.description.as_deref() {
-            ctx.validate_description_rules(description);
+            ctx.validate_description_rules(description, frontmatter.when_to_use.as_deref());
         }
 
         // Phase 5: Compatibility validation (AS-011)
@@ -2066,6 +2214,10 @@ impl Validator for SkillValidator {
 
         // Phase 18: Bundled-content scan (CC-SK-021 / XP-SK-002)
         ctx.validate_hardcoded_user_paths();
+
+        // Phase 19: client-neutral skill checks (AS-020..AS-024, AS-026,
+        // AS-027, XP-SK-003, XP-SK-004)
+        ctx.validate_portable_rules(&frontmatter);
 
         ctx.diagnostics
     }

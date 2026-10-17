@@ -1513,6 +1513,68 @@ fn test_tools_array_kiro_only() {
     assert!(config.is_rule_enabled("XP-001"));
 }
 
+/// Rules that name one vendor in rules.json are gated on that vendor even when
+/// their ID prefix also holds generic rules. Before 0.59 the filter read only
+/// TOOL_RULE_PREFIXES, so AGM-003 (Windsurf), XP-007/XP-009 (Codex), AS-009
+/// (Codex), AS-015 and MCP-025/MCP-026 (Claude Code) ran for every tool.
+#[test]
+fn test_tools_array_gates_vendor_rules_in_mixed_prefixes() {
+    let vendor_rules = [
+        ("AGM-003", "windsurf"),
+        ("XP-007", "codex"),
+        ("XP-009", "codex"),
+        ("AS-009", "codex"),
+        ("AS-015", "claude-code"),
+        ("MCP-025", "claude-code"),
+        ("MCP-026", "claude-code"),
+    ];
+    for (rule, tool) in vendor_rules {
+        // Some of these may move or be retired by other workstreams; only
+        // check the ones rules.json still names a tool for.
+        let Some(named) = agnix_rules::get_rule_tool(rule) else {
+            continue;
+        };
+        assert_eq!(named, tool, "{rule}");
+
+        let mut own = LintConfig::default();
+        dm(&mut own).tools = vec![tool.to_string()];
+        assert!(own.is_rule_enabled(rule), "{rule} with tools = [{tool}]");
+
+        let mut other = LintConfig::default();
+        dm(&mut other).tools = vec!["github-copilot".to_string()];
+        assert!(
+            !other.is_rule_enabled(rule),
+            "{rule} with tools = [copilot]"
+        );
+
+        // An unscoped run still selects every rule.
+        assert!(
+            LintConfig::default().is_rule_enabled(rule),
+            "{rule} unscoped"
+        );
+    }
+
+    // Generic rules in the same prefixes keep running for every tool.
+    let mut cursor = LintConfig::default();
+    dm(&mut cursor).tools = vec!["cursor".to_string()];
+    for rule in ["AGM-001", "XP-001", "AS-001", "MCP-001"] {
+        assert!(cursor.is_rule_enabled(rule), "{rule}");
+    }
+}
+
+#[test]
+fn test_target_gates_vendor_rules_in_mixed_prefixes() {
+    let mut codex = LintConfig::default();
+    dm(&mut codex).target = TargetTool::Codex;
+    assert!(codex.is_rule_enabled("XP-007"));
+    assert!(!codex.is_rule_enabled("AGM-003"));
+
+    let mut cursor = LintConfig::default();
+    dm(&mut cursor).target = TargetTool::Cursor;
+    assert!(!cursor.is_rule_enabled("XP-007"));
+    assert!(!cursor.is_rule_enabled("XP-009"));
+}
+
 #[test]
 fn test_tools_array_case_insensitive() {
     let mut config = LintConfig::default();

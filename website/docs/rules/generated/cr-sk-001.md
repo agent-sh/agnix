@@ -13,7 +13,7 @@ keywords: ["CR-SK-001", "cursor skill uses unsupported field", "cursor skills", 
 - **Category**: `Cursor Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (safe/unsafe)`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,7 @@ keywords: ["CR-SK-001", "cursor skill uses unsupported field", "cursor skills", 
 
 ## Evidence Sources
 
-- https://cursor.com/docs/context/skills
+- https://cursor.com/docs/skills
 
 ## Test Coverage Metadata
 

@@ -47,7 +47,6 @@ pub(in crate::config) const KNOWN_RULE_PREFIXES: &[&str] = &[
     "CP-SK-",
     "CR-SK-",
     "CX-SK-",
-    "RC-SK-",
     "imports::",
 ];
 

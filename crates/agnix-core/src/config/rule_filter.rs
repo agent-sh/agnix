@@ -54,9 +54,20 @@ impl<'a> DefaultRuleFilter<'a> {
         }
     }
 
-    /// Check if a rule applies to the selected tools: a tool-specific rule (see
-    /// TOOL_RULE_PREFIXES) applies only when `selected` accepts its tool.
+    /// Check if a rule applies to the selected tools: a rule that names one
+    /// tool applies only when `selected` accepts that tool.
+    ///
+    /// The tool comes from the rule's own `evidence.applies_to.tool` in
+    /// rules.json. Gating by ID prefix alone let vendor rules in mixed
+    /// families run for every tool: AGM-003 (Windsurf) and XP-007/XP-009
+    /// (Codex) share their prefixes with generic rules, so TOOL_RULE_PREFIXES
+    /// never lists them. The prefix table and the CC-* convention remain the
+    /// fallback for IDs rules.json does not know (or that name no tool).
     fn is_rule_for_tool(rule_id: &str, selected: impl Fn(&str) -> bool) -> bool {
+        if let Some(tool) = agnix_rules::get_rule_tool(rule_id) {
+            return selected(tool);
+        }
+
         for (prefix, tool) in agnix_rules::TOOL_RULE_PREFIXES {
             if rule_id.starts_with(prefix) {
                 return selected(tool);
@@ -69,7 +80,7 @@ impl<'a> DefaultRuleFilter<'a> {
             return selected("claude-code");
         }
 
-        // Generic rules (AS-*, XML-*, REF-*, XP-*, AGM-*, MCP-*, PE-*) apply to all tools
+        // Generic rules (rules.json names no tool) apply to all tools
         true
     }
 
@@ -98,7 +109,7 @@ impl<'a> DefaultRuleFilter<'a> {
         match rule_id {
             s if [
                 "AS-", "CC-SK-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-",
-                "KR-SK-", "AMP-SK-", "RC-SK-",
+                "KR-SK-", "AMP-SK-",
             ]
             .iter()
             .any(|p| s.starts_with(p)) =>

@@ -115,7 +115,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="as-001"></a>
 ### AS-001 [HIGH] Missing Frontmatter
-**Requirement**: SKILL.md MUST have YAML frontmatter between `---` delimiters
+**Requirement**: SKILL.md MUST have YAML frontmatter between `---` delimiters ("The `SKILL.md` file must contain YAML frontmatter followed by Markdown content.")
 **Detection**: `!content.starts_with("---")` or no closing `---`
 **Fix**: [AUTO-FIX] Add template frontmatter
 **Source**: agentskills.io/specification
@@ -125,95 +125,147 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Requirement**: `name` field REQUIRED in Agent Skills frontmatter; Claude Code skills may omit it and derive the name from the skill location
 **Detection**: For non-Claude skills, parse YAML and check for `name` key
 **Fix**: [AUTO-FIX] Add `name: directory-name`
-**Source**: agentskills.io/specification
+**Source**: agentskills.io/specification, code.claude.com/docs/en/skills
 
 <a id="as-003"></a>
 ### AS-003 [HIGH] Missing Required Field: description
-**Requirement**: `description` field REQUIRED in Agent Skills frontmatter; Claude Code skills may omit it and use the first body paragraph
+**Requirement**: `description` field REQUIRED in Agent Skills frontmatter ("Max 1024 characters. Non-empty. Describes what the skill does and when to use it."); Claude Code skills may omit it and use the first body paragraph
 **Detection**: For non-Claude skills, parse YAML and check for `description` key
 **Fix**: [AUTO-FIX] Add `description: "Use when..."`
-**Source**: agentskills.io/specification
+**Source**: agentskills.io/specification, code.claude.com/docs/en/skills
 
 <a id="as-004"></a>
 ### AS-004 [HIGH] Invalid Name Format
-**Requirement**: name MUST be either a bare skill name or `<plugin>:<skill-name>`; each segment MUST be 1-64 chars, lowercase letters/numbers/hyphens only
-**Regex**: `^[a-z0-9]+(-[a-z0-9]+)*(?::[a-z0-9]+(-[a-z0-9]+)*)?$`
-**Detection**:
-```rust
-!is_valid_skill_name(name)
-```
-**Fix**: [AUTO-FIX] Convert each name segment to kebab-case (lowercase, replace `_` with `-`, remove invalid chars, collapse consecutive hyphens, truncate to 64 chars)
-**Source**: agentskills.io/specification
+**Requirement**: name MUST be 1-64 characters of lowercase letters, digits and hyphens ("May only contain unicode lowercase alphanumeric characters (`a-z`, `0-9`) and hyphens (`-`)"). Claude Code is laxer and the rule follows it: Claude Code "refuses a command name or a frontmatter `name` that contains characters such as" zero-width or control characters, private-use characters, characters that change text direction, blanks other than one plain space between words, and `<` or `>` (an error); any other non-kebab name loads in Claude Code but is rejected by Claude API and claude.ai uploads ("lowercase letters, numbers, and hyphens only"), a warning. The `<plugin>:<skill-name>` form is a Claude Code plugin convention, accepted only where the skill may be Claude Code's (Claude skills and unscoped skills).
+**Detection**: Other clients: `!is_valid_name_segment(name)` (regex `^[a-z0-9]+(-[a-z0-9]+)*$`, at most 64 characters). Claude Code: refused characters, then the kebab-case check with the plugin form allowed.
+**Fix**: [AUTO-FIX] Convert each name segment to kebab-case (lowercase, replace `_` with `-`, remove invalid chars, collapse consecutive hyphens, truncate to 64 chars); safe only for case-only changes. A `plugin:skill` name outside Claude Code needs a manual rename.
+**Source**: agentskills.io/specification, code.claude.com/docs/en/skills, platform.claude.com/docs/en/build-with-claude/skills-guide
 
 <a id="as-005"></a>
 ### AS-005 [HIGH] Name Starts/Ends with Hyphen
-**Requirement**: name MUST NOT start or end with `-`
+**Requirement**: name MUST NOT start or end with `-` ("Must not start or end with a hyphen (`-`)"). A warning for Claude Code skills, which load such names.
 **Detection**: `name.starts_with('-') || name.ends_with('-')`
 **Fix**: Remove leading/trailing hyphens
 **Source**: agentskills.io/specification
 
 <a id="as-006"></a>
 ### AS-006 [HIGH] Consecutive Hyphens in Name
-**Requirement**: name MUST NOT contain `--`
+**Requirement**: name MUST NOT contain `--` ("Must not contain consecutive hyphens (`--`)"). A warning for Claude Code skills, which load such names.
 **Detection**: `name.contains("--")`
 **Fix**: Replace `--` with `-`
 **Source**: agentskills.io/specification
 
 <a id="as-008"></a>
 ### AS-008 [HIGH] Description Too Short
-**Requirement**: description MUST be 1-1024 characters (agentskills.io baseline, matched by Codex/OpenCode/Kiro). **Claude Code skills**: 1-1536 (Claude truncates at 1536), resolved per owning client.
-**Detection**: `description.len() < 1 || description.len() > max` where `max` is 1536 for Claude Code skills, 1024 otherwise
-**Fix**: Add minimal description or truncate
-**Source**: agentskills.io/specification (Claude exception: code.claude.com/docs/en/skills)
+**Requirement**: description MUST be 1-1024 characters (agentskills.io: "Must be 1-1024 characters"; Codex's sample validator quick_validate.py applies the same cap, the Codex runtime keeps longer text). **Claude Code skills**: "the combined `description` and `when_to_use` text is truncated at 1,536 characters in the skill listing"; the cap is `skillListingMaxDescChars` (default 1536, "Scope: Any file"). Longer text is cut, not rejected, so this is a warning; a description over 1,024 characters is also noted, since Claude API and claude.ai uploads accept "Maximum 1024 characters, non-empty".
+**Detection**: Other clients: `description.chars().count()` outside 1..=1024 (error). Claude Code: `description` plus `when_to_use` characters above the cap read from the nearest `.claude/settings.local.json` or `.claude/settings.json` (warning), else a description over 1024 characters (info). An empty description is not reported for Claude Code, which treats the field as optional.
+**Fix**: Add a description, or trim it and put the key use case first
+**Source**: agentskills.io/specification, code.claude.com/docs/en/skills, code.claude.com/docs/en/settings-reference, platform.claude.com/docs/en/build-with-claude/skills-guide
 
 <a id="as-009"></a>
 ### AS-009 [HIGH] Description Contains Angle Brackets (Codex)
-**Requirement**: Codex skill descriptions MUST NOT contain `<` or `>`. **Codex-only** - agentskills.io and Claude Code impose no such restriction, so this fires only for Codex skills.
+**Requirement**: Codex skill descriptions MUST NOT contain `<` or `>`. **Codex-only** - agentskills.io and Claude Code impose no such restriction, so this fires only for Codex skills (`.codex/skills/`, or `.agents/skills/` when Codex is the one selected tool that reads it).
 **Detection**: skill client is Codex AND `description` contains any `<` or `>` (matches Codex's `if "<" in description or ">" in description`)
 **Fix**: [AUTO-FIX] Strip all `<` and `>` characters
 **Source**: openai/codex codex-rs/skills/.../quick_validate.py
 
 <a id="as-011"></a>
 ### AS-011 [HIGH] Invalid Compatibility Length
-**Requirement**: compatibility field MUST be 1-500 chars if present
-**Detection**: `compatibility.len() == 0 || compatibility.len() > 500`
+**Requirement**: compatibility field MUST be 1-500 characters if present ("Must be 1-500 characters if provided")
+**Detection**: `compatibility.chars().count() == 0 || > 500`
 **Fix**: Add compatibility text or truncate to 500 chars
 **Source**: agentskills.io/specification
 
 <a id="as-012"></a>
 ### AS-012 [MEDIUM] Content Exceeds 500 Lines
-**Requirement**: SKILL.md SHOULD be under 500 lines. **Generic agentskills.io rule** ("Keep your main `SKILL.md` under 500 lines") - applies to all clients, not Claude-specific.
+**Requirement**: SKILL.md SHOULD be under 500 lines ("Keep your main `SKILL.md` under 500 lines. Move detailed reference material to separate files."); Claude Code states the same figure.
 **Detection**: `body.lines().count() > 500`
 **Fix**: Suggest moving to references/
-**Source**: agentskills.io/specification (progressive disclosure)
+**Source**: agentskills.io/specification, code.claude.com/docs/en/skills
 
 <a id="as-013"></a>
-### AS-013 [MEDIUM] File Reference Too Deep
-**Requirement**: File references SHOULD be one level deep ("Keep file references one level deep from `SKILL.md`") - a SHOULD-level agentskills.io guideline, emitted as a warning. Covers all three documented resource directories: `references/`, `scripts/`, and `assets/`.
-**Detection**: Check references like `references/guide.md` vs `refs/deep/nested/file.md`, `scripts/deep/nested/x.py`, `assets/deep/nested/y.png`. Git ref paths (`refs/heads`, `refs/remotes`, `refs/tags`) are excluded.
-**Fix**: Flatten directory structure
-**Source**: agentskills.io/specification
+### AS-013 [MEDIUM] Reference Chain Too Deep
+**Requirement**: File references SHOULD be one level deep from SKILL.md ("Keep file references one level deep from `SKILL.md`. Avoid deeply nested reference chains."); Anthropic: "All reference files should link directly from SKILL.md". A direct link into a subdirectory (`references/api/errors.md`) is one level of reference.
+**Detection**: For each bundled Markdown file SKILL.md references (`references/`, `scripts/`, `assets/` paths, `./` and `${CLAUDE_SKILL_DIR}/` prefixes accepted), read the file and collect the bundled files it references (skill-root paths and relative Markdown links). Warn at the SKILL.md reference when the file links a bundled file that exists and that SKILL.md does not reference.
+**Fix**: Link the deeper file directly from SKILL.md and say when to read it
+**Source**: agentskills.io/specification, platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices
 
 <a id="as-015"></a>
 ### AS-015 [MEDIUM] Claude API Upload Size Exceeds 30MB
-**Requirement**: Claude API skill uploads MUST be under 30 MB uncompressed. Local Claude Code skill directories have no documented size cap; this rule emits an upload-readiness warning.
+**Requirement**: Claude API skill uploads MUST be under 30 MB uncompressed ("Total upload size must be under 30 MB (uncompressed)"). Local Claude Code skill directories have no documented size cap; this rule emits an upload-readiness warning.
 **Detection**: `directory_size > 30 * 1024 * 1024`; honor top-level `exclude` and `[files].exclude`.
 **Fix**: Remove large assets before uploading to the Claude API.
 **Source**: platform.claude.com/docs/en/build-with-claude/skills-guide
 
 <a id="as-016"></a>
 ### AS-016 [HIGH] Skill Parse Error
-**Requirement**: SKILL.md frontmatter MUST be valid YAML and match the Agent Skills field types. In particular, `metadata` is a map from string keys to string values.
-**Detection**: YAML syntax or typed-frontmatter parse error, including non-string `metadata` values
+**Requirement**: SKILL.md frontmatter MUST be valid YAML and match the Agent Skills field types ("The most common issue is unquoted values containing colons"). `metadata` is "A map from string keys to string values" in the spec. Claude Code takes "Free-form YAML map" metadata, and the Kiro V3 engine checks only that `metadata` is an object, so non-string metadata values are not reported for Claude Code and Kiro skills.
+**Detection**: YAML syntax or typed-frontmatter parse error, including non-string `metadata` keys or values for clients other than Claude Code and Kiro
 **Fix**: Fix YAML syntax errors and use string keys and values in `metadata`
-**Source**: agentskills.io/specification
+**Source**: agentskills.io/specification, agentskills.io/client-implementation/adding-skills-support, code.claude.com/docs/en/skills, kiro.dev/docs/skills
 
 <a id="as-017"></a>
 ### AS-017 [HIGH] Name Must Match Parent Directory
-**Requirement**: Skill name MUST match parent directory name. **agentskills.io baseline only** - Claude Code decouples the two ("`name` sets only the display label shown in skill listings, and the command still comes from the directory or file name"), and a plugin skill's `name` deliberately replaces the last command segment, so the rule is scoped out for Claude Code skills the same way AS-008's length cap is.
+**Requirement**: Skill name MUST match parent directory name ("Must match the parent directory name"). **agentskills.io baseline only** - Claude Code decouples the two ("In a personal or project skill directory, `name` sets the command that the `/` menu shows and that you type"), and a plugin skill's `name` deliberately replaces the last command segment, so the rule is scoped out for Claude Code skills.
 **Detection**: owning client is not Claude Code AND name field does not match directory containing SKILL.md
 **Fix**: Manual fix required - rename directory or update name field
-**Source**: agentskills.io/specification
+**Source**: agentskills.io/specification, code.claude.com/docs/en/skills
+
+<a id="as-020"></a>
+### AS-020 [LOW] Skill Description Lacks a When-to-Use Trigger
+**Requirement**: A skill description SHOULD say what the skill does and when to use it (agentskills.io: "Should describe both what the skill does and when to use it"; "Use imperative phrasing. Frame the description as an instruction to the agent: \"Use this skill when...\""). Anthropic, Codex, Cursor, VS Code, Cline, Devin Desktop and Gemini say the same.
+**Detection**: The trimmed `description` (Claude Code: skipped when `when_to_use` is set) contains no trigger phrase (`use when`, `use this`, `use for`, `when`, `whenever`, `if the user`, `trigger`, `invoke`, `asks for`, `mentions`, ...). Skipped for `disable-model-invocation: true` and for text that is mostly not ASCII letters (the phrase list is English). An agnix heuristic; info level.
+**Fix**: No auto-fix - add a trigger such as "Use when ..."
+**Source**: agentskills.io/specification, agentskills.io/skill-creation/optimizing-descriptions
+
+<a id="as-021"></a>
+### AS-021 [MEDIUM] SKILL.md Body Exceeds 5,000 Tokens
+**Requirement**: The SKILL.md body SHOULD stay under 5,000 tokens ("**Instructions** (< 5000 tokens recommended)"; "recommends keeping `SKILL.md` under 500 lines and 5,000 tokens"). Cline: "Keep SKILL.md under 5k tokens." Claude Code keeps only "the first 5,000 tokens of each" invoked skill after compaction.
+**Detection**: Body characters / 4 (an agnix estimate) above 5,000. Not reported when AS-012 already reports the file (over 500 lines).
+**Fix**: No auto-fix - move detail into references/ files and say when to read each one
+**Source**: agentskills.io/specification, agentskills.io/skill-creation/best-practices
+
+<a id="as-022"></a>
+### AS-022 [MEDIUM] Bundled Script Prompts for Interactive Input
+**Requirement**: Bundled scripts SHOULD NOT prompt for interactive input: "This is a hard requirement of the agent execution environment." "A script that blocks on interactive input will hang indefinitely." "Accept all input via command-line flags, environment variables, or stdin".
+**Detection**: Script files under the skill's `scripts/` directory (by extension or shebang): shell `read -p`, `read` from `/dev/tty`, `select`; Python `input("...")`, `getpass.getpass(`, `click.prompt(`/`click.confirm(`, `questionary`; Node `.question(`, `inquirer`/`prompts`/`enquirer` imports; PowerShell `Read-Host`. A line guarded by a terminal check (`-t 0`, `isatty`, `isTTY`) on the same or previous line is skipped. Reported on the script line.
+**Fix**: No auto-fix - read input from flags, environment variables or stdin
+**Source**: agentskills.io/skill-creation/using-scripts
+
+<a id="as-023"></a>
+### AS-023 [LOW] Bundled File Not Mentioned in the Skill
+**Requirement**: Bundled scripts and references SHOULD be listed so the agent knows they exist: "List available scripts in your `SKILL.md` so the agent knows they exist"; VS Code: "If a file isn't referenced in the instructions, it won't be loaded."; Codex skill-creator: "Link each reference from `SKILL.md` or another relevant resource and explain when it should be read."
+**Detection**: Each file directly under `scripts/` or `references/` (names starting with `_` or `.`, and README.md, skipped) whose file name, or file stem of three or more characters, appears in no other skill file (SKILL.md, bundled Markdown, scripts). Info level.
+**Fix**: No auto-fix - list the file in SKILL.md with when to use it, or remove it
+**Source**: agentskills.io/skill-creation/using-scripts, code.visualstudio.com/docs/agent-customization/agent-skills
+
+<a id="as-024"></a>
+### AS-024 [LOW] Unpinned Package-Runner Command in Skill
+**Requirement**: One-off package-runner commands in a skill SHOULD pin a version: "**Pin versions** (e.g., `npx eslint@9.0.0`) so the command behaves the same over time."
+**Detection**: In SKILL.md code spans and fences: `npx`, `bunx`, `pnpm dlx`, `yarn dlx`, `uvx`, `uv tool run`, `pipx run` running a package without an exact version (or with a floating tag or range), and `go run <module>` without `@version` (the page accepts `@latest` for go run). Packages a `package.json` next to the skill or at the project root depends on, and binaries in `node_modules/.bin`, are local and skipped. Info level.
+**Fix**: No auto-fix - pin a version (for example `npx eslint@9.0.0`)
+**Source**: agentskills.io/skill-creation/using-scripts
+
+<a id="as-025"></a>
+### AS-025 [LOW] Duplicate Skill Name Across Skill Roots
+**Requirement**: One client SHOULD NOT see two different skills with the same name: clients resolve the collision in their own order ("either first-found or last-found is acceptable"; "Log a warning when a collision occurs so the user knows a skill was shadowed."). OpenCode: "Ensure skill names are unique across all locations".
+**Detection**: Project-level: skills (frontmatter `name`, else directory name) in the project skill roots (`.claude/skills`, `.agents/skills`, `.codex/skills`, `.cursor/skills`, `.github/skills`, `.opencode/skills`, `.cline/skills`, `.clinerules/skills`, `.windsurf/skills`, `.devin/skills`, `.kiro/skills`, `.gemini/skills`). Reported on the later copy when two roots that one selected client reads hold the same name with different content. Byte-identical copies (mirrored skills) are not reported. Info level.
+**Fix**: No auto-fix - rename one skill or keep a single copy, unless the override is intended
+**Source**: agentskills.io/client-implementation/adding-skills-support, opencode.ai/docs/skills
+
+<a id="as-026"></a>
+### AS-026 [LOW] Generic Reference Pointer Without Load Condition
+**Requirement**: Tell the agent when to load each reference rather than pointing at a folder: "Read `references/api-errors.md` if the API returns a non-200 status code" "is more useful than a generic \"see references/ for details.\""
+**Detection**: A line in the SKILL.md body (outside code) that ends with "see references/" or "see the docs folder" (optionally "for details") with no condition word (`if`, `when`, `before`, `after`, `unless`, `while`) in the same sentence. An agnix heuristic; info level.
+**Fix**: No auto-fix - name the file and the condition
+**Source**: agentskills.io/skill-creation/best-practices
+
+<a id="as-027"></a>
+### AS-027 [MEDIUM] Unfinished TODO Scaffold Placeholder in Skill
+**Requirement**: A skill SHOULD NOT ship scaffold placeholders. Codex's quick_validate.py reports "Description contains an unfinished TODO placeholder" and "Skill instructions contain an unfinished TODO placeholder"; Gemini's validate_skill.cjs reports "Skill has unresolved TODOs".
+**Detection**: A `description` starting with `[TODO:`, or a body line (outside code) matching `^[ ]{0,3}\[TODO:[^\n]*\][ \t]*$` (the quick_validate.py pattern)
+**Fix**: No auto-fix - replace the placeholder with real text
+**Source**: openai/codex skill-creator quick_validate.py, google-gemini/gemini-cli validate_skill.cjs
 
 ## CLAUDE CODE RULES (SKILLS)
 
@@ -595,45 +647,45 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cr-sk-001"></a>
 ### CR-SK-001 [MEDIUM] Cursor Skill Uses Unsupported Field
-**Requirement**: Skills in `.cursor/skills/` SHOULD NOT use frontmatter fields unsupported by Cursor
-**Detection**: SKILL.md path contains `.cursor/skills/` AND frontmatter has unsupported fields
-**Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.cursor.com/en/context/skills
+**Requirement**: Skills in `.cursor/skills/` SHOULD use only the frontmatter fields Cursor reads: the Agent Skills fields plus `disable-model-invocation`, `paths`, `icon`, `color` ("Frontmatter fields") and the legacy `globs` ("still accepted as a fallback for older skills").
+**Detection**: Top-level keys of the parsed frontmatter (unparseable frontmatter is left to AS-016). A field another skill client acts on is a warning; plain extra data (`version`, `tags`, `author`, ...) is info.
+**Fix**: [AUTO-FIX, safe/unsafe] Move a single-line scalar field under `metadata` (into an existing block mapping, or by creating the block in place), quoting numbers and booleans so `metadata` stays a string map; safe for plain data no skill client reads, unsafe for another client's field. Other values (lists, maps, multi-line scalars) are an unsafe deletion of the whole entry. Every fix is applied to a copy and re-parsed and is offered only when the frontmatter parses to the intended mapping (the old fix deleted only the key line, leaving list items behind).
+**Source**: cursor.com/docs/skills
 
 <a id="cl-sk-001"></a>
 ### CL-SK-001 [MEDIUM] Cline Skill Uses Unsupported Field
-**Requirement**: Skills in `.cline/skills/` SHOULD NOT use frontmatter fields unsupported by Cline
-**Detection**: SKILL.md path contains `.cline/skills/` AND frontmatter has unsupported fields
-**Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.cline.bot/features/custom-instructions
+**Requirement**: Skills in `.cline/skills/` and `.clinerules/skills/` SHOULD use only the frontmatter fields Cline reads: the Agent Skills fields plus boolean `disabled` and `enabled`, which the SDK loader reads (`parseSkillConfigFromMarkdown`).
+**Detection**: Top-level keys of the parsed frontmatter (unparseable frontmatter is left to AS-016). A field another skill client acts on is a warning; plain extra data (`version`, `tags`, `author`, ...) is info.
+**Fix**: [AUTO-FIX, safe/unsafe] Move a single-line scalar field under `metadata` (into an existing block mapping, or by creating the block in place), quoting numbers and booleans so `metadata` stays a string map; safe for plain data no skill client reads, unsafe for another client's field. Other values (lists, maps, multi-line scalars) are an unsafe deletion of the whole entry. Every fix is applied to a copy and re-parsed and is offered only when the frontmatter parses to the intended mapping (the old fix deleted only the key line, leaving list items behind).
+**Source**: docs.cline.bot/customization/skills, cline/cline user-instruction-config-loader.ts
 
 <a id="cp-sk-001"></a>
 ### CP-SK-001 [MEDIUM] Copilot Skill Uses Unsupported Field
-**Requirement**: Skills in `.github/skills/` SHOULD NOT use frontmatter fields unsupported by GitHub Copilot
-**Detection**: SKILL.md path contains `.github/skills/` AND frontmatter has unsupported fields
-**Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.github.com/en/copilot/reference/custom-instructions-support
+**Requirement**: Skills in `.github/skills/` SHOULD use only the frontmatter fields GitHub Copilot reads: the Agent Skills fields plus `argument-hint`, `user-invocable`, `disable-model-invocation` and `context` (VS Code agent skills).
+**Detection**: Top-level keys of the parsed frontmatter (unparseable frontmatter is left to AS-016). A field another skill client acts on is a warning; plain extra data (`version`, `tags`, `author`, ...) is info.
+**Fix**: [AUTO-FIX, safe/unsafe] Move a single-line scalar field under `metadata` (into an existing block mapping, or by creating the block in place), quoting numbers and booleans so `metadata` stays a string map; safe for plain data no skill client reads, unsafe for another client's field. Other values (lists, maps, multi-line scalars) are an unsafe deletion of the whole entry. Every fix is applied to a copy and re-parsed and is offered only when the frontmatter parses to the intended mapping (the old fix deleted only the key line, leaving list items behind).
+**Source**: code.visualstudio.com/docs/agent-customization/agent-skills, docs.github.com add-skills
 
 <a id="cx-sk-001"></a>
 ### CX-SK-001 [MEDIUM] Codex Skill Uses Unsupported Field
-**Requirement**: Skills in `.agents/skills/` SHOULD NOT use frontmatter fields unsupported by Codex CLI
-**Detection**: SKILL.md path contains `.agents/skills/` AND frontmatter has unsupported fields
-**Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
+**Requirement**: Skills in `.codex/skills/` (and in `.agents/skills/` when Codex is the one selected tool that reads it) SHOULD use only the frontmatter fields Codex reads: the Agent Skills fields Codex's validator allows (`allowed_properties = {"name", "description", "license", "allowed-tools", "metadata"}`); the runtime ignores other keys. `compatibility` is reported as info without a fix: it is a spec field other clients read.
+**Detection**: Top-level keys of the parsed frontmatter (unparseable frontmatter is left to AS-016). A field another skill client acts on is a warning; plain extra data (`version`, `tags`, `author`, ...) is info.
+**Fix**: [AUTO-FIX, safe/unsafe] Move a single-line scalar field under `metadata` (into an existing block mapping, or by creating the block in place), quoting numbers and booleans so `metadata` stays a string map; safe for plain data no skill client reads, unsafe for another client's field. Other values (lists, maps, multi-line scalars) are an unsafe deletion of the whole entry. Every fix is applied to a copy and re-parsed and is offered only when the frontmatter parses to the intended mapping (the old fix deleted only the key line, leaving list items behind).
+**Source**: learn.chatgpt.com/docs/build-skills, quick_validate.py
 
 <a id="oc-sk-001"></a>
 ### OC-SK-001 [MEDIUM] OpenCode Skill Uses Unsupported Field
-**Requirement**: Skills in `.opencode/skills/` SHOULD NOT use frontmatter fields unsupported by OpenCode
-**Detection**: SKILL.md path contains `.opencode/skills/` AND frontmatter has unsupported fields
-**Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: opencode.ai/docs/rules
+**Requirement**: Skills in `.opencode/skills/` SHOULD use only the frontmatter fields OpenCode reads: the Agent Skills fields plus `disable-model-invocation`, which V2 documents ("Set to true for the same effect as opencode/autoinvoke: false").
+**Detection**: Top-level keys of the parsed frontmatter (unparseable frontmatter is left to AS-016). A field another skill client acts on is a warning; plain extra data (`version`, `tags`, `author`, ...) is info.
+**Fix**: [AUTO-FIX, safe/unsafe] Move a single-line scalar field under `metadata` (into an existing block mapping, or by creating the block in place), quoting numbers and booleans so `metadata` stays a string map; safe for plain data no skill client reads, unsafe for another client's field. Other values (lists, maps, multi-line scalars) are an unsafe deletion of the whole entry. Every fix is applied to a copy and re-parsed and is offered only when the frontmatter parses to the intended mapping (the old fix deleted only the key line, leaving list items behind).
+**Source**: opencode.ai/docs/skills, opencode.ai/v2/docs/skills
 
 <a id="ws-sk-001"></a>
 ### WS-SK-001 [MEDIUM] Windsurf Skill Uses Unsupported Field
-**Requirement**: Skills in `.windsurf/skills/` SHOULD NOT use frontmatter fields unsupported by Windsurf
-**Detection**: SKILL.md path contains `.windsurf/skills/` AND frontmatter has unsupported fields
-**Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.windsurf.com/windsurf/memories
+**Requirement**: Skills in `.devin/skills/` and `.windsurf/skills/` SHOULD use only the frontmatter fields Windsurf (Devin Desktop) reads: the Agent Skills fields; in `.devin/skills/`, also the Devin CLI fields `argument-hint`, `model`, `subagent`, `agent`, `permissions` and `triggers` (Devin CLI "All Frontmatter Fields").
+**Detection**: Top-level keys of the parsed frontmatter (unparseable frontmatter is left to AS-016). A field another skill client acts on is a warning; plain extra data (`version`, `tags`, `author`, ...) is info.
+**Fix**: [AUTO-FIX, safe/unsafe] Move a single-line scalar field under `metadata` (into an existing block mapping, or by creating the block in place), quoting numbers and booleans so `metadata` stays a string map; safe for plain data no skill client reads, unsafe for another client's field. Other values (lists, maps, multi-line scalars) are an unsafe deletion of the whole entry. Every fix is applied to a copy and re-parsed and is offered only when the frontmatter parses to the intended mapping (the old fix deleted only the key line, leaving list items behind).
+**Source**: docs.devin.ai/desktop/cascade/skills, docs.devin.ai/cli/extensibility/skills/creating-skills
 
 <a id="kr-sk-001"></a>
 ### KR-SK-001 [MEDIUM] Kiro Skill Uses Unsupported Field
@@ -870,10 +922,10 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 <a id="amp-sk-001"></a>
 ### AMP-SK-001 [MEDIUM] Amp Skill Uses Unsupported Field
-**Requirement**: Skills in `.agents/skills/` SHOULD NOT use frontmatter fields unsupported by Amp
-**Detection**: SKILL.md path contains `.agents/skills/` AND frontmatter has unsupported fields
-**Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.amp.dev/setup/customization
+**Requirement**: Skills in `.agents/skills/` when Amp is the one selected tool that reads it SHOULD use only the frontmatter fields Amp reads: the Agent Skills fields plus `mcpServers` ("MCP Servers in Skills") and `builtin-tools` for plugin-bundled skills. `.agents/skills/` is shared by Codex, Amp, Cline, Devin Desktop, Copilot, OpenCode, Cursor and Gemini, so with no single reader selected no client's field list applies.
+**Detection**: Top-level keys of the parsed frontmatter (unparseable frontmatter is left to AS-016). A field another skill client acts on is a warning; plain extra data (`version`, `tags`, `author`, ...) is info.
+**Fix**: [AUTO-FIX, safe/unsafe] Move a single-line scalar field under `metadata` (into an existing block mapping, or by creating the block in place), quoting numbers and booleans so `metadata` stays a string map; safe for plain data no skill client reads, unsafe for another client's field. Other values (lists, maps, multi-line scalars) are an unsafe deletion of the whole entry. Every fix is applied to a copy and re-parsed and is offered only when the frontmatter parses to the intended mapping (the old fix deleted only the key line, leaving list items behind).
+**Source**: ampcode.com/docs/customize/skills
 
 <a id="amp-001"></a>
 ### AMP-001 [HIGH] Invalid Amp Check Frontmatter
@@ -902,13 +954,6 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 **Detection**: JSON parse error OR unknown top-level key in `.amp/settings.json` / `.amp/settings.local.json`
 **Fix**: [AUTO-FIX] Fix JSON syntax and remove unknown keys
 **Source**: ampcode.com/docs/cli/settings, ampcode.com/docs/cli/runners
-
-<a id="rc-sk-001"></a>
-### RC-SK-001 [MEDIUM] Roo Code Skill Uses Unsupported Field
-**Requirement**: Skills in `.roo/skills/` SHOULD NOT use frontmatter fields unsupported by Roo Code
-**Detection**: SKILL.md path contains `.roo/skills/` AND frontmatter has unsupported fields
-**Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.roocode.com/features/custom-instructions
 
 ---
 
@@ -1371,39 +1416,53 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 ## AGENTS.MD RULES (CROSS-PLATFORM)
 
 <a id="agm-001"></a>
-### AGM-001 [HIGH] Valid Markdown Structure
-**Requirement**: AGENTS.md MUST be valid markdown
-**Detection**: Parse as markdown, check for syntax errors
-**Fix**: [AUTO-FIX] Fix markdown syntax issues
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md, docs.cursor.com/en/context, docs.cline.bot/features/custom-instructions
+### AGM-001 [MEDIUM] Valid Markdown Structure
+**Requirement**: AGENTS.md is "just standard Markdown". An unclosed code fence is defined Markdown, not a syntax error (CommonMark: "the code block contains all of the lines after the opening code fence until the end of the containing block (or document)"), but it is almost always a mistake: every later line is read as code. A warning.
+**Detection**: Fences follow CommonMark: three or more backticks or tildes with at most three spaces of indentation, closed by a fence of the same character, at least as long, with no info string. Also reports `[text](` links with no closing parenthesis.
+**Fix**: [AUTO-FIX, unsafe] Append a closing fence matching the opening one at the end of the file (this keeps the current reading; the right place is usually earlier)
+**Source**: agents.md, spec.commonmark.org/0.31.2 (Fenced code blocks)
 
 <a id="agm-002"></a>
-### AGM-002 [MEDIUM] Missing Section Headers
-**Requirement**: AGENTS.md SHOULD have clear section headers (##)
-**Detection**: `!content.contains("## ")` or `!content.contains("# ")`
-**Fix**: Add section headers for organization
-**Source**: docs.cursor.com/en/context, docs.cline.bot/features/custom-instructions
+### AGM-002 [LOW] Missing Section Headers
+**Requirement**: A long AGENTS.md SHOULD group instructions under headings. agents.md makes headings optional ("Use any headings you like"; "Are there required fields? No.") and suggests sections ("Add sections that help an agent work effectively with your project."); Claude Code: "Organized sections are easier for Claude to follow than dense paragraphs." The 50-line threshold is an agnix heuristic.
+**Detection**: More than 50 non-blank lines and no Markdown heading. Info level.
+**Fix**: Add headings for the main sections
+**Source**: agents.md, code.claude.com/docs/en/memory
 
 <a id="agm-003"></a>
 ### AGM-003 [MEDIUM] Character Limit (Windsurf)
-**Requirement**: Rules files SHOULD be under 12000 characters for Windsurf compatibility
-**Detection**: `content.len() > 12000`
-**Fix**: Split into multiple files or reduce content
-**Source**: docs.windsurf.com/windsurf/cascade/memories
+**Requirement**: When Windsurf (Devin Desktop) reads AGENTS.md, it SHOULD stay under 12,000 characters. Windsurf states the limit for workspace rule files ("Limited to 12,000 characters per file.") and processes AGENTS.md by "the same Rules engine"; applying the limit to AGENTS.md is an inference, since Windsurf states no AGENTS.md limit. Runs only when Windsurf is in scope: selected with `tools`, or unscoped with `.devin/`, `.windsurf/` or `.windsurfrules` next to the file or above it.
+**Detection**: `AGENTS.md` only (Windsurf does not read the Codex `.local`/`.override` variants); `content.chars().count() > 12000`, counting characters as Windsurf states, not UTF-8 bytes
+**Fix**: Move directory-specific guidance into nested AGENTS.md files or trim the file
+**Source**: docs.devin.ai/desktop/cascade/memories, docs.devin.ai/desktop/cascade/agents-md
 
 <a id="agm-004"></a>
-### AGM-004 [MEDIUM] Missing Project Context
-**Requirement**: AGENTS.md SHOULD describe project purpose/stack
-**Detection**: Check for project description section
-**Fix**: Add "# Project" or "## Overview" section
-**Source**: Best practices across platforms
+### AGM-004 [LOW] Missing Project Context
+**Requirement**: The repository-root AGENTS.md SHOULD describe the project: "Project overview" is among the agents.md "Popular choices"; Copilot: "Provide an overview of the project you're working on, including its purpose, goals, and any relevant background information." Nested AGENTS.md files describe a package and are not checked.
+**Detection**: Root AGENTS.md (the lint root or a directory holding `.git`) without a project, overview or about heading and without phrases such as "this project". Info level.
+**Fix**: Add a short overview of the project and its tech stack
+**Source**: agents.md, docs.github.com Copilot response customization
 
-<a id="agm-005"></a>
-### AGM-005 [MEDIUM] Platform-Specific Features Without Guard
-**Requirement**: Platform-specific instructions SHOULD be labeled
-**Detection**: Claude-specific (hooks, context: fork) or Cursor-specific features without platform label
-**Fix**: Add platform guard comment (e.g., "## Claude Code Specific")
-**Source**: Multi-platform compatibility
+<a id="agm-007"></a>
+### AGM-007 [LOW] Root AGENTS.md Lists No Build or Test Command
+**Requirement**: The repository-root AGENTS.md SHOULD list the commands agents run: "Build and test commands" is among the agents.md "Popular choices", and agents run the checks a file lists ("Yes—if you list them."). Amp: "Amp looks in `AGENTS.md` files for guidance on codebase structure, build/test commands, and conventions."
+**Detection**: Root AGENTS.md (the lint root or a directory holding `.git`) with no heading about build, test, setup, commands or development, no common runner command (`npm test`, `cargo test`, `pytest`, `make`, `go test`, ...) and no link or @-mention of CONTRIBUTING.md, DEVELOPMENT.md, a Makefile or package.json. Empty files are left to other rules. Info level.
+**Fix**: No auto-fix - add a Build and test section
+**Source**: agents.md, ampcode.com/docs/customize/agents-md
+
+<a id="agm-008"></a>
+### AGM-008 [LOW] Legacy AGENT.md Without AGENTS.md
+**Requirement**: A legacy AGENT.md SHOULD be renamed to AGENTS.md: "Rename existing files to AGENTS.md and create symbolic links for backward compatibility" (`mv AGENT.md AGENTS.md && ln -s AGENTS.md AGENT.md`). Amp reads AGENT.md only when a directory has no AGENTS.md; the other AGENTS.md readers do not read it. A migration note.
+**Detection**: Project-level: an `AGENT.md` in a directory with no `AGENTS.md`. Info level.
+**Fix**: No auto-fix - rename the file and keep a symbolic link for older tools
+**Source**: agents.md, ampcode.com/docs/customize/agents-md
+
+<a id="agm-009"></a>
+### AGM-009 [LOW] Nested AGENTS.md Without a Root AGENTS.md
+**Requirement**: A repository with nested AGENTS.md files SHOULD also have one at the root: "Create an AGENTS.md file at the root of the repository." and "Place another AGENTS.md inside each package".
+**Detection**: Project-level, when the lint root holds `.git`: at least one nested AGENTS.md and no AGENTS.md or AGENTS.override.md at the root. Reported on the shallowest nested file. Info level.
+**Fix**: No auto-fix - add a root AGENTS.md with the project-wide guidance
+**Source**: agents.md
 
 ## CLAUDE CODE RULES (PLUGINS)
 
@@ -1533,12 +1592,12 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="mcp-001"></a>
 
-
+<a id="mcp-001"></a>
 ### MCP-001 [HIGH] Invalid JSON-RPC Version
-**Requirement**: MUST use JSON-RPC 2.0
+**Requirement**: MUST use JSON-RPC 2.0 ("All messages between MCP clients and servers **MUST** follow the JSON-RPC 2.0 specification")
 **Detection**: `message.jsonrpc != "2.0"`
 **Fix**: Set `"jsonrpc": "2.0"`
-**Source**: modelcontextprotocol.io/specification
+**Source**: modelcontextprotocol.io/specification/2026-07-28/basic
 
 <a id="mcp-002"></a>
 ### MCP-002 [HIGH] Missing Required Tool Field
@@ -1549,10 +1608,10 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="mcp-003"></a>
 ### MCP-003 [HIGH] Invalid JSON Schema
-**Requirement**: `inputSchema` MUST be valid JSON Schema (JSON Schema 2020-12 compatible)
+**Requirement**: `inputSchema` MUST be valid JSON Schema ("**MUST** be a valid JSON Schema object (not `null`)"; "Schemas **MUST** be valid according to their declared or default dialect")
 **Detection**: Validate schema structure and field types
 **Fix**: Correct JSON Schema structure errors
-**Source**: modelcontextprotocol.io/specification
+**Source**: modelcontextprotocol.io/specification/2026-07-28/basic, modelcontextprotocol.io/specification/2026-07-28/server/tools
 
 <a id="mcp-004"></a>
 ### MCP-004 [LOW] Missing Tool Description
@@ -1562,18 +1621,18 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Source**: modelcontextprotocol.io/specification/2026-07-28/server/tools
 
 <a id="mcp-006"></a>
-### MCP-006 [HIGH] Untrusted Annotations
-**Requirement**: Tool annotations MUST be treated as untrusted and annotation keys SHOULD use known hint names (`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, `title`)
-**Detection**: Warn when annotations are present and when unknown annotation keys are used
-**Fix**: Restrict annotation keys to known spec hint names
-**Source**: modelcontextprotocol.io/docs/concepts/tools
+### MCP-006 [LOW] Unknown Tool Annotation Key
+**Requirement**: Tool annotation keys SHOULD be the `ToolAnnotations` hints: `title`, `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`. Setting annotations is spec-conformant; "clients **MUST** consider tool annotations to be untrusted unless they come from trusted servers" is a duty of the client, so a tool that has annotations is not reported.
+**Detection**: Unknown keys under `tools[].annotations`, listed in sorted order so the message is the same on every run. Info level.
+**Fix**: Rename or remove the unknown keys
+**Source**: modelcontextprotocol.io/specification/2026-07-28/server/tools, schema/2026-07-28/schema.ts
 
 <a id="mcp-007"></a>
 ### MCP-007 [HIGH] MCP Parse Error
-**Requirement**: MCP configuration MUST be valid JSON
-**Detection**: JSON parse error on MCP configuration file
+**Requirement**: MCP files MUST be valid JSON: messages are JSON-RPC, and clients load their MCP config as JSON. VS Code reads `.vscode/mcp.json` as JSON with comments, so comments and trailing commas there are accepted.
+**Detection**: JSON parse error on an MCP file (after blanking comments and trailing commas in `.vscode/mcp.json`)
 **Fix**: Fix JSON syntax errors in MCP configuration
-**Source**: modelcontextprotocol.io/specification
+**Source**: modelcontextprotocol.io/specification/2026-07-28/basic, code.claude.com/docs/en/mcp, cursor.com/docs/mcp
 
 <a id="mcp-008"></a>
 ### MCP-008 [MEDIUM] Protocol Version Mismatch
@@ -1586,116 +1645,115 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="mcp-009"></a>
 ### MCP-009 [HIGH] Missing command for stdio server
-**Requirement**: Stdio MCP servers MUST have a `command` field
-**Detection**: Server entry has `type: "stdio"`, or omits `type` and has no usable `command`. In `.cursor/mcp.json` only, a URL-only entry is inferred as HTTP, matching Cursor's documented remote-server form.
+**Requirement**: Stdio MCP servers MUST have a `command`. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Cursor: "**command** | Yes | Command to start the server executable."; Claude Code: "Claude Code reads an entry with no `type` as a stdio server, so a `url` entry without a `type` fails."
+**Detection**: Server entry has `type: "stdio"` (or Copilot's `local`), or omits `type` and has no usable `command`. A URL-only entry is read as remote in `.cursor/mcp.json` (Cursor's documented remote form), a Kiro power `mcp.json`, and an Amp skill's sibling `mcp.json`.
 **Fix**: Add a `command` field specifying the executable to run
-**Source**: modelcontextprotocol.io/specification, cursor.com/docs/mcp
+**Source**: code.claude.com/docs/en/mcp, cursor.com/docs/mcp, code.visualstudio.com MCP configuration, geminicli.com/docs/tools/mcp-server
 
 <a id="mcp-010"></a>
-### MCP-010 [HIGH] Missing url for http/sse server
-**Requirement**: HTTP and SSE MCP servers MUST have a `url` field
-**Detection**: Server entry has `type: "http"` or `type: "sse"` but no `url` field; URL-only entries in `.cursor/mcp.json` need no redundant `type`
+### MCP-010 [HIGH] Missing url for remote server
+**Requirement**: Remote MCP servers (`http`, `streamable-http`, `sse`, `ws`) MUST have a `url`. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. VS Code: "| `url` | Yes | URL of the server |".
+**Detection**: Server entry with a remote `type` but no non-empty `url`; URL-only entries in `.cursor/mcp.json` need no redundant `type`
 **Fix**: Add a `url` field specifying the server endpoint
-**Source**: modelcontextprotocol.io/specification, cursor.com/docs/mcp
+**Source**: code.claude.com/docs/en/mcp, cursor.com/docs/mcp, code.visualstudio.com MCP configuration
 
 <a id="mcp-011"></a>
 ### MCP-011 [HIGH] Invalid MCP server type
-**Requirement**: MCP server `type` MUST be `stdio`, `http`, or `sse`
-**Detection**: Server entry has a `type` field with an unrecognized value
-**Fix**: Auto-fix (unsafe) -- replace with closest valid server type
-**Source**: modelcontextprotocol.io/specification
+**Requirement**: An MCP server `type` MUST be one the client that reads the file accepts. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Claude Code: stdio, http, `streamable-http` ("accepts `streamable-http` as an alias for `http`"), sse, ws; GitHub Copilot: "accepts `local`, `stdio`, `http`, or `sse`"; Codex plugins: stdio, http, streamable-http; Cursor: stdio, http, sse, streamable-http; Cline: `streamableHttp`, sse. Claude Code "skips a `\"type\": \"sdk\"` entry" (only an Agent SDK host registers it), a warning.
+**Detection**: The valid set is the union of the types the file's readers accept: `.mcp.json` (Claude Code, Copilot, Codex plugins), `.cursor/mcp.json` (Cursor), `.vscode/mcp.json`, `.github/mcp.json` and `mcp-config.json` (Copilot), narrowed to the selected tools when `tools` names some of them. A file no specific client owns accepts every client's values.
+**Fix**: [AUTO-FIX, unsafe] Replace with the closest valid type
+**Source**: code.claude.com/docs/en/mcp, docs.github.com Copilot MCP servers, code.visualstudio.com MCP configuration, cursor.com/docs/mcp, docs.cline.bot/mcp/mcp-overview
 
 <a id="mcp-012"></a>
-### MCP-012 [HIGH] Deprecated SSE transport
-**Requirement**: SSE transport SHOULD be replaced with Streamable HTTP
+### MCP-012 [MEDIUM] Deprecated SSE transport
+**Requirement**: HTTP+SSE SHOULD be replaced with Streamable HTTP: the deprecated-features registry lists "HTTP+SSE transport" with replacement "Streamable HTTP" ("A Deprecated feature remains part of the specification but is scheduled for removal: new implementations **SHOULD NOT** adopt it"). A warning: Claude Code, Cline and Gemini still load SSE servers.
 **Detection**: Server entry has `type: "sse"`
-**Fix**: Change `type` from `"sse"` to `"http"` (unsafe: server may not support Streamable HTTP)
-**Note**: Raised to high severity because SSE is deprecated and behind current transport guidance
-**Source**: modelcontextprotocol.io/specification
+**Fix**: [AUTO-FIX, unsafe] Change `type` from `"sse"` to `"http"` (the server may not support Streamable HTTP)
+**Source**: modelcontextprotocol.io/specification/2026-07-28/deprecated
 
 <a id="mcp-013"></a>
-### MCP-013 [HIGH] Invalid Tool Name Format
-**Requirement**: Tool name MUST be 1-128 chars and match `[a-zA-Z0-9_.-]+`
-**Detection**: Check `tools[].name` length and allowed characters
-**Fix**: [AUTO-FIX] Rename tool to a compliant identifier
-**Source**: modelcontextprotocol.io/specification/2025-11-25/server/tools
+### MCP-013 [MEDIUM] Invalid Tool Name Format
+**Requirement**: Tool names SHOULD be 1-128 characters of `[A-Za-z0-9_.-]` ("Tool names **SHOULD** be between 1 and 128 characters in length (inclusive)."; "Tool names **SHOULD NOT** contain spaces, commas, or other special characters."). A warning.
+**Detection**: Check `tools[].name` length (characters) and allowed characters
+**Fix**: [AUTO-FIX, unsafe] Rename the tool to a compliant identifier (clients call tools by name)
+**Source**: modelcontextprotocol.io/specification/2026-07-28/server/tools
 
 <a id="mcp-014"></a>
 ### MCP-014 [HIGH] Invalid outputSchema Definition
-**Requirement**: `outputSchema` MUST be valid JSON Schema when provided
+**Requirement**: `outputSchema` MUST be valid JSON Schema when provided ("`outputSchema`: Optional JSON Schema defining expected output structure")
 **Detection**: Validate `tools[].outputSchema` object structure/types
 **Fix**: Correct `outputSchema` to valid JSON Schema
-**Source**: modelcontextprotocol.io/specification/2025-11-25/server/tools
+**Source**: modelcontextprotocol.io/specification/2026-07-28/server/tools
 
 <a id="mcp-015"></a>
 ### MCP-015 [HIGH] Missing Resource Required Fields
-**Requirement**: Resource definitions MUST include `uri` and `name`
+**Requirement**: Resource definitions MUST include `uri` and `name` ("`uri`: Unique identifier for the resource", "`name`: The name of the resource.")
 **Detection**: Check each `resources[]` entry for missing/empty `uri` or `name`
 **Fix**: Add required fields
-**Source**: modelcontextprotocol.io/specification/2025-11-25/server/resources
+**Source**: modelcontextprotocol.io/specification/2026-07-28/server/resources
 
 <a id="mcp-016"></a>
 ### MCP-016 [HIGH] Missing Prompt Required Name
-**Requirement**: Prompt definitions MUST include `name`
+**Requirement**: Prompt definitions MUST include `name` ("`name`: Unique identifier for the prompt")
 **Detection**: Check each `prompts[]` entry for missing/empty `name`
 **Fix**: Add non-empty `name`
-**Source**: modelcontextprotocol.io/specification/2025-11-25/server/prompts
+**Source**: modelcontextprotocol.io/specification/2026-07-28/server/prompts
 
 <a id="mcp-017"></a>
-### MCP-017 [HIGH] Non-HTTPS Remote HTTP Server URL
-**Requirement**: Non-localhost HTTP MCP endpoints MUST use HTTPS
-**Detection**: For `type: "http"`, flag `http://` URLs when host is not localhost/loopback
-**Fix**: [AUTO-FIX] Change remote MCP URL to `https://`
-**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/transports
+### MCP-017 [MEDIUM] Non-HTTPS Remote HTTP Server URL
+**Requirement**: Remote MCP endpoints SHOULD use HTTPS outside loopback: "MCP clients **SHOULD** require HTTPS for all OAuth-related URLs in production environments" and "Reject `http://` URLs except for loopback addresses"; "All authorization server endpoints **MUST** be served over HTTPS." A warning.
+**Detection**: For HTTP and Streamable HTTP servers, flag `http://` URLs whose host is not localhost or loopback
+**Fix**: [AUTO-FIX, unsafe] Change the URL to `https://` (the server may not serve TLS)
+**Source**: modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices, modelcontextprotocol.io/specification/2026-07-28/basic/authorization/security-considerations
 
 <a id="mcp-018"></a>
 ### MCP-018 [MEDIUM] Potential Plaintext Secret in MCP Env
-**Requirement**: Secret-like env vars SHOULD avoid plaintext values
-**Detection**: In stdio server `env`, flag keys matching `API_KEY`, `SECRET`, `TOKEN`, `PASSWORD` with non-empty literal values
-**Fix**: Use runtime secret injection or env indirection
-**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices
+**Requirement**: Secret-like env vars SHOULD NOT hold literal secrets: "**Keep long-lived secrets out of plaintext config.**" and "**Pass secrets per server, not globally.**"; Cursor: "Use environment variables for secrets, never hardcode them".
+**Detection**: In a local server's `env` (`environment` in OpenCode), keys containing `API_KEY`, `APIKEY`, `SECRET`, `TOKEN`, `PASSWORD`, `PASSWD`, `PRIVATE_KEY`, `ACCESS_KEY` or `CREDENTIAL` with a literal value. References (`${VAR}`, `${env:VAR}`, `{env:VAR}`, `$VAR`, `%VAR%`, `${input:...}`, `${{ secrets.X }}`), variable names, values under 8 characters and placeholders are skipped. Runs on generic MCP files and on the MCP servers in OpenCode, Gemini (settings and extensions), Amp settings, Codex `config.toml` and Copilot custom agents.
+**Fix**: Reference an environment variable or secret store
+**Source**: modelcontextprotocol.io/docs/2026-07-28/tutorials/security/local-server-security, cursor.com/docs/mcp
 
 <a id="mcp-019"></a>
 ### MCP-019 [MEDIUM] Potentially Dangerous Stdio Command
-**Requirement**: Stdio server commands SHOULD avoid risky shell patterns
-**Detection**: Flag patterns like `curl|sh`, `wget|sh`, `sudo rm`, and simple exfiltration command signatures
+**Requirement**: Stdio server commands SHOULD avoid risky shell patterns ("Highlight potentially dangerous command patterns (e.g., commands containing `sudo`, `rm -rf`, network operations, file system access")
+**Detection**: Flag patterns like `curl|sh`, `wget|sh`, `sudo rm`, and simple exfiltration command signatures, in the same files as MCP-018
 **Fix**: Replace with audited, explicit command execution flow
-**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices
+**Source**: modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices
 
 <a id="mcp-020"></a>
 ### MCP-020 [MEDIUM] Unknown Capability Declaration Key
 **Requirement**: Capability keys SHOULD use recognized core keys; this is advisory typo detection because implementations can declare additional capabilities.
-**Detection**: Validate keys under `capabilities` against the known list, including legacy `tasks` and modern `extensions`. Extension identifiers and settings inside `extensions` are not checked by this rule.
+**Detection**: Validate keys under `capabilities` against the `ClientCapabilities`/`ServerCapabilities` keys, including legacy `tasks` and modern `extensions`. Extension identifiers and settings inside `extensions` are not checked by this rule.
 **Fix**: Remove or rename unknown capability keys
-**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle, modelcontextprotocol.io/specification/2026-07-28/basic/versioning
+**Source**: schema/2026-07-28/schema.ts, modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle, modelcontextprotocol.io/specification/2026-07-28/basic/versioning
 
 <a id="mcp-021"></a>
 ### MCP-021 [MEDIUM] Wildcard HTTP Interface Binding
-**Requirement**: HTTP servers SHOULD avoid wildcard/all-interface binds by default
+**Requirement**: Local HTTP servers SHOULD avoid wildcard binds ("When running locally, servers **SHOULD** bind only to localhost (127.0.0.1) rather than all network interfaces (0.0.0.0).")
 **Detection**: Flag `http://0.0.0.0...` and IPv6 wildcard binds
-**Fix**: [AUTO-FIX] Prefer localhost binding unless remote exposure is required
-**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices
+**Fix**: [AUTO-FIX, unsafe] Prefer localhost binding unless remote exposure is required
+**Source**: modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
 
 <a id="mcp-022"></a>
 ### MCP-022 [HIGH] Invalid args Array Type
-**Requirement**: `args` MUST be an array of strings when present
+**Requirement**: `args` MUST be an array of strings when present. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Gemini: "**`args`** (string[]): Command-line arguments"; Cursor: "**args** | No | Array of arguments passed to the command".
 **Detection**: Validate `mcpServers.*.args` type and element types
 **Fix**: Convert to array of string arguments
-**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/transports
+**Source**: geminicli.com/docs/tools/mcp-server, cursor.com/docs/mcp, code.visualstudio.com MCP configuration
 
 <a id="mcp-023"></a>
 ### MCP-023 [HIGH] Duplicate MCP Server Names
-**Requirement**: `mcpServers` keys MUST be unique
+**Requirement**: Server names in a server map SHOULD be unique: JSON object names "SHOULD be unique" (RFC 8259), and parsers keep only one of two duplicate keys, so the other server is silently dropped. VS Code: "an object that maps server names to their configurations. Each key is the server name".
 **Detection**: Scan raw JSON for duplicate keys inside `mcpServers`
 **Fix**: Rename duplicate server entries
-**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/transports
+**Source**: RFC 8259 section 4, code.visualstudio.com MCP configuration
 
 <a id="mcp-024"></a>
 ### MCP-024 [HIGH] Empty MCP Server Configuration
-**Requirement**: Each MCP server entry MUST define meaningful config fields
+**Requirement**: Each MCP server entry MUST define a transport. The MCP specification defines no client configuration file; the `mcpServers` map and its fields are each client's format. Gemini requires "one of the following" (`command`, `url`, `httpUrl`); Claude Code reads an entry with no `type` as stdio, so an empty entry has nothing to start.
 **Detection**: Flag empty objects in `mcpServers`
 **Fix**: Add at least one meaningful field (`type`, `command`, `url`, `args`, `env`)
-**Source**: modelcontextprotocol.io/specification/2025-11-25/basic/transports
+**Source**: code.claude.com/docs/en/mcp, geminicli.com/docs/tools/mcp-server
 
 <a id="mcp-025"></a>
 ### MCP-025 [MEDIUM] Non-boolean alwaysLoad in MCP Server Config
@@ -1710,6 +1768,55 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 **Detection**: Walk top-level `mcpServers` keys (case-sensitive); flag any that match the reserved list (`workspace` today).
 **Fix**: Manual - rename the server to something unique.
 **Source**: github.com/anthropics/claude-code/releases/tag/v2.1.128
+
+<a id="mcp-027"></a>
+### MCP-027 [MEDIUM] Unpinned Stdio MCP Server Package
+**Requirement**: A local MCP server SHOULD run a pinned version: "**Pin the version.** Install a specific version rather than `latest`"; "Pinning a package version with a launcher such as `npx` or `uvx` fixes only the top-level package"; "Pinning a container image by digest (`image@sha256:...`) freezes the entire dependency tree."
+**Detection**: Local servers whose command is `npx`, `bunx`, `pnpx`, `pnpm dlx`, `yarn dlx`, `npm exec` (package without an exact `@x.y.z`, or with a tag or range), `uvx`, `uv tool run`, `pipx run` (no `==` or `@` version), or `docker`/`podman run` (no tag, `:latest`). Local paths, URLs and script files are skipped. Same files as MCP-018.
+**Fix**: No auto-fix - pin an exact version or an image digest
+**Source**: modelcontextprotocol.io/docs/2026-07-28/tutorials/security/local-server-security
+
+<a id="mcp-028"></a>
+### MCP-028 [MEDIUM] Plaintext Credential in MCP Server Headers, URL or OAuth Secret
+**Requirement**: Remote MCP server credentials SHOULD NOT be literals in the config: "**Keep long-lived secrets out of plaintext config.**"; Cursor: "Use environment variables for Client ID and Client Secret instead of hardcoding them."; VS Code: "Do not commit tokens, passwords, or populated authentication headers."; Kiro: "Never hardcode API keys or tokens in configuration files"; OpenCode V2: "Store secrets in environment variables rather than in the file"; Gemini: "you should avoid hardcoding secrets".
+**Detection**: `Authorization`/`Proxy-Authorization` headers of the form `Bearer|Basic|Token <12+ characters>`; headers named like api-key, token, secret or password with a literal of 16+ characters; URL `user:password@` or credential query parameters (`api_key`, `token`, `access_token`, `key`, `secret`, ...) with literal values; literal OAuth client secrets (`oauth.clientSecret`, `oauth.client_secret`, Cursor `auth.CLIENT_SECRET`) and Codex `bearer_token`. Reference syntaxes and placeholders are skipped as for MCP-018. Same files as MCP-018.
+**Fix**: No auto-fix - reference an environment variable, input or secret store
+**Source**: modelcontextprotocol.io/docs/2026-07-28/tutorials/security/local-server-security, cursor.com/docs/mcp, code.visualstudio.com MCP configuration
+
+<a id="mcp-029"></a>
+### MCP-029 [MEDIUM] MCP Server Given the Home Directory or Filesystem Root
+**Requirement**: A local MCP server SHOULD get the narrowest root: "**Grant the narrowest root that works.** Configure filesystem-oriented servers with a specific project directory, passed explicitly through the server's configuration or tool parameters — never your home directory." "**Prefer read-only.**"
+**Detection**: A positional argument (not the value of a flag) that is exactly `~`, `$HOME`, `${HOME}`, `%USERPROFILE%`, `${userHome}`, `/`, a drive root, or `/Users/<name>`, `/home/<name>`, `C:\Users\<name>` with no deeper segment (placeholder names skipped); or the source of a `docker`/`podman` volume or bind mount with such a value. Same files as MCP-018.
+**Fix**: No auto-fix - pass a single project directory, read-only if the server supports it
+**Source**: modelcontextprotocol.io/docs/2026-07-28/tutorials/security/local-server-security
+
+<a id="mcp-030"></a>
+### MCP-030 [MEDIUM] Duplicate Tool Names Within a Server
+**Requirement**: "Tool names **SHOULD** be unique within a server."
+**Detection**: Case-sensitive duplicate `name` values in a `tools` list (or a `tools/list` result). Reported on the second occurrence.
+**Fix**: No auto-fix - give each tool a unique name
+**Source**: modelcontextprotocol.io/specification/2026-07-28/server/tools
+
+<a id="mcp-031"></a>
+### MCP-031 [HIGH] Invalid x-mcp-header Annotation
+**Requirement**: `x-mcp-header` values MUST NOT be empty, MUST match HTTP field-name token syntax, MUST NOT contain control characters, MUST be case-insensitively unique in the `inputSchema`, MUST only be applied to `integer`, `string` or `boolean` parameters ("Parameters with type `number` are not permitted"), and MUST be statically reachable ("via a chain consisting solely of `properties` keys"). "Clients using the Streamable HTTP transport **MUST** reject tool definitions where any `x-mcp-header` value violates these constraints", dropping the tool from `tools/list`. Also: "Server developers **SHOULD NOT** mark sensitive parameters (passwords, API keys, tokens" - reported at info level.
+**Detection**: Walk each tool's `inputSchema` for `x-mcp-header` and check the constraints; sensitive property names (`password`, `secret`, `token`, `api_key`) are info. Skipped when the project pins an MCP revision older than 2026-07-28.
+**Fix**: No auto-fix - correct the header name or move it to a primitive, statically reachable property
+**Source**: modelcontextprotocol.io/specification/2026-07-28/server/tools, modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http
+
+<a id="mcp-032"></a>
+### MCP-032 [LOW] Deprecated MCP Capability Declared
+**Requirement**: New implementations SHOULD NOT add Roots, Sampling or Logging: "Deprecate the Roots, Sampling, and Logging features" ... "new implementations should not add support for them". The registry also deprecates `includeContext: "thisServer"` and `"allServers"` ("Omit the field or use `\"none\"`"); removal is eligible from revisions released on or after 2027-07-28.
+**Detection**: `roots`, `sampling` or `logging` under `capabilities` (top level, `params` or `result`), and `params.includeContext` set to `thisServer` or `allServers`. Skipped when the project pins an MCP revision older than 2026-07-28. Info level.
+**Fix**: No auto-fix - follow the deprecated-features registry
+**Source**: modelcontextprotocol.io/specification/2026-07-28/changelog, modelcontextprotocol.io/specification/2026-07-28/deprecated
+
+<a id="mcp-033"></a>
+### MCP-033 [LOW] No-Parameter Tool Accepts Arbitrary Properties
+**Requirement**: A tool without parameters SHOULD say so: "`{ \"type\": \"object\", \"additionalProperties\": false }` - **Recommended**: explicitly accepts only empty objects". `{ "type": "object" }` is valid but accepts any object.
+**Detection**: `inputSchema` that is exactly `{ "type": "object" }`. Info level.
+**Fix**: No auto-fix - add `"additionalProperties": false`
+**Source**: modelcontextprotocol.io/specification/2026-07-28/server/tools
 
 ---
 
@@ -2163,7 +2270,6 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 ---
 
-
 <a id="oc-cfg-001"></a>
 ### OC-CFG-001 [HIGH] Invalid Model Format
 **Requirement**: The `model` field must be formatted as `provider/model`
@@ -2526,7 +2632,6 @@ Rules for local Gemini agent markdown files at `.gemini/agents/*.md`. These defi
 **Detection**: Attempt to parse as TOML; report parse errors with line/column
 **Fix**: Correct the TOML syntax
 **Source**: developers.openai.com/codex/
-
 
 <a id="cdx-001"></a>
 ### CDX-001 [HIGH] Invalid Approval Mode
@@ -3780,7 +3885,6 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 **Fix**: No auto-fix - move the key to the global file.
 **Source**: kiro.dev/docs/reference/settings
 
-
 <a id="kr-wf-001"></a>
 ### KR-WF-001 [HIGH] Workflow Recipe Exceeds Kiro Limits
 **Requirement**: A recipe MUST have at most 50 `step` nodes, nest nodes at most 8 levels deep, give every node a unique `id`, and use at most 50 `include` nodes.
@@ -3888,24 +3992,24 @@ Rules for `.kiroignore` (workspace root or any subdirectory; Kiro CLI V3 and IDE
 
 <a id="ref-001"></a>
 ### REF-001 [HIGH] Import File Not Found
-**Requirement**: @import references MUST point to existing files
-**Detection**: Resolve path, check existence
+**Requirement**: `@path` references MUST point to existing files: Claude Code, Gemini CLI ("importing content from other files using the `@file.md` syntax"), Amp ("@-mention them in agent files") and Copilot CLI load the referenced file, so a missing target loses the content. CLAUDE.md imports are CC-MEM-001.
+**Detection**: Resolve the path (relative to the file, then the project root) and check existence. Absolute paths and paths that leave the project are reported, except in GEMINI.md and GEMINI.local.md, where Gemini allows them ("This feature supports both relative and absolute paths"; its example is `@../shared/style-guide.md`): there only a missing target is reported.
 **Fix**: Show resolved path, suggest alternatives
-**Source**: code.claude.com/docs/en/memory, agentskills.io
+**Source**: code.claude.com/docs/en/memory, geminicli.com/docs/reference/memport, ampcode.com/docs/customize/agents-md, docs.github.com Copilot CLI custom instructions
 
 <a id="ref-002"></a>
 ### REF-002 [HIGH] Broken Markdown Link
 **Requirement**: Markdown links SHOULD point to existing files
 **Detection**: Extract `[text](path)`, check existence
 **Fix**: Show available files
-**Source**: Standard markdown validation
+**Source**: Standard markdown validation (spec.commonmark.org)
 
 <a id="ref-003"></a>
-### REF-003 [MEDIUM] Duplicate Import
-**Requirement**: Each @import path SHOULD appear only once per file
-**Detection**: Extract @imports, normalize paths (strip `./` prefix), flag duplicates
-**Fix**: [AUTO-FIX] Remove the duplicate @import line
-**Source**: Claude Code memory docs
+### REF-003 [LOW] Duplicate Import
+**Requirement**: Each `@import` path SHOULD appear only once per file. An agnix tidiness heuristic: Claude Code loads each file once ("Claude Code skips an `AGENTS.md` it has already loaded"), so a duplicate import adds nothing.
+**Detection**: Extract @imports, normalize paths (strip `./` prefix), flag duplicates. Info level.
+**Fix**: [AUTO-FIX, unsafe] Remove the line with the duplicate @import (unsafe: the line may hold other text)
+**Source**: community heuristic; code.claude.com/docs/en/memory
 
 ---
 
@@ -3958,12 +4062,12 @@ Rules for `.kiroignore` (workspace root or any subdirectory; Kiro CLI V3 and IDE
 ## CROSS-PLATFORM RULES
 
 <a id="xp-001"></a>
-### XP-001 [LOW] Platform-Specific Feature in Generic Config
-**Requirement**: Generic configs MUST NOT use platform-specific features
-**Detection**: Check for Claude-only features (hooks, context: fork) in AGENTS.md
-**Fix**: Move to CLAUDE.md or wrap in a Claude-specific section header
-**Example**: Valid guarded section:
-```markdown
+### XP-001 [LOW] Inert or Partly Supported Content in AGENTS.md
+**Requirement**: AGENTS.md SHOULD NOT rely on content that only some of its readers use. An agnix heuristic. `@path` references are expanded by Amp ("To include other files as context, @-mention them in agent files."), Copilot CLI ("use `@` followed by a relative path to include another file") and Claude Code, but not by Codex, Cursor or OpenCode. Hook definitions and skill or subagent frontmatter fields (`context: fork`, `agent:`, `allowed-tools:`) configure nothing in an instruction file, for any tool.
+**Detection**: In AGENTS.md, AGENTS.local.md and AGENTS.override.md, outside code and outside sections marked as tool-specific (`## Claude Code Specific`, `<!-- Claude Specific -->`): hook definitions (`type:`/`event:` with a Claude Code hook event), `context: fork`, `agent:`, `allowed-tools:`, and `@path` references. `@path` references are not reported when every selected tool expands them (Amp, Copilot, Claude Code). Info level.
+**Fix**: Move configuration to the file that configures it; inline referenced content or name the file in prose
+**Source**: community heuristic; ampcode.com/docs/customize/agents-md, docs.github.com Copilot CLI custom instructions
+
 ## Claude Code Specific
 - type: PreToolExecution
   command: echo "lint"
@@ -3973,84 +4077,90 @@ agent: reviewer
 **Source**: multi-platform research
 
 <a id="xp-002"></a>
-### XP-002 [MEDIUM] AGENTS.md Platform Compatibility
-**Requirement**: AGENTS.md is a widely-adopted standard used by multiple platforms
-**Supported Platforms**:
-- Codex CLI (OpenAI)
-- OpenCode
-- GitHub Copilot coding agent
-- Cursor (alongside `.cursor/rules/`)
-- Cline (alongside `.clinerules`)
-**Note**: Claude Code uses `CLAUDE.md` (not AGENTS.md)
-**Detection**: Validate AGENTS.md follows markdown conventions
-**Fix**: Ensure AGENTS.md is valid markdown with clear sections
-**Source**: learn.chatgpt.com/docs/agent-configuration/agents-md, opencode.ai/docs/rules, docs.cursor.com/en/context, docs.cline.bot/features/custom-instructions, github.com/github/docs/changelog/2025-06-17-github-copilot-coding-agent-now-supports-agents-md-custom-instructions
+### XP-002 [LOW] AGENTS.md Heading Hierarchy
+**Requirement**: AGENTS.md headings SHOULD NOT skip levels. A Markdown style heuristic: agents.md allows any headings ("Use any headings you like"), and a file with no headings at all is AGM-002's finding. AGENTS.md is read by Codex CLI, OpenCode, GitHub Copilot, Cursor, Cline, Amp, Gemini CLI (when configured), Windsurf, Kiro, and Claude Code ("Claude Code can read AGENTS.md as your project instructions", v2.1.277 or later, when no CLAUDE.md exists).
+**Detection**: A heading more than one level deeper than the previous heading (`#` then `###`), outside code fences. Info level.
+**Fix**: Use the next heading level
+**Source**: community heuristic; agents.md, code.claude.com/docs/en/memory
 
 <a id="xp-003"></a>
-### XP-003 [MEDIUM] Hard-Coded Platform Paths
-**Requirement**: Paths SHOULD use environment variables
-**Detection**: Check for tool directories (`.claude/`, `.opencode/`, `.cursor/`, `.cline/`, `.github/copilot/`) in every validated file. Machine paths (`~/.<dir>/`, `~/Library/`, `/Users/<name>/`, `/home/<name>/`, `C:\Users\<name>\`) are checked only in files agents load, not in generic Markdown, where they mostly document where a tool keeps its data
-**Fix**: Use `$CLAUDE_PROJECT_DIR` or equivalent
-**Source**: multi-platform best practices
+### XP-003 [MEDIUM] Hard-Coded User Home Path
+**Requirement**: Files agents load SHOULD NOT hard-code one person's home directory (`/Users/<name>/`, `/home/<name>/`, `C:\Users\<name>\`): the path resolves on no other machine and names its author. An agnix heuristic, in line with the Agent Skills advice to use relative paths. Tool directories (`.claude/`, `.cursor/`, `.github/copilot/`, `~/.codex/`) are not reported: vendors document those locations and ask for them by name (Cursor hooks use `.cursor/hooks/format.sh`; Copilot reads `.github/copilot/settings.json`).
+**Detection**: Absolute home paths with a real user name (placeholders such as `user`, `<name>` and `you` skipped; `/home/` inside a longer path or URL skipped) in every file type except generic Markdown, where such paths mostly document where a tool keeps its data.
+**Fix**: Use a path relative to the project, `~/`, or an environment variable such as `$HOME`
+**Source**: community heuristic; agentskills.io/specification
 
 <a id="xp-004"></a>
 ### XP-004 [MEDIUM] Conflicting Build/Test Commands
-**Requirement**: Instruction files SHOULD use consistent package managers
+**Requirement**: Instruction files SHOULD NOT contradict each other on the package manager: Copilot "Whenever possible, try to avoid providing conflicting sets of instructions."; VS Code "Applicable instruction sources are additive. Do not depend on a file order or precedence rule to resolve conflicts"; Claude Code "if two instructions contradict each other, Claude may pick one arbitrarily". The npm/pnpm/yarn/bun detection is an agnix heuristic.
 **Detection**: Extract build commands (npm/pnpm/yarn/bun) from multiple instruction files, detect conflicts when different managers are used for the same command type
 **Fix**: Standardize on a single package manager across all instruction files
-**Source**: cross-layer consistency best practices
+**Source**: docs.github.com Copilot response customization, code.visualstudio.com custom instructions, code.claude.com/docs/en/memory
 
 <a id="xp-005"></a>
-### XP-005 [HIGH] Conflicting Tool Constraints
-**Requirement**: Tool constraints MUST NOT conflict across instruction layers
+### XP-005 [MEDIUM] Conflicting Tool Constraints
+**Requirement**: Instruction files SHOULD NOT allow a tool in one file and forbid it in another (same sources as XP-004: "try to avoid providing conflicting sets of instructions"). A warning: the tools load both files; the constraint extraction is an agnix heuristic.
 **Detection**: Extract tool allow/disallow patterns from multiple instruction files, detect when one file allows a tool and another disallows it
 **Fix**: Resolve the conflict by consistently allowing or disallowing the tool
-**Source**: cross-layer consistency requirements
+**Source**: docs.github.com Copilot response customization, code.visualstudio.com custom instructions, code.claude.com/docs/en/memory
 
 <a id="xp-006"></a>
-### XP-006 [MEDIUM] Multiple Layers Without Documented Precedence
-**Requirement**: When multiple instruction layers exist, precedence SHOULD be documented
-**Detection**: Detect multiple instruction files (CLAUDE.md, AGENTS.md, .cursor/rules/, etc.) without documented precedence
-**Fix**: Document which file takes precedence (e.g., "CLAUDE.md takes precedence over AGENTS.md")
-**Source**: multi-platform clarity requirements
+### XP-006 [LOW] Several Tools' Instruction Files Without a Note
+**Requirement**: When instruction files for several tools exist (CLAUDE.md, AGENTS.md, Cursor rules, Copilot instructions, GEMINI.md, .clinerules), they SHOULD be kept consistent. An agnix heuristic. Each tool applies its own precedence: Claude Code "All discovered files are concatenated into context rather than overriding each other"; Codex "concatenates files from the root down"; Cursor "Team Rules → Project Rules → User Rules"; agents.md "The closest AGENTS.md to the edited file wins". VS Code: "Do not depend on a file order or precedence rule to resolve conflicts".
+**Detection**: Instruction files of two or more different kinds (several files of one kind, such as nested AGENTS.md, are that tool's own hierarchy) and none mentions precedence, priority, override or hierarchy. Files with identical content count once; files in `.opencode/` are agents, commands and skills, not instruction layers. Info level.
+**Fix**: Keep the files consistent, or say which tool each file is for
+**Source**: community heuristic; code.visualstudio.com custom instructions, code.claude.com/docs/en/memory, cursor.com/docs/rules
 
 <a id="xp-007"></a>
 ### XP-007 [MEDIUM] AGENTS.md Exceeds Codex Byte Limit
-**Requirement**: AGENTS.md SHOULD stay under Codex CLI's 32768-byte `project_doc_max_bytes` default. `AGENTS.override.md` is checked too, since Codex reads it first in each directory and it draws on the same budget.
+**Requirement**: AGENTS.md SHOULD stay under Codex CLI's 32768-byte `project_doc_max_bytes` default ("stops adding files once the combined size reaches the limit defined by `project_doc_max_bytes` (32 KiB by default)"). `AGENTS.override.md` is checked too, since Codex reads it first in each directory and it draws on the same budget. Codex states the cap in bytes. Runs only when Codex is in scope (the rule's tool, `tools` or `--target`).
 **Detection**: Check byte length of `AGENTS.md` / `AGENTS.override.md` content against the 32768-byte threshold. The documented cap is cumulative across the root-to-cwd chain; that dimension is covered by [XP-009](#xp-009), while this rule catches a single file that blows the limit on its own.
 
-Known asymmetry with XP-009: this is a per-file validator, so it has no view of which files Codex actually loads. An `AGENTS.md` shadowed by an `AGENTS.override.md` in the same directory is never read by Codex, and XP-009 correctly excludes its bytes - but XP-007 still reports it on size alone. Resolving that needs the project-level shadowing model XP-009 uses, which a per-file rule cannot reach.
-**Fix**: Reduce content or split into multiple files using @import
+Known asymmetry with XP-009: this is a per-file validator, so it has no view of which files Codex actually loads. An `AGENTS.md` shadowed by an `AGENTS.override.md` in the same directory is never read by Codex, and XP-009 correctly excludes its bytes - but XP-007 still reports it on size alone.
+**Fix**: Trim the file, move directory-specific guidance into nested AGENTS.md files closer to the code ("Raise the limit or split instructions across nested directories when you hit the cap."), or raise `project_doc_max_bytes`. Codex does not expand `@import` lines, so splitting into imported files drops the content.
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
 <a id="xp-008"></a>
-### XP-008 [MEDIUM] Claude-specific Features in CLAUDE.md for Cursor
-**Requirement**: CLAUDE.md SHOULD guard Claude-specific features under a `## Claude Code` section when targeting Cursor
-**Detection**: When target tool is Cursor, check CLAUDE.md and CLAUDE.local.md for Claude-specific directives (context:fork, agent fields, allowed-tools, hooks, @import) outside guarded sections
-**Fix**: No auto-fix - move Cursor-compatible instructions to .cursor/rules/ or guard Claude-specific content under a `## Claude Code` section header
-**Source**: docs.cursor.com/context/rules-for-ai
+### XP-008 [MEDIUM] CLAUDE.md @-Imports Cursor Does Not Inline
+**Requirement**: When Cursor reads a CLAUDE.md, content Cursor needs SHOULD NOT live only behind `@` imports. Cursor "reads `CLAUDE.md` files the same way it reads `AGENTS.md`" and applies them "to every conversation", but an `@` reference is a pointer: "The file's contents are not inlined into the prompt". Claude Code expands the same imports. Skipping sections marked Claude-specific is an agnix convention.
+**Detection**: CLAUDE.md, when Cursor is in scope: selected with `tools` or `--target`, or unscoped with `.cursor/` or `.cursorrules` next to the file or above it. Each `@path` reference outside code and outside a Claude-specific section.
+**Fix**: No auto-fix - put the instructions Cursor needs in CLAUDE.md itself or in `.cursor/rules/`, and keep `@` imports for Claude Code
+**Source**: cursor.com/help/customization/rules, cursor.com/docs/rules
 
 <a id="xp-009"></a>
 ### XP-009 [MEDIUM] Codex Instruction Chain Exceeds project_doc_max_bytes
-**Requirement**: The *combined* size of the Codex instruction chain SHOULD stay under the 32768-byte `project_doc_max_bytes` default. The cap is cumulative, not per-file - Codex "stops adding files once the combined size reaches the limit", so a project split across several mid-size files is truncated even when every individual file passes XP-007.
-**Detection**: Project-level check. Builds **one chain per leaf directory** the way Codex discovers them - start at the project root, walk down, at most one file per directory, preferring `AGENTS.override.md` over `AGENTS.md` - then sums each chain independently and reports on the file where that chain's running total crosses the limit, since that file and everything deeper is what Codex drops. Sibling subtrees are separate chains and are never summed together: a single whole-tree total would blame a sibling for bytes it does not share, and would eventually trip on any project with enough packages - nested instruction directories are supported, not a defect. A leaf inside a nested Git repository starts its chain at that repository, since Codex starts at the Git root. A chain of one file over the cap is left to XP-007, which already reports it. Conservative by design: `project_doc_fallback_filenames` lives in the user's Codex config rather than anything agnix reads, so a project using fallbacks has a longer real chain and this check under-reports rather than over-reports.
+**Requirement**: The *combined* size of the Codex instruction chain SHOULD stay under the 32768-byte `project_doc_max_bytes` default. The cap is cumulative, not per-file - Codex "stops adding files once the combined size reaches the limit", so a project split across several mid-size files is truncated even when every individual file passes XP-007. Runs only when Codex is in scope.
+**Detection**: Project-level check. Builds **one chain per leaf directory** the way Codex discovers them - start at the project root, walk down, at most one file per directory, preferring `AGENTS.override.md` over `AGENTS.md` - then sums each chain independently and reports on the largest file in a chain over the limit. Sibling subtrees are separate chains and are never summed together. A leaf inside a nested Git repository starts its chain at that repository, since Codex starts at the Git root. A chain of one file over the cap is left to XP-007. `project_doc_fallback_filenames` lives in the user's Codex config, so a project using fallbacks has a longer real chain and this check under-reports rather than over-reports.
 **Fix**: Manual - trim the chain, or raise `project_doc_max_bytes` in the Codex config
 **Source**: learn.chatgpt.com/docs/agent-configuration/agents-md
 
-
 <a id="xp-sk-001"></a>
 ### XP-SK-001 [LOW] Skill Uses Client-Specific Features
-**Requirement**: Skills SHOULD avoid client-specific frontmatter fields for maximum portability
-**Detection**: Skill frontmatter uses extension fields (model, context, agent, hooks, etc.) that are not part of the universal Agent Skills spec. Not reported on Kiro skills while KR-SK-001 is enabled, which reports the same fields.
-**Fix**: No auto-fix - review whether the field is needed or can be removed for portability
-**Source**: agentskills.io/specification
+**Requirement**: Skills SHOULD keep client-specific frontmatter out of the top level for portability: the spec defines `metadata` so "Clients can use this to store additional properties not defined by the Agent Skills spec", and the reference validator (skills-ref) reports "Unexpected fields in frontmatter" for any other top-level key.
+**Detection**: Skill frontmatter uses a top-level field outside the Agent Skills set (`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`). Not reported on Claude Code skills, nor on Kiro skills while KR-SK-001 is enabled, which reports the same fields.
+**Fix**: No auto-fix - remove the field or move it under `metadata`
+**Source**: agentskills.io/specification, agentskills/agentskills skills-ref validator.py
 
 <a id="xp-sk-002"></a>
 ### XP-SK-002 [MEDIUM] Hardcoded User Directory Path In Skill
-**Requirement**: A skill owned by a client other than Claude Code SHOULD NOT contain hardcoded user-home paths (`/Users/<name>/`, `/home/<name>/`, `C:\Users\<name>\`). The Agent Skills spec says to reference other files with relative paths from the skill root; a home path leaks the author's identity and does not resolve on another machine. This is the client-neutral twin of CC-SK-021, which covers Claude Code and unscoped skills, so a path is reported by exactly one of the two rules.
+**Requirement**: A skill owned by a client other than Claude Code SHOULD NOT contain hardcoded user-home paths (`/Users/<name>/`, `/home/<name>/`, `C:\Users\<name>\`). The Agent Skills spec says "When referencing other files in your skill, use relative paths from the skill root"; a home path leaks the author's identity and does not resolve on another machine. This is the client-neutral twin of CC-SK-021, which covers Claude Code and unscoped skills, so a path is reported by exactly one of the two rules.
 **Detection**: Same scan as CC-SK-021: the SKILL.md body, `.md` bodies bundled in the skill directory, and bundled scripts, skipping placeholder names such as `<name>`, `user` and `...`.
 **Fix**: Manual - use a path relative to the skill root, `~/`, `$HOME/`, or an environment variable.
 **Source**: agentskills.io/specification
+
+<a id="xp-sk-003"></a>
+### XP-SK-003 [MEDIUM] Hardcoded Secret in Skill Files
+**Requirement**: Skill files SHOULD NOT contain credentials. Gemini: "**Avoid hardcoded secrets**: Never include API keys or passwords in your skill's scripts or documentation." Cline: "Keep secrets out of the repo."
+**Detection**: SKILL.md and the text files bundled in the skill directory (Markdown, scripts, JSON/YAML/TOML, `.env`): well-known token formats (`ghp_`, `gho_`, `github_pat_`, `glpat-`, `sk-ant-`, `sk-proj-`, Slack `xox*-`, AWS `AKIA...`, Google `AIza...`) and private key blocks. Reported on the file and line.
+**Fix**: No auto-fix - remove the secret and read it from an environment variable or secret store at run time
+**Source**: geminicli.com/docs/cli/skills-best-practices, docs.cline.bot/getting-started/config
+
+<a id="xp-sk-004"></a>
+### XP-SK-004 [LOW] Backslash Path in Skill
+**Requirement**: Paths in a skill SHOULD use forward slashes. Anthropic: "Always use forward slashes in file paths, even on Windows"; "Unix-style paths work across all platforms, while Windows-style paths cause errors on Unix systems." VS Code: "Use Unix-style `/` path separators to keep skills portable across operating systems."
+**Detection**: A backslash path into a bundled directory (`scripts\`, `references\`, `assets\`, `templates\`, `examples\`, `resources\`) in the SKILL.md body. Fences marked as PowerShell, batch or cmd show Windows commands and are skipped. Info level.
+**Fix**: No auto-fix - write the path with `/`
+**Source**: platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices, code.visualstudio.com/docs/agent-customization/agent-skills
 
 ---
 
@@ -4092,10 +4202,10 @@ Add these 15 rules:
 
 ### P2 (Week 5-6)
 Complete coverage:
-- MCP-001 through MCP-004, MCP-006 (MCP protocol)
+- MCP-001 through MCP-004, MCP-006 (MCP protocol); MCP-027 through MCP-033 (MCP server and tool hygiene)
 - PE-001 through PE-006 (Prompt engineering)
 - XP-001 through XP-008, XP-SK-001 through XP-SK-002 (Cross-platform)
-- CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, KR-SK-001, KR-AG-001 to KR-AG-006, KR-AG-008 to KR-AG-030, KR-HK-001 through KR-HK-006, KR-PW-001 through KR-PW-004, KR-MCP-001 through KR-MCP-002, AMP-SK-001, RC-SK-001 (Per-client and Kiro rules)
+- CR-SK-001, CL-SK-001, CP-SK-001, CX-SK-001, OC-SK-001, WS-SK-001, KR-SK-001, KR-AG-001 to KR-AG-006, KR-AG-008 to KR-AG-030, KR-HK-001 through KR-HK-006, KR-PW-001 through KR-PW-004, KR-MCP-001 through KR-MCP-002, AMP-SK-001 (Per-client and Kiro rules)
 - Remaining MEDIUM/LOW certainty rules
 
 ---
@@ -4237,8 +4347,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 | Category | Total Rules | HIGH | MEDIUM | LOW | Auto-Fixable |
 |----------|-------------|------|--------|-----|--------------|
-| Agent Skills | 14 | 11 | 3 | 0 | 7 |
-| AGENTS.md | 5 | 1 | 4 | 0 | 1 |
+| Agent Skills | 22 | 11 | 6 | 5 | 7 |
+| AGENTS.md | 7 | 0 | 2 | 5 | 1 |
 | Amp Checks | 4 | 2 | 2 | 0 | 3 |
 | Amp Skills | 1 | 0 | 1 | 0 | 1 |
 | Claude Agents | 18 | 10 | 7 | 1 | 9 |
@@ -4254,7 +4364,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
 | GitHub Copilot | 25 | 13 | 9 | 3 | 12 |
 | Copilot Skills | 1 | 0 | 1 | 0 | 1 |
-| Cross-Platform | 11 | 1 | 8 | 2 | 0 |
+| Cross-Platform | 13 | 0 | 8 | 5 | 0 |
 | Cursor | 20 | 10 | 9 | 1 | 6 |
 | Cursor Skills | 1 | 0 | 1 | 0 | 1 |
 | Gemini Agents | 1 | 1 | 0 | 0 | 0 |
@@ -4269,18 +4379,18 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro Ignore | 1 | 0 | 1 | 0 | 0 |
 | Kiro Skills | 2 | 0 | 1 | 1 | 1 |
 | Kiro Steering | 16 | 4 | 10 | 2 | 1 |
-| MCP | 25 | 18 | 6 | 1 | 8 |
+| MCP | 32 | 15 | 13 | 4 | 8 |
 | OpenCode | 46 | 28 | 17 | 1 | 11 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
 | Prompt Eng | 6 | 0 | 3 | 3 | 1 |
-| References | 3 | 2 | 1 | 0 | 1 |
+| References | 3 | 2 | 0 | 1 | 1 |
 | Roo Code | 6 | 3 | 3 | 0 | 0 |
-| Roo Code Skills | 1 | 0 | 1 | 0 | 1 |
+| Roo Code Skills | 0 | 0 | 0 | 0 | 0 |
 | Version Awareness | 1 | 0 | 0 | 1 | 0 |
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **535** | **241** | **242** | **52** | **136** |
+| **TOTAL** | **553** | **236** | **248** | **69** | **135** |
 
 
 ---
@@ -4310,8 +4420,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 535 validation rules across 43 categories
+**Total Coverage**: 553 validation rules across 42 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 241 HIGH, 242 MEDIUM, 52 LOW
-**Auto-Fixable**: 136 rules (25%)
+**Certainty**: 236 HIGH, 248 MEDIUM, 69 LOW
+**Auto-Fixable**: 135 rules (24%)

@@ -7,6 +7,7 @@
 //! - `RULES_DATA`: All rule (id, name) tuples
 //! - `VALID_TOOLS`: Unique tool names from evidence.applies_to.tool
 //! - `TOOL_RULE_PREFIXES`: Mapping of (prefix, tool) for tool-specific rules
+//! - `RULE_TOOLS`: Sorted (id, tool) pairs for every rule that names one tool
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::env;
@@ -229,6 +230,39 @@ fn main() {
         ));
     }
 
+    generated_code.push_str("];\n\n");
+
+    // =========================================================================
+    // Generate RULE_TOOLS: (id, tool) for every rule that names one tool,
+    // sorted by id for binary search. The rule filter reads it so a rule
+    // naming one vendor is gated on that vendor even when its ID prefix also
+    // holds generic rules (AGM-003, XP-007).
+    // =========================================================================
+    let mut rule_tools: Vec<(&str, &str)> = rules_array
+        .iter()
+        .filter_map(|rule| {
+            let id = rule["id"].as_str()?;
+            let tool = rule
+                .get("evidence")
+                .and_then(|e| e.get("applies_to"))
+                .and_then(|a| a.get("tool"))
+                .and_then(|t| t.as_str())
+                .filter(|t| !t.is_empty())?;
+            Some((id, tool))
+        })
+        .collect();
+    rule_tools.sort_unstable();
+    generated_code
+        .push_str("/// (id, tool) for every rule whose `evidence.applies_to.tool` names a tool,\n");
+    generated_code.push_str("/// sorted by id. Use [`get_rule_tool`] to look a rule up.\n");
+    generated_code.push_str("pub const RULE_TOOLS: &[(&str, &str)] = &[\n");
+    for (id, tool) in &rule_tools {
+        generated_code.push_str(&format!(
+            "    (\"{}\", \"{}\"),\n",
+            escape_str(id),
+            escape_str(tool)
+        ));
+    }
     generated_code.push_str("];\n\n");
 
     // =========================================================================
