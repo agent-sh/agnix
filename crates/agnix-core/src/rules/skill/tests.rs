@@ -745,6 +745,27 @@ Body"#,
 }
 
 #[test]
+fn test_cc_sk_006_matches_whole_segments_only() {
+    for (name, expected) in [
+        ("send-slack-message", 1),
+        ("commit", 1),
+        ("prepare-release", 1),
+        ("deployment-triage", 0),
+        ("codedeploy-triage", 0),
+        ("ownership-map", 0),
+        ("commit-style", 0),
+        ("release-notes", 0),
+        ("pipeline-release-friction-analysis", 0),
+    ] {
+        let content = format!("---\nname: {name}\ndescription: A skill\n---\nBody");
+        let diagnostics =
+            SkillValidator.validate(Path::new("test.md"), &content, &LintConfig::default());
+        let count = diagnostics.iter().filter(|d| d.rule == "CC-SK-006").count();
+        assert_eq!(count, expected, "name: {name}");
+    }
+}
+
+#[test]
 fn test_cc_sk_007_unrestricted_bash() {
     let content = r#"---
 name: git-helper

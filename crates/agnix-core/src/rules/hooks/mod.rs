@@ -116,14 +116,15 @@ fn validate_cc_hk_008_script_exists(
 fn validate_cc_hk_009_dangerous_patterns(
     command: &str,
     path: &Path,
+    (line, col): (usize, usize),
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     if let Some((pattern, reason)) = check_dangerous_patterns(command) {
         diagnostics.push(
             Diagnostic::warning(
                 path.to_path_buf(),
-                1,
-                0,
+                line,
+                col,
                 "CC-HK-009",
                 t!("rules.cc_hk_009.message", reason = reason),
             )
@@ -441,6 +442,16 @@ impl Validator for HooksValidator {
             return diagnostics;
         }
 
+        // `.vscode/settings.json` is VS Code's editor settings file (JSON with
+        // comments and trailing commas); Claude Code never reads it.
+        if path
+            .parent()
+            .and_then(Path::file_name)
+            .is_some_and(|dir| dir.eq_ignore_ascii_case(".vscode"))
+        {
+            return diagnostics;
+        }
+
         let raw_value: serde_json::Value = match serde_json::from_str(content) {
             Ok(v) => v,
             Err(e) => {
@@ -644,9 +655,18 @@ impl Validator for HooksValidator {
 
                                 // CC-HK-009: Dangerous command patterns
                                 if config.is_rule_enabled("CC-HK-009") {
+                                    let pos = locator.value_pos(&[
+                                        Seg::Key("hooks"),
+                                        Seg::Key(event.as_str()),
+                                        Seg::Index(matcher_idx),
+                                        Seg::Key("hooks"),
+                                        Seg::Index(hook_idx),
+                                        Seg::Key("command"),
+                                    ]);
                                     validate_cc_hk_009_dangerous_patterns(
                                         cmd,
                                         path,
+                                        pos,
                                         &mut diagnostics,
                                     );
                                 }

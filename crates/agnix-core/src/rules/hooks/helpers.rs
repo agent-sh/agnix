@@ -65,14 +65,6 @@ fn dangerous_patterns() -> &'static Vec<DangerousPattern> {
             ),
             (r"(?i)mkfs\.", "Formatting filesystem destroys all data"),
             (r"(?i)dd\s+if=.*of=/dev/", "dd to device can destroy data"),
-            (
-                r"(?i)\|\|\s*true\s*$",
-                "Error suppression with '|| true' silently hides hook failures",
-            ),
-            (
-                r"(?i)2>\s*/dev/null",
-                "Redirecting stderr to /dev/null hides error messages",
-            ),
         ];
         patterns
             .iter()
@@ -1748,23 +1740,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_check_dangerous_patterns_error_suppression() {
-        // Test || true pattern
-        let result = check_dangerous_patterns("some_command || true");
-        assert!(result.is_some(), "Should detect || true pattern");
-        let (pattern, reason) = result.unwrap();
-        assert!(pattern.contains("true"));
-        assert!(reason.contains("silently hides"));
-    }
-
-    #[test]
-    fn test_check_dangerous_patterns_stderr_redirect() {
-        // Test 2>/dev/null pattern
-        let result = check_dangerous_patterns("command 2>/dev/null");
-        assert!(result.is_some(), "Should detect 2>/dev/null pattern");
-        let (pattern, reason) = result.unwrap();
-        assert!(pattern.contains("2>"));
-        assert!(reason.contains("hides error"));
+    fn test_check_dangerous_patterns_error_suppression_not_reported() {
+        // `|| true` and `2>/dev/null` are not destructive; Anthropic's own
+        // plugins use `|| true` on PostToolUse hooks.
+        assert!(check_dangerous_patterns("some_command || true").is_none());
+        assert!(check_dangerous_patterns("command 2>/dev/null").is_none());
+        assert!(check_dangerous_patterns("command 2> /dev/null || true").is_none());
     }
 
     #[test]

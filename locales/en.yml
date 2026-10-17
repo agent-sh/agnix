@@ -1666,7 +1666,7 @@ rules:
     message: Skill has no description or when_to_use, so Claude Code uses the first non-empty body line to decide when to load it
     suggestion: Add a description that says what the skill does and when to use it
   cc_sk_025:
-    message: Project skills use about %{chars} characters of names and descriptions across %{count} skills, over the %{budget} characters agnix estimates for Claude Code's listing budget (1% of a 200,000-token context window)
+    message: Skills in this .claude/skills directory use about %{chars} characters of names and descriptions across %{count} skills, over the %{budget} characters agnix estimates for Claude Code's listing budget (1% of a 200,000-token context window)
     suggestion: Shorten descriptions and put the key use case first; over budget, Claude Code drops descriptions from the listing
   cc_sk_027:
     message: Legacy custom command file; Claude Code still loads .claude/commands files, but skills are the current format

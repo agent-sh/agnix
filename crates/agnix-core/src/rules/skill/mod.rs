@@ -1218,11 +1218,39 @@ impl<'a> ValidationContext<'a> {
             // control timing, like `/commit`, `/deploy`, or
             // `/send-slack-message`." The vendor's own examples include commit
             // and send; the other words are agnix's.
+            // Words match whole name segments, so `deployment-triage` and
+            // `ownership` don't count, and a read-only qualifier such as
+            // `commit-style` or `release-notes` drops the match.
             const DANGEROUS_NAMES: &[&str] = &[
                 "deploy", "ship", "publish", "delete", "release", "push", "commit", "send",
             ];
+            const READ_ONLY_QUALIFIERS: &[&str] = &[
+                "style",
+                "guide",
+                "guidelines",
+                "conventions",
+                "format",
+                "triage",
+                "analysis",
+                "analyzer",
+                "summary",
+                "report",
+                "review",
+                "status",
+                "check",
+                "docs",
+                "notes",
+                "history",
+                "lookup",
+                "search",
+            ];
             let name_lower = schema.name.to_lowercase();
-            if DANGEROUS_NAMES.iter().any(|d| name_lower.contains(d))
+            let segments: Vec<&str> = name_lower
+                .split(|c: char| !c.is_ascii_alphanumeric())
+                .filter(|s| !s.is_empty())
+                .collect();
+            if segments.iter().any(|s| DANGEROUS_NAMES.contains(s))
+                && !segments.iter().any(|s| READ_ONLY_QUALIFIERS.contains(s))
                 && !frontmatter.disable_model_invocation.unwrap_or(false)
             {
                 let mut diagnostic = Diagnostic::warning(

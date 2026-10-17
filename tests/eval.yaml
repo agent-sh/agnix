@@ -32,8 +32,8 @@ cases:
     description: "Name-directory mismatch triggers AS-017"
 
   - file: fixtures/invalid/skills/vague-name/SKILL.md
-    expected: [AS-017]
-    description: "Vague skill name with name-directory mismatch triggers AS-017"
+    expected: [AS-017, CC-SK-033]
+    description: "Vague skill name with name-directory mismatch triggers AS-017 and CC-SK-033"
 
   - file: fixtures/invalid/skills/indexed-arguments-no-hint/SKILL.md
     expected: [CC-SK-016]

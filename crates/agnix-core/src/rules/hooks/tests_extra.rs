@@ -613,3 +613,17 @@ fn cc_pl_021_plugin_settings_keys_are_dropped() {
     assert_eq!(hits.len(), 2, "{diagnostics:?}");
     assert!(diagnostics.iter().all(|d| !d.rule.starts_with("CC-HK")));
 }
+
+// ===== Editor settings files =====
+
+#[test]
+fn vscode_settings_json_gets_no_hook_rules() {
+    let temp = TempDir::new().unwrap();
+    let path = write(
+        temp.path(),
+        ".vscode/settings.json",
+        "{\n    \"python.envFile\": \"${workspaceFolder}/.env\",\n}\n",
+    );
+    let diagnostics = validate_file(&path);
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+}

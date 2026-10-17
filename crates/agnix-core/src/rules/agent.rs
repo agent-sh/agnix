@@ -686,8 +686,18 @@ impl Validator for AgentValidator {
                         }
                     }
                 }
+                // A plugin agent's bare skill names resolve to the plugin's
+                // own skills.
+                let plugin_skills = plugin_agent_root(path, fs.as_ref()).map(|r| r.join("skills"));
                 if let Some(project_root) = Self::find_project_root(path, fs.as_ref()) {
                     for skill_name in skills {
+                        let in_plugin = plugin_skills.as_ref().is_some_and(|dir| {
+                            Self::is_safe_skill_name(skill_name)
+                                && fs.exists(&dir.join(skill_name).join("SKILL.md"))
+                        });
+                        if in_plugin {
+                            continue;
+                        }
                         #[cfg(feature = "filesystem")]
                         let user_skill = dirs::home_dir().map(|home| {
                             home.join(".claude/skills")
@@ -705,8 +715,8 @@ impl Validator for AgentValidator {
                             diagnostics.push(
                                 Diagnostic::warning(
                                     path.to_path_buf(),
-                                    1,
-                                    0,
+                                    skills_line,
+                                    skills_col,
                                     "CC-AG-005",
                                     t!("rules.cc_ag_005.message", skill = skill_name.as_str()),
                                 )
@@ -1377,7 +1387,11 @@ impl Validator for AgentValidator {
                     );
                 }
             }
-            for entry in schema.tools.iter().flatten() {
+            // `initialPrompt` only applies "when this agent runs as the main
+            // session agent", so an agent that sets it is meant for
+            // `claude --agent`, where the type list applies.
+            let main_thread_agent = schema.initial_prompt.is_some();
+            for entry in schema.tools.iter().flatten().filter(|_| !main_thread_agent) {
                 if let Some(inner) = entry
                     .strip_prefix("Agent(")
                     .or_else(|| entry.strip_prefix("Task("))
@@ -2626,6 +2640,38 @@ Agent instructions"#;
         assert_eq!(cc_ag_005[0].level, DiagnosticLevel::Warning);
         assert!(cc_ag_005[0].message.contains("nonexistent-skill"));
         assert!(cc_ag_005[0].message.contains("not found"));
+        assert_eq!(cc_ag_005[0].line, 4, "points at the skills key");
+    }
+
+    #[test]
+    fn test_cc_ag_005_plugin_agent_finds_plugin_skills() {
+        let temp = TempDir::new().unwrap();
+        let root = temp.path();
+        std::fs::create_dir_all(root.join(".claude")).unwrap();
+        let plugin = root.join("plugins/p");
+        std::fs::create_dir_all(plugin.join(".claude-plugin")).unwrap();
+        std::fs::write(
+            plugin.join(".claude-plugin/plugin.json"),
+            r#"{"name": "p"}"#,
+        )
+        .unwrap();
+        std::fs::create_dir_all(plugin.join("skills/triage")).unwrap();
+        std::fs::write(
+            plugin.join("skills/triage/SKILL.md"),
+            "---\nname: triage\ndescription: Triage\n---\nBody",
+        )
+        .unwrap();
+        std::fs::create_dir_all(plugin.join("agents")).unwrap();
+        let agent_path = plugin.join("agents/lead.md");
+        let content =
+            "---\nname: lead\ndescription: Lead\nskills:\n  - triage\n  - elsewhere\n---\nBody";
+        let diagnostics = validate_with_path(&agent_path, content);
+        let missing: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-AG-005")
+            .collect();
+        assert_eq!(missing.len(), 1, "{missing:?}");
+        assert!(missing[0].message.contains("elsewhere"));
     }
 
     #[test]
@@ -5525,6 +5571,17 @@ mod tests_claude_ext {
             hits.iter().any(|d| d.level == DiagnosticLevel::Info
                 && d.message.contains("Agent(worker, researcher)"))
         );
+        // An agent with initialPrompt is meant to run as the main thread.
+        let main = write(
+            temp.path(),
+            ".claude/agents/lead.md",
+            &agent(
+                "lead",
+                "Lead",
+                "tools: Agent(worker), Read\ninitialPrompt: \"/start\"\n",
+            ),
+        );
+        assert_eq!(rules(&check(&main), "CC-AG-024"), 0);
     }
 
     #[test]

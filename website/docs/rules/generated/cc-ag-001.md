@@ -12,7 +12,7 @@ keywords: ["CC-AG-001", "missing name field", "claude agents", "validation", "ag
 - **Severity**: `HIGH`
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
-- **Auto-Fix**: `Yes (safe)`
+- **Auto-Fix**: `Yes (unsafe)`
 - **Verified On**: `2026-10-17`
 
 ## Applicability

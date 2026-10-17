@@ -47,7 +47,10 @@ const VAGUE_SKILL_NAMES: &[&str] = &[
     "files",
 ];
 
-static_regex!(fn xml_tag_regex, r"</?[A-Za-z][A-Za-z0-9_.:-]*(?:\s[^<>]*)?/?>");
+static_regex!(
+    fn xml_tag_regex,
+    r#"</?[A-Za-z][A-Za-z0-9_.:-]*(?:\s+[A-Za-z_:][A-Za-z0-9_.:-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'<>=]+))?)*\s*/?>"#
+);
 static_regex!(fn unbraced_plugin_var_regex, r"\$CLAUDE_PLUGIN_(ROOT|DATA)\b");
 static_regex!(fn toc_heading_regex, r"(?im)^\s{0,3}#{1,6}\s*(table of contents|contents|toc)\b");
 
@@ -59,11 +62,42 @@ pub(crate) fn is_claude_command_path(path: &Path) -> bool {
 }
 
 /// The first unbraced `$CLAUDE_PLUGIN_ROOT` or `$CLAUDE_PLUGIN_DATA` in a
-/// Markdown body: (byte offset, spelling).
+/// Markdown body that Claude could run through the Bash tool: (byte offset,
+/// spelling). Hook and other config examples get the variable from their own
+/// environment, so these are skipped: a line that mentions hooks, a fenced
+/// JSON block, and an inline code span holding only the variable name.
 pub(crate) fn unbraced_plugin_var(body: &str) -> Option<(usize, &str)> {
-    unbraced_plugin_var_regex()
-        .find(body)
-        .map(|m| (m.start(), m.as_str()))
+    let mut offset = 0;
+    let mut fence: Option<(char, bool)> = None; // (fence char, is a JSON block)
+    for line in body.split_inclusive('\n') {
+        let start = offset;
+        offset += line.len();
+        let trimmed = line.trim_start();
+        let fence_char = trimmed.chars().next().filter(|c| *c == '`' || *c == '~');
+        if let Some(c) = fence_char
+            && trimmed.starts_with(&c.to_string().repeat(3))
+        {
+            match fence {
+                Some((open, _)) if open == c => fence = None,
+                Some(_) => {}
+                None => {
+                    let info = trimmed.trim_start_matches(c).trim().to_ascii_lowercase();
+                    fence = Some((c, info.starts_with("json")));
+                }
+            }
+            continue;
+        }
+        if fence.is_some_and(|(_, json)| json) || line.to_ascii_lowercase().contains("hook") {
+            continue;
+        }
+        for m in unbraced_plugin_var_regex().find_iter(line) {
+            let name_only = line[..m.start()].ends_with('`') && line[m.end()..].starts_with('`');
+            if !name_only {
+                return Some((start + m.start(), m.as_str()));
+            }
+        }
+    }
+    None
 }
 
 /// The plugin root of a plugin skill (`<root>/.claude-plugin/plugin.json`
@@ -602,6 +636,35 @@ mod tests {
         );
         assert_eq!(unbraced_plugin_var("run ${CLAUDE_PLUGIN_ROOT}/x.sh"), None);
         assert_eq!(unbraced_plugin_var("$CLAUDE_PLUGIN_ROOTS"), None);
+        // Found inside a shell fence, after an earlier skipped line.
+        assert_eq!(
+            unbraced_plugin_var("intro\n```bash\nnode $CLAUDE_PLUGIN_DATA/x\n```\n"),
+            Some((19, "$CLAUDE_PLUGIN_DATA"))
+        );
+    }
+
+    #[test]
+    fn unbraced_plugin_variable_skips_hook_and_config_examples() {
+        // Hook commands get the variable from their environment.
+        assert_eq!(
+            unbraced_plugin_var("Test with `echo $CLAUDE_PLUGIN_ROOT` in hook scripts"),
+            None
+        );
+        // A name-only mention documents the variable.
+        assert_eq!(
+            unbraced_plugin_var("- `$CLAUDE_PLUGIN_ROOT` - Plugin directory"),
+            None
+        );
+        // JSON config examples are not run through the Bash tool.
+        assert_eq!(
+            unbraced_plugin_var("```json\n{\"command\": \"$CLAUDE_PLUGIN_ROOT/run.sh\"}\n```\n"),
+            None
+        );
+        // A JavaScript block Claude may run still counts.
+        assert!(
+            unbraced_plugin_var("```javascript\nconst root = '$CLAUDE_PLUGIN_ROOT';\n```\n")
+                .is_some()
+        );
     }
 
     #[test]
@@ -610,6 +673,9 @@ mod tests {
         assert!(xml_tag_regex().is_match("</thinking>"));
         assert!(!xml_tag_regex().is_match("a < b and c > d"));
         assert!(!xml_tag_regex().is_match("x<5"));
+        assert!(xml_tag_regex().is_match(r#"<example type="a">"#));
+        // A prose placeholder is not tag-shaped.
+        assert!(!xml_tag_regex().is_match("Pass <the problem, stated in full, or a path>"));
     }
 }
 

@@ -86,10 +86,7 @@ fn claude_mcp_scope(path: &Path, config: &PerFileLintConfig<'_>) -> Option<McpSc
 
 /// The server map: `mcpServers`, or (plugin `.mcp.json`, which may "omit the
 /// `mcpServers` wrapper") a top-level map of server objects.
-fn server_map<'v>(
-    root: &'v Value,
-    scope: McpScope,
-) -> Option<(&'v serde_json::Map<String, Value>, bool)> {
+fn server_map(root: &Value, scope: McpScope) -> Option<(&serde_json::Map<String, Value>, bool)> {
     if let Some(map) = root.get("mcpServers").and_then(Value::as_object) {
         return Some((map, true));
     }

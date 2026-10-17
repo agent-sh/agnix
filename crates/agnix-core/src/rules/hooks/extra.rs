@@ -678,10 +678,7 @@ pub(crate) fn unquoted_placeholder(command: &str) -> Option<String> {
             }
             b'\'' if !in_double => {
                 // Skip to the closing single quote.
-                match command[i + 1..].find('\'') {
-                    Some(end) => i += end + 2,
-                    None => return None,
-                }
+                i += command[i + 1..].find('\'')? + 2;
                 continue;
             }
             b'"' => in_double = !in_double,

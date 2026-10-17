@@ -29,7 +29,7 @@ This section contains all `567` validation rules generated from `knowledge-base/
 | [AS-015](./generated/as-015.md) | Claude API Upload Size Exceeds 30MB | MEDIUM | Agent Skills | No |
 | [AS-016](./generated/as-016.md) | Skill Parse Error | HIGH | Agent Skills | No |
 | [AS-017](./generated/as-017.md) | Name Must Match Parent Directory | HIGH | Agent Skills | No |
-| [CC-AG-001](./generated/cc-ag-001.md) | Missing Name Field | HIGH | Claude Agents | Yes (safe) |
+| [CC-AG-001](./generated/cc-ag-001.md) | Missing Name Field | HIGH | Claude Agents | Yes (unsafe) |
 | [CC-AG-002](./generated/cc-ag-002.md) | Missing Description Field | HIGH | Claude Agents | Yes (safe) |
 | [CC-AG-003](./generated/cc-ag-003.md) | Invalid Model Value | HIGH | Claude Agents | Yes (unsafe) |
 | [CC-AG-004](./generated/cc-ag-004.md) | Invalid Permission Mode | HIGH | Claude Agents | Yes (unsafe) |

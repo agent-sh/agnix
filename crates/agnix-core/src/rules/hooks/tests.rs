@@ -412,6 +412,7 @@ fn test_cc_hk_009_git_reset_hard() {
 
     assert_eq!(cc_hk_009.len(), 1);
     assert!(cc_hk_009[0].message.contains("Hard reset"));
+    assert_eq!(cc_hk_009[0].line, 7, "points at the command value");
 }
 
 #[test]

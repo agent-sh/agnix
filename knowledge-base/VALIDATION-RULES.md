@@ -250,7 +250,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-sk-006"></a>
 ### CC-SK-006 [MEDIUM] Side-Effect Skill Without disable-model-invocation
 **Requirement**: Skills with side effects SHOULD set `disable-model-invocation: true`. Vendor text: "Use this for workflows with side effects or that you want to control timing, like `/commit`, `/deploy`, or `/send-slack-message`. You don't want Claude deciding to deploy because your code looks ready." (skills, "Control who invokes a skill")
-**Detection**: the skill name contains `deploy`, `ship`, `publish`, `delete`, `release`, `push`, `commit` or `send`, and `disable-model-invocation` is not true. `commit` and `send` are the vendor's own examples; the other words are agnix's.
+**Detection**: a segment of the skill name (split on non-alphanumeric characters) is `deploy`, `ship`, `publish`, `delete`, `release`, `push`, `commit` or `send`, no segment is a read-only qualifier (`style`, `guide`, `guidelines`, `conventions`, `format`, `triage`, `analysis`, `analyzer`, `summary`, `report`, `review`, `status`, `check`, `docs`, `notes`, `history`, `lookup`, `search`), and `disable-model-invocation` is not true. `commit` and `send` are the vendor's own examples; the other words and the qualifier list are agnix heuristics.
 **Fix**: [AUTO-FIX] (unsafe) Add `disable-model-invocation: true`
 **Source**: code.claude.com/docs/en/skills
 
@@ -391,7 +391,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-sk-031"></a>
 ### CC-SK-031 [LOW] XML Tag in Skill Name or Description
 **Requirement**: A skill that may be uploaded SHOULD keep XML tags out of its name and description. Vendor text: "`description`: Maximum 1024 characters, non-empty, no XML tags" (Claude API skills guide, "Limits and constraints")
-**Detection**: a tag-shaped `<name ...>` or `</name>` in `name` or `description` (info). `a < b` comparisons are not tags.
+**Detection**: a tag-shaped `<name>`, `<name attr="...">` or `</name>` in `name` or `description` (info). `a < b` comparisons and prose placeholders such as `<the problem, stated in full>` are not tags.
 **Fix**: Manual
 **Source**: platform.claude.com/docs/en/build-with-claude/skills-guide
 
@@ -1058,7 +1058,7 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 <a id="cc-hk-012"></a>
 ### CC-HK-012 [HIGH] Hooks Parse Error
 **Requirement**: Hooks configuration MUST be valid JSON
-**Detection**: JSON parse error on settings.json
+**Detection**: JSON parse error on settings.json. `.vscode/settings.json` (VS Code editor settings, which allow comments and trailing commas) and the `hooks/hooks.json` of a Gemini CLI extension or Codex plugin are not Claude Code files and get no CC-HK rules.
 **Fix**: Fix JSON syntax errors in hooks configuration
 **Source**: code.claude.com/docs/en/hooks
 
@@ -1258,7 +1258,7 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 <a id="cc-ag-005"></a>
 ### CC-AG-005 [MEDIUM] Preloaded Skill Not Found or Not Preloadable
 **Requirement**: Skills listed in `skills` SHOULD be ones Claude Code preloads. Claude Code skips missing or disabled skills with a debug warning, and the sub-agents reference says: "The full content of each listed skill is injected into the subagent's context at startup, up to the first 32 distinct names in the list." and "You can't preload skills that set `disable-model-invocation: true`" (sub-agents, "Preload skills into subagents")
-**Detection**: Check project and user `.claude/skills/{name}/SKILL.md`. Plugin-qualified references are left to plugin resolution; unresolved unqualified names get a warning because an enabled plugin may supply them. Also warn when the list has more than 32 distinct names, and when a project skill it names sets `disable-model-invocation: true`.
+**Detection**: Check project and user `.claude/skills/{name}/SKILL.md`, and for a plugin agent the plugin's own `skills/{name}/SKILL.md`. Reported at the `skills` key. Plugin-qualified references are left to plugin resolution; unresolved unqualified names get a warning because an enabled plugin may supply them. Also warn when the list has more than 32 distinct names, and when a project skill it names sets `disable-model-invocation: true`.
 **Fix**: Check enabled plugins or add the skill to project or user skills; trim the list or drop `disable-model-invocation`.
 **Source**: code.claude.com/docs/en/sub-agents
 
@@ -1370,7 +1370,7 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 <a id="cc-ag-024"></a>
 ### CC-AG-024 [MEDIUM] disallowedTools Specifier Removes the Whole Tool
 **Requirement**: `disallowedTools` SHOULD list whole tools. Vendor text: "A `disallowedTools` entry with a specifier, such as `Bash(git push *)`, still removes the whole tool from the subagent, not only the matching commands. To keep Bash and block specific commands, add a Bash deny rule such as `Bash(git push *)` to `permissions.deny` in your settings." and "The `Agent(agent_type)` allowlist syntax applies only to an agent running as the main thread with `claude --agent`. In a subagent definition, listing `Agent` in `tools` lets that subagent spawn subagents of its own while the depth limit allows it, but any type list inside the parentheses is ignored." (sub-agents, "Restrict which tools a subagent can use", "Restrict which subagents can be spawned")
-**Detection**: a `disallowedTools` entry of the form `Tool(...)` (warning); an `Agent(...)` or `Task(...)` entry with a type list in `tools` (info, since agnix can't tell whether the file runs as the main thread)
+**Detection**: a `disallowedTools` entry of the form `Tool(...)` (warning); an `Agent(...)` or `Task(...)` entry with a type list in `tools` (info, since agnix can't tell whether the file runs as the main thread), unless the agent sets `initialPrompt`, which only applies to a main session agent
 **Fix**: Manual - move the pattern to `permissions.deny`
 **Source**: code.claude.com/docs/en/sub-agents
 
@@ -1676,7 +1676,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="cc-pl-020"></a>
 ### CC-PL-020 [MEDIUM] Unbraced Plugin Variable in Plugin Content
 **Requirement**: Plugin skill, command and agent content SHOULD write path variables in braces. Vendor text: "The variables aren't present in the environment of commands Claude runs through the Bash tool, in the main session or in a subagent. In skill, command, and agent content, write the `${...}` reference in the Markdown body instead, and Claude Code substitutes the path inline when it loads the content." (plugins manifest reference, "Where each variable resolves")
-**Detection**: the body of a plugin skill (SKILL.md under a plugin root) or plugin agent contains `$CLAUDE_PLUGIN_ROOT` or `$CLAUDE_PLUGIN_DATA` without braces. Plugin command files are not detected as a file type.
+**Detection**: the body of a plugin skill (SKILL.md under a plugin root) or plugin agent contains `$CLAUDE_PLUGIN_ROOT` or `$CLAUDE_PLUGIN_DATA` without braces. Hook commands get the variables from their environment, so lines that mention hooks, fenced JSON blocks and inline code spans holding only the variable name are skipped. Plugin command files are not detected as a file type.
 **Fix**: Manual - write `${CLAUDE_PLUGIN_ROOT}`
 **Source**: code.claude.com/docs/en/plugins/manifest-reference
 
