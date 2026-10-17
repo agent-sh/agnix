@@ -66,6 +66,7 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-mcp/.kiro/settings/hardcoded-secrets.json",
         "tests/fixtures/kiro-permissions/valid/.kiro/settings/permissions.yaml",
         "tests/fixtures/kiro-permissions/invalid/.kiro/settings/permissions.yaml",
+        "tests/fixtures/kiro-detect/.kiroignore",
         "tests/fixtures/kiro-detect/.kiro/agents/reviewer.JSON",
         "tests/fixtures/kiro-detect/.kiro/hooks/team/lint.json",
         "tests/fixtures/kiro-detect/.kiro/mcp.json",
@@ -75,6 +76,9 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-detect/.kiro/settings/cli.json",
         "tests/fixtures/kiro-detect/.kiro/settings/permissions.yml",
         "tests/fixtures/kiro-detect/.kiro/settings/settings.json",
+        "tests/fixtures/kiro-detect/.kiro/workflows/broken.workflow.yaml",
+        "tests/fixtures/kiro-detect/.kiro/workflows/notes.json",
+        "tests/fixtures/kiro-detect/.kiro/workflows/plan-and-implement.workflow.json",
         "tests/fixtures/kiro-detect/power/POWER.md",
         "tests/fixtures/kiro-detect/power/steering/patterns.md",
     ]
@@ -121,6 +125,22 @@ fn kiro_detect_expectations() -> Vec<(&'static str, FileType)> {
             FileType::Unknown,
         ),
         (
+            "tests/fixtures/kiro-detect/.kiroignore",
+            FileType::KiroIgnore,
+        ),
+        (
+            "tests/fixtures/kiro-detect/.kiro/workflows/broken.workflow.yaml",
+            FileType::KiroWorkflow,
+        ),
+        (
+            "tests/fixtures/kiro-detect/.kiro/workflows/notes.json",
+            FileType::KiroNotLoaded,
+        ),
+        (
+            "tests/fixtures/kiro-detect/.kiro/workflows/plan-and-implement.workflow.json",
+            FileType::KiroWorkflow,
+        ),
+        (
             "tests/fixtures/kiro-detect/power/POWER.md",
             FileType::KiroPower,
         ),
@@ -155,8 +175,10 @@ fn collect_relative_files(root: &Path, dir: &Path, out: &mut BTreeSet<String>) {
         if metadata.is_dir() {
             collect_relative_files(root, &path, out);
         } else if metadata.is_file() {
+            // `.kiroignore` is a Kiro configuration file, inventoried like the rest.
             if let Some(name) = path.file_name().and_then(|name| name.to_str())
                 && name.starts_with('.')
+                && name != ".kiroignore"
             {
                 if is_allowed_hidden_fixture_file(name) {
                     continue;
@@ -286,8 +308,9 @@ fn kiro_fixture_families_are_cli_runnable() {
         ("tests/fixtures/kiro-hooks", 7_u64, 4_u64),
         ("tests/fixtures/kiro-mcp", 1_u64, 0_u64),
         ("tests/fixtures/kiro-permissions", 2_u64, 4_u64),
-        // Five KIRO-026 near misses; settings/settings.json is not validated.
-        ("tests/fixtures/kiro-detect", 10_u64, 5_u64),
+        // Six KIRO-026 near misses, five KR-WF findings in broken.workflow.yaml
+        // and one KR-IGN-001; settings/settings.json is not validated.
+        ("tests/fixtures/kiro-detect", 14_u64, 12_u64),
     ];
 
     for (rel, expected_files_checked, expected_diagnostics) in fixture_roots {
@@ -410,34 +433,45 @@ fn kiro_fixture_representatives_map_to_expected_file_types() {
 }
 
 #[test]
-fn kiro_detect_fixtures_report_only_never_loaded_files() {
+fn kiro_detect_fixtures_report_exactly_the_expected_findings() {
     let root = workspace_root();
     let fixture = root.join("tests/fixtures/kiro-detect");
     let output = run_agnix_json(&fixture);
     let diagnostics = output["diagnostics"].as_array().unwrap();
 
-    let flagged: BTreeSet<String> = diagnostics
+    let found: BTreeSet<(String, String)> = diagnostics
         .iter()
         .map(|diagnostic| {
-            assert_eq!(diagnostic["rule"], "KIRO-026", "{diagnostic}");
-            assert_eq!(diagnostic["level"], "warning", "{diagnostic}");
-            diagnostic["file"].as_str().unwrap().replace('\\', "/")
+            let file = diagnostic["file"].as_str().unwrap().replace('\\', "/");
+            let start = file.find("tests/fixtures/").unwrap_or(0);
+            (
+                diagnostic["rule"].as_str().unwrap().to_string(),
+                file[start..].to_string(),
+            )
         })
         .collect();
-    let expected: BTreeSet<String> = kiro_detect_expectations()
+    let mut expected: BTreeSet<(String, String)> = kiro_detect_expectations()
         .into_iter()
         .filter(|(_, file_type)| *file_type == FileType::KiroNotLoaded)
-        .map(|(rel, _)| rel.to_string())
+        .map(|(rel, _)| ("KIRO-026".to_string(), rel.to_string()))
         .collect();
-    let flagged_relative: BTreeSet<String> = flagged
-        .iter()
-        .map(|file| {
-            let start = file.find("tests/fixtures/").unwrap_or(0);
-            file[start..].to_string()
-        })
-        .collect();
+    let broken = "tests/fixtures/kiro-detect/.kiro/workflows/broken.workflow.yaml";
+    for rule in [
+        "KR-WF-001",
+        "KR-WF-002",
+        "KR-WF-004",
+        "KR-WF-006",
+        "KR-WF-007",
+    ] {
+        expected.insert((rule.to_string(), broken.to_string()));
+    }
+    expected.insert((
+        "KR-IGN-001".to_string(),
+        "tests/fixtures/kiro-detect/.kiroignore".to_string(),
+    ));
     // No Claude import, cross-platform or hook rules on Kiro files: power
     // steering has `### @app.entrypoint`, POWER.md documents OS paths, and
-    // .kiro/settings/settings.json looks like Claude settings.
-    assert_eq!(flagged_relative, expected);
+    // .kiro/settings/settings.json looks like Claude settings. The valid
+    // recipe gets nothing.
+    assert_eq!(found, expected);
 }

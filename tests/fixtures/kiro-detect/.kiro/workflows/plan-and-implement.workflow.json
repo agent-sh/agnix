@@ -1,0 +1,21 @@
+{
+  "name": "plan-and-implement",
+  "description": "Plan a change, then implement it",
+  "inputs": {
+    "task": "prompt"
+  },
+  "steps": [
+    {
+      "type": "step",
+      "id": "plan",
+      "agent": "wf-planner",
+      "prompt": "Create an implementation plan for: {{task}}. Do not edit files."
+    },
+    {
+      "type": "step",
+      "id": "implement",
+      "agent": "wf-coder",
+      "prompt": "Implement this plan, then run relevant tests:\n\n{{previous.output}}"
+    }
+  ]
+}

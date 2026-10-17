@@ -366,6 +366,11 @@ mod kiro {
             // permissions.yaml, or permissions.json / managed-settings.json.
             FileType::KiroPermissions if start.starts_with('{') => Some(Syntax::Json),
             FileType::KiroPermissions => Some(Syntax::Yaml),
+            // `.workflow.json` or `.workflow.yaml` / `.workflow.yml`.
+            FileType::KiroWorkflow if start.is_empty() || start.starts_with('{') => {
+                Some(Syntax::Json)
+            }
+            FileType::KiroWorkflow => Some(Syntax::Yaml),
             _ => None,
         }
     }
@@ -381,6 +386,7 @@ mod kiro {
             FileType::KiroPowerMcp => "kiro-power-mcp",
             FileType::KiroSettings => "kiro-settings",
             FileType::KiroPermissions => "kiro-permissions",
+            FileType::KiroWorkflow => "kiro-workflow",
             // Legacy IDE 0.x `.kiro.hook` files, power steering and files
             // Kiro never loads have no catalog: no completions rather than
             // another tool's.
@@ -794,6 +800,142 @@ mod kiro {
         ),
     ];
 
+    const WORKFLOW_KEYS: &[Key] = &[
+        key_with(
+            "name",
+            "Stable recipe name (required).",
+            &["KR-WF-004"],
+            &[],
+        ),
+        key("description", "Purpose shown by recipe selectors."),
+        key(
+            "inputs",
+            "Input names to free-form type hints such as prompt, file or string; declare every bare template variable.",
+        ),
+        key_with(
+            "modelId",
+            "Default model for steps; auto or omission inherits the parent session.",
+            &[],
+            &["auto"],
+        ),
+        key_with(
+            "effortLevel",
+            "Reasoning effort; unsupported values fall back to the model default.",
+            &[],
+            &["low", "medium", "high", "xhigh", "max"],
+        ),
+        key_with(
+            "steps",
+            "Workflow nodes; top-level nodes run in order (at most 50 step nodes, 8 levels deep).",
+            &["KR-WF-001"],
+            &[],
+        ),
+        key_with(
+            "type",
+            "Node type.",
+            &["KR-WF-004"],
+            &["step", "sequence", "repeat", "parallel", "watch", "include"],
+        ),
+        key_with(
+            "id",
+            "Node id, unique across the recipe.",
+            &["KR-WF-001"],
+            &[],
+        ),
+        key_with(
+            "agent",
+            "Workflow-capable agent of a step: a bundled workflow agent or one from .kiro/agents/.",
+            &[],
+            &[
+                "wf-planner",
+                "wf-coder",
+                "wf-design",
+                "wf-design-reviewer",
+                "wf-review-aggregator",
+                "wf-pr-submitter",
+                "wf-pr-responder",
+                "wf-auto-researcher",
+                "semantic_reviewer",
+            ],
+        ),
+        key(
+            "prompt",
+            "Step prompt; templates: {{input}}, {{previous.output}}, {{<id>.output}}, {{artifacts.<name>}}.",
+        ),
+        key("artifacts", "Logical names to files the step produces."),
+        key_with(
+            "captureOutput",
+            "Capture the step's final message for later templates (default true).",
+            &[],
+            BOOL,
+        ),
+        key(
+            "completion",
+            "Keeps the step interactive until the stop condition matches (not inside parallel).",
+        ),
+        key_with(
+            "maxIterations",
+            "Repeat cap, 1 to 1000 (required).",
+            &["KR-WF-002"],
+            &[],
+        ),
+        key_with(
+            "onMaxIterations",
+            "What happens at the cap (required).",
+            &["KR-WF-002"],
+            &["abort", "continue", "pause"],
+        ),
+        key_with(
+            "stopCondition",
+            "containsText, fileCheck or completionSignal; any match stops the repeat.",
+            &["KR-WF-006"],
+            &[],
+        ),
+        key_with(
+            "stopWhen",
+            "'<watchId>.terminal' or '{{expr}} contains <text>' (not with stopCondition).",
+            &["KR-WF-006"],
+            &[],
+        ),
+        key("containsText", "Text the latest captured output contains."),
+        key(
+            "fileCheck",
+            "{\"path\", \"jsonPath\", \"value\"}: a JSON value in a file.",
+        ),
+        key("jsonPath", "Dotted key path such as verdict or $.verdict."),
+        key_with(
+            "completionSignal",
+            "The latest send_message signal.",
+            &["KR-WF-006"],
+            &["success", "need_input", "error"],
+        ),
+        key(
+            "branches",
+            "Branches of a parallel node, scheduled independently.",
+        ),
+        key_with(
+            "joinPolicy",
+            "When a parallel node settles (required).",
+            &["KR-WF-004"],
+            &["all", "allSettled", "any"],
+        ),
+        key_with(
+            "handler",
+            "Watch handler.",
+            &["KR-WF-008"],
+            &["github-pr", "command"],
+        ),
+        key("config", "Handler configuration."),
+        key(
+            "idleTimeoutSec",
+            "Seconds a watch may stay idle before it ends with a terminal outcome.",
+        ),
+        key(
+            "pollIntervalSec",
+            "Watch poll cadence in seconds (command: at least 10, github-pr: at least 30; default 60).",
+        ),
+    ];
+
     const FAMILIES: &[Family] = &[
         Family {
             id: "kiro-agent",
@@ -855,6 +997,15 @@ mod kiro {
             id: "kiro-settings",
             keys: SETTINGS_KEYS,
             snippets: &[],
+        },
+        Family {
+            id: "kiro-workflow",
+            keys: WORKFLOW_KEYS,
+            snippets: &[(
+                "Kiro workflow recipe",
+                "{\n  \"name\": \"plan-and-implement\",\n  \"inputs\": { \"task\": \"prompt\" },\n  \"steps\": [\n    { \"type\": \"step\", \"id\": \"plan\", \"agent\": \"wf-planner\", \"prompt\": \"Plan {{task}}. Do not edit files.\" },\n    { \"type\": \"step\", \"id\": \"implement\", \"agent\": \"wf-coder\", \"prompt\": \"Implement this plan: {{previous.output}}\" }\n  ]\n}\n",
+                "Two-step recipe (.kiro/workflows/*.workflow.json).",
+            )],
         },
         Family {
             id: "kiro-permissions",
@@ -1317,12 +1468,32 @@ mod tests {
             FileType::KiroHook,
             FileType::KiroPowerSteering,
             FileType::KiroNotLoaded,
+            FileType::KiroIgnore,
         ] {
             assert!(
                 completion_candidates(file_type, content, byte).is_empty(),
                 "{file_type}"
             );
         }
+    }
+
+    #[test]
+    fn test_completion_kiro_workflow_yaml_values() {
+        let content = "name: x\nsteps:\n  - type: repeat\n    onMaxIterations: \n";
+        let byte = content.find("onMaxIterations: ").unwrap() + "onMaxIterations: ".len();
+        let labels: Vec<_> = completion_candidates(FileType::KiroWorkflow, content, byte)
+            .into_iter()
+            .map(|c| c.label)
+            .collect();
+        assert_eq!(labels, vec!["abort", "continue", "pause"]);
+        // JSON recipes get JSON insert text.
+        let content = "{\"name\": \"x\", \"steps\": [{\"type\": \n}]}";
+        let byte = content.find("\"type\": ").unwrap() + "\"type\": ".len();
+        let repeat = completion_candidates(FileType::KiroWorkflow, content, byte)
+            .into_iter()
+            .find(|c| c.label == "repeat")
+            .unwrap();
+        assert_eq!(repeat.insert_text, "\"repeat\"");
     }
 
     #[test]
@@ -1355,6 +1526,7 @@ mod tests {
             FileType::KiroPowerMcp,
             FileType::KiroSettings,
             FileType::KiroPermissions,
+            FileType::KiroWorkflow,
         ] {
             assert!(kiro::syntax(file_type, "").is_some(), "{file_type}");
             assert!(

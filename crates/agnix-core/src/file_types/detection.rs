@@ -305,6 +305,10 @@ fn has_clinerules_ancestor(path: &Path) -> bool {
 // - Permissions (V3): `permissions.yaml`, else `permissions.json`, in
 //   `<config>/settings/` (user) and `<config>/workspace-roots/<hash>/`
 //   (workspace), plus the administrator's `managed-settings.json`.
+// - Workflows (V3): the top-level `*.workflow.json`, `*.workflow.yaml` and
+//   `*.workflow.yml` files of `.kiro/workflows/` and `~/.kiro/workflows/`.
+// - Ignore files (V3, IDE): `.kiroignore` in a workspace root or any
+//   subdirectory, and the global `~/.kiro/settings/kiroignore`.
 // - Powers (V3): an installed power lives in `~/.kiro/powers/installed/<name>/`
 //   and has `plugin.json` (Agent Plugins format) or `POWER.md` (legacy) at
 //   its root, `mcp.json`, steering in `steering/*.md` (legacy) or
@@ -345,7 +349,19 @@ pub(crate) enum KiroNotLoadedReason {
     /// `.kiro/settings.json`. The validator reports it only when it holds
     /// Kiro CLI setting keys.
     LegacySettings,
+    /// A file in `.kiro/workflows/` whose name lacks an exact
+    /// `.workflow.json`, `.workflow.yaml` or `.workflow.yml` suffix
+    /// (`plan.json`, `plan.Workflow.json`). For a bare `.json`/`.yaml`/`.yml`
+    /// the validator reports it only when the content is a recipe.
+    WorkflowSuffix { case_only: bool },
+    /// A recipe in a subdirectory of `.kiro/workflows/` (recipes are not
+    /// discovered recursively).
+    NestedWorkflow,
 }
+
+/// Recipe suffixes Kiro lists in `.kiro/workflows/`.
+pub(crate) const KIRO_WORKFLOW_SUFFIXES: &[&str] =
+    &[".workflow.json", ".workflow.yaml", ".workflow.yml"];
 
 /// Which Kiro engines load a file that is detected as `FileType::KiroAgent`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -425,6 +441,24 @@ fn is_kiro_power_root(rel_dirs: &[&str]) -> bool {
 fn is_named_power_root(dirs: &[&str]) -> bool {
     dirs_end_with(dirs, &["power"])
         || (dirs.len() >= 2 && dirs[dirs.len() - 2].eq_ignore_ascii_case("powers"))
+}
+
+/// Returns true for a skill bundled in a power, `<power>/skills/<dir>/SKILL.md`,
+/// where the power directory is recognised by path (installed or in-repo
+/// under `.kiro/powers`, or a published `power/` / `powers/<name>/`).
+pub(crate) fn is_kiro_power_skill(path: &Path) -> bool {
+    let comps = normal_components(path);
+    let n = comps.len();
+    if n < 4 || comps[n - 1] != "SKILL.md" || !comps[n - 3].eq_ignore_ascii_case("skills") {
+        return false;
+    }
+    let power_root = &comps[..n - 3];
+    if let Some(idx) = kiro_dir_index(power_root)
+        && is_kiro_power_root(&power_root[idx + 1..])
+    {
+        return true;
+    }
+    kiro_dir_index(power_root).is_none() && is_named_power_root(power_root)
 }
 
 /// Settings file names Kiro opens by path, for near-miss matching.
@@ -580,6 +614,10 @@ fn classify_in_kiro_dir(rel_dirs: &[&str], filename: &str) -> Option<KiroClass> 
             if filename.eq_ignore_ascii_case("mcp.json") {
                 return Some(Type(FileType::KiroMcp));
             }
+            // The global ignore file (`~/.kiro/settings/kiroignore`).
+            if filename.eq_ignore_ascii_case("kiroignore") {
+                return Some(Type(FileType::KiroIgnore));
+            }
             if filename.eq_ignore_ascii_case("cli.json") {
                 return Some(Type(FileType::KiroSettings));
             }
@@ -603,6 +641,31 @@ fn classify_in_kiro_dir(rel_dirs: &[&str], filename: &str) -> Option<KiroClass> 
             && expected.starts_with("permissions.")
         {
             return Some(NotLoaded(Reason::Misnamed { expected }));
+        }
+        return None;
+    }
+
+    if is("workflows") {
+        let exact = KIRO_WORKFLOW_SUFFIXES
+            .iter()
+            .any(|suffix| filename.ends_with(suffix));
+        let any_case = KIRO_WORKFLOW_SUFFIXES
+            .iter()
+            .any(|suffix| ends_with_ignore_ascii_case(filename, suffix));
+        if rel_dirs.len() > 1 {
+            return any_case.then_some(NotLoaded(Reason::NestedWorkflow));
+        }
+        if exact {
+            return Some(Type(FileType::KiroWorkflow));
+        }
+        if any_case {
+            return Some(NotLoaded(Reason::WorkflowSuffix { case_only: true }));
+        }
+        if [".json", ".yaml", ".yml"]
+            .iter()
+            .any(|ext| ends_with_ignore_ascii_case(filename, ext))
+        {
+            return Some(NotLoaded(Reason::WorkflowSuffix { case_only: false }));
         }
         return None;
     }
@@ -691,6 +754,11 @@ fn classify_kiro(path: &Path) -> Option<KiroClass> {
     let comps = normal_components(path);
     let (filename, dirs) = comps.split_last()?;
     let kiro_idx = kiro_dir_index(dirs);
+
+    // `.kiroignore` applies in the workspace root and in any subdirectory.
+    if *filename == ".kiroignore" {
+        return Some(KiroClass::Type(FileType::KiroIgnore));
+    }
 
     if let Some(idx) = kiro_idx
         && let Some(class) = classify_in_kiro_dir(&dirs[idx + 1..], filename)
@@ -2723,6 +2791,69 @@ mod tests {
         assert_eq!(reason(".kiro/settings.json"), Some(LegacySettings));
         assert_eq!(reason(".kiro/agents/a.json"), None);
         assert_eq!(reason("settings.json"), None);
+    }
+
+    #[test]
+    fn kiro_workflows_are_top_level_recipe_files() {
+        use FileType::*;
+        assert_types(&[
+            (".kiro/workflows/plan.workflow.json", KiroWorkflow),
+            (".kiro/workflows/plan.workflow.yaml", KiroWorkflow),
+            (".kiro/workflows/plan.workflow.yml", KiroWorkflow),
+            ("/home/u/.kiro/workflows/review.workflow.json", KiroWorkflow),
+            // Near misses Kiro never loads (KIRO-026).
+            (".kiro/workflows/plan.json", KiroNotLoaded),
+            (".kiro/workflows/plan.yaml", KiroNotLoaded),
+            (".kiro/workflows/plan.Workflow.json", KiroNotLoaded),
+            (".kiro/workflows/team/plan.workflow.json", KiroNotLoaded),
+            (".kiro/workflows/README.md", Unknown),
+            (".kiro/workflows/watch-review.mjs", Unknown),
+            // Run output and other tools' workflow files.
+            (".kiro/workflow-output/status.json", Unknown),
+            (".github/workflows/ci.yml", Unknown),
+            (".windsurf/workflows/deploy.md", WindsurfWorkflow),
+            ("workflows/plan.workflow.json", Unknown),
+        ]);
+    }
+
+    #[test]
+    fn kiro_ignore_files() {
+        use FileType::*;
+        assert_types(&[
+            (".kiroignore", KiroIgnore),
+            ("packages/api/.kiroignore", KiroIgnore),
+            ("/home/u/.kiro/settings/kiroignore", KiroIgnore),
+            (".kiro/settings/kiroignore", KiroIgnore),
+            // Other tools' ignore files.
+            (".gitignore", Unknown),
+            (".geminiignore", GeminiIgnore),
+            (".rooignore", RooIgnore),
+            (".cursorignore", Unknown),
+            ("kiroignore", Unknown),
+        ]);
+    }
+
+    #[test]
+    fn kiro_power_skills() {
+        for path in [
+            ".kiro/powers/installed/aws/skills/setup/SKILL.md",
+            "/home/u/.kiro/powers/aws/skills/setup/SKILL.md",
+            "power/skills/setup/SKILL.md",
+            "powers/supabase/skills/setup/SKILL.md",
+        ] {
+            assert!(is_kiro_power_skill(Path::new(path)), "{path}");
+            assert_eq!(detect_file_type(Path::new(path)), FileType::Skill, "{path}");
+        }
+        for path in [
+            ".kiro/skills/setup/SKILL.md",
+            ".kiro/powers/aws/skills/SKILL.md",
+            ".kiro/powers/aws/skills/a/b/SKILL.md",
+            "plugins/x/skills/setup/SKILL.md",
+            ".claude/skills/setup/SKILL.md",
+            "my-power/skills/setup/SKILL.md",
+        ] {
+            assert!(!is_kiro_power_skill(Path::new(path)), "{path}");
+        }
     }
 
     #[test]

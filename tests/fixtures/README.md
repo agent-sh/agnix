@@ -30,7 +30,7 @@ Keep fixtures minimal, deterministic, and focused on one rule family when possib
 | Kiro Agents (fixture pack) | `kiro-agents/` | `kiro-agents/.kiro/agents/valid-agent.json` | `kiro-agents/.kiro/agents/invalid-model.json`, `kiro-agents/.kiro/agents/missing-hook-command.json` |
 | Kiro Hooks (fixture pack) | `kiro-hooks/` | `kiro-hooks/.kiro/hooks/valid-file-save.kiro.hook` | `kiro-hooks/.kiro/hooks/invalid-event.kiro.hook`, `kiro-hooks/.kiro/hooks/missing-action.kiro.hook` |
 | Kiro MCP (fixture pack) | `kiro-mcp/` | `kiro-mcp/.kiro/settings/mcp.json` | `kiro-mcp/.kiro/settings/missing-command-url.json`, `kiro-mcp/.kiro/settings/hardcoded-secrets.json` |
-| Kiro detection (fixture pack) | `kiro-detect/` | `kiro-detect/.kiro/settings/cli.json`, `kiro-detect/power/POWER.md` | `kiro-detect/.kiro/agents/reviewer.JSON`, `kiro-detect/.kiro/settings/permissions.yml` (KIRO-026) |
+| Kiro detection, workflows, ignore files (fixture pack) | `kiro-detect/` | `kiro-detect/.kiro/settings/cli.json`, `kiro-detect/power/POWER.md`, `kiro-detect/.kiro/workflows/plan-and-implement.workflow.json` | `kiro-detect/.kiro/agents/reviewer.JSON` (KIRO-026), `kiro-detect/.kiro/workflows/broken.workflow.yaml` (KR-WF), `kiro-detect/.kiroignore` (KR-IGN-001) |
 | KR-SET | `valid/kiro-settings/`, `invalid/kiro-settings/` | `valid/kiro-settings/.kiro/settings/cli.json` | `invalid/kiro-settings/.kiro/settings/cli.json` |
 
 ## Notes

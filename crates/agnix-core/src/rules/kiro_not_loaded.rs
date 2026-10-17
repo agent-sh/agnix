@@ -262,6 +262,26 @@ impl Validator for KiroNotLoadedValidator {
                     t!("rules.kiro_026.legacy_settings_suggestion"),
                 )
             }
+            KiroNotLoadedReason::WorkflowSuffix { case_only } => {
+                if !case_only && !is_workflow_recipe(path, content) {
+                    return Vec::new();
+                }
+                (
+                    1,
+                    0,
+                    t!("rules.kiro_026.workflow_suffix", name = name),
+                    t!(
+                        "rules.kiro_026.rename_suggestion",
+                        fixed = workflow_file_name(name)
+                    ),
+                )
+            }
+            KiroNotLoadedReason::NestedWorkflow => (
+                1,
+                0,
+                t!("rules.kiro_026.nested_workflow"),
+                t!("rules.kiro_026.nested_workflow_suggestion"),
+            ),
         };
 
         vec![
@@ -281,6 +301,38 @@ fn replace_extension(name: &str, expected: &str) -> String {
         Some((stem, _)) if !stem.is_empty() => format!("{stem}{expected}"),
         _ => format!("{name}{expected}"),
     }
+}
+
+/// `plan.json` -> `plan.workflow.json`, `plan.Workflow.YAML` ->
+/// `plan.workflow.yaml`.
+fn workflow_file_name(name: &str) -> String {
+    let lower = name.to_ascii_lowercase();
+    for suffix in crate::file_types::KIRO_WORKFLOW_SUFFIXES {
+        if lower.ends_with(suffix) {
+            return format!("{}{}", &name[..name.len() - suffix.len()], suffix);
+        }
+    }
+    match name.rsplit_once('.') {
+        Some((stem, ext)) if !stem.is_empty() => {
+            format!("{stem}.workflow.{}", ext.to_ascii_lowercase())
+        }
+        _ => format!("{name}.workflow.json"),
+    }
+}
+
+/// A workflow recipe: a JSON or YAML object with a `steps` array.
+fn is_workflow_recipe(path: &Path, content: &str) -> bool {
+    let is_yaml = extension(&path.to_string_lossy())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("yaml") || ext.eq_ignore_ascii_case("yml"));
+    let value: Option<serde_json::Value> = if is_yaml {
+        serde_yaml::from_str(content).ok()
+    } else {
+        serde_json::from_str(content).ok()
+    };
+    value
+        .as_ref()
+        .and_then(|v| v.get("steps"))
+        .is_some_and(serde_json::Value::is_array)
 }
 
 /// A V3 hook document (`{"hooks": [...]}`) or a legacy IDE hook saved as JSON
@@ -469,6 +521,44 @@ mod tests {
             .is_empty()
         );
         assert!(validate(".kiro/hooks/scripts/broken.json", "{").is_empty());
+    }
+
+    #[test]
+    fn misnamed_and_nested_workflow_recipes_are_reported() {
+        let recipe = r#"{"name": "plan", "steps": [{"type": "step", "id": "a", "agent": "wf-planner", "prompt": "x"}]}"#;
+        let diagnostics = validate(".kiro/workflows/plan.json", recipe);
+        let diagnostic = only(&diagnostics);
+        assert!(
+            diagnostic.message.contains("plan.json"),
+            "{}",
+            diagnostic.message
+        );
+        assert!(
+            diagnostic
+                .suggestion
+                .as_deref()
+                .is_some_and(|s| s.contains("plan.workflow.json"))
+        );
+        // YAML recipe without the infix.
+        only(&validate(
+            ".kiro/workflows/plan.yml",
+            "name: plan\nsteps: []\n",
+        ));
+        // A case variant is reported whatever the content.
+        let diagnostics = validate(".kiro/workflows/plan.Workflow.JSON", "{}");
+        assert!(
+            only(&diagnostics)
+                .suggestion
+                .as_deref()
+                .is_some_and(|s| s.contains("plan.workflow.json"))
+        );
+        only(&validate(
+            ".kiro/workflows/team/plan.workflow.yaml",
+            "name: x\n",
+        ));
+        // Data files that are not recipes are left alone.
+        assert!(validate(".kiro/workflows/inputs.json", r#"{"task": "x"}"#).is_empty());
+        assert!(validate(".kiro/workflows/notes.yaml", "a: 1\n").is_empty());
     }
 
     #[test]

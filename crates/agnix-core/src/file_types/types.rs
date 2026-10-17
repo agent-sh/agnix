@@ -120,6 +120,12 @@ pub enum FileType {
     /// Kiro capability policy (settings/permissions.{yaml,json},
     /// workspace-roots/<hash>/permissions.{yaml,json}, managed-settings.json)
     KiroPermissions,
+    /// Kiro workflow recipes (.kiro/workflows/*.workflow.json, *.workflow.yaml,
+    /// *.workflow.yml; also ~/.kiro/workflows/)
+    KiroWorkflow,
+    /// Kiro ignore files (.kiroignore in the workspace root or a subdirectory,
+    /// ~/.kiro/settings/kiroignore)
+    KiroIgnore,
     /// File in a Kiro configuration location that no Kiro engine loads, such
     /// as .kiro/agents/reviewer.JSON or .kiro/settings/permissions.yml
     KiroNotLoaded,
@@ -206,6 +212,8 @@ impl fmt::Display for FileType {
             FileType::KiroMcp => "KiroMcp",
             FileType::KiroSettings => "KiroSettings",
             FileType::KiroPermissions => "KiroPermissions",
+            FileType::KiroWorkflow => "KiroWorkflow",
+            FileType::KiroIgnore => "KiroIgnore",
             FileType::KiroNotLoaded => "KiroNotLoaded",
             FileType::GeminiAgent => "GeminiAgent",
             FileType::GenericMarkdown => "GenericMarkdown",
@@ -271,6 +279,8 @@ mod tests {
             (FileType::KiroMcp, "KiroMcp"),
             (FileType::KiroSettings, "KiroSettings"),
             (FileType::KiroPermissions, "KiroPermissions"),
+            (FileType::KiroWorkflow, "KiroWorkflow"),
+            (FileType::KiroIgnore, "KiroIgnore"),
             (FileType::KiroNotLoaded, "KiroNotLoaded"),
             (FileType::GeminiAgent, "GeminiAgent"),
             (FileType::GenericMarkdown, "GenericMarkdown"),
@@ -335,6 +345,8 @@ mod tests {
             FileType::KiroMcp,
             FileType::KiroSettings,
             FileType::KiroPermissions,
+            FileType::KiroWorkflow,
+            FileType::KiroIgnore,
             FileType::KiroNotLoaded,
             FileType::GeminiAgent,
             FileType::GenericMarkdown,
@@ -413,6 +425,8 @@ mod tests {
             FileType::KiroMcp,
             FileType::KiroSettings,
             FileType::KiroPermissions,
+            FileType::KiroWorkflow,
+            FileType::KiroIgnore,
             FileType::KiroNotLoaded,
             FileType::GeminiAgent,
             FileType::Unknown,

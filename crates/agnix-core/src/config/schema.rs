@@ -40,6 +40,8 @@ pub(in crate::config) const KNOWN_RULE_PREFIXES: &[&str] = &[
     "KR-PM-",
     "KR-PW-",
     "KR-SET-",
+    "KR-WF-",
+    "KR-IGN-",
     "KR-SK-",
     "CL-SK-",
     "CP-SK-",

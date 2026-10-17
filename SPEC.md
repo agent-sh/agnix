@@ -43,6 +43,8 @@
 | Kiro MCP | .kiro/settings/mcp.json | 6 |
 | Kiro Powers | POWER.md, power plugin.json / mcp.json / steering/*.md (.kiro/powers/[installed/]<name>/, power/, powers/<name>/) | 8 |
 | Kiro Settings | .kiro/settings/cli.json | 3 |
+| Kiro Workflows | .kiro/workflows/*.workflow.{json,yaml,yml} | 9 |
+| Kiro Ignore | .kiroignore, ~/.kiro/settings/kiroignore | 1 |
 | Amp Skills | .agents/skills/*/SKILL.md | 1 |
 | Amp Checks | .agents/checks/*.md, .amp/settings*.json | 4 |
 | Roo Code Skills | .roo/skills/*/SKILL.md | 1 |

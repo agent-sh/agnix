@@ -29,6 +29,7 @@ keywords: ["KIRO-026", "kiro configuration file never loaded", "kiro steering", 
 - https://kiro.dev/docs/steering/
 - https://kiro.dev/docs/reference/settings/
 - https://kiro.dev/docs/permissions/
+- https://kiro.dev/docs/workflows/authoring/
 
 ## Test Coverage Metadata
 

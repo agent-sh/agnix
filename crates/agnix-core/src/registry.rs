@@ -398,7 +398,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 86;
+const EXPECTED_BUILTIN_COUNT: usize = 88;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -847,6 +847,16 @@ impl ValidatorProvider for MiscProvider {
                 kiro_settings_validator,
             ),
             (
+                FileType::KiroWorkflow,
+                Some("KiroWorkflowValidator"),
+                kiro_workflow_validator,
+            ),
+            (
+                FileType::KiroIgnore,
+                Some("KiroIgnoreValidator"),
+                kiro_ignore_validator,
+            ),
+            (
                 FileType::KiroNotLoaded,
                 Some("KiroNotLoadedValidator"),
                 kiro_not_loaded_validator,
@@ -1064,6 +1074,14 @@ fn kiro_power_mcp_validator() -> Box<dyn Validator> {
 /// Validator for a power's `plugin.json` (`FileType::KiroPowerPlugin`).
 fn kiro_power_plugin_validator() -> Box<dyn Validator> {
     Box::new(KiroPowerPluginValidator)
+}
+
+fn kiro_workflow_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::kiro_workflow::KiroWorkflowValidator)
+}
+
+fn kiro_ignore_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::kiro_ignore::KiroIgnoreValidator)
 }
 
 fn kiro_not_loaded_validator() -> Box<dyn Validator> {
@@ -1555,6 +1573,8 @@ mod tests {
             FileType::KiroPermissions,
             FileType::KiroMcp,
             FileType::KiroSettings,
+            FileType::KiroWorkflow,
+            FileType::KiroIgnore,
             FileType::KiroNotLoaded,
             FileType::GenericMarkdown,
         ];
@@ -1612,6 +1632,8 @@ mod tests {
                 | FileType::KiroMcp
                 | FileType::KiroSettings
                 | FileType::KiroPermissions
+                | FileType::KiroWorkflow
+                | FileType::KiroIgnore
                 | FileType::KiroNotLoaded
                 | FileType::GeminiAgent
                 | FileType::GenericMarkdown => (),
@@ -1685,6 +1707,11 @@ mod tests {
             names_for(FileType::KiroNotLoaded),
             vec!["KiroNotLoadedValidator"]
         );
+        assert_eq!(
+            names_for(FileType::KiroWorkflow),
+            vec!["KiroWorkflowValidator"]
+        );
+        assert_eq!(names_for(FileType::KiroIgnore), vec!["KiroIgnoreValidator"]);
         for file_type in [
             FileType::KiroSteering,
             FileType::KiroPower,
@@ -1697,6 +1724,8 @@ mod tests {
             FileType::KiroMcp,
             FileType::KiroSettings,
             FileType::KiroPermissions,
+            FileType::KiroWorkflow,
+            FileType::KiroIgnore,
             FileType::KiroNotLoaded,
         ] {
             let names = names_for(file_type);
@@ -2175,10 +2204,10 @@ mod tests {
 
     #[test]
     fn misc_provider_count() {
-        // Still 36: Kiro hooks and powers dropped four Imports/CrossPlatform
-        // entries and gained power plugin, power MCP, power steering and
-        // not-loaded entries.
-        assert_eq!(MiscProvider.named_validators().len(), 36);
+        // 38: Kiro hooks and powers dropped four Imports/CrossPlatform entries
+        // and gained power plugin, power MCP, power steering, workflow,
+        // ignore-file and not-loaded entries.
+        assert_eq!(MiscProvider.named_validators().len(), 38);
     }
 
     #[test]

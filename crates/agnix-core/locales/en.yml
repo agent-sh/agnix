@@ -1114,6 +1114,9 @@ rules:
     nested_hook_suggestion: Move the hook file directly into .kiro/hooks/
     move_suggestion: Move the file to %{expected}
     legacy_settings_suggestion: Move the settings to .kiro/settings/cli.json (kiro-cli settings writes there; use --workspace for the project file)
+    workflow_suffix: Kiro loads only files ending in '.workflow.json', '.workflow.yaml' or '.workflow.yml' from .kiro/workflows/, so it never loads '%{name}'
+    nested_workflow: Kiro loads workflow recipes only from the top level of .kiro/workflows/, so it never loads this recipe
+    nested_workflow_suggestion: Move the recipe directly into .kiro/workflows/
   kr_pw_005:
     message: 'POWER.md step #%{index} is missing a description'
     suggestion: Add a short description below each step heading so agents know what the step does
@@ -1310,6 +1313,58 @@ rules:
     not_integer: toolSearch.minTokens must be an integer (token counts are whole numbers)
     suggestion: Set toolSearch.minTokens to a non-negative integer (default 50000). Use 0 to make Tool Search always active.
       See https://kiro.dev/docs/cli/mcp/tool-search/
+  kr_wf_001:
+    steps: Workflow recipe has more than %{limit} step nodes; Kiro rejects it at load
+    depth: Workflow recipe nests nodes deeper than %{limit} levels; Kiro rejects it at load
+    duplicate: Duplicate workflow node id '%{id}'; node ids must be unique across the recipe
+    includes: Workflow recipe has %{count} include nodes, more than the maximum of %{limit}; Kiro resolves none of them
+    suggestion: Keep at most 50 step nodes and 8 nesting levels, and give every node a unique id (split large recipes with include nodes)
+  kr_wf_002:
+    missing_max: Repeat '%{id}' is missing the required maxIterations
+    invalid_max: Repeat '%{id}' has maxIterations %{value}; it must be a positive integer
+    too_many: Repeat '%{id}' has maxIterations %{value}, exceeding the maximum of %{limit}
+    missing_cap: Repeat '%{id}' is missing the required onMaxIterations (abort, continue or pause)
+    invalid_cap: Repeat '%{id}' has onMaxIterations %{value}; use abort, continue or pause
+    both_stops: Repeat '%{id}' sets both stopCondition and stopWhen; use only one
+    suggestion: Give every repeat a finite maxIterations (1-1000), choose onMaxIterations deliberately, and use either stopCondition or stopWhen
+  kr_wf_003:
+    message: Kiro loads '%{json}' instead of '%{name}' and reports this file as a conflict
+    suggestion: Keep one suffix per recipe name; delete or rename this file
+  kr_wf_004:
+    parse: 'Workflow recipe is not valid %{format}: %{error}'
+    message: 'Invalid workflow recipe: %{detail}'
+    suggestion: Fix the recipe so it matches the workflow schema (see kiro.dev/docs/workflows/authoring), then run validate_workflow on it
+  kr_wf_005:
+    message: Step '%{id}' declares completion inside a parallel node; Kiro rejects interactive steps in parallel branches
+    suggestion: Move the interactive step outside the parallel node
+  kr_wf_006:
+    not_object: Node '%{id}' has a stop condition that is not an object
+    empty: Node '%{id}' has a stop condition without containsText, fileCheck or completionSignal
+    signal: Node '%{id}' has completionSignal %{value}; use success, need_input or error
+    file_check: 'Node ''%{id}'' has an invalid fileCheck: %{detail}'
+    stop_when: 'Repeat ''%{id}'' has an invalid stopWhen ''%{value}'': %{detail}'
+    unknown_watch: Repeat '%{id}' stops on '%{watch}.terminal' but the recipe has no watch node '%{watch}'
+    suggestion: Use stopWhen '<watchId>.terminal' or '{{expr}} contains <text>', or a stopCondition with containsText, fileCheck (path, jsonPath, value) or completionSignal
+  kr_wf_007:
+    previous_parallel: Step '%{id}' references %{template} from inside a parallel branch, which has no guaranteed prior sibling
+    previous_first: Step '%{id}' references %{template} but has no prior sibling step that captures output
+    previous_stop: Node '%{id}' references %{template} in a stop or completion condition, which has no previous sibling
+    unknown_node: Node '%{id}' references %{template} but no node with id '%{node}' exists
+    no_output: Node '%{id}' references %{template} but node '%{node}' captures no output
+    not_before: Node '%{id}' references %{template} but node '%{node}' does not run before it
+    unknown_artifact: Node '%{id}' references %{template} but no step declares an artifact named '%{name}'
+    artifact_not_before: Node '%{id}' references %{template} but no step declaring artifact '%{name}' (%{producers}) runs before it
+    undeclared_input: Step '%{id}' references {{%{name}}}, which is not a declared input; Kiro passes it through as literal text
+    suggestion: Reference only outputs and artifacts of nodes that run earlier in the same ordered container, and declare every bare template variable in inputs
+  kr_wf_008:
+    message: 'Watch ''%{id}'': %{detail}'
+    suggestion: Configure the handler as documented (command handler - one static command, no args, pollIntervalSec >= 10; github-pr - prRef or url, pollIntervalSec >= 30)
+  kr_wf_009:
+    message: Repeat '%{id}' stops on fileCheck '%{path}', but no step inside the loop mentions that path; the loop may never stop
+    suggestion: Have a step inside the loop write the fileCheck file (name the path in its prompt or artifacts)
+  kr_ign_001:
+    message: Negation '%{pattern}' has no effect because its parent directory '%{dir}' is excluded by '%{excluded_by}' (line %{line}); Kiro cannot re-include a file below an excluded directory
+    suggestion: Exclude the directory's contents instead of the directory (for example '%{dir}/*' instead of '%{excluded_by}'), then keep the negation
   cc_set_001:
     type_error: prUrlTemplate must be a string
     empty: prUrlTemplate is set but empty - Claude Code will render no PR badge

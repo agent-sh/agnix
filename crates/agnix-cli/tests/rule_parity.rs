@@ -242,8 +242,8 @@ fn extract_implemented_rule_ids() -> BTreeSet<String> {
         "AS-", "CC-SK-", "CC-HK-", "CC-AG-", "CC-MEM-", "CC-OS-", "CC-PL-", "CC-SET-", "AGM-",
         "MCP-", "COP-", "CUR-", "CLN-", "CDX-", "OC-", "GM-", "GM-AG-", "XML-", "REF-", "PE-",
         "XP-", "VER-", "WS-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-", "KR-SK-",
-        "KR-AG-", "KR-PM-", "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KIRO-", "AMP-SK-", "AMP-",
-        "RC-SK-", "ROO-",
+        "KR-AG-", "KR-PM-", "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KR-WF-", "KR-IGN-", "KIRO-",
+        "AMP-SK-", "AMP-", "RC-SK-", "ROO-",
     ];
 
     fn extract_from_file(
@@ -408,6 +408,8 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
             "kiro-settings",
             vec!["valid/kiro-settings", "invalid/kiro-settings"],
         ),
+        ("kiro-workflows", vec!["kiro-detect"]),
+        ("kiro-ignore", vec!["kiro-detect"]),
         ("amp-skills", vec!["per_client_skills"]),
         ("amp-checks", vec!["amp-checks"]),
         ("roo-code-skills", vec!["per_client_skills"]),
@@ -635,6 +637,8 @@ fn test_rules_json_integrity() {
         "kiro-mcp",
         "kiro-powers",
         "kiro-settings",
+        "kiro-workflows",
+        "kiro-ignore",
         "kiro-steering",
         "amp-skills",
         "amp-checks",

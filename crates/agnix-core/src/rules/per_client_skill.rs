@@ -122,14 +122,17 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
 }
 
 /// Kiro skills in a `.kiro/skills` directory whose name differs in case
-/// (`.KIRO/Skills/x/SKILL.md`). File-type detection matches the `.kiro`
-/// directories case-insensitively, since case-insensitive file systems load
-/// them, so the client must too.
+/// (`.KIRO/Skills/x/SKILL.md`), and skills bundled in a power
+/// (`<power>/skills/<dir>/SKILL.md`, which Kiro V3 loads with the same
+/// skill rules). File-type detection matches the `.kiro` directories
+/// case-insensitively, since case-insensitive file systems load them, so the
+/// client must too.
 fn kiro_skill_client(components: &[&str]) -> SkillClient {
     let is_kiro_skills = components.windows(2).any(|pair| {
         pair[0].eq_ignore_ascii_case(".kiro") && pair[1].eq_ignore_ascii_case("skills")
     });
-    if is_kiro_skills {
+    let path: std::path::PathBuf = components.iter().collect();
+    if is_kiro_skills || crate::file_types::is_kiro_power_skill(&path) {
         SkillClient::Kiro
     } else {
         SkillClient::Unknown
@@ -676,6 +679,27 @@ mod tests {
         );
         assert_eq!(
             detect_client(Path::new("project/.kiro-old/skills/x/SKILL.md")),
+            SkillClient::Unknown
+        );
+    }
+
+    #[test]
+    fn test_detect_client_kiro_power_skills() {
+        for path in [
+            ".kiro/powers/installed/aws/skills/setup/SKILL.md",
+            "/home/u/.kiro/powers/aws/skills/setup/SKILL.md",
+            "power/skills/setup/SKILL.md",
+            "powers/supabase/skills/setup/SKILL.md",
+        ] {
+            assert_eq!(detect_client(Path::new(path)), SkillClient::Kiro, "{path}");
+        }
+        // Plugin skills of other tools are unaffected.
+        assert_eq!(
+            detect_client(Path::new("plugins/x/skills/setup/SKILL.md")),
+            SkillClient::Unknown
+        );
+        assert_eq!(
+            detect_client(Path::new(".claude/plugins/x/skills/setup/SKILL.md")),
             SkillClient::Unknown
         );
     }

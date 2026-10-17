@@ -1,0 +1,8 @@
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+
+# Private directories
+secrets/
+!secrets/public.txt
