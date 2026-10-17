@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 553,
+  "total_rules": 560,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -180,15 +180,15 @@
     },
     {
       "id": "AMP-001",
-      "name": "Invalid Amp Check Frontmatter",
+      "name": "Invalid Amp Check File",
       "severity": "HIGH",
       "category": "amp-checks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://ampcode.com/manual#code-review-checks"
+          "https://ampcode.com/docs/review"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "amp"
         },
@@ -201,10 +201,10 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "---\nname: security-review\ndescription: Review security-sensitive changes\nseverity-default: high\ntools:\n  - rg\n---\n# Security Review\n\nReview auth, secrets, and shell execution paths.",
-      "bad_example": "---\ndescription: Review security-sensitive changes\nunknownKey: true\n---\n# Security Review\n\nMissing required name field."
+      "good_example": "---\nname: no-emojis\ndescription: Flags emoji characters in user-facing text\nseverity-default: medium\n---\n\nReport emoji characters in user-facing strings.",
+      "bad_example": "---\ndescription: Flags emoji characters in user-facing text\n---\n"
     },
     {
       "id": "AMP-002",
@@ -214,13 +214,13 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://ampcode.com/manual#code-review-checks"
+          "https://ampcode.com/docs/review"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "amp"
         },
-        "normative_level": "SHOULD",
+        "normative_level": "MUST",
         "tests": {
           "unit": true,
           "fixtures": true,
@@ -229,22 +229,22 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "---\nname: security-review\nseverity-default: high\n---\n# Security Review\n\nReview auth and secret handling.",
-      "bad_example": "---\nname: security-review\nseverity-default: urgent\n---\n# Security Review\n\nInvalid severity-default value."
+      "good_example": "---\nname: security-review\nseverity-default: high\n---\n\nReview auth and secret handling.",
+      "bad_example": "---\nname: security-review\nseverity-default: urgent\n---\n\nReview auth and secret handling."
     },
     {
       "id": "AMP-003",
-      "name": "Invalid AGENTS.md globs Frontmatter for Amp",
+      "name": "Invalid globs in a File AGENTS.md Mentions",
       "severity": "MEDIUM",
       "category": "amp-checks",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://ampcode.com/manual#settings"
+          "https://ampcode.com/docs/customize/agents-md"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "amp"
         },
@@ -258,8 +258,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nglobs:\n  - \"src/**/*.rs\"\n---\n# AGENTS\n\nProject instructions for Amp.",
-      "bad_example": "---\nglobs: \"[broken\"\n---\n# AGENTS\n\nInvalid glob syntax."
+      "good_example": "<!-- AGENTS.md -->\nSee @docs/*.md.\n\n<!-- docs/typescript-conventions.md -->\n---\nglobs:\n  - '**/*.ts'\n  - '**/*.tsx'\n---\n\nFollow these TypeScript conventions.",
+      "bad_example": "<!-- AGENTS.md -->\nSee @docs/*.md.\n\n<!-- docs/typescript-conventions.md -->\n---\nglobs:\n  - '[broken'\n---\n\nFollow these TypeScript conventions."
     },
     {
       "id": "AMP-004",
@@ -270,9 +270,9 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://ampcode.com/docs/cli/settings",
-          "https://ampcode.com/docs/cli/runners"
+          "https://ampcode.com/cli-settings.schema.json"
         ],
-        "verified_on": "2026-09-18",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "amp"
         },
@@ -285,10 +285,148 @@
       },
       "fix": {
         "autofix": true,
-        "fix_safety": "safe"
+        "fix_safety": "unsafe"
       },
-      "good_example": "{\n  \"model\": \"amp-default\",\n  \"notify\": true\n}",
-      "bad_example": "{\n  \"model\": \"amp-default\",\n  \"unknownKey\": true\n}"
+      "good_example": "{\n  \"$schema\": \"https://ampcode.com/cli-settings.schema.json\",\n  \"amp.showCosts\": true,\n  \"amp.updates.mode\": \"warn\"\n}",
+      "bad_example": "{\n  \"model\": \"amp-default\",\n  \"amp.updates.mode\": \"never\"\n}"
+    },
+    {
+      "id": "AMP-005",
+      "name": "Amp Skill Defines MCP Servers Twice",
+      "severity": "MEDIUM",
+      "category": "amp-checks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\nname: linear\ndescription: Manages Linear issues. Use when filing or updating an issue.\nmcpServers:\n  linear:\n    url: https://mcp.linear.app/mcp\n    includeTools: [list_issues]\n---\n\nUse the linear tools.\n\n(No sibling mcp.json.)",
+      "bad_example": "---\nname: linear\ndescription: Manages Linear issues. Use when filing or updating an issue.\nmcpServers:\n  linear:\n    url: https://mcp.linear.app/mcp\n---\n\nUse the linear tools.\n\n(A sibling mcp.json also defines servers; Amp ignores it.)"
+    },
+    {
+      "id": "AMP-006",
+      "name": "Amp ID Token Outside HTTPS Headers",
+      "severity": "HIGH",
+      "category": "amp-checks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/mcp"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"amp.mcpServers\": {\n    \"internal-tools\": {\n      \"url\": \"https://mcp.example.com/mcp\",\n      \"headers\": { \"Authorization\": \"Bearer ${amp:id-token}\" }\n    }\n  }\n}",
+      "bad_example": "{\n  \"amp.mcpServers\": {\n    \"internal-tools\": {\n      \"command\": \"internal-mcp\",\n      \"env\": { \"TOKEN\": \"${amp:id-token}\" }\n    }\n  }\n}"
+    },
+    {
+      "id": "AMP-007",
+      "name": "Invalid amp.mcpPermissions Rule",
+      "severity": "MEDIUM",
+      "category": "amp-checks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/cli/settings",
+          "https://ampcode.com/cli-settings.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"amp.mcpPermissions\": [\n    { \"matches\": { \"command\": \"npx\", \"args\": \"* @playwright/mcp@*\" }, \"action\": \"allow\" },\n    { \"matches\": { \"url\": \"*\" }, \"action\": \"reject\" }\n  ]\n}",
+      "bad_example": "{\n  \"amp.mcpPermissions\": [\n    { \"matches\": \"*\", \"action\": \"deny\" }\n  ]\n}"
+    },
+    {
+      "id": "AMP-008",
+      "name": "Amp Skill MCP Server Without includeTools",
+      "severity": "LOW",
+      "category": "amp-checks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"linear\": {\n    \"url\": \"https://mcp.linear.app/sse\",\n    \"includeTools\": [\"list_issues\", \"create_issue\", \"update_issue\"]\n  }\n}",
+      "bad_example": "{\n  \"linear\": {\n    \"url\": \"https://mcp.linear.app/sse\"\n  }\n}"
+    },
+    {
+      "id": "AMP-010",
+      "name": "Invalid Amp MCP Server Configuration",
+      "severity": "HIGH",
+      "category": "amp-checks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/skills",
+          "https://ampcode.com/docs/customize/mcp",
+          "https://ampcode.com/cli-settings.schema.json"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"chrome-devtools\": {\n    \"command\": \"npx\",\n    \"args\": [\"-y\", \"chrome-devtools-mcp@latest\"],\n    \"includeTools\": [\"navigate_*\", \"take_screenshot\"]\n  }\n}",
+      "bad_example": "{\n  \"chrome-devtools\": {\n    \"args\": \"-y chrome-devtools-mcp@latest\",\n    \"includeTools\": \"navigate_*\"\n  }\n}"
     },
     {
       "id": "AMP-SK-001",
@@ -298,9 +436,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://ampcode.com/manual#agent-skills"
+          "https://ampcode.com/docs/customize/skills",
+          "https://ampcode.com/docs/plugin-api"
         ],
-        "verified_on": "2026-04-23",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "amp"
         },
@@ -317,6 +456,60 @@
       },
       "good_example": "---\nname: my-skill\ndescription: A useful development skill\n---\n# My Skill\n\nSkill instructions here.",
       "bad_example": "---\nname: my-skill\ndescription: A useful development skill\nmodel: opus\n---\n# My Skill\n\nSkill instructions here.\n\n(Note: AMP-SK-001 requires explicit Amp configuration context. The .agents/ directory is mapped to Codex by default.)"
+    },
+    {
+      "id": "AMP-SK-002",
+      "name": "Amp Skill Masked by an .agents/skills Copy",
+      "severity": "LOW",
+      "category": "amp-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# .claude/skills/deploy/SKILL.md\n---\nname: deploy-claude\ndescription: Deploys the app. Use when deploying.\n---\n\n(.agents/skills/deploy/SKILL.md names its skill 'deploy', or is byte-identical.)",
+      "bad_example": "# .claude/skills/deploy/SKILL.md\n---\nname: deploy\ndescription: Deploys the app. Use when deploying.\n---\n\n(.agents/skills/deploy/SKILL.md, with different content, also has name: deploy; Amp loads that one.)"
+    },
+    {
+      "id": "AMP-SK-003",
+      "name": "Amp Skill Too Deep to Be Discovered",
+      "severity": "MEDIUM",
+      "category": "amp-skills",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://ampcode.com/docs/customize/skills"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "amp"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "~/.agents/skills/something/deep/SKILL.md",
+      "bad_example": ".agents/skills/a/b/c/d/e/f/SKILL.md"
     },
     {
       "id": "AS-001",
@@ -16224,7 +16417,7 @@
     },
     "amp-skills": {
       "prefix": "AMP-SK",
-      "count": 1,
+      "count": 3,
       "description": "Amp per-client skill rules"
     },
     "roo-code-skills": {
@@ -16239,7 +16432,7 @@
     },
     "amp-checks": {
       "prefix": "AMP",
-      "count": 4,
+      "count": 9,
       "description": "Amp code review checks and settings rules"
     },
     "kiro-steering": {

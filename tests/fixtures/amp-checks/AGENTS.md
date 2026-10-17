@@ -1,6 +1,9 @@
----
-globs: "[broken"
----
-# AMP-003
+# Project
 
-Invalid AGENTS globs fixture.
+Build with `make`. Run the tests with `make test`.
+
+Language guidance: see @docs/*.md. Backend notes: @docs/backend.md.
+
+```text
+@docs/ignored-in-code.md
+```

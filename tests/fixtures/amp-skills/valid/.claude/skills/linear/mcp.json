@@ -1,0 +1,6 @@
+{
+	"linear": {
+		"url": "https://mcp.linear.app/sse",
+		"includeTools": ["list_issues", "create_issue", "update_issue"]
+	}
+}

@@ -33,7 +33,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| amp | `.amp/settings.json`, `.agents/checks/*.md`, `AGENTS.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-10-08 | AGM, AMP, AMP-SK |
+| amp | `.amp/settings.json(c)`, `~/.config/amp/settings.json(c)`, `.agents/checks/*.md`, `.agents/skills/*/SKILL.md`, skill `mcp.json`, `AGENTS.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-10-08 | AGM, AMP, AMP-SK |
 
 ### C Tier (community reports fixes only)
 

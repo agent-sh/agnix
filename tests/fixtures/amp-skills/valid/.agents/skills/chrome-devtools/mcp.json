@@ -1,0 +1,7 @@
+{
+	"chrome-devtools": {
+		"command": "npx",
+		"args": ["-y", "chrome-devtools-mcp@latest"],
+		"includeTools": ["navigate_*", "take_screenshot", "click", "fill*"]
+	}
+}

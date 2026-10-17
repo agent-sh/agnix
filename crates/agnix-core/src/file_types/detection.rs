@@ -241,10 +241,77 @@ fn is_under_cursor_agents(path: &Path) -> bool {
     path_contains_consecutive_components(path, ".cursor", "agents")
 }
 
-/// Returns true if the path contains `.agents/checks` as consecutive
-/// components anywhere in the path.
+/// Returns true for Amp code review check locations: `.agents/checks` as
+/// consecutive components anywhere in the path, and the global check
+/// directories `$XDG_CONFIG_HOME/agents/checks/` and
+/// `$XDG_CONFIG_HOME/amp/checks/` ("When `XDG_CONFIG_HOME` is not set, it
+/// uses `~/.config`", ampcode.com/docs/review).
 fn is_under_agents_checks(path: &Path) -> bool {
     path_contains_consecutive_components(path, ".agents", "checks")
+        || path.parent().is_some_and(|dir| {
+            dir.ancestors().any(|ancestor| {
+                path_ends_with_components_ignore_ascii_case(
+                    ancestor,
+                    &[".config", "agents", "checks"],
+                ) || path_ends_with_components_ignore_ascii_case(
+                    ancestor,
+                    &[".config", "amp", "checks"],
+                )
+            })
+        })
+}
+
+/// Amp's local skill roots, as trailing directory names
+/// (ampcode.com/docs/customize/skills, "Skill Sources and Precedence"):
+/// `.agents/skills/` (project, and `~/.agents/skills/`), `.claude/skills/`
+/// (project, and `~/.claude/skills/`), `~/.config/agents/skills/` and
+/// `~/.config/amp/skills/`.
+const AMP_SKILL_ROOTS: &[&[&str]] = &[
+    &[".agents", "skills"],
+    &[".claude", "skills"],
+    &[".config", "agents", "skills"],
+    &[".config", "amp", "skills"],
+];
+
+/// A file inside a skill directory below one of Amp's local skill roots.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct AmpSkillLocation<'p> {
+    /// The nearest skills root directory, such as `<project>/.agents/skills`.
+    pub root: &'p Path,
+    /// Directories from the root to the file's directory: 1 for
+    /// `<root>/<skill>/SKILL.md`, 2 for `<root>/something/deep/SKILL.md`.
+    pub depth: usize,
+}
+
+impl AmpSkillLocation<'_> {
+    /// The root is a Claude Code location (`.claude/skills/`), which Amp
+    /// skips when `amp.skills.disableClaudeCodeSkills` is set.
+    pub fn is_claude_root(&self) -> bool {
+        path_ends_with_components_ignore_ascii_case(self.root, &[".claude", "skills"])
+    }
+}
+
+/// Where `path` sits below the nearest Amp skills root, or `None` outside
+/// them (a file directly in a root is not in a skill directory).
+pub(crate) fn amp_skill_location(path: &Path) -> Option<AmpSkillLocation<'_>> {
+    let dir = path.parent()?;
+    dir.ancestors().enumerate().find_map(|(depth, ancestor)| {
+        AMP_SKILL_ROOTS
+            .iter()
+            .any(|root| path_ends_with_components_ignore_ascii_case(ancestor, root))
+            .then_some(AmpSkillLocation {
+                root: ancestor,
+                depth,
+            })
+            .filter(|location| location.depth > 0)
+    })
+}
+
+/// A skill's sibling `mcp.json` in Amp's layout, `<skills root>/<skill>/mcp.json`
+/// ("A skill can define MCP servers in a sibling `mcp.json` file"). It uses
+/// Amp's flat shape (server names at the top level, no `mcpServers` wrapper).
+fn is_amp_skill_mcp_path(path: &Path) -> bool {
+    amp_skill_location(path).is_some_and(|location| location.depth == 1)
 }
 
 /// Returns true if the path contains `.windsurf/rules` as consecutive
@@ -1076,9 +1143,23 @@ pub fn detect_file_type(path: &Path) -> FileType {
         "SKILL.md" => FileType::Skill,
         "CLAUDE.md" | "CLAUDE.local.md" | "AGENTS.md" | "AGENTS.local.md"
         | "AGENTS.override.md" => FileType::ClaudeMd,
-        "settings.json" | "settings.local.json" if parent_eq_ignore_ascii_case(parent, ".amp") => {
+        // Amp settings: workspace `.amp/settings.json(c)`, user
+        // `~/.config/amp/settings.json(c)` and the managed-settings.json of
+        // `/Library/Application Support/ampcode/`, `/etc/ampcode/` and
+        // `%ProgramData%\ampcode\` (ampcode.com/docs/cli/settings).
+        "settings.json" | "settings.jsonc"
+            if parent_eq_ignore_ascii_case(parent, ".amp")
+                || (parent_eq_ignore_ascii_case(parent, "amp")
+                    && parent_eq_ignore_ascii_case(grandparent, ".config")) =>
+        {
             FileType::AmpSettings
         }
+        "managed-settings.json" if parent_eq_ignore_ascii_case(parent, "ampcode") => {
+            FileType::AmpSettings
+        }
+        // No Amp page documents `.amp/settings.local.json`; it is not Claude
+        // Code's `settings.local.json` either.
+        "settings.local.json" if parent_eq_ignore_ascii_case(parent, ".amp") => FileType::Unknown,
         "settings.json" | "settings.local.json"
             if parent_eq_ignore_ascii_case(parent, ".gemini") =>
         {
@@ -1092,6 +1173,8 @@ pub fn detect_file_type(path: &Path) -> FileType {
         }
         // Classify any other plugin.json as Plugin - validator checks .claude-plugin/ constraint (CC-PL-001)
         "plugin.json" => FileType::Plugin,
+        // Amp skill MCP servers (`<skills root>/<skill>/mcp.json`, flat shape)
+        "mcp.json" if is_amp_skill_mcp_path(path) => FileType::AmpSkillMcp,
         // MCP configuration files
         "mcp.json" => FileType::Mcp,
         name if name.ends_with(".mcp.json") => FileType::Mcp,
@@ -2077,18 +2160,118 @@ mod tests {
 
     #[test]
     fn detect_amp_settings() {
-        assert_eq!(
-            detect_file_type(Path::new(".amp/settings.json")),
-            FileType::AmpSettings
-        );
+        for path in [
+            ".amp/settings.json",
+            ".amp/settings.jsonc",
+            ".AMP/settings.json",
+            "/home/u/.config/amp/settings.json",
+            "/home/u/.config/amp/settings.jsonc",
+            "C:/Users/u/.config/amp/settings.json",
+            "/Library/Application Support/ampcode/managed-settings.json",
+            "/etc/ampcode/managed-settings.json",
+            "C:/ProgramData/ampcode/managed-settings.json",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::AmpSettings,
+                "{path}"
+            );
+        }
+        // `.amp/settings.local.json` was AmpSettings; no Amp page documents
+        // it, and it must not fall through to the Claude settings arm.
         assert_eq!(
             detect_file_type(Path::new(".amp/settings.local.json")),
-            FileType::AmpSettings
+            FileType::Unknown
+        );
+        // An `amp/` directory outside `~/.config` is not Amp's user config.
+        assert_eq!(
+            detect_file_type(Path::new("tools/amp/settings.json")),
+            FileType::Hooks
+        );
+        // Claude Code and Kiro managed settings keep their own types.
+        assert_eq!(
+            detect_file_type(Path::new("/etc/claude-code/managed-settings.json")),
+            FileType::Hooks
         );
         assert_eq!(
-            detect_file_type(Path::new(".AMP/settings.json")),
-            FileType::AmpSettings
+            detect_file_type(Path::new("/etc/kiro/managed-settings.json")),
+            FileType::KiroPermissions
         );
+    }
+
+    #[test]
+    fn detect_amp_global_checks() {
+        for path in [
+            "/home/u/.config/agents/checks/no-emojis.md",
+            "/home/u/.config/amp/checks/api/auth.md",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::AmpCheck,
+                "{path}"
+            );
+        }
+        assert_ne!(
+            detect_file_type(Path::new("/home/u/agents/checks/no-emojis.md")),
+            FileType::AmpCheck
+        );
+    }
+
+    #[test]
+    fn detect_amp_skill_mcp() {
+        for path in [
+            ".agents/skills/browser/mcp.json",
+            ".claude/skills/linear/mcp.json",
+            "/home/u/.agents/skills/linear/mcp.json",
+            "/home/u/.config/agents/skills/linear/mcp.json",
+            "/home/u/.config/amp/skills/linear/mcp.json",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(path)),
+                FileType::AmpSkillMcp,
+                "{path}"
+            );
+        }
+        for (path, expected) in [
+            // Directly in the root, or deeper than a skill directory.
+            (".agents/skills/mcp.json", FileType::Mcp),
+            (".agents/skills/browser/config/mcp.json", FileType::Mcp),
+            ("skills/browser/mcp.json", FileType::Mcp),
+            ("mcp.json", FileType::Mcp),
+            // Kiro detection runs first and keeps power files.
+            (".kiro/powers/linear/mcp.json", FileType::KiroMcp),
+        ] {
+            assert_eq!(detect_file_type(Path::new(path)), expected, "{path}");
+        }
+    }
+
+    #[test]
+    fn amp_skill_location_depth() {
+        let location = |path: &str| amp_skill_location(Path::new(path)).map(|l| l.depth);
+        assert_eq!(location(".agents/skills/a/SKILL.md"), Some(1));
+        // The skills page example: `~/.agents/skills/something/deep/SKILL.md`.
+        assert_eq!(
+            location("/home/u/.agents/skills/something/deep/SKILL.md"),
+            Some(2)
+        );
+        assert_eq!(location(".claude/skills/a/b/c/d/e/SKILL.md"), Some(5));
+        assert_eq!(location(".claude/skills/a/b/c/d/e/f/SKILL.md"), Some(6));
+        assert_eq!(location("/home/u/.config/amp/skills/a/SKILL.md"), Some(1));
+        assert_eq!(location(".agents/skills/SKILL.md"), None);
+        assert_eq!(location("skills/a/SKILL.md"), None);
+        // The nearest root counts.
+        assert_eq!(
+            location(".agents/skills/a/.claude/skills/b/SKILL.md"),
+            Some(1)
+        );
+        let claude = amp_skill_location(Path::new(".claude/skills/a/SKILL.md")).unwrap();
+        assert!(claude.is_claude_root());
+        assert!(
+            !amp_skill_location(Path::new(".agents/skills/a/SKILL.md"))
+                .unwrap()
+                .is_claude_root()
+        );
+        assert_eq!(claude.root, Path::new(".claude/skills"));
     }
 
     #[test]

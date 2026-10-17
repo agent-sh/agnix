@@ -410,8 +410,8 @@ fn infer_fixture_coverage(rules: &[RuleEntry]) -> HashMap<String, Vec<String>> {
         ),
         ("kiro-workflows", vec!["kiro-detect"]),
         ("kiro-ignore", vec!["kiro-detect"]),
-        ("amp-skills", vec!["per_client_skills"]),
-        ("amp-checks", vec!["amp-checks"]),
+        ("amp-skills", vec!["per_client_skills", "amp-skills"]),
+        ("amp-checks", vec!["amp-checks", "amp-skills"]),
         ("roo-code-skills", vec!["per_client_skills"]),
         (
             "gemini-cli",

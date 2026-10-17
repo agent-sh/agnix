@@ -3,6 +3,9 @@
 pub mod agent;
 pub mod agents_md;
 pub mod amp;
+pub(crate) mod amp_mcp;
+pub(crate) mod amp_settings;
+pub mod amp_skill;
 pub mod claude_md;
 pub mod claude_rules;
 pub mod claude_settings;

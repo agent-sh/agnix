@@ -1,0 +1,20 @@
+{
+	"$schema": "https://ampcode.com/cli-settings.schema.json",
+	"amp.showCosts": true,
+	"amp.tools.disable": ["builtin:Bash"],
+	"amp.mcpServers": {
+		"playwright": { "command": "npx", "args": ["-y", "@playwright/mcp@latest", "--headless"] },
+		"linear": { "url": "https://mcp.linear.app/sse" },
+		"internal-tools": {
+			"url": "https://mcp.example.com/mcp",
+			"headers": { "Authorization": "Bearer ${amp:id-token}" }
+		}
+	},
+	"amp.mcpPermissions": [
+		// Allow specific trusted MCP servers
+		{ "matches": { "command": "npx", "args": "* @playwright/mcp@*" }, "action": "allow" },
+		// Block potentially risky MCP servers
+		{ "matches": { "url": "*/malicious.com*" }, "action": "reject" }
+	],
+	"amp.updates.mode": "warn"
+}

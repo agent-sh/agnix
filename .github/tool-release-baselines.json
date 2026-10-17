@@ -310,6 +310,7 @@
       "display_name": "amp (Sourcegraph)",
       "validators": [
         "amp",
+        "amp_skill",
         "agents_md"
       ],
       "github_repo": null,
@@ -322,13 +323,19 @@
       "changes_of_interest": {
         "config_surfaces": [
           ".amp/settings.json",
+          ".amp/settings.jsonc",
+          "~/.config/amp/settings.json",
           ".agents/checks/*.md",
+          ".agents/skills/*/SKILL.md",
+          ".agents/skills/*/mcp.json",
           "AGENTS.md"
         ],
         "relevant": [
-          "New or renamed keys in .amp/settings.json",
-          "Changes to check frontmatter schema (name, description, severity-default, tools)",
-          "Changes to AGENTS.md glob pattern parsing or frontmatter"
+          "New or renamed keys in .amp/settings.json (cli-settings.schema.json)",
+          "Changes to check frontmatter schema (name, description, severity-default)",
+          "Changes to AGENTS.md @-mentions or globs frontmatter in mentioned files",
+          "Changes to skill roots, discovery depth or precedence, and skill MCP fields (mcp.json, mcpServers, includeTools)",
+          "Changes to amp.mcpPermissions or ${amp:id-token} handling"
         ],
         "irrelevant": [
           "Model additions (e.g. GPT-5.5, Opus 4.x)",

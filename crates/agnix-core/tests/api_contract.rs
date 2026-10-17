@@ -285,6 +285,7 @@ fn file_type_enum_covers_all_variants() {
         agnix_core::FileType::GeminiMd,
         agnix_core::FileType::GeminiSettings,
         agnix_core::FileType::AmpSettings,
+        agnix_core::FileType::AmpSkillMcp,
         agnix_core::FileType::GeminiExtension,
         agnix_core::FileType::GeminiIgnore,
         agnix_core::FileType::GeminiHooks,
@@ -316,7 +317,7 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        52,
+        53,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
@@ -347,6 +348,7 @@ fn file_type_enum_covers_all_variants() {
             agnix_core::FileType::GeminiMd => {}
             agnix_core::FileType::GeminiSettings => {}
             agnix_core::FileType::AmpSettings => {}
+            agnix_core::FileType::AmpSkillMcp => {}
             agnix_core::FileType::GeminiExtension => {}
             agnix_core::FileType::GeminiIgnore => {}
             agnix_core::FileType::GeminiHooks => {}

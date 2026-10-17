@@ -34,6 +34,8 @@ pub(crate) use detection::{
 pub(crate) use detection::refine_file_type;
 // The extension root of a Gemini CLI extension policy file.
 pub(crate) use detection::gemini_policy_extension_root;
+// Amp skill roots, for the Amp skill validator.
+pub(crate) use detection::{AmpSkillLocation, amp_skill_location};
 // Path facts for the Kiro agent and permissions validators.
 #[allow(unused_imports)]
 pub(crate) use detection::{KiroAgentLoaders, kiro_agent_loaders};

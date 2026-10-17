@@ -870,38 +870,87 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 <a id="amp-sk-001"></a>
 ### AMP-SK-001 [MEDIUM] Amp Skill Uses Unsupported Field
-**Requirement**: Skills in `.agents/skills/` SHOULD NOT use frontmatter fields unsupported by Amp
-**Detection**: SKILL.md path contains `.agents/skills/` AND frontmatter has unsupported fields
+**Requirement**: Skills Amp loads SHOULD use frontmatter fields Amp reads. The skills page shows `name` and `description` ("Each skill is a directory containing a `SKILL.md` file with YAML frontmatter") and documents `mcpServers`: "A skill can define MCP servers in a sibling `mcp.json` file or in the `mcpServers` field of its `SKILL.md` frontmatter." Plugin-bundled skills also take `builtin-tools`: "A bundled skill can gate the plugin's tools behind itself with the `builtin-tools` frontmatter field." (plugin-api, bundled skills)
+**Detection**: Implemented in the per-client skill validator: a SKILL.md whose client resolves to Amp has a frontmatter field outside the universal Agent Skills fields. `.agents/skills/` resolves to Codex today, so the rule is reachable only through configuration, and its field list does not yet include the documented `mcpServers` and `builtin-tools` (change requested from the skills workstream)
 **Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.amp.dev/setup/customization
+**Source**: ampcode.com/docs/customize/skills ("Skill Format", "MCP Servers in Skills"), ampcode.com/docs/plugin-api (bundled skills)
+
+<a id="amp-sk-002"></a>
+### AMP-SK-002 [LOW] Amp Skill Masked by an .agents/skills Copy
+**Requirement**: A project SHOULD NOT define one skill name in both `.agents/skills/` and `.claude/skills/` with different content: "Amp uses the first skill with a given frontmatter `name`. The order is:" ... "4. `.agents/skills/` in the project and searched parent directories" "5. `.claude/skills/` in those directories" (skills, "Skill Sources and Precedence")
+**Detection**: Info, at `name`, on `<dir>/.claude/skills/<skill>/SKILL.md` when `<dir>/.agents/skills/<skill>/SKILL.md` exists, is not byte-identical (identical copies are deliberate per-tool copies, and masking one is harmless) and has the same frontmatter `name`. A `.claude` copy whose text names the `.agents` copy (`.agents/skills/<skill>/SKILL.md`, a pointer stub such as "Read `.agents/skills/<skill>/SKILL.md` and follow it") is also not reported: Amp then uses the copy the stub points to. Not reported when the workspace or user settings next to the `.claude/skills/` root set `amp.skills.disableClaudeCodeSkills` to true. Claude Code reads only `.claude/skills/`, so a deliberate per-tool variant may want this rule off
+**Fix**: No auto-fix - keep one copy, make the copies identical, or rename one
+**Source**: ampcode.com/docs/customize/skills ("Skill Sources and Precedence")
+
+<a id="amp-sk-003"></a>
+### AMP-SK-003 [MEDIUM] Amp Skill Too Deep to Be Discovered
+**Requirement**: A skill directory SHOULD be at most five directories below an Amp skills root: "Amp searches local skill directories recursively, up to five directories below each skills root. For example, it discovers `~/.agents/skills/something/deep/SKILL.md`; the directory containing `SKILL.md` is the skill directory." (skills, "Skill Sources and Precedence")
+**Detection**: Warning on a SKILL.md whose directory is more than five directories below the nearest Amp skills root (`.agents/skills/`, `.claude/skills/`, `~/.config/agents/skills/`, `~/.agents/skills/`, `~/.config/amp/skills/`). Depth counts the directories from the root to the skill directory, so the docs example `something/deep` is depth 2 and `<root>/a/b/c/d/e/SKILL.md` (depth 5) is the deepest one found. Reading "five directories below" as the depth of the skill directory is agnix's interpretation of the example
+**Fix**: No auto-fix - move the skill directory closer to the root
+**Source**: ampcode.com/docs/customize/skills ("Skill Sources and Precedence")
 
 <a id="amp-001"></a>
-### AMP-001 [HIGH] Invalid Amp Check Frontmatter
-**Requirement**: `.agents/checks/*.md` files MUST include valid YAML frontmatter with required `name` and known optional fields
-**Detection**: Missing frontmatter OR invalid YAML OR missing `name` OR unknown key outside `name`, `description`, `severity-default`, `tools`
-**Fix**: [AUTO-FIX] Add valid frontmatter with required fields and remove unknown keys
-**Source**: ampcode.com/manual#code-review-checks
+### AMP-001 [HIGH] Invalid Amp Check File
+**Requirement**: A check MUST have frontmatter and instructions: "Each check must have valid YAML frontmatter with a non-empty `name`, followed by non-empty check instructions" and "Existing checks under `.agents/checks/` continue to apply if they use the format below." (review, "Check File Format"; checks now run through the `@amp/review-checks` plugin, "`amp review` is deprecated")
+**Detection**: Error for a missing or unclosed frontmatter block, invalid YAML, frontmatter that is not a mapping, a missing, empty or non-string `name`, and no non-whitespace text after the frontmatter. Warning (at the key) for a key other than `name`, `description`, `severity-default` and `tools`, a non-string `description`, and a `tools` that is not a string or a list of strings. `tools` is not on the current page; whether the plugin still reads it is unverified, so it is accepted. Files: `.agents/checks/**/*.md` (any `.agents/checks/` in the tree) and the global `~/.config/agents/checks/` and `~/.config/amp/checks/` ("The plugin also finds global checks under `$XDG_CONFIG_HOME/agents/checks/` and `$XDG_CONFIG_HOME/amp/checks/`")
+**Fix**: [AUTO-FIX, unsafe] Remove an unknown key with its value lines (the plugin may read keys the page does not document)
+**Source**: ampcode.com/docs/review ("Check File Format", "Migrating From `amp review`")
 
 <a id="amp-002"></a>
 ### AMP-002 [MEDIUM] Invalid Amp severity-default
-**Requirement**: `severity-default` SHOULD be one of `low`, `medium`, `high`, `critical`
-**Detection**: Frontmatter `severity-default` value is missing, non-string, or outside allowed values
-**Fix**: [AUTO-FIX] Set `severity-default` to a valid value
-**Source**: ampcode.com/manual#code-review-checks
+**Requirement**: `severity-default` MUST be one of the documented values when present: "`severity-default` is optional. Its value must be `low`, `medium`, `high`, or `critical`." (review, "Check File Format")
+**Detection**: Warning, at the value, for a non-string or a value other than `low`, `medium`, `high`, `critical`. A missing field is not reported
+**Fix**: [AUTO-FIX, unsafe] Replace the value with the closest valid one (for example `High` with `high`), keeping its quotes
+**Source**: ampcode.com/docs/review ("Check File Format")
 
 <a id="amp-003"></a>
-### AMP-003 [MEDIUM] Invalid AGENTS.md globs Frontmatter for Amp
-**Requirement**: AGENTS frontmatter `globs` SHOULD contain syntactically valid glob patterns for Amp
-**Detection**: `globs` is invalid type OR contains a pattern that fails glob parsing (after Amp implicit `**/` behavior)
-**Fix**: Correct glob syntax in `globs` frontmatter
-**Source**: ampcode.com/manual#settings
+### AMP-003 [MEDIUM] Invalid globs in a File AGENTS.md Mentions
+**Requirement**: `globs` frontmatter of a file that an agent file @-mentions SHOULD be valid glob patterns: "To provide guidance that only applies when working with certain files, you can specify `globs` in YAML front matter of mentioned files." "Mentioned files with `globs` will only be included if Amp has read a file matching any of the globs" and "Globs are implicitly prefixed with `**/` unless they start with `../` or `./`, in which case they refer to paths relative to the mentioned file." (agents-md, "Granular Guidance")
+**Detection**: Follows the @-mentions of AGENTS.md, AGENTS.local.md and AGENTS.override.md outside fenced and inline code ("@-mentions in code blocks are ignored"), relative to the mentioning file ("Relative paths are interpreted relative to the agent file containing the mention"), literal Markdown paths and glob mentions such as `@doc/*.md` or `@.agent/**/*.md` (expanded inside the project root, at most 64 files and 4096 directory entries per agent file; `.git`, `node_modules` and `target` are skipped). `@~/` and absolute mentions are not followed. For each mentioned Markdown file with frontmatter `globs`, warning on that file at `globs` when the value is not a string or a list of strings, or a pattern (after the implicit `**/` prefix) is not a valid glob. Each file is checked once per agent file. `globs` on AGENTS.md itself is not reported: Amp documents it only for mentioned files (unverified whether Amp ignores it on AGENTS.md)
+**Fix**: No auto-fix - correct the glob syntax
+**Source**: ampcode.com/docs/customize/agents-md ("Writing AGENTS.md Files", "Granular Guidance")
 
 <a id="amp-004"></a>
 ### AMP-004 [HIGH] Invalid Amp Settings Configuration
-**Requirement**: `.amp/settings.json` MUST be valid JSON and use known top-level keys, including documented dotted keys such as `amp.runner.autoUpdate.enabled`, `amp.remoteThreadCreation.enabled`, and `amp.updates.mode`
-**Detection**: JSON parse error OR unknown top-level key in `.amp/settings.json` / `.amp/settings.local.json`
-**Fix**: [AUTO-FIX] Fix JSON syntax and remove unknown keys
-**Source**: ampcode.com/docs/cli/settings, ampcode.com/docs/cli/runners
+**Requirement**: Amp settings files MUST parse and SHOULD use the keys and types of the official schema: "All settings use the `amp.` prefix." and "Before distributing a managed settings file, validate it against the Amp settings JSON Schema" (settings, "Configuration", "Managed Settings"). The schema (cli-settings.schema.json) lists `$schema` and 21 `amp.` properties with `"additionalProperties": false` and `"patternProperties": { "^amp\\.": true }`; the settings page also names `amp.url`, `amp.proxy`, `amp.workspaces` and `amp.mcpTrustedServers`
+**Detection**: Files: workspace `.amp/settings.json` / `.amp/settings.jsonc` ("the nearest `.amp/settings.json` or `.amp/settings.jsonc`"), user `~/.config/amp/settings.json(c)`, and `managed-settings.json` in `/Library/Application Support/ampcode/`, `/etc/ampcode/` or `%ProgramData%\ampcode\`. Both names are parsed as JSONC (Amp documents `settings.jsonc` and shows `//` comments in its examples; whether `settings.json` accepts comments is unverified, so comments are not reported). Error for a parse error or a non-object top level. Warning, at the key, for a key without the `amp.` prefix other than `$schema` (outside the schema). Info for an undocumented `amp.` key (the schema accepts any `amp.` key through `patternProperties`, so it may be a typo or a setting of another Amp client), with a "did you mean" hint for close spellings. Warning, at the value, for a value of the wrong schema type: booleans, `amp.fuzzy.alwaysIncludePaths` and `amp.tools.disable` (string arrays), `amp.skills.path` and `$schema` (strings), `amp.keymap` (object of string, string array or null), `amp.defaultVisibility` (object of `private`, `workspace`, `group`), `amp.mcpServers` (object), `amp.updates.mode` (`auto`, `warn`, `disabled`) and `amp.admin.compatibilityDate` (`YYYY-MM-DD`). `amp.admin.compatibilityDate` outside `managed-settings.json` is info: "Both the local file and the workspace document support one additional field" (managed settings only; the page does not say what a workspace or user file does with it). `amp.mcpPermissions` is AMP-007 and `amp.mcpServers` entries AMP-006 and AMP-010. `.amp/settings.local.json` is documented nowhere and is not validated (it is not Claude Code's `settings.local.json` either)
+**Fix**: [AUTO-FIX, unsafe] Remove an unknown key with its comma, keeping the JSON valid (Amp may read keys its schema leaves out)
+**Source**: ampcode.com/docs/cli/settings ("Configuration", "Settings", "Managed Settings"), ampcode.com/cli-settings.schema.json
+
+<a id="amp-005"></a>
+### AMP-005 [MEDIUM] Amp Skill Defines MCP Servers Twice
+**Requirement**: A skill SHOULD define its MCP servers in one place: "A skill can define MCP servers in a sibling `mcp.json` file or in the `mcpServers` field of its `SKILL.md` frontmatter. If both are present, Amp uses `mcpServers` and ignores `mcp.json`." (skills, "MCP Servers in Skills")
+**Detection**: Warning, at `mcpServers`, on a SKILL.md below an Amp skills root (`.agents/skills/`, `.claude/skills/`, `~/.config/agents/skills/`, `~/.agents/skills/`, `~/.config/amp/skills/`) whose frontmatter has a non-null `mcpServers` while a sibling `mcp.json` exists. The servers of that ignored `mcp.json` are not checked by AMP-006, AMP-008 or AMP-010
+**Fix**: No auto-fix - move the servers into one place
+**Source**: ampcode.com/docs/customize/skills ("MCP Servers in Skills")
+
+<a id="amp-006"></a>
+### AMP-006 [HIGH] Amp ID Token Outside HTTPS Headers
+**Requirement**: `${amp:id-token}` MUST appear only in headers of an HTTPS server without OAuth: "`${amp:id-token}` works only in headers of HTTPS servers without OAuth configuration. Amp rejects it in URLs and in the command, arguments, and environment of local servers." (mcp, "Amp ID Tokens")
+**Detection**: Error, at the value, for `${amp:id-token}` in `url`, `command`, an `args` item or an `env` value, and in a `headers` value of a server with an `oauth` object or a literal `url` that does not start with `https://`. A `url` built from a variable (`${SRC_ENDPOINT}/...`) is not judged. Checked in `amp.mcpServers` of Amp settings files, skill `mcp.json` files and SKILL.md `mcpServers` frontmatter (positions in YAML are found by key text and are approximate for flow-style values)
+**Fix**: No auto-fix - send the token in a header of an https:// server, or let a local server run `amp orb id-token` itself
+**Source**: ampcode.com/docs/customize/mcp ("Amp ID Tokens")
+
+<a id="amp-007"></a>
+### AMP-007 [MEDIUM] Invalid amp.mcpPermissions Rule
+**Requirement**: `amp.mcpPermissions` MUST be a list of rules with an object `matches` and an `allow`/`reject` action: "In `amp.mcpPermissions`, each rule's `matches` must be an object, such as `{"command":"*"}`, not a string. The workspace settings editor rejects invalid MCP permissions without changing the saved policy." and "For a remote MCP server, use the `url` key to match the server endpoint. For a local MCP server, use the `command` and `args` keys to match an executable command and its arguments." (settings, "Settings", "Managed Settings"). Schema: items `required: ["matches", "action"]`, `additionalProperties: false`, `action` enum `allow`, `reject`
+**Detection**: Warning for an `amp.mcpPermissions` value that is not an array, a rule that is not an object, a rule key other than `matches` and `action`, a missing `matches`, a `matches` that is not an object, a `matches` key other than `command`, `args` and `url`, a `matches` that combines `url` with `command` or `args` (no server has both, so the rule never matches), and a missing or invalid `action`. Warnings, not errors: the editor rejects such a policy, but how the CLI treats an invalid rule in a file is not documented
+**Fix**: No auto-fix
+**Source**: ampcode.com/docs/cli/settings ("Settings", "Managed Settings"), ampcode.com/cli-settings.schema.json
+
+<a id="amp-008"></a>
+### AMP-008 [LOW] Amp Skill MCP Server Without includeTools
+**Requirement**: Skill MCP servers SHOULD list the tools they expose: "`includeTools` (`string[]`, optional but recommended) contains tool names or glob patterns used to choose which tools are exposed." (skills, "MCP Servers in Skills"); "Too many available tools can reduce model performance" (mcp, "MCP Best Practices")
+**Detection**: Info, at the server name, for a skill `mcp.json` entry or a SKILL.md `mcpServers` entry with `command` or `url` and no `includeTools`. Not reported for `amp.mcpServers` in settings files (the recommendation is for skill servers). A server with a handful of tools may not need the filter; the rule stays informational
+**Fix**: No auto-fix - add `includeTools` with the tools the skill needs
+**Source**: ampcode.com/docs/customize/skills ("MCP Servers in Skills"), ampcode.com/docs/customize/mcp ("MCP Best Practices")
+
+<a id="amp-010"></a>
+### AMP-010 [HIGH] Invalid Amp MCP Server Configuration
+**Requirement**: MCP server entries MUST have the shape Amp reads: "MCP servers use the same configuration fields as MCP servers in skills—`command`/`args`/`env` for local servers, `url`/`headers` for remote." (mcp, "MCP"); skills, "MCP Servers in Skills": "`command` (`string`) is the command to run.", "`args` (`string[]`, optional) contains the command arguments.", "`env` (`object`, optional) contains the environment variables.", "`url` (`string`) is the server endpoint.", "`headers` (`object`, optional) contains the HTTP headers to send with requests."; the settings schema types the entries as `stdioMCPServer` (`command` required) or `httpMCPServer` (`url` required, `transport` `http`/`sse`/`http-first`, `oauth` with `clientId`, `authUrl`, `tokenUrl` required)
+**Detection**: Skill `mcp.json` (`<skills root>/<skill>/mcp.json`, Amp's flat shape with server names at the top level; detected as its own file type, so the generic MCP rules no longer misread a `url` entry as a stdio server): error for a parse error or a non-object top level (Amp cannot load the servers; JSONC is accepted). Warning, in skill `mcp.json` and SKILL.md `mcpServers`, for an entry that is not an object, has neither or both of `command` and `url`, a non-string `command` or `url`, `args` or `includeTools` that is not a string array, `env` or `headers` that is not an object of strings, an unknown `transport`, and an `oauth` that is not an object or lacks `clientId`, `authUrl` or `tokenUrl`; also a SKILL.md `mcpServers` that is not a mapping. In settings `amp.mcpServers` only the Amp-specific checks run (both `command` and `url`, `transport`, `oauth`); the generic MCP server checks cover the rest there. Other entry keys are not reported: the schema rejects them, but the MCP page says skill fields (such as `includeTools`) also apply to settings entries
+**Fix**: No auto-fix
+**Source**: ampcode.com/docs/customize/skills ("MCP Servers in Skills"), ampcode.com/docs/customize/mcp ("MCP"), ampcode.com/cli-settings.schema.json
 
 <a id="rc-sk-001"></a>
 ### RC-SK-001 [MEDIUM] Roo Code Skill Uses Unsupported Field
@@ -4349,8 +4398,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | COP-012 | Delete unsupported GitHub.com agent field | safe |
 | COP-014 | Delete unknown prompt frontmatter key | safe |
 | COP-015 | Replace invalid prompt type | unsafe |
-| AMP-001 | Delete unknown check frontmatter key | unsafe |
-| AMP-004 | Delete unknown settings JSON key | unsafe |
+| AMP-001 | Delete unknown check frontmatter key and its value lines | unsafe |
+| AMP-004 | Delete unknown settings key and its comma | unsafe |
 | GM-009 | Delete unknown top-level settings key (and one comma) | unsafe |
 | CDX-004 | Delete unknown TOML config key | unsafe |
 | AMP-002 | Replace invalid severity-default with closest match | unsafe |
@@ -4363,8 +4412,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 |----------|-------------|------|--------|-----|--------------|
 | Agent Skills | 14 | 11 | 3 | 0 | 7 |
 | AGENTS.md | 5 | 1 | 4 | 0 | 1 |
-| Amp Checks | 4 | 2 | 2 | 0 | 3 |
-| Amp Skills | 1 | 0 | 1 | 0 | 1 |
+| Amp Checks | 9 | 4 | 4 | 1 | 3 |
+| Amp Skills | 3 | 0 | 2 | 1 | 1 |
 | Claude Agents | 18 | 10 | 7 | 1 | 9 |
 | Claude Hooks | 26 | 15 | 7 | 4 | 11 |
 | Claude Memory | 10 | 4 | 5 | 1 | 1 |
@@ -4403,7 +4452,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **553** | **245** | **247** | **61** | **135** |
+| **TOTAL** | **560** | **247** | **250** | **63** | **135** |
 
 
 ---
@@ -4433,8 +4482,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 553 validation rules across 42 categories
+**Total Coverage**: 560 validation rules across 42 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 245 HIGH, 247 MEDIUM, 61 LOW
+**Certainty**: 247 HIGH, 250 MEDIUM, 63 LOW
 **Auto-Fixable**: 135 rules (24%)

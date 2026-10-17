@@ -45,8 +45,8 @@
 | Kiro Settings | .kiro/settings/cli.json | 11 |
 | Kiro Workflows | .kiro/workflows/*.workflow.{json,yaml,yml} | 9 |
 | Kiro Ignore | .kiroignore, ~/.kiro/settings/kiroignore | 1 |
-| Amp Skills | .agents/skills/*/SKILL.md | 1 |
-| Amp Checks | .agents/checks/*.md, .amp/settings*.json | 4 |
+| Amp Skills | SKILL.md and mcp.json under .agents/skills/, .claude/skills/, ~/.config/agents/skills/, ~/.config/amp/skills/ | 3 |
+| Amp Checks | .agents/checks/*.md, ~/.config/{agents,amp}/checks/*.md, .amp/settings.json(c), ~/.config/amp/settings.json(c), ampcode/managed-settings.json, files AGENTS.md @-mentions, skill mcp.json | 9 |
 | Roo Code Skills | .roo/skills/*/SKILL.md | 1 |
 
 ## Architecture

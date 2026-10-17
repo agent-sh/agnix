@@ -353,7 +353,8 @@ fn test_validators_for_gemini_ignore() {
 fn test_validators_for_skill() {
     let registry = ValidatorRegistry::with_defaults();
     let validators = registry.validators_for(FileType::Skill);
-    assert_eq!(validators.len(), 4);
+    // 5: AmpSkillValidator joined the four skill validators (Amp skill checks).
+    assert_eq!(validators.len(), 5);
 }
 
 #[test]
@@ -2116,15 +2117,17 @@ fn test_validate_fixtures_directory() {
         }),
         "Expected AMP-002 from amp-checks/.agents/checks/invalid-severity.md fixture"
     );
+    // AMP-003 now reports on the file AGENTS.md @-mentions (Amp reads
+    // `globs` there), not on AGENTS.md itself.
     assert!(
         amp_diagnostics.iter().any(|d| {
             d.rule == "AMP-003"
                 && d.file
                     .to_string_lossy()
                     .replace('\\', "/")
-                    .contains("amp-checks/AGENTS.md")
+                    .contains("amp-checks/docs/typescript.md")
         }),
-        "Expected AMP-003 from amp-checks/AGENTS.md fixture"
+        "Expected AMP-003 from amp-checks/docs/typescript.md (mentioned by amp-checks/AGENTS.md)"
     );
     assert!(
         amp_diagnostics.iter().any(|d| {
@@ -4809,6 +4812,7 @@ fn test_validator_names_are_ascii_and_nonempty() {
         FileType::GeminiMd,
         FileType::GeminiSettings,
         FileType::AmpSettings,
+        FileType::AmpSkillMcp,
         FileType::GeminiExtension,
         FileType::GeminiIgnore,
         FileType::GeminiHooks,
@@ -4857,6 +4861,7 @@ const ALL_VALIDATED_FILE_TYPES: &[FileType] = &[
     FileType::GeminiMd,
     FileType::GeminiSettings,
     FileType::AmpSettings,
+    FileType::AmpSkillMcp,
     FileType::GeminiExtension,
     FileType::GeminiIgnore,
     FileType::GeminiHooks,

@@ -397,7 +397,7 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 86;
+const EXPECTED_BUILTIN_COUNT: usize = 88;
 
 // -- Category providers -----------------------------------------------------
 //
@@ -720,6 +720,19 @@ impl ValidatorProvider for MiscProvider {
     fn named_validators(&self) -> Vec<(FileType, Option<&'static str>, ValidatorFactory)> {
         vec![
             (FileType::AmpCheck, Some("AmpValidator"), amp_validator),
+            // Amp skill checks (AMP-005, AMP-006, AMP-008, AMP-010, AMP-SK-002,
+            // AMP-SK-003). On SKILL.md the validator returns early for paths
+            // outside Amp's skill roots; AmpSkillMcp is a skill's mcp.json.
+            (
+                FileType::Skill,
+                Some("AmpSkillValidator"),
+                amp_skill_validator,
+            ),
+            (
+                FileType::AmpSkillMcp,
+                Some("AmpSkillValidator"),
+                amp_skill_validator,
+            ),
             (FileType::Hooks, Some("HooksValidator"), hooks_validator),
             (
                 FileType::Hooks,
@@ -912,6 +925,10 @@ fn per_client_skill_validator() -> Box<dyn Validator> {
 
 fn amp_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::amp::AmpValidator)
+}
+
+fn amp_skill_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::amp_skill::AmpSkillValidator)
 }
 
 fn claude_md_validator() -> Box<dyn Validator> {
@@ -1331,8 +1348,10 @@ mod tests {
     fn validators_for_returns_all_when_none_disabled() {
         let registry = ValidatorRegistry::with_defaults();
         let skill_validators = registry.validators_for(FileType::Skill);
-        // Skill has: SkillValidator, PerClientSkillValidator, XmlValidator, ImportsValidator
-        assert_eq!(skill_validators.len(), 4);
+        // Skill has: SkillValidator, PerClientSkillValidator, XmlValidator,
+        // ImportsValidator, and AmpSkillValidator (Amp skill checks, added
+        // with AMP-005 and AMP-SK-002/003).
+        assert_eq!(skill_validators.len(), 5);
     }
 
     #[test]
@@ -1389,6 +1408,8 @@ mod tests {
             .without_validator("PerClientSkillValidator")
             .without_validator("XmlValidator")
             .without_validator("ImportsValidator")
+            // Added with the Amp skill checks (AMP-005, AMP-SK-002/003).
+            .without_validator("AmpSkillValidator")
             .build();
 
         assert!(
@@ -1530,6 +1551,7 @@ mod tests {
             FileType::GeminiMd,
             FileType::GeminiSettings,
             FileType::AmpSettings,
+            FileType::AmpSkillMcp,
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
             FileType::GeminiHooks,
@@ -1585,6 +1607,7 @@ mod tests {
                 | FileType::GeminiMd
                 | FileType::GeminiSettings
                 | FileType::AmpSettings
+                | FileType::AmpSkillMcp
                 | FileType::GeminiExtension
                 | FileType::GeminiIgnore
                 | FileType::GeminiHooks
@@ -2177,8 +2200,9 @@ mod tests {
     fn misc_provider_count() {
         // 38: Kiro hooks and powers dropped four Imports/CrossPlatform entries
         // and gained power plugin, power steering, workflow, ignore-file,
-        // not-loaded and Kiro AGENTS.md entries.
-        assert_eq!(MiscProvider.named_validators().len(), 38);
+        // not-loaded and Kiro AGENTS.md entries. 40: AmpSkillValidator on
+        // Skill and AmpSkillMcp.
+        assert_eq!(MiscProvider.named_validators().len(), 40);
     }
 
     #[test]

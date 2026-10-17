@@ -198,6 +198,89 @@ rules:
   amp_sk_001:
     message: field '%{field}' is not supported by %{client} -- it will be ignored
     suggestion: Remove '%{field}' or move this skill to a client that supports it
+  amp_001:
+    missing_frontmatter: 'Amp check file has no YAML frontmatter; the review-checks plugin applies only checks with valid frontmatter and a non-empty `name`'
+    not_mapping: 'Amp check frontmatter must be a YAML mapping of keys such as `name` and `description`'
+    invalid_yaml: 'Invalid YAML frontmatter in Amp check file: %{error}'
+    invalid_yaml_suggestion: 'Fix the YAML syntax of the frontmatter between the --- lines.'
+    missing_name: 'Amp check frontmatter needs a non-empty `name`'
+    empty_body: 'Amp check has no check instructions after the frontmatter'
+    format_suggestion: 'ampcode.com/docs/review: "Each check must have valid YAML frontmatter with a non-empty `name`, followed by non-empty check instructions". The documented keys are name, description and severity-default.'
+    unknown_key: "Unknown Amp check frontmatter key '%{key}'"
+    unknown_key_suggestion: 'The check format documents name, description and severity-default (ampcode.com/docs/review, "Check File Format"). Remove or rename the key.'
+    description_type: 'Amp check `description` must be a string'
+    tools_type: 'Amp check `tools` must be a string or an array of strings'
+    fix_remove: "Remove unknown check key '%{key}'"
+  amp_002:
+    invalid: "Invalid severity-default value '%{value}' (expected low, medium, high or critical)"
+    not_string: 'severity-default must be a string (low, medium, high or critical)'
+    suggestion: 'ampcode.com/docs/review: "`severity-default` is optional. Its value must be `low`, `medium`, `high`, or `critical`."'
+    fix: "Replace severity-default with '%{value}'"
+  amp_003:
+    invalid_pattern: "Invalid `globs` pattern '%{pattern}' (%{error}); this file is @-mentioned from %{agents}"
+    not_list: '`globs` must be a string or an array of strings; this file is @-mentioned from %{agents}'
+    non_string_item: '`globs` must contain only string patterns; this file is @-mentioned from %{agents}'
+    suggestion: 'ampcode.com/docs/customize/agents-md: "Mentioned files with `globs` will only be included if Amp has read a file matching any of the globs" and "Globs are implicitly prefixed with `**/` unless they start with `../` or `./`". Fix the patterns so %{agents} includes this file when intended.'
+  amp_004:
+    parse_error: 'Amp settings file is not valid JSON: %{error}'
+    parse_error_suggestion: 'Fix the JSON syntax. Amp reads settings.json and settings.jsonc; agnix accepts // and /* */ comments and trailing commas in both.'
+    root_not_object: 'Amp settings must be a JSON object, found %{found}'
+    root_not_object_suggestion: 'Put the settings in one top-level object, for example {"amp.showCosts": true}.'
+    unknown_key: "'%{key}' is not in Amp's settings schema; all Amp settings use the `amp.` prefix"
+    unknown_amp_key: "'%{key}' is not a documented Amp setting"
+    unknown_key_suggestion: 'Check the key against ampcode.com/docs/cli/settings and the settings schema (ampcode.com/cli-settings.schema.json).'
+    did_you_mean: "Did you mean '%{suggested}'? The documented keys are on ampcode.com/docs/cli/settings."
+    fix_remove: "Remove settings key '%{key}'"
+    type: "Amp setting '%{key}' should be %{expected}, found %{found}"
+    type_suggestion: 'Use the type the Amp settings schema gives (ampcode.com/cli-settings.schema.json; add "$schema": "https://ampcode.com/cli-settings.schema.json" for editor validation).'
+    keymap_entry: "amp.keymap entry '%{entry}' should be a string, an array of strings or null, found %{found}"
+    visibility: "amp.defaultVisibility value for '%{entry}' should be private, workspace or group, found %{found}"
+    updates_mode: "amp.updates.mode '%{value}' is not one of auto, warn or disabled"
+    compatibility_date_format: "amp.admin.compatibilityDate '%{value}' does not use the YYYY-MM-DD format"
+    compatibility_date_managed: 'amp.admin.compatibilityDate is documented only for managed settings; in this file it may have no effect'
+    compatibility_date_managed_suggestion: 'ampcode.com/docs/cli/settings: "Both the local file and the workspace document support one additional field" (managed-settings.json and the workspace Managed Settings document). Move it there.'
+  amp_005:
+    message: 'Skill defines MCP servers in both `mcpServers` frontmatter and a sibling mcp.json; Amp uses `mcpServers` and ignores mcp.json'
+    suggestion: 'ampcode.com/docs/customize/skills: "If both are present, Amp uses `mcpServers` and ignores `mcp.json`." Keep the servers in one place: move them into mcpServers and delete mcp.json, or remove mcpServers.'
+  amp_006:
+    url: "`${amp:id-token}` in the url of MCP server '%{server}'; Amp rejects it in URLs"
+    command: "`${amp:id-token}` in the command of MCP server '%{server}'; Amp rejects it in the command of local servers"
+    args: "`${amp:id-token}` in the args of MCP server '%{server}'; Amp rejects it in the arguments of local servers"
+    env: "`${amp:id-token}` in the env of MCP server '%{server}'; Amp rejects it in the environment of local servers"
+    headers_not_https: "`${amp:id-token}` in the headers of MCP server '%{server}', whose url is not https://; Amp accepts it only in headers of HTTPS servers"
+    headers_oauth: "`${amp:id-token}` in the headers of MCP server '%{server}', which has OAuth configuration; Amp accepts it only in headers of servers without OAuth"
+    suggestion: 'ampcode.com/docs/customize/mcp: "`${amp:id-token}` works only in headers of HTTPS servers without OAuth configuration. Amp rejects it in URLs and in the command, arguments, and environment of local servers. A local server that needs a token can run `amp orb id-token` itself."'
+  amp_007:
+    not_array: 'amp.mcpPermissions must be an array of rules, found %{found}'
+    rule_not_object: 'amp.mcpPermissions[%{index}] must be an object with matches and action, found %{found}'
+    rule_key: "amp.mcpPermissions[%{index}] has key '%{key}'; a rule has only matches and action"
+    matches_missing: 'amp.mcpPermissions[%{index}] has no matches object'
+    matches_not_object: 'amp.mcpPermissions[%{index}].matches must be an object, found %{found}'
+    matches_key: "amp.mcpPermissions[%{index}].matches has key '%{key}'; Amp matches local servers by command and args and remote servers by url"
+    mixed: 'amp.mcpPermissions[%{index}].matches combines url with command or args; a server is either remote (url) or local (command, args), so this rule never matches'
+    action_missing: 'amp.mcpPermissions[%{index}] has no action'
+    action_invalid: 'amp.mcpPermissions[%{index}].action must be "allow" or "reject", found %{found}'
+    suggestion: 'ampcode.com/docs/cli/settings: "In `amp.mcpPermissions`, each rule''s `matches` must be an object, such as `{"command":"*"}`, not a string. The workspace settings editor rejects invalid MCP permissions without changing the saved policy." For example {"matches": {"url": "https://mcp.trusted.com/mcp"}, "action": "allow"}.'
+  amp_008:
+    message: "Skill MCP server '%{server}' has no includeTools; every tool it offers is exposed once the skill loads"
+    suggestion: 'ampcode.com/docs/customize/skills: "`includeTools` (`string[]`, optional but recommended) contains tool names or glob patterns used to choose which tools are exposed." For example "includeTools": ["list_issues", "create_*"].'
+  amp_010:
+    parse_error: 'Skill mcp.json is not valid JSON, so Amp cannot load its MCP servers: %{error}'
+    root_not_object: 'Skill mcp.json must be an object of server names to server entries, found %{found}'
+    frontmatter_not_mapping: 'Skill frontmatter mcpServers must be a mapping of server names to server entries, found %{found}'
+    entry_not_object: "MCP server '%{server}' must be an object, found %{found}"
+    no_transport: "MCP server '%{server}' has neither command (local server) nor url (remote server)"
+    both_transports: "MCP server '%{server}' has both command and url; a server is either local (command) or remote (url)"
+    field_type: "MCP server '%{server}' field '%{field}' should be %{expected}, found %{found}"
+    transport: "MCP server '%{server}' transport '%{value}' is not one of http, sse or http-first"
+    oauth_missing: "MCP server '%{server}' oauth is missing %{fields}"
+    suggestion: 'Local servers take command (string), args (string[]) and env (object); remote servers take url (string) and headers (object); includeTools is a string[] (ampcode.com/docs/customize/skills, "MCP Servers in Skills"; ampcode.com/cli-settings.schema.json).'
+  amp_sk_002:
+    message: "Amp ignores this skill: '%{name}' is also defined in %{other}, which Amp loads first"
+    suggestion: 'ampcode.com/docs/customize/skills: "Amp uses the first skill with a given frontmatter `name`", and .agents/skills/ comes before .claude/skills/. Keep one copy, make the copies identical, or rename one.'
+  amp_sk_003:
+    message: 'Amp does not discover this skill: its directory is %{depth} directories below the skills root %{root}, and Amp searches up to five'
+    suggestion: 'ampcode.com/docs/customize/skills: "Amp searches local skill directories recursively, up to five directories below each skills root." Move the skill directory closer to the root.'
   rc_sk_001:
     message: field '%{field}' is not supported by %{client} -- it will be ignored
     suggestion: Remove '%{field}' or move this skill to a client that supports it

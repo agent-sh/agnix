@@ -62,8 +62,12 @@ pub enum FileType {
     GeminiMd,
     /// Gemini CLI settings (.gemini/settings.json)
     GeminiSettings,
-    /// Amp settings (.amp/settings.json, .amp/settings.local.json)
+    /// Amp settings (.amp/settings.json(c), ~/.config/amp/settings.json(c),
+    /// ampcode/managed-settings.json)
     AmpSettings,
+    /// Amp skill MCP servers (`mcp.json` in a skill directory below an Amp
+    /// skills root, such as `.agents/skills/<skill>/mcp.json`)
+    AmpSkillMcp,
     /// Gemini CLI extension manifest (gemini-extension.json)
     GeminiExtension,
     /// Gemini CLI ignore file (.geminiignore)
@@ -185,6 +189,7 @@ impl fmt::Display for FileType {
             FileType::GeminiMd => "GeminiMd",
             FileType::GeminiSettings => "GeminiSettings",
             FileType::AmpSettings => "AmpSettings",
+            FileType::AmpSkillMcp => "AmpSkillMcp",
             FileType::GeminiExtension => "GeminiExtension",
             FileType::GeminiIgnore => "GeminiIgnore",
             FileType::GeminiHooks => "GeminiHooks",
@@ -249,6 +254,7 @@ mod tests {
             (FileType::GeminiMd, "GeminiMd"),
             (FileType::GeminiSettings, "GeminiSettings"),
             (FileType::AmpSettings, "AmpSettings"),
+            (FileType::AmpSkillMcp, "AmpSkillMcp"),
             (FileType::GeminiExtension, "GeminiExtension"),
             (FileType::GeminiIgnore, "GeminiIgnore"),
             (FileType::GeminiHooks, "GeminiHooks"),
@@ -312,6 +318,7 @@ mod tests {
             FileType::GeminiMd,
             FileType::GeminiSettings,
             FileType::AmpSettings,
+            FileType::AmpSkillMcp,
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
             FileType::GeminiHooks,
@@ -389,6 +396,7 @@ mod tests {
             FileType::GeminiMd,
             FileType::GeminiSettings,
             FileType::AmpSettings,
+            FileType::AmpSkillMcp,
             FileType::GeminiExtension,
             FileType::GeminiIgnore,
             FileType::GeminiHooks,

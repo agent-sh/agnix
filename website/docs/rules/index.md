@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `553` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `560` validation rules generated from `knowledge-base/rules.json`.
 `135` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -10,11 +10,18 @@ This section contains all `553` validation rules generated from `knowledge-base/
 | [AGM-003](./generated/agm-003.md) | Character Limit (Windsurf) | MEDIUM | AGENTS.md | No |
 | [AGM-004](./generated/agm-004.md) | Missing Project Context | MEDIUM | AGENTS.md | No |
 | [AGM-005](./generated/agm-005.md) | Platform-Specific Features Without Guard | MEDIUM | AGENTS.md | No |
-| [AMP-001](./generated/amp-001.md) | Invalid Amp Check Frontmatter | HIGH | Amp Checks | Yes (safe) |
-| [AMP-002](./generated/amp-002.md) | Invalid Amp severity-default | MEDIUM | Amp Checks | Yes (safe) |
-| [AMP-003](./generated/amp-003.md) | Invalid AGENTS.md globs Frontmatter for Amp | MEDIUM | Amp Checks | No |
-| [AMP-004](./generated/amp-004.md) | Invalid Amp Settings Configuration | HIGH | Amp Checks | Yes (safe) |
+| [AMP-001](./generated/amp-001.md) | Invalid Amp Check File | HIGH | Amp Checks | Yes (unsafe) |
+| [AMP-002](./generated/amp-002.md) | Invalid Amp severity-default | MEDIUM | Amp Checks | Yes (unsafe) |
+| [AMP-003](./generated/amp-003.md) | Invalid globs in a File AGENTS.md Mentions | MEDIUM | Amp Checks | No |
+| [AMP-004](./generated/amp-004.md) | Invalid Amp Settings Configuration | HIGH | Amp Checks | Yes (unsafe) |
+| [AMP-005](./generated/amp-005.md) | Amp Skill Defines MCP Servers Twice | MEDIUM | Amp Checks | No |
+| [AMP-006](./generated/amp-006.md) | Amp ID Token Outside HTTPS Headers | HIGH | Amp Checks | No |
+| [AMP-007](./generated/amp-007.md) | Invalid amp.mcpPermissions Rule | MEDIUM | Amp Checks | No |
+| [AMP-008](./generated/amp-008.md) | Amp Skill MCP Server Without includeTools | LOW | Amp Checks | No |
+| [AMP-010](./generated/amp-010.md) | Invalid Amp MCP Server Configuration | HIGH | Amp Checks | No |
 | [AMP-SK-001](./generated/amp-sk-001.md) | Amp Skill Uses Unsupported Field | MEDIUM | Amp Skills | Yes (safe/unsafe) |
+| [AMP-SK-002](./generated/amp-sk-002.md) | Amp Skill Masked by an .agents/skills Copy | LOW | Amp Skills | No |
+| [AMP-SK-003](./generated/amp-sk-003.md) | Amp Skill Too Deep to Be Discovered | MEDIUM | Amp Skills | No |
 | [AS-001](./generated/as-001.md) | Missing Frontmatter | HIGH | Agent Skills | Yes (safe) |
 | [AS-002](./generated/as-002.md) | Missing Required Field: name | HIGH | Agent Skills | Yes (safe) |
 | [AS-003](./generated/as-003.md) | Missing Required Field: description | HIGH | Agent Skills | Yes (safe) |
