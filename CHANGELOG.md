@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.0] - 2026-10-17
+
 ### Migration
 - **Roo Code support is removed** (Roo Code shut down on 2026-05-15): ROO-001 to ROO-006 and RC-SK-001 are retired, `.roo/` files get only the generic checks, `rules.roo_code` is a deprecated no-op, and `tools = ["roo-code"]` only warns. Remove those IDs and settings from your config.
 - Remove the rule IDs retired in this release from `disabled_rules`, severity overrides and explicit rule lists: AGM-003, AGM-005, CC-AG-013, CC-HK-017, CC-MEM-007, CC-MEM-009, CC-OS-005, CC-SET-014, CC-SET-015, CC-SET-021, CC-SET-024, CC-SET-032, CDX-001, CDX-002, CDX-003, CDX-AG-004, CDX-AG-007, CDX-CFG-013, CL-SK-002, CL-SK-003, COP-022, COP-023, COP-024, COP-026, GM-007, KIRO-012, KIRO-013, KIRO-014, KR-AG-007, KR-HK-007, KR-HK-008, KR-PW-005, MCP-025, MCP-026, OC-AGM-001, OC-CFG-003, OC-PM-001, PE-001, PE-003, RC-SK-001, ROO-001, ROO-002, ROO-003, ROO-004, ROO-005, ROO-006, XP-007, XP-009. agnix warns about each one and names its replacement where there is one (see the Removed section and `knowledge-base/removed-rules.json`).
