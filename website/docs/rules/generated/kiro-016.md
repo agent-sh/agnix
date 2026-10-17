@@ -28,7 +28,7 @@ keywords: ["KIRO-016", "agents.md exceeds kiro truncation limit", "kiro steering
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

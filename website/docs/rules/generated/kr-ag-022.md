@@ -30,7 +30,7 @@ keywords: ["KR-AG-022", "reserved or duplicate kiro agent name", "kiro agents", 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

@@ -1,0 +1,12 @@
+{
+  "name": "review-agent",
+  "description": "Reviews pull requests for correctness and style",
+  "prompt": "Review the diff.",
+  "tools": [
+    "fs_read",
+    "execute_bash"
+  ],
+  "allowedTools": [
+    "Read"
+  ]
+}

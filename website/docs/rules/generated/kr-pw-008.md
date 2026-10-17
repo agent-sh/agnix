@@ -28,7 +28,7 @@ keywords: ["KR-PW-008", "secrets in power body", "kiro powers", "validation", "a
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

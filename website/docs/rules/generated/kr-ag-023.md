@@ -29,7 +29,7 @@ keywords: ["KR-AG-023", "invalid inline mcp server in kiro agent", "kiro agents"
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

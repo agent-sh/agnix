@@ -29,7 +29,7 @@ keywords: ["KR-AG-020", "non-agent file in kiro agents directory", "kiro agents"
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

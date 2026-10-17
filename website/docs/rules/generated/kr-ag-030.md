@@ -29,7 +29,7 @@ keywords: ["KR-AG-030", "sub-agent description missing or too short", "kiro agen
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples
@@ -39,6 +39,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
+# .kiro/agents/lead.json: {"name": "lead", "tools": ["subagent/review-agent"]}
 {"name": "review-agent", "description": "Reviewer"}
 ```
 

@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Lint on save",
+      "description": "Run ESLint when the agent saves a TypeScript file",
+      "trigger": "PostFileSave",
+      "matcher": "\\.(ts|tsx)$",
+      "action": {
+        "type": "command",
+        "command": "npx eslint --fix"
+      },
+      "timeout": 30
+    }
+  ]
+}

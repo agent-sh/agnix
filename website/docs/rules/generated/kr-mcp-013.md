@@ -30,7 +30,7 @@ keywords: ["KR-MCP-013", "unknown top-level field in agent plugins mcp.json", "k
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

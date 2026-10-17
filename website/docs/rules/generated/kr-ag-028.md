@@ -30,7 +30,7 @@ keywords: ["KR-AG-028", "agent file not loaded by a targeted kiro engine", "kiro
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples
@@ -40,6 +40,9 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
+[tool_versions]
+kiro = "2.32.1"
+# with .kiro/agents/reviewer.md:
 ---
 description: Reviews code
 ---

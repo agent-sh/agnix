@@ -29,7 +29,7 @@ keywords: ["KR-PW-009", "plugin.json is not a json object", "kiro powers", "vali
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

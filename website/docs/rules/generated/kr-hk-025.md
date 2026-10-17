@@ -29,7 +29,7 @@ keywords: ["KR-HK-025", "standalone hook file ignored by pinned kiro cli 2.x", "
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

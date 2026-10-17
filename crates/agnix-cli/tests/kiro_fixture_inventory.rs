@@ -118,6 +118,69 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-detect/power/POWER.md",
         "tests/fixtures/kiro-detect/power/steering/patterns.md",
         "tests/fixtures/kiro-permissions/strict/.kiro/settings/permissions.yaml",
+        // kiro-reach: one minimal project per rule that no other family
+        // triggers (see kiro_rule_reachability.rs); two pin a Kiro version.
+        "tests/fixtures/kiro-reach/kiro-005/.kiro/steering/empty-body.md",
+        "tests/fixtures/kiro-reach/kiro-011/.kiro/steering/everything.md",
+        "tests/fixtures/kiro-reach/kiro-016/.kiro/steering/project.md",
+        "tests/fixtures/kiro-reach/kiro-016/AGENTS.md",
+        "tests/fixtures/kiro-reach/kiro-017/.kiro/steering/project.md",
+        "tests/fixtures/kiro-reach/kiro-017/AGENTS.md",
+        "tests/fixtures/kiro-reach/kiro-018/.kiro/steering/api-design.md",
+        "tests/fixtures/kiro-reach/kr-ag-006/.kiro/agents/lead.json",
+        "tests/fixtures/kiro-reach/kr-ag-008/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-009/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-010/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-011/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-012/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-013/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-014/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-018/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-020/.kiro/agents/review-agent.json.attribution.json",
+        "tests/fixtures/kiro-reach/kr-ag-022/.kiro/agents/plan.md",
+        "tests/fixtures/kiro-reach/kr-ag-023/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-024/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-025/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-026/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-027/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-028/.agnix.toml",
+        "tests/fixtures/kiro-reach/kr-ag-028/.kiro/agents/reviewer.md",
+        "tests/fixtures/kiro-reach/kr-ag-029/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-ag-030/.kiro/agents/lead.json",
+        "tests/fixtures/kiro-reach/kr-ag-030/.kiro/agents/review-agent.json",
+        "tests/fixtures/kiro-reach/kr-hk-009/.kiro/hooks/run-tests.kiro.hook",
+        "tests/fixtures/kiro-reach/kr-hk-010/.kiro/hooks/notify.kiro.hook",
+        "tests/fixtures/kiro-reach/kr-hk-025/.agnix.toml",
+        "tests/fixtures/kiro-reach/kr-hk-025/.kiro/hooks/lint.json",
+        "tests/fixtures/kiro-reach/kr-mcp-006/.kiro/settings/mcp.json",
+        "tests/fixtures/kiro-reach/kr-mcp-012/.kiro/powers/installed/docs/mcp.json",
+        "tests/fixtures/kiro-reach/kr-mcp-012/.kiro/powers/installed/docs/plugin.json",
+        "tests/fixtures/kiro-reach/kr-mcp-013/.kiro/powers/installed/docs/mcp.json",
+        "tests/fixtures/kiro-reach/kr-mcp-013/.kiro/powers/installed/docs/plugin.json",
+        "tests/fixtures/kiro-reach/kr-mcp-014/.kiro/powers/installed/docs/mcp.json",
+        "tests/fixtures/kiro-reach/kr-mcp-014/.kiro/powers/installed/docs/plugin.json",
+        "tests/fixtures/kiro-reach/kr-pm-001/.kiro/settings/permissions.yaml",
+        "tests/fixtures/kiro-reach/kr-pw-007/.kiro/powers/my-power/POWER.md",
+        "tests/fixtures/kiro-reach/kr-pw-008/.kiro/powers/deploy/POWER.md",
+        "tests/fixtures/kiro-reach/kr-pw-009/.kiro/powers/installed/supabase/plugin.json",
+        "tests/fixtures/kiro-reach/kr-pw-010/.kiro/powers/installed/supabase/plugin.json",
+        "tests/fixtures/kiro-reach/kr-pw-011/.kiro/powers/installed/supabase/plugin.json",
+        "tests/fixtures/kiro-reach/kr-pw-012/.kiro/powers/installed/supabase/plugin.json",
+        "tests/fixtures/kiro-reach/kr-pw-013/.kiro/powers/installed/supabase/plugin.json",
+        "tests/fixtures/kiro-reach/kr-pw-014/.kiro/powers/installed/supabase/plugin.json",
+        "tests/fixtures/kiro-reach/kr-pw-014/.kiro/powers/installed/supabase/skills/Setup_DB/SKILL.md",
+        "tests/fixtures/kiro-reach/kr-pw-015/.kiro/powers/installed/supabase/plugin.json",
+        "tests/fixtures/kiro-reach/kr-pw-017/.kiro/powers/installed/supabase/plugin.json",
+        "tests/fixtures/kiro-reach/kr-pw-017/.kiro/powers/installed/supabase/POWER.md",
+        "tests/fixtures/kiro-reach/kr-pw-018/.kiro/powers/installed/supabase/plugin.json",
+        "tests/fixtures/kiro-reach/kr-pw-018/.kiro/powers/installed/supabase/steering/setup.md",
+        "tests/fixtures/kiro-reach/kr-sk-001/.kiro/skills/my-skill/SKILL.md",
+        "tests/fixtures/kiro-reach/kr-sk-002/.kiro/skills/pr-review/SKILL.md",
+        "tests/fixtures/kiro-reach/kr-wf-003/.kiro/workflows/plan.workflow.json",
+        "tests/fixtures/kiro-reach/kr-wf-003/.kiro/workflows/plan.workflow.yaml",
+        "tests/fixtures/kiro-reach/kr-wf-005/.kiro/workflows/review.workflow.json",
+        "tests/fixtures/kiro-reach/kr-wf-008/.kiro/workflows/review.workflow.json",
+        "tests/fixtures/kiro-reach/kr-wf-009/.kiro/workflows/loop.workflow.json",
     ]
 }
 
@@ -212,10 +275,13 @@ fn collect_relative_files(root: &Path, dir: &Path, out: &mut BTreeSet<String>) {
         if metadata.is_dir() {
             collect_relative_files(root, &path, out);
         } else if metadata.is_file() {
-            // `.kiroignore` is a Kiro configuration file, inventoried like the rest.
+            // `.kiroignore` is a Kiro configuration file and `.agnix.toml` pins
+            // a kiro-reach fixture's Kiro version; both are inventoried like
+            // the rest.
             if let Some(name) = path.file_name().and_then(|name| name.to_str())
                 && name.starts_with('.')
                 && name != ".kiroignore"
+                && name != ".agnix.toml"
             {
                 if is_allowed_hidden_fixture_file(name) {
                     continue;
@@ -300,6 +366,7 @@ fn kiro_fixture_families_exist_with_required_cases() {
         "tests/fixtures/kiro-mcp",
         "tests/fixtures/kiro-permissions",
         "tests/fixtures/kiro-detect",
+        "tests/fixtures/kiro-reach",
     ];
 
     for rel in fixture_roots {
@@ -359,6 +426,13 @@ fn kiro_fixture_families_are_cli_runnable() {
         // the KR-PW-016 author note on the power plugin.json;
         // settings/settings.json is not validated.
         ("tests/fixtures/kiro-detect", 14_u64, 14_u64),
+        // One run over every kiro-reach fixture (the two .agnix.toml files
+        // are not linted). `--config` replaces their Kiro 2.x pins, so
+        // KR-AG-028 and KR-HK-025 do not fire here; the reachability test
+        // lints each fixture with its own config. The two AGENTS.md files add
+        // AGM-003, XP-006 and XP-007, and several fixtures also trip related
+        // Kiro rules (KR-AG-001, KR-AG-015, KR-PW-015, KR-PW-016, ...).
+        ("tests/fixtures/kiro-reach", 59_u64, 66_u64),
     ];
 
     for (rel, expected_files_checked, expected_diagnostics) in fixture_roots {
@@ -460,7 +534,8 @@ fn kiro_fixture_files_have_explicit_detection_baselines() {
             || (rel.starts_with("tests/fixtures/kiro-mcp/")
                 && rel.ends_with("/.kiro/settings/mcp.json"))
             || (rel.starts_with("tests/fixtures/kiro-detect/")
-                && rel != "tests/fixtures/kiro-detect/.kiro/settings/settings.json");
+                && rel != "tests/fixtures/kiro-detect/.kiro/settings/settings.json")
+            || (rel.starts_with("tests/fixtures/kiro-reach/") && !rel.ends_with("/.agnix.toml"));
 
         assert_eq!(
             is_detected, should_be_detected,

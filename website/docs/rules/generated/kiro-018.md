@@ -29,7 +29,7 @@ keywords: ["KIRO-018", "vague auto steering description", "kiro steering", "vali
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

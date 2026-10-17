@@ -30,7 +30,7 @@ keywords: ["KR-MCP-012", "agent plugins mcp.json schema missing or mismatched", 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

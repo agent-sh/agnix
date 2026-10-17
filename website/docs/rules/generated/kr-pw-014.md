@@ -29,7 +29,7 @@ keywords: ["KR-PW-014", "plugin skill kiro skips", "kiro powers", "validation", 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

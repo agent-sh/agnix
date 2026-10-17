@@ -32,6 +32,7 @@ Keep fixtures minimal, deterministic, and focused on one rule family when possib
 | Kiro MCP (fixture pack) | `kiro-mcp/` | `kiro-mcp/.kiro/settings/mcp.json` | `kiro-mcp/.kiro/settings/missing-command-url.json`, `kiro-mcp/.kiro/settings/hardcoded-secrets.json` |
 | Kiro detection, workflows, ignore files (fixture pack) | `kiro-detect/` | `kiro-detect/.kiro/settings/cli.json`, `kiro-detect/power/POWER.md`, `kiro-detect/.kiro/workflows/plan-and-implement.workflow.json` | `kiro-detect/.kiro/agents/reviewer.JSON` (KIRO-026), `kiro-detect/.kiro/workflows/broken.workflow.yaml` (KR-WF), `kiro-detect/.kiroignore` (KR-IGN-001) |
 | KR-SET | `valid/kiro-settings/`, `invalid/kiro-settings/` | `valid/kiro-settings/.kiro/settings/cli.json` | `invalid/kiro-settings/.kiro/settings/cli.json` |
+| Kiro rule reachability (one project per rule) | `kiro-reach/<rule-id>/` | - | `kiro-reach/kr-ag-030/.kiro/agents/review-agent.json` (KR-AG-030, with its orchestrator `lead.json`), `kiro-reach/kr-hk-025/.agnix.toml` (Kiro 2.x pin) |
 
 ## Notes
 - AGENTS.md and cross-platform fixtures intentionally overlap; they are validated by different rule families.
@@ -39,4 +40,5 @@ Keep fixtures minimal, deterministic, and focused on one rule family when possib
 - REF-002 only fires on agent config files (CLAUDE.md, AGENTS.md, SKILL.md), so broken-link fixture uses CLAUDE.md.
 - Keep fixture paths stable, as tests assert on filenames.
 - Kiro powers/agents/hooks/MCP/permissions/detection fixture packs are guarded by inventory and CLI smoke-baseline checks in `crates/agnix-cli/tests/kiro_fixture_inventory.rs`, including detection baselines and representative file-type assertions.
+- `crates/agnix-cli/tests/kiro_rule_reachability.rs` runs the CLI over every Kiro fixture family and requires each `KIRO-*` and `KR-*` rule in `knowledge-base/rules.json` to fire at least once. A new Kiro rule that no family triggers needs a minimal project at a real Kiro path under `kiro-reach/<rule-id-lowercase>/`, with an `.agnix.toml` holding only `[tool_versions] kiro = "..."` when the rule needs a pinned version; each such project must produce its own rule.
 - Kiro MCP file-type detection currently only matches `.kiro/settings/mcp.json`; other JSON files in `kiro-mcp/.kiro/settings/` are fixture artifacts and are not detected as `KiroMcp`.

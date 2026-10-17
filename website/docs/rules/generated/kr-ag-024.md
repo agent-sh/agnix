@@ -32,7 +32,7 @@ keywords: ["KR-AG-024", "kiro agent tool name matches no tool", "kiro agents", "
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

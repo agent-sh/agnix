@@ -30,7 +30,7 @@ keywords: ["KR-AG-015", "unconverted cli 2.x trust configuration", "kiro agents"
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

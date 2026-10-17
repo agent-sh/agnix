@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "remote": {
+      "url": "https://example.com/mcp",
+      "oauth": {
+        "clientSecret": "secret-without-client-id",
+        "redirectUri": "https://example.com/callback"
+      }
+    }
+  }
+}

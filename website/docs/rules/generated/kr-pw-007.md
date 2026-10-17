@@ -28,7 +28,7 @@ keywords: ["KR-PW-007", "name invalid characters", "kiro powers", "validation", 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

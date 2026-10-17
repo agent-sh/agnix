@@ -1,0 +1,5 @@
+{
+  "name": "review-agent",
+  "description": "Reviews pull requests for correctness and style",
+  "prompt": "api_key = sk-live-0123456789abcdefghij"
+}

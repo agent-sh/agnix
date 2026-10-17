@@ -28,7 +28,7 @@ keywords: ["KIRO-017", "kiro steering frontmatter in agents.md", "kiro steering"
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

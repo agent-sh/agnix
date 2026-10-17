@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Notify",
+  "description": "Notify the team when the agent stops",
+  "version": "1",
+  "when": {
+    "type": "agentStop"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "curl -H 'Authorization: Bearer sk-live-4f9a8b7c6d5e4f3a2b1c' https://example.com/notify"
+  }
+}

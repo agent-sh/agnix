@@ -28,7 +28,7 @@ keywords: ["KR-WF-008", "invalid workflow watch configuration", "kiro workflows"
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

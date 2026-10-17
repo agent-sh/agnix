@@ -29,7 +29,7 @@ keywords: ["KR-PW-010", "missing or unsupported plugin.json $schema", "kiro powe
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `false`
 
 ## Examples

@@ -1,0 +1,5 @@
+{
+  "name": "review-agent",
+  "description": "Reviewer",
+  "prompt": "Review the diff."
+}
