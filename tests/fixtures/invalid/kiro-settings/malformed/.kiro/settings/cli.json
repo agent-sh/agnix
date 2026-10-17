@@ -1,0 +1,4 @@
+{
+  // Kiro CLI parses this file as strict JSON
+  "chat.defaultAgent": "project-agent",
+}

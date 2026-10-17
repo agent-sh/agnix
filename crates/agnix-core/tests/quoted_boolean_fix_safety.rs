@@ -2,8 +2,8 @@
 //! Exact token conversion is available, but must never activate behavior in safe mode.
 
 use agnix_core::{
-    FileSystem, FixApplyMode, FixApplyOptions, LintConfig, MockFileSystem, ValidatorRegistry,
-    apply_fixes_with_fs_options, validate_content,
+    FileSystem, FileType, FixApplyMode, FixApplyOptions, LintConfig, MockFileSystem,
+    ValidatorRegistry, apply_fixes_with_fs_options, detect_file_type, validate_content,
 };
 use std::{path::Path, sync::Arc};
 
@@ -169,6 +169,42 @@ fn output_style_quoted_booleans_require_opt_in_and_preserve_comments_and_body() 
                     "CC-OS-002",
                 );
             }
+        }
+    }
+}
+
+#[test]
+fn kiro_settings_quoted_booleans_require_opt_in_and_target_the_top_level_key() {
+    // Kiro CLI settings live in .kiro/settings/cli.json; older agnix builds
+    // routed .kiro/settings.json to the same validator.
+    let path = [".kiro/settings/cli.json", ".kiro/settings.json"]
+        .into_iter()
+        .map(Path::new)
+        .find(|path| detect_file_type(path) == FileType::KiroSettings)
+        .expect("a Kiro CLI settings path is detected");
+    for quoted in ["true", "false"] {
+        for (rule, key) in [
+            ("KR-SET-001", "toolSearch.enabled"),
+            ("KR-SET-008", "chat.enableKnowledge"),
+        ] {
+            // A nested copy of the key and a quoted decoy must not be edited.
+            let content = format!(
+                "{{\n  \"profiles\": {{\"{key}\": \"{quoted}\"}},\n  \"chat.defaultAgent\": \"é \\\"{quoted}\\\"\",\n  \"{key}\": \"{quoted}\"\n}}"
+            );
+            let expected = format!(
+                "{{\n  \"profiles\": {{\"{key}\": \"{quoted}\"}},\n  \"chat.defaultAgent\": \"é \\\"{quoted}\\\"\",\n  \"{key}\": {quoted}\n}}"
+            );
+            for newline in ["\n", "\r\n"] {
+                assert_requires_opt_in(
+                    path,
+                    &content.replace('\n', newline),
+                    &expected.replace('\n', newline),
+                    rule,
+                );
+            }
+            let fixed: serde_json::Value = serde_json::from_str(&expected).unwrap();
+            assert_eq!(fixed[key], quoted == "true");
+            assert_eq!(fixed["profiles"][key], quoted);
         }
     }
 }

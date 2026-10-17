@@ -11,6 +11,9 @@ fn validate(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> 
         .validators_for(detect_file_type(path))
         .iter()
         .flat_map(|v| v.validate(path, &content, config))
+        // KR-PM-009 notes that Kiro does not read a repository-local
+        // permissions file; these tests are about the policy content.
+        .filter(|d| d.rule != "KR-PM-009")
         .collect()
 }
 

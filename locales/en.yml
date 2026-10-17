@@ -8,20 +8,60 @@ rules:
     fix: "Normalize hook trigger to %{canonical}"
     legacy: "Legacy .kiro.hook uses CLI trigger spelling %{trigger} without a corresponding V3 JSON hook in this directory"
     legacy_suggestion: "If this hook is intended for CLI V3, migrate it to a versioned .kiro/hooks/*.json file. Legacy IDE manual hooks can remain in their original format."
-  kr_pm_004:
-    message: "Permission rule at index %{index}: %{field} must be an array of strings"
-    suggestion: "Use a list of quoted glob patterns. Omit match for unrestricted scope; exclude is optional."
-  kr_pm_003:
-    message: "Permission rule at index %{index} has a missing or invalid effect"
-    suggestion: "Set effect to allow, deny, or ask. Review the policy before changing access."
-  kr_pm_002:
-    message: "Permission rule at index %{index} has a missing or invalid capability"
-    suggestion: "Use a documented capability such as shell, fs_read, fs_write, mcp, or a meta-capability (all, builtin, filesystem)."
   kr_pm_001:
-    parse_error: "Invalid Kiro permissions YAML: %{error}"
-    shape: "Kiro permissions must be a mapping containing a rules array"
-    entry: "Permission rule at index %{index} must be a mapping"
+    parse_error: "Kiro cannot load this permissions file (%{error}); it rejects every rule in it and fails closed, denying all tool calls until the file is fixed"
+    shape: "Kiro permissions must be a mapping containing a rules array; an empty file or any other shape is rejected and Kiro fails closed, denying all tool calls"
+    entry: "Permission rule at index %{index} must be a mapping; Kiro rejects the whole file and fails closed, denying all tool calls"
     suggestion: "Use rules: [] or a list of capability/effect mappings in permissions.yaml."
+  kr_pm_002:
+    missing: "Permission rule at index %{index} has a missing or non-string capability; Kiro rejects the whole file and fails closed, denying all tool calls"
+    unknown: "Permission rule at index %{index} has unknown capability '%{capability}'; Kiro skips this rule"
+    suggestion: "Use a documented capability such as shell, fs_read, fs_write, mcp, or a meta-capability (all, builtin, filesystem)."
+  kr_pm_003:
+    message: "Permission rule at index %{index} has a missing or invalid effect; %{consequence}"
+    evaluate: "Permission rule at index %{index} uses effect 'evaluate', which Kiro does not support yet; the rule is skipped"
+    scope: "Permission rule at index %{index} uses effect '%{effect}', which an administrator managed-settings.json cannot contain; %{consequence}"
+    suggestion: "Set effect to allow, deny, or ask. Review the policy before changing access."
+    admin_suggestion: "Administrator policies may only deny or ask; grant allow rules in user, workspace or agent permissions instead."
+  kr_pm_004:
+    message: "Permission rule at index %{index}: %{field} must be an array of strings; %{consequence}"
+    suggestion: "Use a list of quoted glob patterns. Omit match for unrestricted scope; exclude is optional."
+  kr_pm_005:
+    message: "Permission rule at index %{index} has unknown field(s) %{fields}; %{consequence}"
+    suggestion: "A permission rule takes only capability, effect, match and exclude."
+  kr_pm_006:
+    not_array: "Kiro permissions 'policies' must be an array of preset id strings; Kiro rejects the whole file and fails closed, denying all tool calls"
+    unknown: "Kiro permissions preset '%{policy}' is unknown and skipped"
+    admin: "Kiro permissions preset '%{policy}' contains allow rules, which an administrator policy cannot hold; Kiro skips them"
+    suggestion: "Use preset ids allow-all, edit-workspace, read-workspace, read-all, read-only-shell or dev-shell."
+  kr_pm_007:
+    message: "Permission rule at index %{index}: %{field} pattern %{reason}"
+    mcp_at: "'%{pattern}' never matches; MCP permission resources are server/tool without '@' (use '%{fixed}')"
+    web_fetch_url: "'%{pattern}' never matches; web_fetch rules are compared with the URL host name (for example docs.example.com or *.example.com)"
+    no_resource: "'%{pattern}' never matches; %{capability} requests have no resource to compare, so only '*' (or no match) applies"
+    protected_path: "'%{pattern}' has no effect for an allow rule; Kiro always asks before (or denies) agent writes to .git, .vscode, .kiroignore, *.code-workspace and the .kiro agents, hooks, workflows, powers and settings directories"
+    suggestion: "Rewrite the pattern in the form Kiro compares for this capability; see kiro.dev/docs/permissions."
+  kr_pm_008:
+    message: "Permission rule at index %{index} has match: [], which Kiro treats like an omitted match: the %{effect} rule applies to every %{capability} resource"
+    suggestion: "List the resources the rule should cover, or omit match to make the full scope explicit."
+  kr_pm_009:
+    message: "Kiro does not read permission policies from this location; it reads ~/.kiro/settings/permissions.yaml (user) and ~/.kiro/workspace-roots/<hash>/permissions.yaml (workspace), so these rules are not applied"
+    admin: "Kiro reads an administrator policy only from the operating-system managed-settings.json path (/Library/Application Support/Kiro/, /etc/kiro/ or C:\\ProgramData\\Kiro\\), so these rules are not applied from here"
+    suggestion: "Install the policy in a location Kiro reads (copy it to ~/.kiro/settings/permissions.yaml, or let Kiro write workspace rules to ~/.kiro/workspace-roots), or keep this file only as a template."
+    shadowed: "Kiro ignores this permissions.json because permissions.yaml exists in the same directory and is read instead"
+    shadowed_suggestion: "Merge the rules into permissions.yaml and remove permissions.json."
+  kr_pm_common:
+    fatal: "Kiro rejects the whole file and fails closed, denying all tool calls until it is fixed"
+    latent: "Kiro already skips this rule for its unknown capability, and will reject the whole file and fail closed once the capability is fixed"
+  kr_pm_010:
+    message: "Permission rule at index %{index} allows %{capability} with no match restriction and no exclude; Kiro advises specific patterns over wildcards and allowing only what the agent needs"
+    suggestion: "List the commands, paths or servers to allow, or add exclude patterns for dangerous ones."
+  kr_pm_011:
+    message: "Permission rule at index %{index}: pattern '%{pattern}' uses %{syntax}, which Kiro does not support for %{capability} patterns (only * is a wildcard; ** acts as *, ? and [...] match literally)"
+    suggestion: "Use * as the only wildcard in shell, web and MCP patterns."
+  kr_pm_012:
+    message: "Permission rule at index %{index} denies '%{host}', but sandbox_network rules are first-match and the earlier allow rule at index %{allow} already matches it, so this deny never applies"
+    suggestion: "Move the specific deny before the broader allow."
   oc_dep_005:
     cleanup_suggestion: "Move '%{key}' to tui.json first. Only use the unsafe cleanup after migration is complete; it deletes legacy TUI settings without moving them."
     cleanup_fix: "Remove legacy TUI settings only after migration to tui.json is complete (does not move configuration)"
@@ -861,32 +901,102 @@ rules:
     message: Kiro CLI hook entry at %{event}[%{index}] is missing required command
     suggestion: Add a non-empty command to each CLI hook entry
   kr_mcp_001:
-    message: Kiro MCP server '%{server}' is missing both command and url
-    suggestion: Set command for local servers or url for remote servers
+    message: "Kiro MCP server '%{server}' has neither command nor url, so Kiro cannot start it"
+    suggestion: "Set command for a local server or url for a remote server, or set \"disabled\": true to keep the entry switched off"
   kr_mcp_001_root:
-    message: Kiro MCP config is missing mcpServers object
-    suggestion: Define mcpServers as an object with one or more server entries
+    message: "Kiro MCP config is missing mcpServers object"
+    suggestion: "Define mcpServers as an object with one or more server entries"
+  kr_mcp_001_root_type:
+    message: "Kiro MCP config 'mcpServers' must be an object of server entries, found %{found}; Kiro loads no servers from this file"
   kr_mcp_001_parse:
-    message: 'Kiro MCP config has invalid JSON structure: %{error}'
-    suggestion: Fix JSON syntax and ensure mcpServers is an object
+    message: "Kiro MCP config has invalid JSON structure: %{error}"
+    suggestion: "Fix JSON syntax and ensure mcpServers is an object"
+  kr_mcp_001_jsonc:
+    message: "Kiro CLI 2.x (V2 engine) cannot parse this mcp.json (%{error}): comments and trailing commas are accepted only by the V3 engine, so V2 loads no server from this file"
+    suggestion: "Remove comments and trailing commas so every Kiro engine can read the file"
+  kr_mcp_001_plugin:
+    suggestion: "Agent Plugins mcp.json must be plain JSON (no comments or trailing commas) with an mcpServers object"
   kr_mcp_002:
-    message: Kiro MCP server '%{server}' has potential hardcoded secret in env '%{env_key}'
-    suggestion: Use environment variable indirection such as ${VAR_NAME} instead of plaintext secrets
-  kr_mcp_006:
-    message: 'Kiro MCP server ''%{server}'' has invalid OAuth configuration: %{reason}'
-    suggestion: Use the documented optional OAuth fields on an HTTP(S) remote MCP server, or remove the oauth block
+    message: "Kiro MCP server '%{server}' has potential hardcoded secret in %{field} '%{key}'"
+    suggestion: "Use environment variable indirection such as ${VAR_NAME} instead of plaintext secrets"
+  kr_mcp_003:
+    message: "Kiro MCP server '%{server}' command '%{command}' includes its arguments; Kiro starts command as a single executable without a shell, so the server fails to start"
+    suggestion: "Keep only the executable in command and move the arguments to args, for example \"command\": \"npx\", \"args\": [\"-y\", \"package\"]"
+  kr_mcp_004:
+    message: "Kiro MCP server '%{server}' has invalid url '%{url}': %{reason}"
+    suggestion: "Use an https:// URL, or http:// for a server on localhost, 127.0.0.1 or ::1"
     reasons:
-      oauth_object: '''oauth'' must be an object'
-      client_id_string: '''oauth.clientId'' must be a string'
-      client_id_non_empty: '''oauth.clientId'' must not be empty'
-      client_secret_string: '''oauth.clientSecret'' must be a string'
-      client_secret_non_empty: '''oauth.clientSecret'' must not be empty'
-      client_secret_requires_client_id: '''oauth.clientSecret'' is only meaningful alongside ''oauth.clientId'''
-      redirect_uri_string: '''oauth.redirectUri'' must be a string'
-      redirect_uri_format: '''oauth.redirectUri'' must use an HTTP loopback address with a valid port'
-      oauth_scopes_array: '''oauth.oauthScopes'' must be an array'
-      oauth_scopes_strings: '''oauth.oauthScopes'' entries must all be strings'
-      http_url: '''oauth'' can only be used with HTTP(S) remote MCP server URLs'
+      not_url: "it is not a valid URL, so Kiro skips this server"
+      scheme: "Kiro reaches remote MCP servers over HTTPS (or HTTP on localhost), and a '%{scheme}' URL cannot be used"
+  kr_mcp_005:
+    message: "MCP server '%{server}' is defined again at line %{line}; Kiro keeps only the last definition and ignores this one"
+    suggestion: "Remove or rename one of the definitions"
+  kr_mcp_006:
+    message: "Kiro MCP server '%{server}' has invalid OAuth configuration: %{reason}"
+    suggestion: "Use the documented optional OAuth fields on an HTTP(S) remote MCP server, or remove the oauth block"
+    reasons:
+      client_id_non_empty: "'oauth.clientId' must not be empty"
+      client_secret_non_empty: "'oauth.clientSecret' must not be empty"
+      client_secret_requires_client_id: "'oauth.clientSecret' is only meaningful alongside 'oauth.clientId'"
+      redirect_uri_format: "'oauth.redirectUri' must be \":port\", \"localhost:port\", \"127.0.0.1:port\" or \"http://localhost:port/path\" with a port from 1 to 65535; the V3 engine skips the server otherwise"
+      redirect_uri_query: "'oauth.redirectUri' must not contain a query string or fragment; the V3 engine skips the server otherwise"
+      client_metadata_url: "'oauth.clientMetadataUrl' must be an https URL with a path (for example https://example.com/client-metadata.json); the V3 engine skips the server otherwise"
+      http_url: "'oauth' can only be used with HTTP(S) remote MCP server URLs"
+      client_metadata_url_ignored: "'oauth.clientMetadataUrl' is ignored because 'oauth.clientId' is set; Kiro uses the client ID and never consults the metadata document"
+      client_metadata_url_redirect: "'oauth.clientMetadataUrl' needs a pinned 'oauth.redirectUri'; the authorization server checks the callback against your metadata document, so Kiro's random loopback port is rejected on every connect"
+  kr_mcp_007:
+    message: "Kiro MCP server '%{server}' field '%{field}' must be %{expected}, found %{found}: %{effect}"
+    server_message: "Kiro MCP server '%{server}' must be an object, found %{found}: %{effect}"
+    suggestion: "Fix the value type; Kiro does not coerce MCP configuration values"
+    effects:
+      both: "Kiro CLI 2.x (V2 engine) rejects the whole mcp.json and the V3 engine skips this server"
+      v2: "Kiro CLI 2.x (V2 engine) rejects the whole mcp.json"
+      v3: "the V3 engine skips this server"
+  kr_mcp_008:
+    message: "Kiro MCP server '%{server}' url '%{url}' uses plain http for a host that is not local; the V3 engine accepts only https or http on localhost, 127.0.0.1 or ::1, and skips this server"
+    suggestion: "Use https:// for remote MCP servers"
+  kr_mcp_009:
+    message: "Kiro MCP server '%{server}' %{field} contains '%{reference}', which Kiro does not expand; only ${NAME} references are replaced, so the server receives the text literally"
+    editor_message: "Kiro MCP server '%{server}' %{field} contains the editor variable '%{reference}'; Kiro replaces ${NAME} only with an environment variable of that name, so the server normally receives the text literally"
+    suggestion: "Use ${NAME} for environment variables (for example \"${GITHUB_TOKEN}\"), or write the value out"
+  kr_mcp_010:
+    message: "Kiro MCP server '%{server}' has unknown field '%{field}', which Kiro ignores"
+    suggestion: "Remove the field or check its spelling against the Kiro MCP server fields"
+    did_you_mean: "Did you mean '%{field}'?"
+  kr_mcp_011:
+    message: "Kiro MCP server '%{server}' has both command and url; the V3 engine starts the command (stdio) and ignores url"
+    suggestion: "Keep command for a local server or url for a remote one, not both"
+  kr_mcp_012:
+    schema_message: "Agent Plugins mcp.json has a missing or unsupported $schema, so Kiro loads none of this power's MCP servers"
+    version_message: "Agent Plugins mcp.json targets Agent Plugins %{mcp} but plugin.json targets %{manifest}, so Kiro loads none of this power's MCP servers"
+    suggestion: "Set \"$schema\" to https://agent-plugins.org/schemas/1.x.y/mcp.schema.json with the same version as plugin.json"
+  kr_mcp_013:
+    message: "Agent Plugins mcp.json field '%{field}' is not part of the Agent Plugins MCP configuration, so Kiro loads none of this power's MCP servers"
+    suggestion: "Keep only \"$schema\" and \"mcpServers\" at the top level of a plugin mcp.json"
+  kr_mcp_014:
+    message: "Agent Plugins MCP server '%{server}' is skipped: %{reason}"
+    suggestion: "Follow the Agent Plugins MCP schema (stdio servers take type, command, args, env and cwd; streamable-http and sse servers take type, url and headers)"
+    reasons:
+      not_object: "the entry must be an object"
+      type_missing: "\"type\" must be \"stdio\", \"streamable-http\" or \"sse\""
+      type_unknown: "type \"%{value}\" is not \"stdio\", \"streamable-http\" or \"sse\""
+      unknown_field: "field '%{field}' is not allowed for a %{server_type} server"
+      command_missing: "a stdio server needs a non-empty string command"
+      command_path: "command must be a bare executable name or a \"./\" path inside the power"
+      command_escapes: "a \"./\" command must stay inside the power directory"
+      args: "args must be an array of strings"
+      env: "env must be an object of strings"
+      env_reserved: "env must not define PLUGIN_ROOT or PLUGIN_DATA (Kiro sets them)"
+      cwd: "cwd must be a string starting with \"./\", ${PLUGIN_ROOT} or ${PLUGIN_DATA}, without \"..\""
+      url_missing: "a remote server needs a non-empty string url"
+      url_invalid: "url must be a valid http or https URL"
+      url_userinfo: "url must not contain a user name or password"
+      url_fragment: "url must not contain a fragment"
+      url_insecure: "a url to a host that is not local must use https"
+      headers: "headers must be an object of strings with no names that differ only in case"
+  kr_mcp_015:
+    message: "Kiro MCP server '%{server}' auto-approves every tool with autoApprove [\"*\"]; Kiro advises auto-approving only trusted, read-only tools with limited scope"
+    suggestion: "List the specific tool names to auto-approve (Kiro CLI V3 ignores autoApprove and approves MCP tools through permission rules)"
   pe_001:
     message: Critical keyword '%{keyword}' at %{percent} percent of document (40-60 percent is the 'lost in the middle' zone)
     suggestion: Move critical content to the start or end of the document for better recall
@@ -1189,15 +1299,6 @@ rules:
   kr_hk_010:
     message: Potential hardcoded secret detected in Kiro hook command
     suggestion: Remove hardcoded credentials from the hook command; reference environment variables (e.g. ${API_KEY}) instead
-  kr_mcp_003:
-    message: Kiro MCP server '%{server}' is missing required 'args' field
-    suggestion: Add an 'args' array (even if empty) alongside 'command', or switch to 'url' for remote servers
-  kr_mcp_004:
-    message: Kiro MCP server '%{server}' has invalid URL '%{url}'
-    suggestion: Provide a valid URL with http:// or https:// (or ws:// / wss://) scheme for remote MCP servers
-  kr_mcp_005:
-    message: Duplicate MCP server name '%{server}' found across configurations
-    suggestion: Use unique server names to avoid conflicts
   cc_sk_021:
     message: Hardcoded user directory path '%{path}' leaks author identity and is not portable across machines
     suggestion: Replace with '~/', '$HOME/', a project-relative path, or an env var like '$PROJECT_ROOT'. For shebangs prefer
@@ -1299,20 +1400,48 @@ rules:
       {type: google-credentials, scopes?: [...]}. For oauth: {type: oauth, client_id?, client_secret?, scopes?, authorization_url?,
       token_url?}'
   kr_set_001:
-    type_error: toolSearch.enabled must be a boolean (true or false)
-    suggestion: 'Set toolSearch.enabled to true or false. Example: {"toolSearch.enabled": true}. See https://kiro.dev/docs/cli/mcp/tool-search/'
+    type_error: "toolSearch.enabled must be a boolean (true or false); Kiro does not read other values and keeps the default"
+    suggestion: "Set toolSearch.enabled to true or false. Example: {\"toolSearch.enabled\": true}. See https://kiro.dev/docs/mcp/tool-search/"
   kr_set_002:
-    type_error: toolSearch.minPct must be a number (percentage of the context window)
-    negative: toolSearch.minPct must be non-negative (0 means 'always active')
-    over_100: toolSearch.minPct is above 100% - Tool Search will never activate because MCP tool specs cannot exceed the context
-      window
-    suggestion: Set toolSearch.minPct to a non-negative number (default 5). Use 0 to make Tool Search always active. See https://kiro.dev/docs/cli/mcp/tool-search/
+    type_error: "toolSearch.minPct must be a number (percentage of the context window); Kiro does not read other values and keeps the default"
+    negative: "toolSearch.minPct must be non-negative (0 means 'always active')"
+    over_100: "toolSearch.minPct is above 100%; Tool Search would never activate, and the V3 engine accepts only 0 to 100"
+    suggestion: "Set toolSearch.minPct to a number from 0 to 100 (default 5). Use 0 to make Tool Search always active. See https://kiro.dev/docs/mcp/tool-search/"
   kr_set_003:
-    type_error: toolSearch.minTokens must be a number (token count threshold)
-    negative: toolSearch.minTokens must be non-negative (0 means 'always active')
-    not_integer: toolSearch.minTokens must be an integer (token counts are whole numbers)
-    suggestion: Set toolSearch.minTokens to a non-negative integer (default 50000). Use 0 to make Tool Search always active.
-      See https://kiro.dev/docs/cli/mcp/tool-search/
+    type_error: "toolSearch.minTokens must be a number (token count threshold); Kiro does not read other values and keeps the default"
+    negative: "toolSearch.minTokens must be non-negative (0 means 'always active')"
+    not_integer: "toolSearch.minTokens must be an integer (token counts are whole numbers)"
+    suggestion: "Set toolSearch.minTokens to a non-negative integer (default 50000). Use 0 to make Tool Search always active. See https://kiro.dev/docs/mcp/tool-search/"
+  kr_set_004:
+    message: "Kiro CLI cannot parse this settings file (%{error}); every kiro-cli command, chat included, exits with \"failed to parse\" until it is fixed"
+    root: "Kiro CLI settings must be a JSON object of dotted setting keys, found %{found}; every kiro-cli command exits with \"failed to parse\" until it is fixed"
+    suggestion: "Use plain JSON (no comments or trailing commas) with a top-level object, for example {\"chat.defaultAgent\": \"my-agent\"}"
+  kr_set_005:
+    message: "'%{key}' is not a Kiro CLI setting; Kiro ignores it"
+    suggestion: "Check the key against kiro-cli settings list --all, or remove it"
+    did_you_mean: "Did you mean '%{key}'?"
+  kr_set_006:
+    message: "'%{key}' does not belong in the Kiro CLI settings file; Kiro reads it only from %{file}, so it has no effect here"
+    suggestion: "Move this section to %{file}"
+  kr_set_007:
+    message: "Kiro reads settings only as flat dotted keys; the nested '%{key}' object is ignored, so %{settings} stays unset"
+    suggestion: "Write each setting as a top-level dotted key, for example \"%{example}\": <value>"
+  kr_set_008:
+    message: "Setting '%{key}' must be %{expected}, found %{found}; Kiro does not read the value and keeps the default"
+    suggestion: "Write the value with the setting's JSON type (kiro-cli settings list --all lists each type)"
+    number_fix: "Convert quoted %{value} to a JSON number (may change behavior or security policy)"
+  kr_set_009:
+    message: "Setting '%{key}' has value %{value}, which Kiro does not recognize; expected %{allowed}"
+    suggestion: "Use one of the documented values (kiro-cli settings list --all)"
+  kr_set_010:
+    message: "Setting '%{key}' is set again at line %{line}; Kiro keeps only the last value and ignores this one"
+    suggestion: "Remove one of the duplicate keys"
+  kr_set_011:
+    message: "Setting '%{key}' is global-only; Kiro ignores it in a workspace .kiro/settings/cli.json"
+    suggestion: "Set it in ~/.kiro/settings/cli.json instead (kiro-cli settings --global)"
+  kr_set_012:
+    message: "Kiro CLI does not read .kiro/settings.json (Kiro CLI 1.23 saved settings there); the settings in this file have no effect"
+    suggestion: "Move the settings to .kiro/settings/cli.json (workspace) or ~/.kiro/settings/cli.json (global), for example with kiro-cli settings --workspace <key> <value>"
   kr_wf_001:
     steps: Workflow recipe has more than %{limit} step nodes; Kiro rejects it at load
     depth: Workflow recipe nests nodes deeper than %{limit} levels; Kiro rejects it at load

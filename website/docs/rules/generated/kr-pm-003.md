@@ -13,7 +13,7 @@ keywords: ["KR-PM-003", "invalid kiro permission effect", "kiro permissions", "v
 - **Category**: `Kiro Permissions`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-16`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["KR-PM-003", "invalid kiro permission effect", "kiro permissions", "v
 
 - https://kiro.dev/docs/permissions/
 - https://kiro.dev/docs/cli/v3/permissions/
+- https://kiro.dev/docs/enterprise/governance/permissions/
 
 ## Test Coverage Metadata
 

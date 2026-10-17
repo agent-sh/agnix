@@ -1,0 +1,44 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx -y @modelcontextprotocol/server-github",
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "q8Zt3vWx9LmN2pRs7KdYb4Hc"
+      }
+    },
+    "atlassian": {
+      "command": "uvx",
+      "args": ["mcp-atlassian"],
+      "env": {
+        "JIRA_API_TOKEN": "$JIRA_API_TOKEN"
+      },
+      "transport": "stdio",
+      "autoApprove": ["*"]
+    },
+    "typed": {
+      "command": "node",
+      "args": "server.js",
+      "timeout": 0
+    },
+    "insecure": {
+      "url": "http://mcp.example.com/mcp"
+    },
+    "websocket": {
+      "url": "wss://mcp.example.com/mcp"
+    },
+    "both": {
+      "command": "node",
+      "args": ["server.js"],
+      "url": "https://mcp.example.com/mcp"
+    },
+    "empty": {},
+    "dup": {
+      "command": "node",
+      "args": ["old.js"]
+    },
+    "dup": {
+      "command": "node",
+      "args": ["new.js"]
+    }
+  }
+}

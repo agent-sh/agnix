@@ -2,18 +2,18 @@
 id: kr-set-001
 title: "KR-SET-001: Invalid toolSearch.enabled Value - Kiro Settings"
 sidebar_label: "KR-SET-001"
-description: "agnix rule KR-SET-001 checks for invalid toolsearch.enabled value in kiro settings files. Severity: HIGH. See examples and fix guidance."
+description: "agnix rule KR-SET-001 checks for invalid toolsearch.enabled value in kiro settings files. Severity: MEDIUM. See examples and fix guidance."
 keywords: ["KR-SET-001", "invalid toolsearch.enabled value", "kiro settings", "validation", "agnix", "linter"]
 ---
 
 ## Summary
 
 - **Rule ID**: `KR-SET-001`
-- **Severity**: `HIGH`
+- **Severity**: `MEDIUM`
 - **Category**: `Kiro Settings`
-- **Normative Level**: `MUST`
-- **Auto-Fix**: `Yes (safe)`
-- **Verified On**: `2026-04-26`
+- **Normative Level**: `SHOULD`
+- **Auto-Fix**: `Yes (unsafe)`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["KR-SET-001", "invalid toolsearch.enabled value", "kiro settings", "v
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/cli/mcp/tool-search/
+- https://kiro.dev/docs/reference/settings/
+- https://kiro.dev/docs/mcp/tool-search/
 
 ## Test Coverage Metadata
 

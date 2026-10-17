@@ -1,0 +1,28 @@
+policies: [read-only-shell, yolo]
+rules:
+  - capability: shell
+    match: ["git *"]
+    effect: allow
+    comment: git only
+  - capability: mcp
+    match: ["@github"]
+    effect: allow
+  - capability: web_fetch
+    match: ["https://docs.aws.amazon.com/*"]
+    effect: allow
+  - capability: fs_write
+    match: []
+    effect: deny
+  - capability: workflow
+    effect: evaluate
+  - capability: shell
+    match: ["npm run **"]
+    effect: ask
+  - capability: mcp
+    effect: allow
+  - capability: sandbox_network
+    match: ["*.example.com"]
+    effect: allow
+  - capability: sandbox_network
+    match: ["evil.example.com"]
+    effect: deny

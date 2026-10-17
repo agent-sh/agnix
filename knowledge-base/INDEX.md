@@ -1,6 +1,6 @@
 # agnix Knowledge Base - Master Index
 
-> 470 validation rules across 40 categories, sourced from 75+ references
+> 496 validation rules across 40 categories, sourced from 75+ references
 
 
 ---
@@ -9,7 +9,7 @@
 
 | What You Need | Start Here |
 |---------------|------------|
-| **Implement validator** | [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 470 rules with detection logic |
+| **Implement validator** | [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 496 rules with detection logic |
 
 | **Understand a standard** | [standards/](#standards) - HARD-RULES files |
 | **Learn best practices** | [standards/](#standards) - OPINIONS files |
@@ -28,7 +28,7 @@
 knowledge-base/
 ├── INDEX.md                        # This file
 ├── README.md                       # Detailed navigation guide
-├── VALIDATION-RULES.md             # Master validation reference (470 rules)
+├── VALIDATION-RULES.md             # Master validation reference (496 rules)
 
 ├── PATTERNS-CATALOG.md             # 70 production-tested patterns
 ├── RESEARCH-TRACKING.md            # Tool inventory and monitoring process
@@ -81,7 +81,7 @@ knowledge-base/
 | **AGENTS.md** | 5 | - | - | 6 rules |
 | **Cursor** | 2 | - | - | 9 rules |
 | **agentsys** | 12 | - | - | 70 patterns |
-| **Total** | **75+** | **117KB** | **160KB** | **470 rules** |
+| **Total** | **75+** | **117KB** | **160KB** | **496 rules** |
 
 
 ### Validation Rules by Category
@@ -112,10 +112,10 @@ knowledge-base/
 | Gemini CLI | 10 | 3 | 5 | 2 | 3 |
 | Kiro Agents | 15 | 5 | 8 | 2 | 0 |
 | Kiro Hooks | 14 | 8 | 5 | 1 | 2 |
-| Kiro Permissions | 4 | 4 | 0 | 0 | 0 |
-| Kiro MCP | 6 | 2 | 4 | 0 | 0 |
+| Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
+| Kiro MCP | 15 | 7 | 6 | 2 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
-| Kiro Settings | 3 | 1 | 2 | 0 | 3 |
+| Kiro Settings | 12 | 1 | 9 | 2 | 4 |
 | Kiro Workflows | 9 | 7 | 2 | 0 | 0 |
 | Kiro Ignore | 1 | 0 | 1 | 0 | 0 |
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
@@ -131,7 +131,7 @@ knowledge-base/
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **470** | **217** | **216** | **37** | **129** |
+| **TOTAL** | **496** | **224** | **230** | **42** | **130** |
 
 
 ---
@@ -169,7 +169,7 @@ knowledge-base/
 
 ### For Implementation
 
-**Start here**: [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 470 rules with rule IDs (AS-001, CC-HK-001, etc.)
+**Start here**: [VALIDATION-RULES.md](./VALIDATION-RULES.md) - 496 rules with rule IDs (AS-001, CC-HK-001, etc.)
 
 - Detection pseudocode
 - Auto-fix implementations
@@ -295,7 +295,7 @@ Total Size:           650KB
 Standards Covered:     5 (Agent Skills, MCP, Claude Code, Multi-Platform, Prompt Eng)
 Sources Consulted:    75+ (specs, docs, research papers, repos)
 Research Agents:       5 (10+ sources each)
-Validation Rules:     470 rules
+Validation Rules:     496 rules
 Auto-Fixable Rules:   124 rules
 
 Test Fixtures:        116 files

@@ -13,7 +13,7 @@ keywords: ["KR-PM-001", "invalid kiro permissions document", "kiro permissions",
 - **Category**: `Kiro Permissions`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-16`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -25,11 +25,12 @@ keywords: ["KR-PM-001", "invalid kiro permissions document", "kiro permissions",
 
 - https://kiro.dev/docs/permissions/
 - https://kiro.dev/docs/cli/v3/permissions/
+- https://kiro.dev/docs/enterprise/governance/permissions/
 
 ## Test Coverage Metadata
 
 - Unit tests: `true`
-- Fixture tests: `false`
+- Fixture tests: `true`
 - E2E tests: `true`
 
 ## Examples
@@ -39,14 +40,13 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```yaml
-rules: {}
+capability: fs_write
+match: /**
+effect: allow
 ```
 
 ### Valid
 
 ```yaml
-rules:
-  - capability: shell
-    match: ["git *"]
-    effect: allow
+rules: []
 ```

@@ -8,20 +8,6 @@ rules:
     fix: "将钩子触发器规范化为 %{canonical}"
     legacy: "旧版 .kiro.hook 使用 CLI 触发器名称 %{trigger}，但此目录中没有对应的 V3 JSON 钩子"
     legacy_suggestion: "如果此钩子用于 CLI V3，请将其迁移到带版本的 .kiro/hooks/*.json 文件。旧版 IDE 手动钩子可以保留原始格式。"
-  kr_pm_004:
-    message: "索引 %{index} 处的权限规则：%{field} 必须是字符串数组"
-    suggestion: "使用带引号的 glob 模式列表。省略 match 表示不限制范围；exclude 为可选项。"
-  kr_pm_003:
-    message: "索引 %{index} 处的权限规则缺少 effect 或其值无效"
-    suggestion: "将 effect 设置为 allow、deny 或 ask。更改访问权限前请检查策略。"
-  kr_pm_002:
-    message: "索引 %{index} 处的权限规则缺少 capability 或其值无效"
-    suggestion: "使用文档列出的能力，例如 shell、fs_read、fs_write、mcp，或元能力（all、builtin、filesystem）。"
-  kr_pm_001:
-    parse_error: "Kiro 权限 YAML 无效：%{error}"
-    shape: "Kiro 权限必须是包含 rules 数组的映射"
-    entry: "索引 %{index} 处的权限规则必须是映射"
-    suggestion: "在 permissions.yaml 中使用 rules: [] 或 capability/effect 映射列表。"
   oc_dep_005:
     cleanup_suggestion: "请先将 '%{key}' 移至 tui.json。仅在迁移完成后使用不安全清理；它会删除旧版 TUI 设置，但不会移动这些设置。"
     cleanup_fix: "仅在完成向 tui.json 的迁移后删除旧版 TUI 设置（不会移动配置）"
@@ -618,33 +604,6 @@ rules:
   kr_hk_006:
     message: Kiro CLI Hook 条目 %{event}[%{index}] 缺少必需字段 command
     suggestion: 为每个 CLI Hook 条目添加非空 command
-  kr_mcp_001:
-    message: Kiro MCP 服务 '%{server}' 同时缺少 command 和 url
-    suggestion: 本地服务请设置 command，远程服务请设置 url
-  kr_mcp_001_root:
-    message: Kiro MCP 配置缺少 mcpServers 对象
-    suggestion: 将 mcpServers 定义为包含一个或多个服务项的对象
-  kr_mcp_001_parse:
-    message: Kiro MCP 配置 JSON 结构无效：%{error}
-    suggestion: 修复 JSON 语法并确保 mcpServers 为对象
-  kr_mcp_002:
-    message: Kiro MCP 服务 '%{server}' 在 env '%{env_key}' 中存在潜在硬编码密钥
-    suggestion: 使用 ${VAR_NAME} 形式的环境变量引用，避免明文密钥
-  kr_mcp_006:
-    message: Kiro MCP 服务 '%{server}' 的 OAuth 配置无效：%{reason}
-    suggestion: 在 HTTP(S) 远程 MCP 服务上使用文档支持的可选 OAuth 字段，或移除 oauth 块
-    reasons:
-      oauth_object: '''oauth'' 必须是对象'
-      client_id_string: '''oauth.clientId'' 必须是字符串'
-      client_id_non_empty: '''oauth.clientId'' 不能为空'
-      client_secret_string: '''oauth.clientSecret'' 必须是字符串'
-      client_secret_non_empty: '''oauth.clientSecret'' 不能为空'
-      client_secret_requires_client_id: '''oauth.clientSecret'' 只能与 ''oauth.clientId'' 一起使用'
-      redirect_uri_string: '''oauth.redirectUri'' 必须是字符串'
-      redirect_uri_format: '''oauth.redirectUri'' 必须使用带有效端口的 HTTP 回环地址'
-      oauth_scopes_array: '''oauth.oauthScopes'' 必须是数组'
-      oauth_scopes_strings: '''oauth.oauthScopes'' 中的所有项都必须是字符串'
-      http_url: '''oauth'' 只能用于 HTTP(S) 远程 MCP 服务器 URL'
   cdx_pl_001:
     message: plugin.json 必须位于 .codex-plugin/ 目录中
     suggestion: 将 plugin.json 移至 .codex-plugin/plugin.json
