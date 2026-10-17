@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `563` validation rules generated from `knowledge-base/rules.json`.
-`133` rules have automatic fixes.
+This section contains all `569` validation rules generated from `knowledge-base/rules.json`.
+`131` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -222,15 +222,21 @@ This section contains all `563` validation rules generated from `knowledge-base/
 | [CDX-REQ-000](./generated/cdx-req-000.md) | Codex requirements.toml TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-REQ-001](./generated/cdx-req-001.md) | Unknown Codex requirements.toml Key | MEDIUM | Codex CLI | No |
 | [CL-SK-001](./generated/cl-sk-001.md) | Cline Skill Uses Unsupported Field | MEDIUM | Cline Skills | Yes (safe/unsafe) |
-| [CL-SK-002](./generated/cl-sk-002.md) | Missing Skill Name | HIGH | Cline Skills | Yes (safe) |
-| [CL-SK-003](./generated/cl-sk-003.md) | Missing Skill Description | HIGH | Cline Skills | No |
+| [CL-SK-004](./generated/cl-sk-004.md) | Cline Skill Without Instructions | MEDIUM | Cline Skills | No |
 | [CLN-001](./generated/cln-001.md) | Empty Cline Rules File | HIGH | Cline | No |
 | [CLN-002](./generated/cln-002.md) | Invalid Paths Glob in Cline Rules | HIGH | Cline | No |
 | [CLN-003](./generated/cln-003.md) | Unknown Frontmatter Key in Cline Rules | MEDIUM | Cline | Yes (unsafe) |
 | [CLN-004](./generated/cln-004.md) | Scalar Paths in Cline Rules | HIGH | Cline | Yes (safe) |
 | [CLN-005](./generated/cln-005.md) | Empty Workflow File | HIGH | Cline | No |
-| [CLN-006](./generated/cln-006.md) | Workflow With Frontmatter | MEDIUM | Cline | Yes (unsafe) |
+| [CLN-006](./generated/cln-006.md) | Unknown Frontmatter Key in Cline Workflow | MEDIUM | Cline | No |
 | [CLN-009](./generated/cln-009.md) | Unknown Hook Event Name | MEDIUM | Cline | No |
+| [CLN-010](./generated/cln-010.md) | Unparseable Cline Rule Frontmatter | HIGH | Cline | No |
+| [CLN-011](./generated/cln-011.md) | Invalid paths Entries in Cline Rules | HIGH | Cline | No |
+| [CLN-012](./generated/cln-012.md) | Cline Hook Not Runnable in the VS Code Extension | MEDIUM | Cline | No |
+| [CLN-013](./generated/cln-013.md) | Deprecated .clineignore | LOW | Cline | No |
+| [CLN-014](./generated/cln-014.md) | Literal Secret in Cline Rule or Workflow | MEDIUM | Cline | No |
+| [CLN-015](./generated/cln-015.md) | Cline paths Pattern Never Matches | MEDIUM | Cline | No |
+| [CLN-016](./generated/cln-016.md) | Remote MCP Server Without type in Cline Settings | MEDIUM | Cline | No |
 | [COP-001](./generated/cop-001.md) | Empty Copilot Instruction File | HIGH | GitHub Copilot | No |
 | [COP-002](./generated/cop-002.md) | Scoped Instructions Without applyTo or Valid Frontmatter | HIGH | GitHub Copilot | Yes (unsafe) |
 | [COP-003](./generated/cop-003.md) | Invalid Glob Pattern in applyTo | HIGH | GitHub Copilot | No |

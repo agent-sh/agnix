@@ -117,3 +117,51 @@ fn cursor_valid_fixtures_have_no_errors() {
         .collect();
     assert!(errors.is_empty(), "{errors:#?}");
 }
+
+#[test]
+fn cline_survey_rules_fire_through_the_pipeline() {
+    let diagnostics = diagnostics_in("cline-invalid/survey", &LintConfig::default());
+    let found = rule_ids(&diagnostics);
+    for id in [
+        "CLN-005",
+        "CLN-006",
+        "CLN-009",
+        "CLN-010",
+        "CLN-011",
+        "CLN-012",
+        "CLN-013",
+        "CLN-014",
+        "CLN-015",
+        "CLN-016",
+        "CL-SK-004",
+    ] {
+        assert!(found.contains(id), "{id} not found; got {found:?}");
+    }
+    let file_rules = |suffix: &str| -> BTreeSet<String> {
+        diagnostics
+            .iter()
+            .filter(|d| d.file.ends_with(suffix))
+            .map(|d| d.rule.clone())
+            .collect()
+    };
+    // PreCompact is in Cline's hook table but not wired for file hooks.
+    assert!(file_rules(".cline/hooks/PreCompact.sh").contains("CLN-009"));
+    // Both CLN-012 checks fire in the VS Code extension's folder only.
+    assert!(file_rules(".clinerules/hooks/PreToolUse.sh").contains("CLN-012"));
+    assert!(file_rules(".clinerules/hooks/TaskStart").contains("CLN-012"));
+    assert!(!file_rules(".cline/hooks/OnSave.sh").contains("CLN-012"));
+    // Workflows are not checked as rules.
+    let workflow = file_rules(".cline/workflows/release.md");
+    assert!(workflow.contains("CLN-005"), "{workflow:?}");
+    assert!(!workflow.contains("CLN-001"), "{workflow:?}");
+}
+
+#[test]
+fn cline_valid_fixtures_have_no_cline_findings() {
+    let diagnostics = diagnostics_in("cline", &LintConfig::default());
+    let cline: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule.starts_with("CLN-") || d.rule.starts_with("CL-SK-"))
+        .collect();
+    assert!(cline.is_empty(), "{cline:#?}");
+}

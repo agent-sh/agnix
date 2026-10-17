@@ -1,7 +1,7 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 563,
+  "total_rules": 569,
   "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
@@ -6361,9 +6361,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.cline.bot/prompting/cline-memory-bank#cline-memory-bank-custom-instructions-[copy-this]"
+          "https://docs.cline.bot/customization/skills",
+          "https://github.com/cline/cline/blob/main/sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts"
         ],
-        "verified_on": "2026-04-22",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cline"
         },
@@ -6382,59 +6383,32 @@
       "bad_example": "---\nname: my-skill\ndescription: A useful development skill\ncontext: fork\n---\n# My Skill\n\nSkill instructions here."
     },
     {
-      "id": "CL-SK-002",
-      "name": "Missing Skill Name",
-      "severity": "HIGH",
+      "id": "CL-SK-004",
+      "name": "Cline Skill Without Instructions",
+      "severity": "MEDIUM",
       "category": "cline-skills",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://docs.cline.bot/customization/cline-rules"
+          "https://docs.cline.bot/customization/skills",
+          "https://github.com/cline/cline/blob/main/sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cline"
         },
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": false,
-          "e2e": false
-        }
-      },
-      "fix": {
-        "autofix": true,
-        "fix_safety": "safe"
-      },
-      "good_example": "---\nname: my-skill\ndescription: A skill\n---\n# My Skill",
-      "bad_example": "---\ndescription: A skill\n---\n# My Skill"
-    },
-    {
-      "id": "CL-SK-003",
-      "name": "Missing Skill Description",
-      "severity": "HIGH",
-      "category": "cline-skills",
-      "evidence": {
-        "source_type": "vendor_docs",
-        "source_urls": [
-          "https://docs.cline.bot/customization/cline-rules"
-        ],
-        "verified_on": "2026-07-31",
-        "applies_to": {
-          "tool": "cline"
-        },
-        "normative_level": "MUST",
-        "tests": {
-          "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "---\nname: my-skill\ndescription: A useful development skill\n---\n# My Skill",
-      "bad_example": "---\nname: my-skill\n---\n# My Skill"
+      "good_example": "---\nname: changelog\ndescription: Formats changelog entries. Use when editing CHANGELOG.md.\n---\n# Changelog\n\nGroup entries under Added, Changed and Fixed.",
+      "bad_example": "---\nname: changelog\ndescription: Formats changelog entries. Use when editing CHANGELOG.md.\n---\n"
     },
     {
       "id": "CLN-001",
@@ -6442,11 +6416,13 @@
       "severity": "HIGH",
       "category": "cline",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://docs.cline.bot/customization/cline-rules"
+          "https://docs.cline.bot/customization/cline-rules",
+          "https://github.com/cline/cline/blob/main/sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts",
+          "https://github.com/cline/cline/blob/main/apps/vscode/src/core/context/instructions/user-instructions/rule-helpers.ts"
         ],
-        "verified_on": "2026-09-27",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cline"
         },
@@ -6473,7 +6449,7 @@
         "source_urls": [
           "https://docs.cline.bot/customization/cline-rules"
         ],
-        "verified_on": "2026-09-27",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cline"
         },
@@ -6496,11 +6472,13 @@
       "severity": "MEDIUM",
       "category": "cline",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://docs.cline.bot/customization/cline-rules"
+          "https://docs.cline.bot/customization/cline-rules",
+          "https://github.com/cline/cline/blob/main/apps/vscode/src/core/context/instructions/user-instructions/rule-conditionals.ts",
+          "https://github.com/cline/cline/blob/main/sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts"
         ],
-        "verified_on": "2026-09-27",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cline"
         },
@@ -6515,7 +6493,7 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "---\npaths:\n  - \"**/*.ts\"\n---\n# TypeScript Rules\n\nUse strict mode.",
+      "good_example": "---\nname: TypeScript\npaths:\n  - \"**/*.ts\"\n---\n# TypeScript Rules\n\nUse strict mode.",
       "bad_example": "---\npaths:\n  - \"**/*.ts\"\nunknownKey: some-value\n---\n# TypeScript Rules\n\nUse strict mode."
     },
     {
@@ -6524,11 +6502,12 @@
       "severity": "HIGH",
       "category": "cline",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://docs.cline.bot/customization/cline-rules"
+          "https://docs.cline.bot/customization/cline-rules",
+          "https://github.com/cline/cline/blob/main/apps/vscode/src/core/context/instructions/user-instructions/rule-conditionals.ts"
         ],
-        "verified_on": "2026-09-27",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cline"
         },
@@ -6552,18 +6531,19 @@
       "severity": "HIGH",
       "category": "cline",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://docs.cline.bot/customization/cline-rules"
+          "https://docs.cline.bot/getting-started/config",
+          "https://github.com/cline/cline/blob/main/sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cline"
         },
         "normative_level": "MUST",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
@@ -6571,35 +6551,35 @@
         "autofix": false
       },
       "good_example": "# Deploy Workflow\n\n1. Run tests\n2. Build\n3. Deploy",
-      "bad_example": ""
+      "bad_example": "---\nname: deploy\n---\n"
     },
     {
       "id": "CLN-006",
-      "name": "Workflow With Frontmatter",
+      "name": "Unknown Frontmatter Key in Cline Workflow",
       "severity": "MEDIUM",
       "category": "cline",
       "evidence": {
-        "source_type": "vendor_docs",
+        "source_type": "vendor_code",
         "source_urls": [
-          "https://docs.cline.bot/customization/cline-rules"
+          "https://docs.cline.bot/getting-started/config",
+          "https://github.com/cline/cline/blob/main/sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cline"
         },
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
-        "autofix": true,
-        "fix_safety": "unsafe"
+        "autofix": false
       },
-      "good_example": "# Deploy Workflow\n\n1. Run tests\n2. Deploy",
-      "bad_example": "---\nname: deploy\n---\n# Deploy Workflow\n\n1. Run tests\n2. Deploy"
+      "good_example": "---\nname: deploy\n---\n# Deploy Workflow\n\n1. Run tests\n2. Deploy",
+      "bad_example": "---\ndescription: Deploy to staging\n---\n# Deploy Workflow\n\n1. Run tests\n2. Deploy"
     },
     {
       "id": "CLN-009",
@@ -6609,24 +6589,220 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://docs.cline.bot/customization/cline-rules"
+          "https://github.com/cline/cline/blob/main/sdk/examples/hooks/README.md",
+          "https://docs.cline.bot/customization/clineignore"
         ],
-        "verified_on": "2026-07-31",
+        "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "cline"
         },
         "normative_level": "SHOULD",
         "tests": {
           "unit": true,
-          "fixtures": false,
+          "fixtures": true,
           "e2e": false
         }
       },
       "fix": {
         "autofix": false
       },
-      "good_example": "{\n  \"hooks\": { \"on_save\": [{ \"command\": \"npm test\" }] }\n}",
-      "bad_example": "{\n  \"hooks\": { \"on_magic\": [{ \"command\": \"npm test\" }] }\n}"
+      "good_example": ".cline/hooks/PreToolUse.sh (CLI) or .clinerules/hooks/PreToolUse (VS Code extension)",
+      "bad_example": ".cline/hooks/OnSave.sh"
+    },
+    {
+      "id": "CLN-010",
+      "name": "Unparseable Cline Rule Frontmatter",
+      "severity": "HIGH",
+      "category": "cline",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.cline.bot/customization/cline-rules",
+          "https://github.com/cline/cline/blob/main/sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts",
+          "https://github.com/cline/cline/blob/main/apps/vscode/src/core/context/instructions/user-instructions/rule-helpers.ts"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\npaths:\n  - \"*.md\"\n---\n# Docs rules\n\nWrite docs in plain English.",
+      "bad_example": "---\npaths:\n  - *.md\n---\n# Docs rules\n\nWrite docs in plain English."
+    },
+    {
+      "id": "CLN-011",
+      "name": "Invalid paths Entries in Cline Rules",
+      "severity": "HIGH",
+      "category": "cline",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/cline/cline/blob/main/apps/vscode/src/core/context/instructions/user-instructions/rule-conditionals.ts",
+          "https://docs.cline.bot/customization/cline-rules"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\npaths:\n  - \"src/**/*.ts\"\n---\n# TypeScript rules",
+      "bad_example": "---\npaths:\n  - \"src/**/*.ts\"\n  - \"\"\n---\n# TypeScript rules"
+    },
+    {
+      "id": "CLN-012",
+      "name": "Cline Hook Not Runnable in the VS Code Extension",
+      "severity": "MEDIUM",
+      "category": "cline",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.cline.bot/customization/clineignore",
+          "https://github.com/cline/cline/blob/main/sdk/examples/hooks/README.md"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".clinerules/hooks/PreToolUse (no file extension), starting with #!/usr/bin/env bash",
+      "bad_example": ".clinerules/hooks/PreToolUse.sh"
+    },
+    {
+      "id": "CLN-013",
+      "name": "Deprecated .clineignore",
+      "severity": "LOW",
+      "category": "cline",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.cline.bot/resources/deprecations",
+          "https://docs.cline.bot/customization/clineignore"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".clineignore enforced by the .clineignore guard hook in .cline/hooks/PreToolUse.sh",
+      "bad_example": ".clineignore listing .env, with no PreToolUse hook"
+    },
+    {
+      "id": "CLN-014",
+      "name": "Literal Secret in Cline Rule or Workflow",
+      "severity": "MEDIUM",
+      "category": "cline",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.cline.bot/getting-started/config"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "# Deploy\n\nRead the API key from the DEPLOY_API_KEY environment variable.",
+      "bad_example": "# Deploy\n\nUse api_key: \"4f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c\" for staging."
+    },
+    {
+      "id": "CLN-015",
+      "name": "Cline paths Pattern Never Matches",
+      "severity": "MEDIUM",
+      "category": "cline",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/cline/cline/blob/main/apps/vscode/src/core/context/instructions/user-instructions/rule-conditionals.ts",
+          "https://docs.cline.bot/customization/cline-rules"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "---\npaths:\n  - \"src/**\"\n---\n# Source rules",
+      "bad_example": "---\npaths:\n  - \"/src/**\"\n---\n# Source rules"
+    },
+    {
+      "id": "CLN-016",
+      "name": "Remote MCP Server Without type in Cline Settings",
+      "severity": "MEDIUM",
+      "category": "cline",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://docs.cline.bot/mcp/mcp-overview"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "cline"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\n  \"mcpServers\": {\n    \"docs\": { \"type\": \"streamableHttp\", \"url\": \"https://mcp.example.com/mcp\" }\n  }\n}",
+      "bad_example": "{\n  \"mcpServers\": {\n    \"docs\": { \"url\": \"https://mcp.example.com/mcp\" }\n  }\n}"
     },
     {
       "id": "COP-001",
@@ -16329,7 +16505,7 @@
     },
     "cline": {
       "prefix": "CLN",
-      "count": 7,
+      "count": 14,
       "description": "Cline rules validation"
     },
     "opencode": {
@@ -16379,7 +16555,7 @@
     },
     "cline-skills": {
       "prefix": "CL-SK",
-      "count": 3,
+      "count": 2,
       "description": "Cline per-client skill rules"
     },
     "copilot-skills": {

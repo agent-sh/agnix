@@ -605,7 +605,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Requirement**: Skills in `.cline/skills/` SHOULD NOT use frontmatter fields unsupported by Cline
 **Detection**: SKILL.md path contains `.cline/skills/` AND frontmatter has unsupported fields
 **Fix**: [AUTO-FIX, safe] Remove unsupported field
-**Source**: docs.cline.bot/features/custom-instructions
+**Source**: docs.cline.bot/customization/skills ("Skill Structure"); vendor code sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts (`parseSkillConfigFromMarkdown`)
 
 <a id="cp-sk-001"></a>
 ### CP-SK-001 [MEDIUM] Copilot Skill Uses Unsupported Field
@@ -2237,66 +2237,108 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cln-001"></a>
 ### CLN-001 [HIGH] Empty Cline Rules File
-**Requirement**: `.clinerules` file and Markdown rules in `.clinerules/` or `.cline/rules/` MUST have non-empty content after frontmatter
-**Detection**: Parse file, strip optional YAML frontmatter, check remaining body is non-whitespace
+**Requirement**: `.clinerules` file and Markdown rules in `.clinerules/` or `.cline/rules/` MUST have content after any frontmatter. The Cline SDK loader throws "Missing instructions body in rule file.", and the VS Code extension skips a file whose trimmed content is empty.
+**Detection**: Parse file, strip optional YAML frontmatter, check remaining body is non-whitespace. Files whose frontmatter Cline cannot parse get CLN-010 instead.
 **Fix**: No auto-fix (content must be authored by user)
-**Source**: docs.cline.bot/improving-your-workflow/cline-rules
+**Source**: docs.cline.bot/customization/cline-rules ("Where Rules Live"); vendor code sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts (`parseRuleConfigFromMarkdown`), apps/vscode/src/core/context/instructions/user-instructions/rule-helpers.ts
 
 <a id="cln-002"></a>
 ### CLN-002 [HIGH] Invalid Paths Glob in Cline Rules
-**Requirement**: `paths` field in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` frontmatter MUST contain valid glob patterns
+**Requirement**: `paths` field in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` frontmatter MUST contain valid glob patterns: "Currently, `paths` is the supported conditional. It takes an array of glob patterns".
 **Detection**: Parse YAML frontmatter, extract `paths` field, validate each glob pattern
 **Fix**: No auto-fix (glob patterns must be manually corrected)
-**Source**: docs.cline.bot/improving-your-workflow/cline-rules
+**Source**: docs.cline.bot/customization/cline-rules ("Conditional Rules")
 
 <a id="cln-003"></a>
 ### CLN-003 [MEDIUM] Unknown Frontmatter Key in Cline Rules
-**Requirement**: Frontmatter in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` SHOULD only use documented keys (`paths`)
-**Detection**: Parse YAML frontmatter, check all keys against allowlist
-**Fix**: [AUTO-FIX unsafe] Remove unknown frontmatter keys
-**Source**: docs.cline.bot/improving-your-workflow/cline-rules
+**Requirement**: Frontmatter in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` SHOULD only use keys Cline reads: `paths` ("Currently, `paths` is the supported conditional"), and `name`, `disabled` and `enabled`, which the SDK loader reads. Other keys have no effect ("Unknown conditional keys are ignored for forward compatibility."). `disabled` and `enabled` must be booleans and `name` a string: the SDK loader throws "Frontmatter field '${fieldName}' must be a boolean." (or "must be a string.") and drops the file.
+**Detection**: Parse YAML frontmatter; report keys outside `paths`, `name`, `disabled`, `enabled`, and those three with the wrong type, at the key line
+**Fix**: [AUTO-FIX unsafe] Remove an unknown frontmatter key; offered only when the edited frontmatter re-parses to the same mapping without the key. No fix for wrong types.
+**Source**: docs.cline.bot/customization/cline-rules ("Conditional Rules"); vendor code apps/vscode/src/core/context/instructions/user-instructions/rule-conditionals.ts, sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts (`parseRuleConfigFromMarkdown`)
 
 <a id="cln-004"></a>
 ### CLN-004 [HIGH] Scalar Paths in Cline Rules
-**Requirement**: `paths` field in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` frontmatter MUST be a YAML array, not a scalar string
-**Detection**: Parse YAML frontmatter, check if `paths` is a scalar string (Cline silently ignores scalar values)
-**Fix**: [AUTO-FIX safe] Convert scalar paths to array format
-**Source**: docs.cline.bot/features/cline-rules
+**Requirement**: `paths` field in `.clinerules/*.{md,txt}` and `.cline/rules/*.md` frontmatter MUST be a YAML array, not a scalar string. Cline then drops the condition ("// Invalid type -> ignore conditional (fail-open)"), so the rule loads for every request.
+**Detection**: Parse YAML frontmatter, check if `paths` is a scalar string
+**Fix**: [AUTO-FIX safe] Convert scalar paths to a one-item array; offered only when the edited frontmatter re-parses to the same mapping with `paths` as that array
+**Source**: docs.cline.bot/customization/cline-rules ("Conditional Rules"); vendor code apps/vscode/src/core/context/instructions/user-instructions/rule-conditionals.ts (`evaluatePathsConditional`)
 
 <a id="cln-005"></a>
 ### CLN-005 [HIGH] Empty Workflow File
-**Requirement**: Workflow files MUST have content
-**Detection**: Check .clinerules/workflows/*.md for empty content
+**Requirement**: Workflow files MUST have steps: the SDK loader throws "Missing instructions body in workflow file." Project workflows live in `.cline/workflows/` ("# Project workflows"), and "Cline also reads the older `.clinerules/` layout (rules, plus its `workflows/`, `skills/` and `hooks/` folders)".
+**Detection**: `.cline/workflows/*.md` and `.clinerules/workflows/*.md` that are empty or have no content after the frontmatter
 **Fix**: Manual - add workflow content
-**Source**: docs.cline.bot/features/cline-rules/overview
+**Source**: docs.cline.bot/getting-started/config ("Configuration Directory Layout"); vendor code sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts (`parseWorkflowConfigFromMarkdown`)
 
 <a id="cln-006"></a>
-### CLN-006 [MEDIUM] Workflow With Frontmatter
-**Requirement**: Workflow files SHOULD be plain markdown without frontmatter
-**Detection**: Check for --- delimiter at start of workflow file
-**Fix**: Manual - remove frontmatter
-**Source**: docs.cline.bot/features/cline-rules/overview
+### CLN-006 [MEDIUM] Unknown Frontmatter Key in Cline Workflow
+**Requirement**: Workflow frontmatter SHOULD only use keys Cline reads: the SDK loader reads `name`, `disabled` and `enabled` (booleans; "Frontmatter field '${fieldName}' must be a boolean."). Other keys have no effect. Frontmatter itself is allowed.
+**Detection**: Parse the frontmatter of `.cline/workflows/*.md` and `.clinerules/workflows/*.md`; report keys outside `name`, `disabled`, `enabled`, and those three with the wrong type, at the key line
+**Fix**: Manual - remove the key
+**Source**: docs.cline.bot/getting-started/config ("Configuration Directory Layout"); vendor code sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts (`parseWorkflowConfigFromMarkdown`)
 
 <a id="cln-009"></a>
 ### CLN-009 [MEDIUM] Unknown Hook Event Name
-**Requirement**: Hook filenames SHOULD match valid events: TaskStart, TaskResume, TaskCancel, TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit, PreCompact
-**Detection**: Check filename against event list
+**Requirement**: Hook files SHOULD be named after a file hook event: TaskStart, TaskResume, UserPromptSubmit, PreToolUse, PostToolUse, TaskComplete, TaskError, TaskCancel, SessionShutdown ("File Hooks vs Runtime Hooks"). PreCompact is listed as "not wired for file hooks today", so a PreCompact file hook never runs. The VS Code extension reads `.clinerules/hooks/`; "The CLI discovers hooks from `.cline/hooks/` in the workspace".
+**Detection**: Files directly in `.clinerules/hooks/` or `.cline/hooks/` whose name without extension is not one of the events; PreCompact gets a "not wired" message. Markdown and text notes and files starting with `_` or `.` are skipped.
 **Fix**: Manual - rename file
-**Source**: docs.cline.bot/features/cline-rules/overview
+**Source**: github.com/cline/cline sdk/examples/hooks/README.md ("File Hooks vs Runtime Hooks"), docs.cline.bot/customization/clineignore ("Enforcing .clineignore with a Hook")
 
-<a id="cl-sk-002"></a>
-### CL-SK-002 [HIGH] Missing Skill Name
-**Requirement**: Cline SKILL.md MUST have name frontmatter field
-**Detection**: Parse frontmatter, check for name
-**Fix**: Manual - add name field
-**Source**: docs.cline.bot/features/cline-rules/overview
+<a id="cln-010"></a>
+### CLN-010 [HIGH] Unparseable Cline Rule Frontmatter
+**Requirement**: Rule and workflow frontmatter MUST be valid YAML: "**Invalid YAML**: If frontmatter can't be parsed, Cline fails open. The rule activates with raw content visible to help debugging." The SDK loader throws "Failed to parse YAML frontmatter" and skips the file.
+**Detection**: Rules (`.clinerules/*.{md,txt}`, `.cline/rules/*.md`) and workflows whose frontmatter is not valid YAML or has no closing `---`. Reported at the line of an unquoted glob that starts with `*` (a YAML alias, for example `- *.md`) with a hint to quote it, otherwise at the parser's line.
+**Fix**: Manual - fix the YAML (quote glob patterns)
+**Source**: docs.cline.bot/customization/cline-rules ("Behavior Details"); vendor code sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts, apps/vscode/src/core/context/instructions/user-instructions/rule-helpers.ts
 
-<a id="cl-sk-003"></a>
-### CL-SK-003 [HIGH] Missing Skill Description
-**Requirement**: Cline SKILL.md MUST have description frontmatter field
-**Detection**: Parse frontmatter, check for description
-**Fix**: Manual - add description field
-**Source**: docs.cline.bot/features/cline-rules/overview
+<a id="cln-011"></a>
+### CLN-011 [HIGH] Invalid paths Entries in Cline Rules
+**Requirement**: `paths` MUST be an array of non-empty strings. Cline checks `isNonEmptyStringArray` and otherwise ignores the condition ("// Invalid type -> ignore conditional (fail-open)"), so the rule loads for every request. `paths: []` is valid: "`paths: []` means the rule never activates."
+**Detection**: `paths` arrays with an empty string or a non-string item, and `paths` values that are neither a string (CLN-004) nor an array (number, boolean, mapping, or empty), at the `paths` line
+**Fix**: Manual
+**Source**: vendor code apps/vscode/src/core/context/instructions/user-instructions/rule-conditionals.ts (`isNonEmptyStringArray`, `evaluatePathsConditional`); docs.cline.bot/customization/cline-rules ("Behavior Details")
+
+<a id="cln-012"></a>
+### CLN-012 [MEDIUM] Cline Hook Not Runnable in the VS Code Extension
+**Requirement**: Hooks for the VS Code extension SHOULD follow its naming and format: "Hooks in the extension live in `.clinerules/hooks/` (workspace) or `~/Documents/Cline/Hooks/` (global), must be named exactly after their event with no file extension, and need a shebang and the executable bit". The CLI reads `.cline/hooks/` and accepts extensions (`.cline/hooks/PreToolUse.sh`).
+**Detection**: In `.clinerules/hooks/`: a file named `<Event>.<ext>` for a valid event, and a hook whose first line is not a `#!` shebang. `.cline/hooks/` is not checked. The executable bit is not checked.
+**Fix**: Manual - rename the file to the event name, add a shebang
+**Source**: docs.cline.bot/customization/clineignore ("Install in the VS Code extension", "Install in the CLI"), github.com/cline/cline sdk/examples/hooks/README.md
+
+<a id="cln-013"></a>
+### CLN-013 [LOW] Deprecated .clineignore
+**Requirement**: Projects SHOULD move off `.clineignore`: "| .clineignore | VS Code extension | Deprecating soon | Block Ignored File Access plugin |" and "To avoid creating a false sense of security, we are removing `.clineignore` as a supported feature." The file "was never designed to prevent access to those files".
+**Detection**: A `.clineignore` file, as a LOW note. Not reported when `.clinerules/hooks/` or `.cline/hooks/` next to it has a PreToolUse hook (the documented guard hook reads `.clineignore`).
+**Fix**: Manual - enforce the patterns with the PreToolUse guard hook or the Block Ignored File Access plugin
+**Source**: docs.cline.bot/resources/deprecations ("`.clineignore`"), docs.cline.bot/customization/clineignore ("Enforcing .clineignore with a Hook")
+
+<a id="cln-014"></a>
+### CLN-014 [MEDIUM] Literal Secret in Cline Rule or Workflow
+**Requirement**: Rules and workflows SHOULD NOT hold credentials: "Commit `.cline/` files you want to share with your team. Keep secrets out of the repo."
+**Detection**: Heuristic: the first `api_key`, `token`, `password` or `*secret` assignment with a literal value (placeholders, variable references and code identifiers excluded), or a known provider token prefix (`sk-`, `ghp_`, `github_pat_`, `xox?-`, `AKIA`, `glpat-`), in Cline rules and workflows. One finding per file. Skills are left to the cross-tool skill secret rule.
+**Fix**: Manual - move the value to an environment variable
+**Source**: docs.cline.bot/getting-started/config ("What Goes Where?")
+
+<a id="cln-015"></a>
+### CLN-015 [MEDIUM] Cline paths Pattern Never Matches
+**Requirement**: `paths` patterns SHOULD be relative to the workspace root: "Candidate paths are expected to be workspace-root-relative POSIX paths." A pattern with a leading `/` or `\`, a drive letter or a `..` segment never matches, and the docs examples are all relative.
+**Detection**: `paths` entries that start with `/`, `\` or a drive letter, or contain a `..` segment. `./` prefixes are not reported.
+**Fix**: Manual
+**Source**: vendor code apps/vscode/src/core/context/instructions/user-instructions/rule-conditionals.ts (header comment); docs.cline.bot/customization/cline-rules ("Conditional Rules")
+
+<a id="cln-016"></a>
+### CLN-016 [MEDIUM] Remote MCP Server Without type in Cline Settings
+**Requirement**: Remote servers in `cline_mcp_settings.json` SHOULD set `type`: "The `type` field selects the transport. Omitting it defaults to the legacy `sse` transport for backward compatibility, so set `"type": "streamableHttp"` explicitly for the recommended transport."
+**Detection**: A server under `mcpServers` with `url` and no `type`, at the server key. The file usually lives in `~/.cline/data/settings/`, so repository runs rarely see it.
+**Fix**: Manual - set `"type": "streamableHttp"` (or `"sse"` for SSE-only servers)
+**Source**: docs.cline.bot/mcp/mcp-overview ("Remote server (Streamable HTTP)")
+
+<a id="cl-sk-004"></a>
+### CL-SK-004 [MEDIUM] Cline Skill Without Instructions
+**Requirement**: A Cline skill MUST have instructions after its frontmatter: the SDK loader throws "Missing instructions body in skill file."
+**Detection**: SKILL.md in `.cline/skills/` or `.clinerules/skills/` (and `.claude/skills/` or `.agents/skills/` when the run targets Cline) that is empty or has only frontmatter
+**Fix**: Manual - add the skill instructions
+**Source**: docs.cline.bot/customization/skills ("Where Skills Live"); vendor code sdk/packages/core/src/extensions/config/user-instruction-config-loader.ts (`parseSkillConfigFromMarkdown`)
 
 ---
 
@@ -4445,8 +4487,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Plugins | 17 | 8 | 8 | 1 | 4 |
 | Claude Settings | 33 | 1 | 31 | 1 | 12 |
 | Claude Skills | 19 | 10 | 8 | 1 | 7 |
-| Cline | 7 | 4 | 3 | 0 | 3 |
-| Cline Skills | 3 | 2 | 1 | 0 | 2 |
+| Cline | 14 | 6 | 7 | 1 | 2 |
+| Cline Skills | 2 | 0 | 2 | 0 | 1 |
 | Codex CLI | 64 | 31 | 28 | 5 | 9 |
 | Codex Skills | 1 | 0 | 1 | 0 | 1 |
 | GitHub Copilot | 33 | 13 | 13 | 7 | 7 |
@@ -4477,7 +4519,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **563** | **244** | **253** | **66** | **133** |
+| **TOTAL** | **569** | **244** | **258** | **67** | **131** |
 
 
 ---
@@ -4507,8 +4549,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 563 validation rules across 43 categories
+**Total Coverage**: 569 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 244 HIGH, 253 MEDIUM, 66 LOW
-**Auto-Fixable**: 133 rules (24%)
+**Certainty**: 244 HIGH, 258 MEDIUM, 67 LOW
+**Auto-Fixable**: 131 rules (23%)

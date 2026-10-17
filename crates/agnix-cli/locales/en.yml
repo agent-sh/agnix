@@ -857,9 +857,12 @@ rules:
     suggestion: Use valid glob syntax like '**/*.ts' or 'src/**/*.js'
   cln_003:
     message: Unknown frontmatter key '%{key}' in Cline rules file
-    suggestion: Remove unknown key '%{key}'. Only 'paths' is a recognized frontmatter key.
+    suggestion: "Remove '%{key}'. Cline reads paths, name, disabled and enabled in rule frontmatter and ignores other keys."
+    fix: "Remove unknown frontmatter key '%{key}'"
+    field_type: "Frontmatter field '%{key}' must be %{expected}; the Cline SDK loader, used by the CLI, rejects the file otherwise"
+    field_type_suggestion: "Change '%{key}' to the type Cline reads: true or false for disabled and enabled, a string for name"
   cln_004:
-    message: Cline ignores scalar paths values - use a YAML array instead
+    message: "Cline ignores a non-array paths value, so this rule loads for every request"
     suggestion: "Change paths to array format: paths:\n  - \"%{pattern}\""
     fix: Convert scalar paths to array format
   gm_001:
@@ -1871,20 +1874,46 @@ rules:
     suggestion: 'If %{token} is shell, awk or other code syntax, escape it as \%{token}. If it should receive an argument, add an argument-hint.'
   cln_005:
     message: Cline workflow file is empty
+    message_no_content: "Cline workflow has no steps after the frontmatter; the Cline SDK loader rejects it"
     suggestion: Add workflow steps to the file
   cln_006:
-    message: Cline workflow file contains frontmatter
-    suggestion: Cline workflows should be plain markdown without frontmatter
+    message: "Cline ignores frontmatter key '%{key}' in workflow files"
+    suggestion: "Remove '%{key}'. Cline reads name, disabled and enabled in workflow frontmatter."
   cln_009:
     message: Unknown Cline hook event name '%{event}'
-    suggestion: 'Use a valid hook event name: TaskStart, TaskResume, TaskCancel, TaskComplete, PreToolUse, PostToolUse, UserPromptSubmit,
-      PreCompact'
-  cl_sk_002:
-    message: Cline skill is missing required 'name' field in frontmatter
-    suggestion: Add a 'name' field to the SKILL.md frontmatter
-  cl_sk_003:
-    message: Cline skill is missing required 'description' field in frontmatter
-    suggestion: Add a 'description' field to the SKILL.md frontmatter
+    suggestion: "Name the hook after a file hook event: TaskStart, TaskResume, UserPromptSubmit, PreToolUse, PostToolUse, TaskComplete, TaskError, TaskCancel or SessionShutdown"
+    unwired: "%{event} is not wired for file hooks, so Cline never runs this script"
+    unwired_suggestion: "Use a runtime hook in a Cline plugin, or one of the file hook events"
+  cln_010:
+    message: "Cline cannot parse this frontmatter (%{error}): the VS Code extension then loads the whole file for every request, and the CLI skips the file"
+    suggestion: "Fix the YAML between the --- lines"
+    alias_suggestion: "Quote glob patterns that start with *, for example - \"*.md\". YAML reads an unquoted *.md as an alias."
+    unclosed: "Frontmatter has no closing --- line, so Cline reads no frontmatter: paths is ignored and the block becomes part of the rule text"
+    unclosed_suggestion: "Close the frontmatter with a line that contains only ---"
+  cln_011:
+    items: "paths has an empty or non-string entry, so Cline ignores the condition and loads this rule for every request"
+    not_array: "paths is %{got}, not an array, so Cline ignores the condition and loads this rule for every request"
+    suggestion: "Make paths a list of quoted glob patterns, for example paths: [\"src/**/*.ts\"]. Use paths: [] to turn the rule off."
+  cln_012:
+    extension: "The VS Code extension does not run '%{file}': hooks there must be named exactly %{event}, with no file extension"
+    extension_suggestion: "Rename the file to %{event}, or move it to .cline/hooks/ if only the Cline CLI uses it"
+    shebang: "Hook '%{file}' has no shebang line, so the VS Code extension cannot run it"
+    shebang_suggestion: "Start the script with a shebang such as #!/usr/bin/env bash, and make it executable"
+  cln_013:
+    message: "Cline is removing .clineignore, and it never blocked access to the files it lists"
+    suggestion: "To keep the patterns, enforce them with the PreToolUse .clineignore guard hook or the Block Ignored File Access plugin"
+  cln_014:
+    message: "Possible literal secret in a Cline %{kind} file; these files are committed and sent to the model"
+    suggestion: "Move the value to an environment variable and keep secrets out of the repo"
+  cln_015:
+    message: "Cline matches paths against workspace-relative paths, so '%{pattern}' never matches"
+    suggestion: "Write the pattern relative to the workspace root, without a leading / or .. segments, for example src/**"
+  cln_016:
+    message: "Remote MCP server '%{server}' has no type, so Cline uses the legacy SSE transport"
+    suggestion: "Set \"type\": \"streamableHttp\", or \"type\": \"sse\" if the server only supports SSE"
+  cl_sk_004:
+    message: "Cline skill has no instructions; the Cline SDK loader, used by the CLI, rejects it"
+    suggestion: "Add the skill instructions below the frontmatter"
   gm_010:
     message: experimental.memoryManager is enabled without experimental.autoMemory (Gemini CLI v0.40+ split these flags)
     suggestion: 'Set experimental.autoMemory: true alongside memoryManager to keep background skill extraction and /memory
