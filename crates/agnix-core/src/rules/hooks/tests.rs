@@ -5607,3 +5607,38 @@ fn test_cc_hk_010_session_end_accepts_settings_budget_overrides() {
     assert!(hit.suggestion.as_deref().unwrap().contains("1.5-second"));
     assert!(hit.suggestion.as_deref().unwrap().contains("60 seconds"));
 }
+
+// ===== Kiro paths are never Claude Code settings =====
+
+#[test]
+fn kiro_settings_files_get_no_claude_hook_rules() {
+    // Real `.kiro/settings/settings.json` (Kiro IDE editor settings) that
+    // produced a false CC-HK-012 in the Kiro corpus, plus a parse failure.
+    let content = r#"{
+        "statusLine": {"type": "command", "command": "node .kiro/statusline.js"},
+        "hooks": {"PreToolUse": [{"matcher": ".*", "command": "node scout.js"}], "agentStop": [{"command": "x"}]}
+    }"#;
+    for path in [
+        ".kiro/settings/settings.json",
+        "packages/cli/.kiro/settings/settings.json",
+        ".kiro/settings.local.json",
+        "/home/u/.KIRO/settings.json",
+    ] {
+        for text in [content, "{ not json"] {
+            let diagnostics =
+                HooksValidator.validate(Path::new(path), text, &LintConfig::default());
+            assert!(diagnostics.is_empty(), "{path}: {diagnostics:?}");
+        }
+    }
+
+    // The same content outside a Kiro directory is still validated.
+    assert!(
+        !HooksValidator
+            .validate(
+                Path::new(".claude/settings.json"),
+                "{ not json",
+                &LintConfig::default()
+            )
+            .is_empty()
+    );
+}

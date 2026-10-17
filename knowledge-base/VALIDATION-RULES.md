@@ -3051,6 +3051,13 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 **Fix**: No auto-fix (add headings for structure)
 **Source**: kiro.dev/docs/steering
 
+<a id="kiro-026"></a>
+### KIRO-026 [MEDIUM] Kiro Configuration File Never Loaded
+**Requirement**: A Kiro configuration file MUST use the name and location Kiro loads. Kiro lists `.kiro/agents/` (`*.json`; V3 also `*.md`, recursively), the top level of `.kiro/hooks/` (`*.json`) and `.kiro/steering/` (`**/*.md`) and compares extensions case-sensitively; it lists the top-level `*.workflow.{json,yaml,yml}` of `.kiro/workflows/`; it opens `.kiro/settings/mcp.json`, `.kiro/settings/cli.json`, and `permissions.yaml` or `permissions.json` in `~/.kiro/settings/` and `~/.kiro/workspace-roots/<hash>/`. Kiro CLI does not read `.kiro/settings.json` (only the CLI 2.x session tool's description still names it).
+**Detection**: Report, as a warning, a file no Kiro engine loads although its name shows the intent: an extension that differs only by case (`reviewer.JSON`, `style.MD`) or a JSON variant (`reviewer.jsonc`, `lint.yaml`) in `.kiro/agents/`, `.kiro/hooks/` or `.kiro/steering/`; `permissions.yml`, `mcp.jsonc`, `cli.jsonc` or a settings name with surrounding whitespace (` permissions.yaml`); `mcp.json`, `cli.json` or `permissions.*` placed directly in `.kiro/`; a hook document (`hooks` array, or `when` and `then`) in a subdirectory of `.kiro/hooks/`; a workflow recipe in a subdirectory of `.kiro/workflows/`, with a case-variant suffix (`plan.Workflow.json`), or without the `.workflow` infix when its content is a recipe (`plan.json` with a `steps` array); and a `.kiro/settings.json` that holds a Kiro CLI setting key (`chat.defaultModel`, `toolSearch.enabled`, ...). Unrelated files in those directories (scripts, `package.json`, editor settings) are not reported.
+**Fix**: No auto-fix (rename or move the file)
+**Source**: kiro.dev/docs/configuration, kiro.dev/docs/custom-agents, kiro.dev/docs/hooks, kiro.dev/docs/steering, kiro.dev/docs/reference/settings, kiro.dev/docs/permissions
+
 ---
 
 ## KIRO POWERS RULES
@@ -3205,7 +3212,7 @@ Validates Codex's admin-written managed `requirements.toml` (system location: `/
 
 ## KIRO PERMISSIONS RULES
 
-Capability policy YAML is recognized at `.kiro/settings/permissions.yaml` and `.kiro/workspace-roots/<hash>/permissions.yaml`. The user policy is `~/.kiro/settings/permissions.yaml`; real workspace policies live outside the repository in `~/.kiro/workspace-roots/<hash>/permissions.yaml`. Repository-local `.kiro/settings/permissions.yaml` templates can be linted, but are not the real workspace policy store. All corrections below are manual because permissions affect access.
+Capability policies are recognized at `.kiro/settings/permissions.yaml` and `.kiro/workspace-roots/<hash>/permissions.yaml`, their `permissions.json` variants (Kiro reads the YAML file first, else the JSON one), and the administrator's `managed-settings.json` (`/Library/Application Support/Kiro/`, `/etc/kiro/`, `C:\ProgramData\Kiro\`). `permissions.yml` is never read (KIRO-026). The user policy is `~/.kiro/settings/permissions.yaml`; real workspace policies live outside the repository in `~/.kiro/workspace-roots/<hash>/permissions.yaml`. Repository-local `.kiro/settings/permissions.yaml` templates can be linted, but are not the real workspace policy store. All corrections below are manual because permissions affect access.
 
 <a id="kr-pm-001"></a>
 ### KR-PM-001 [HIGH] Invalid Kiro Permissions Document
@@ -3285,28 +3292,110 @@ Capability policy YAML is recognized at `.kiro/settings/permissions.yaml` and `.
 
 ## KIRO CLI SETTINGS RULES
 
-Rules for `.kiro/settings.json` (and `~/.kiro/settings.json`) - the flat-key JSON that Kiro's `kiro-cli settings <key> <value>` command writes to. Today covers the Tool Search feature added in Kiro CLI 2.1.
+Rules for `.kiro/settings/cli.json` (and `~/.kiro/settings/cli.json`) - the flat-key JSON that Kiro's `kiro-cli settings <key> <value>` command writes to (`--workspace` writes the project file). Kiro CLI does not read `.kiro/settings.json` (KIRO-026). Today covers the Tool Search feature added in Kiro CLI 2.1.
 
 <a id="kr-set-001"></a>
 ### KR-SET-001 [HIGH] Invalid toolSearch.enabled Value
 **Requirement**: `toolSearch.enabled` MUST be a boolean (true or false) when present. Non-boolean values will cause Kiro CLI to fail to apply the setting.
-**Detection**: Parse settings.json; look up top-level `toolSearch.enabled`; flag non-boolean types (string, number, array, object, null)
+**Detection**: Parse cli.json; look up top-level `toolSearch.enabled`; flag non-boolean types (string, number, array, object, null)
 **Fix**: [AUTO-FIX, safe] When the value is a quoted string that's unambiguously boolean (`"true"`/`"True"`/`"false"`/`"FALSE"` etc.), strip the quotes + normalize case. Other non-boolean types (number/array/null) remain manual since the user's intent isn't mechanically recoverable.
 **Source**: kiro.dev/docs/cli/mcp/tool-search/ (Kiro CLI 2.1+)
 
 <a id="kr-set-002"></a>
 ### KR-SET-002 [MEDIUM] Invalid toolSearch.minPct Value
 **Requirement**: `toolSearch.minPct` SHOULD be a non-negative number representing the percentage-of-context-window threshold that activates Tool Search. Default 5. Value 0 means "always active". Values above 100 will never trigger Tool Search because MCP tool specs cannot exceed the context window.
-**Detection**: Parse settings.json; type-check top-level `toolSearch.minPct`; flag non-numbers and negative numbers (ERROR), warn on values above 100 (WARNING)
+**Detection**: Parse cli.json; type-check top-level `toolSearch.minPct`; flag non-numbers and negative numbers (ERROR), warn on values above 100 (WARNING)
 **Fix**: [AUTO-FIX, safe] When the value is a quoted numeric string (`"5"`, `"2.5"`), strip the quotes. Negative and >100 warnings remain manual since they're semantic intent problems.
 **Source**: kiro.dev/docs/cli/mcp/tool-search/
 
 <a id="kr-set-003"></a>
 ### KR-SET-003 [MEDIUM] Invalid toolSearch.minTokens Value
 **Requirement**: `toolSearch.minTokens` SHOULD be a non-negative integer representing the token-count threshold that activates Tool Search. Default 50000. Value 0 means "always active".
-**Detection**: Parse settings.json; type-check top-level `toolSearch.minTokens`; flag non-numbers, negative numbers, and fractional values (ERROR)
+**Detection**: Parse cli.json; type-check top-level `toolSearch.minTokens`; flag non-numbers, negative numbers, and fractional values (ERROR)
 **Fix**: [AUTO-FIX, safe] When the value is a quoted integer string (`"50000"`), strip the quotes. Fractional strings, negatives, and fractional numbers remain manual.
 **Source**: kiro.dev/docs/cli/mcp/tool-search/
+
+---
+
+## KIRO WORKFLOW RULES
+
+Rules for Kiro workflow recipes (Kiro CLI V3 2.26+, IDE, Web): the top-level `*.workflow.json`, `*.workflow.yaml` and `*.workflow.yml` files of `.kiro/workflows/` and `~/.kiro/workflows/` (recipes in subdirectories or without the `.workflow` infix are never loaded: KIRO-026). The checks mirror the V3 engine's load-time validation and the documented run-time rules. An `include` node is resolved by Kiro before validation; its target is not read, so references that may come from an included recipe are not reported.
+
+<a id="kr-wf-001"></a>
+### KR-WF-001 [HIGH] Workflow Recipe Exceeds Kiro Limits
+**Requirement**: A recipe MUST have at most 50 `step` nodes, nest nodes at most 8 levels deep, give every node a unique `id`, and use at most 50 `include` nodes.
+**Detection**: Count step nodes, track nesting depth (a root-level node is depth 1) and node ids across the static recipe; report the first excess step, the first too-deep node, each duplicate id (at the duplicate), and an include count above 50.
+**Fix**: No auto-fix (split the recipe or rename nodes)
+**Source**: kiro.dev/docs/workflows/authoring ("Node types", "Validate before launch")
+
+<a id="kr-wf-002"></a>
+### KR-WF-002 [HIGH] Invalid Workflow Repeat Cap
+**Requirement**: Every `repeat` MUST set `maxIterations` (a positive integer, at most 1000) and `onMaxIterations` (`abort`, `continue` or `pause`), and MUST NOT set both `stopCondition` and `stopWhen`.
+**Detection**: Check each repeat node for the two required fields, the integer range and the enum, and for both stop forms.
+**Fix**: No auto-fix (choose the cap and its behavior deliberately)
+**Source**: kiro.dev/docs/workflows/authoring ("Node types", "Repeat", "Define stop conditions", "Authoring checklist")
+
+<a id="kr-wf-003"></a>
+### KR-WF-003 [MEDIUM] Workflow Recipe Suffix Conflict
+**Requirement**: A recipe name SHOULD use one suffix. When `<name>.workflow.json` exists, Kiro loads it and reports `<name>.workflow.yaml` / `.workflow.yml` as a conflict.
+**Detection**: For a `.workflow.yaml` or `.workflow.yml` recipe, check for a `.workflow.json` sibling with the same stem.
+**Fix**: No auto-fix (delete or rename one file)
+**Source**: kiro.dev/docs/workflows/authoring (introduction)
+
+<a id="kr-wf-004"></a>
+### KR-WF-004 [HIGH] Invalid Workflow Recipe Document
+**Requirement**: A recipe MUST parse (JSON for `.workflow.json`, YAML otherwise) and match the workflow schema, or Kiro does not load it: an object with a string `name` and a `steps` array; `inputs` an object of string type hints; each node an object with a `type` of `step`, `sequence`, `repeat`, `parallel`, `watch` or `include`, a string `id`, and its required fields (`step`: `agent`, `prompt`; `sequence`/`repeat`: `steps`; `parallel`: `branches`, `joinPolicy` of `all`, `allSettled` or `any`; `watch`: `handler`; `include`: `path`).
+**Detection**: Report parse errors at the parser's location and schema violations at the node: wrong types (`captureOutput`, `artifacts`, `modelId`, `effortLevel`, `config`, `idleTimeoutSec`), the removed step `input` field, unknown keys and malformed ids or paths in `include` nodes (absolute path, `bundled://<name>` or `generated://<id>`; relative paths are rejected).
+**Fix**: No auto-fix
+**Source**: kiro.dev/docs/workflows/authoring ("Root fields", "Node types", "Configure a step"); Kiro V3 recipe schema
+
+<a id="kr-wf-005"></a>
+### KR-WF-005 [HIGH] Interactive Workflow Step Inside Parallel
+**Requirement**: A step with `completion` (interactive) MUST NOT be nested inside a `parallel` node.
+**Detection**: Report a step that has `completion` and a `parallel` ancestor.
+**Fix**: No auto-fix (move the step outside the parallel node)
+**Source**: kiro.dev/docs/workflows/authoring ("Parallel")
+
+<a id="kr-wf-006"></a>
+### KR-WF-006 [HIGH] Invalid Workflow Stop Condition
+**Requirement**: A `stopCondition` or step `completion` MUST set at least one of `containsText`, `fileCheck` or `completionSignal` (`success`, `need_input`, `error`); a `fileCheck` takes exactly `path`, `jsonPath` (a dotted key path) and `value` (not an empty array). A `stopWhen` MUST be `<watchId>.terminal` naming a watch node of the recipe, or `{{expr}} contains <text>`.
+**Detection**: Validate each stop condition, completion and `stopWhen` against those forms.
+**Fix**: No auto-fix
+**Source**: kiro.dev/docs/workflows/authoring ("Define stop conditions"); Kiro V3 `stopWhen` parser
+
+<a id="kr-wf-007"></a>
+### KR-WF-007 [HIGH] Invalid Workflow Template Reference
+**Requirement**: A structured template (`{{previous.output}}`, `{{<id>.output}}`, `{{steps.<id>.output}}`, `{{artifacts.<name>}}`) MUST point to a producer that runs before the consumer, or the consuming step fails. `{{previous.output}}` needs an earlier sibling that captures output and cannot be used inside a parallel branch or a stop condition. A bare `{{name}}` that is not a declared input stays literal text.
+**Detection**: Apply Kiro's happens-before rule to step prompts, artifact paths and stop-condition templates (errors); warn on undeclared bare inputs in step prompts, as Kiro does.
+**Fix**: No auto-fix
+**Source**: kiro.dev/docs/workflows/authoring ("Use template variables")
+
+<a id="kr-wf-008"></a>
+### KR-WF-008 [HIGH] Invalid Workflow Watch Configuration
+**Requirement**: A `command` watch MUST set `config.command` to one static command line (no `{{...}}` template, no `args` key) and poll no faster than every 10 seconds; `commandTimeoutSec` is positive. A `github-pr` watch MUST set `config.prRef` or `config.url` and poll no faster than every 30 seconds.
+**Detection**: Check the config of watch nodes with the built-in handlers; other handlers are checked by Kiro when the run is created.
+**Fix**: No auto-fix
+**Source**: kiro.dev/docs/workflows/authoring ("Watch")
+
+<a id="kr-wf-009"></a>
+### KR-WF-009 [MEDIUM] Workflow Loop Stop File Never Written
+**Requirement**: The `fileCheck` file of a repeat's stop condition SHOULD be written by a step inside the loop, or the loop never stops before its cap.
+**Detection**: Warn when no step prompt or artifact path inside the repeat contains the `fileCheck` path (Kiro logs the same warning).
+**Fix**: No auto-fix
+**Source**: kiro.dev/docs/workflows/authoring ("Repeat"); Kiro V3 recipe validation
+
+---
+
+## KIRO IGNORE FILE RULES
+
+Rules for `.kiroignore` (workspace root or any subdirectory; Kiro CLI V3 and IDE) and the global `~/.kiro/settings/kiroignore`. Both use gitignore syntax.
+
+<a id="kr-ign-001"></a>
+### KR-IGN-001 [MEDIUM] Ineffective Kiro Ignore Negation
+**Requirement**: A negation SHOULD NOT try to re-include a file below an excluded directory: "You cannot re-include a file if a parent directory is excluded."
+**Detection**: For a negation that names its parent directories literally (`!secrets/public.txt`), report it when the file's other patterns leave one of those directories excluded (`secrets/`, `/secrets`, `**/secrets`), with gitignore semantics: the last matching pattern wins and shorter directories are checked first.
+**Fix**: No auto-fix (exclude the directory's contents, for example `secrets/*`, instead of the directory)
+**Source**: kiro.dev/docs/kiroignore ("Pattern syntax")
 
 ---
 
@@ -3705,8 +3794,10 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro MCP | 6 | 2 | 4 | 0 | 0 |
 | Kiro Powers | 8 | 3 | 4 | 1 | 0 |
 | Kiro Settings | 3 | 1 | 2 | 0 | 3 |
+| Kiro Workflows | 9 | 7 | 2 | 0 | 0 |
+| Kiro Ignore | 1 | 0 | 1 | 0 | 0 |
 | Kiro Skills | 1 | 0 | 1 | 0 | 1 |
-| Kiro Steering | 14 | 3 | 9 | 2 | 1 |
+| Kiro Steering | 15 | 3 | 10 | 2 | 1 |
 | MCP | 25 | 18 | 6 | 1 | 8 |
 | OpenCode | 46 | 28 | 17 | 1 | 11 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
@@ -3718,7 +3809,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 4 | 1 | 2 | 1 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 3 | 0 | 0 | 3 |
-| **TOTAL** | **459** | **210** | **212** | **37** | **129** |
+| **TOTAL** | **470** | **217** | **216** | **37** | **129** |
 
 
 ---
@@ -3748,8 +3839,8 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 459 validation rules across 41 categories
+**Total Coverage**: 470 validation rules across 43 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 210 HIGH, 212 MEDIUM, 37 LOW
-**Auto-Fixable**: 129 rules (28%)
+**Certainty**: 217 HIGH, 216 MEDIUM, 37 LOW
+**Auto-Fixable**: 129 rules (27%)

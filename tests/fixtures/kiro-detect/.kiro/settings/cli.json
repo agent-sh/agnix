@@ -1,0 +1,4 @@
+{
+  "chat.defaultModel": "claude-sonnet-4.6",
+  "toolSearch.enabled": true
+}

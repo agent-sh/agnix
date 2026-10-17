@@ -26,7 +26,13 @@ pub use types::FileType;
 // New public API
 pub use detection::{DOCUMENTATION_DIRECTORIES, EXCLUDED_FILENAMES, EXCLUDED_PARENT_DIRECTORIES};
 pub(crate) use detection::{
-    is_claude_managed_settings_path, is_claude_system_managed_settings_path,
-    path_contains_consecutive_components,
+    KIRO_WORKFLOW_SUFFIXES, KiroNotLoadedReason, is_claude_managed_settings_path,
+    is_claude_system_managed_settings_path, is_inside_kiro_dir, is_kiro_power_skill,
+    kiro_not_loaded_reason, path_contains_consecutive_components,
+};
+// Path facts for the Kiro agent and permissions validators.
+#[allow(unused_imports)]
+pub(crate) use detection::{
+    KiroAgentLoaders, KiroPermissionScope, kiro_agent_loaders, kiro_permissions_scope,
 };
 pub use detector::{BuiltinDetector, FileTypeDetector, FileTypeDetectorChain};

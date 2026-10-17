@@ -186,17 +186,6 @@ fn ends_with_ignore_ascii_case(value: &str, suffix: &str) -> bool {
         .is_some_and(|tail| tail.eq_ignore_ascii_case(suffix))
 }
 
-/// Case-insensitive prefix check that avoids allocating temporary strings.
-fn starts_with_ignore_ascii_case(value: &str, prefix: &str) -> bool {
-    if value.len() < prefix.len() {
-        return false;
-    }
-
-    value
-        .get(..prefix.len())
-        .is_some_and(|head| head.eq_ignore_ascii_case(prefix))
-}
-
 fn parent_eq_ignore_ascii_case(parent: Option<&str>, expected: &str) -> bool {
     parent.is_some_and(|p| p.eq_ignore_ascii_case(expected))
 }
@@ -293,16 +282,589 @@ fn has_clinerules_ancestor(path: &Path) -> bool {
     )
 }
 
-/// Returns true if the path contains `.kiro/steering` as consecutive
-/// components anywhere in the path.
-fn is_under_kiro_steering(path: &Path) -> bool {
-    path_contains_consecutive_components(path, ".kiro", "steering")
+// ============================================================================
+// Kiro CLI
+// ============================================================================
+//
+// Kiro detection follows where each engine loads each file (Kiro CLI 2.x "V2"
+// and the V3 harness):
+//
+// - Agents: V2 reads the top-level `*.json` of `<cwd>/.kiro/agents/` (or of
+//   `<cwd>/.amazonq/cli-agents/` when `.kiro/agents/` is absent) and
+//   `~/.kiro/agents/`. V3 reads `*.json` and `*.md` recursively under
+//   `.kiro/agents/` and never reads `.amazonq`. V3 compares the extension
+//   case-sensitively (as does the CLI 2.x lineage code), and both try every
+//   matching file, including README.md, prompt files and
+//   `*.attribution.json`, so all of them are agents.
+// - Hooks: V3 reads the top-level `*.json` of `.kiro/hooks/` (no recursion);
+//   `.kiro.hook` files are Kiro IDE 0.x hooks.
+// - Steering: `.kiro/steering/**/*.md` (V3 scans recursively, case-sensitive).
+// - Settings: `.kiro/settings/mcp.json`, `.kiro/settings/cli.json`; there is
+//   no `.kiro/settings.json` (only the 2.x session tool's description still
+//   names it).
+// - Permissions (V3): `permissions.yaml`, else `permissions.json`, in
+//   `<config>/settings/` (user) and `<config>/workspace-roots/<hash>/`
+//   (workspace), plus the administrator's `managed-settings.json`.
+// - Workflows (V3): the top-level `*.workflow.json`, `*.workflow.yaml` and
+//   `*.workflow.yml` files of `.kiro/workflows/` and `~/.kiro/workflows/`.
+// - Ignore files (V3, IDE): `.kiroignore` in a workspace root or any
+//   subdirectory, and the global `~/.kiro/settings/kiroignore`.
+// - Powers (V3): an installed power lives in `~/.kiro/powers/installed/<name>/`
+//   and has `plugin.json` (Agent Plugins format) or `POWER.md` (legacy) at
+//   its root, `mcp.json`, steering in `steering/*.md` (legacy) or
+//   `dev.kiro/steering/*.md` (plugin) read raw on demand, and
+//   `dev.kiro/INSTRUCTIONS.md`. Published powers live anywhere, so outside
+//   `.kiro/powers` only the Kiro-specific `POWER.md` name and power-named
+//   directories (`power/`, `powers/<name>/`, `dev.kiro/`) are trusted.
+//
+// Names that resolve through a path lookup (`mcp.json`, `cli.json`,
+// `permissions.yaml`, `POWER.md` in an installed power) match
+// case-insensitively, because case-insensitive file systems find them. Files
+// found by listing a directory (agents, hooks, steering) match exactly.
+// Near misses that no engine loads are `FileType::KiroNotLoaded` (KIRO-026).
+
+/// Why a file in a Kiro configuration location is never loaded by Kiro.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum KiroNotLoadedReason {
+    /// The extension differs from the one Kiro lists only by case
+    /// (`.kiro/agents/reviewer.JSON`).
+    ExtensionCase {
+        expected: &'static str,
+        dir: &'static str,
+    },
+    /// A JSON variant Kiro does not list (`.kiro/agents/reviewer.jsonc`,
+    /// `.kiro/hooks/lint.yaml`).
+    UnsupportedExtension {
+        expected: &'static str,
+        dir: &'static str,
+    },
+    /// A JSON file in a subdirectory of `.kiro/hooks/`. The validator reports
+    /// it only when the content is a hook document.
+    NestedHookFile,
+    /// A settings file whose name is not the one Kiro opens
+    /// (`permissions.yml`, ` permissions.yaml`, `mcp.jsonc`).
+    Misnamed { expected: &'static str },
+    /// A settings file placed directly in `.kiro/` (`.kiro/mcp.json`).
+    Misplaced { expected: &'static str },
+    /// `.kiro/settings.json`. The validator reports it only when it holds
+    /// Kiro CLI setting keys.
+    LegacySettings,
+    /// A file in `.kiro/workflows/` whose name lacks an exact
+    /// `.workflow.json`, `.workflow.yaml` or `.workflow.yml` suffix
+    /// (`plan.json`, `plan.Workflow.json`). For a bare `.json`/`.yaml`/`.yml`
+    /// the validator reports it only when the content is a recipe.
+    WorkflowSuffix { case_only: bool },
+    /// A recipe in a subdirectory of `.kiro/workflows/` (recipes are not
+    /// discovered recursively).
+    NestedWorkflow,
 }
 
-/// Returns true if the path contains `.kiro/powers` as consecutive
-/// components anywhere in the path.
-fn is_kiro_power(path: &Path) -> bool {
-    path_contains_consecutive_components(path, ".kiro", "powers")
+/// Recipe suffixes Kiro lists in `.kiro/workflows/`.
+pub(crate) const KIRO_WORKFLOW_SUFFIXES: &[&str] =
+    &[".workflow.json", ".workflow.yaml", ".workflow.yml"];
+
+/// Which Kiro engines load a file that is detected as `FileType::KiroAgent`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct KiroAgentLoaders {
+    pub v2: bool,
+    pub v3: bool,
+}
+
+/// The permission scope a Kiro policy file is read in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum KiroPermissionScope {
+    /// `<config>/settings/permissions.{yaml,json}`. Kiro reads it only from
+    /// the user config dir (`~/.kiro`); a repo copy is linted as a template.
+    User,
+    /// `<config>/workspace-roots/<hash>/permissions.{yaml,json}`.
+    Workspace,
+    /// `managed-settings.json`: only `deny` and `ask` are allowed.
+    Administration,
+}
+
+enum KiroClass {
+    Type(FileType),
+    NotLoaded(KiroNotLoadedReason),
+}
+
+fn normal_components(path: &Path) -> Vec<&str> {
+    path.components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(name) => name.to_str(),
+            _ => None,
+        })
+        .collect()
+}
+
+fn eq_any_ignore_ascii_case(value: &str, candidates: &[&str]) -> bool {
+    candidates.iter().any(|c| value.eq_ignore_ascii_case(c))
+}
+
+/// `dirs` is the directory chain of a file; returns true when it ends with
+/// `expected`, compared case-insensitively.
+fn dirs_end_with(dirs: &[&str], expected: &[&str]) -> bool {
+    dirs.len() >= expected.len()
+        && dirs[dirs.len() - expected.len()..]
+            .iter()
+            .zip(expected)
+            .all(|(actual, expected)| actual.eq_ignore_ascii_case(expected))
+}
+
+/// Index of the `.kiro` directory a path belongs to (the innermost one).
+fn kiro_dir_index(dirs: &[&str]) -> Option<usize> {
+    dirs.iter().rposition(|c| c.eq_ignore_ascii_case(".kiro"))
+}
+
+/// Returns true if any directory of the path is a `.kiro` directory.
+pub(crate) fn is_inside_kiro_dir(path: &Path) -> bool {
+    let comps = normal_components(path);
+    comps
+        .split_last()
+        .is_some_and(|(_, dirs)| kiro_dir_index(dirs).is_some())
+}
+
+/// Returns true for the directory of an installed or in-repo power under
+/// `.kiro/powers`: `powers/<name>` or `powers/installed/<name>`, relative to
+/// `.kiro`.
+fn is_kiro_power_root(rel_dirs: &[&str]) -> bool {
+    match rel_dirs {
+        [powers, _name] => powers.eq_ignore_ascii_case("powers"),
+        [powers, installed, _name] => {
+            powers.eq_ignore_ascii_case("powers") && installed.eq_ignore_ascii_case("installed")
+        }
+        _ => false,
+    }
+}
+
+/// Returns true for a published power directory outside `.kiro`, recognised
+/// by name: `.../power/` or `.../powers/<name>/`.
+fn is_named_power_root(dirs: &[&str]) -> bool {
+    dirs_end_with(dirs, &["power"])
+        || (dirs.len() >= 2 && dirs[dirs.len() - 2].eq_ignore_ascii_case("powers"))
+}
+
+/// Returns true for a skill bundled in a power, `<power>/skills/<dir>/SKILL.md`,
+/// where the power directory is recognised by path (installed or in-repo
+/// under `.kiro/powers`, or a published `power/` / `powers/<name>/`).
+pub(crate) fn is_kiro_power_skill(path: &Path) -> bool {
+    let comps = normal_components(path);
+    let n = comps.len();
+    if n < 4 || comps[n - 1] != "SKILL.md" || !comps[n - 3].eq_ignore_ascii_case("skills") {
+        return false;
+    }
+    let power_root = &comps[..n - 3];
+    if let Some(idx) = kiro_dir_index(power_root)
+        && is_kiro_power_root(&power_root[idx + 1..])
+    {
+        return true;
+    }
+    kiro_dir_index(power_root).is_none() && is_named_power_root(power_root)
+}
+
+/// Settings file names Kiro opens by path, for near-miss matching.
+const KIRO_SETTINGS_FILENAMES: &[&str] = &[
+    "mcp.json",
+    "cli.json",
+    "permissions.yaml",
+    "permissions.json",
+];
+
+/// The Kiro settings file a near-miss name was meant to be: surrounding
+/// whitespace (` permissions.yaml`), `.yml` for `.yaml`, or `.jsonc`.
+fn kiro_settings_near_miss(filename: &str) -> Option<&'static str> {
+    let trimmed = filename.trim();
+    if trimmed.len() != filename.len()
+        && let Some(expected) = KIRO_SETTINGS_FILENAMES
+            .iter()
+            .find(|name| trimmed.eq_ignore_ascii_case(name))
+    {
+        return Some(expected);
+    }
+    if trimmed.eq_ignore_ascii_case("permissions.yml") {
+        return Some("permissions.yaml");
+    }
+    if trimmed.eq_ignore_ascii_case("mcp.jsonc") {
+        return Some("mcp.json");
+    }
+    if trimmed.eq_ignore_ascii_case("cli.jsonc") {
+        return Some("cli.json");
+    }
+    None
+}
+
+/// Returns true for the documents a power hands to the agent raw, given the
+/// directories between the power root and the file: `steering/*.md`
+/// (legacy), `dev.kiro/steering/*.md` and `dev.kiro/INSTRUCTIONS.md`
+/// (Agent Plugins). Steering is listed top-level only.
+fn is_kiro_power_steering(sub_dirs: &[&str], filename: &str) -> bool {
+    let steering_doc = filename.ends_with(".md")
+        && match sub_dirs {
+            [steering] => steering.eq_ignore_ascii_case("steering"),
+            [dev_kiro, steering] => {
+                dev_kiro.eq_ignore_ascii_case("dev.kiro")
+                    && steering.eq_ignore_ascii_case("steering")
+            }
+            _ => false,
+        };
+    let instructions = filename == "INSTRUCTIONS.md"
+        && matches!(sub_dirs, [dev_kiro] if dev_kiro.eq_ignore_ascii_case("dev.kiro"));
+    steering_doc || instructions
+}
+
+/// Classify a file below a `.kiro` directory. `rel_dirs` are the directories
+/// between `.kiro` and the file.
+fn classify_in_kiro_dir(rel_dirs: &[&str], filename: &str) -> Option<KiroClass> {
+    use KiroClass::{NotLoaded, Type};
+    use KiroNotLoadedReason as Reason;
+
+    let first = rel_dirs.first().copied().unwrap_or("");
+    let is = |name: &str| first.eq_ignore_ascii_case(name);
+
+    if rel_dirs.is_empty() {
+        let lower = filename.to_ascii_lowercase();
+        return match lower.as_str() {
+            "settings.json" => Some(NotLoaded(Reason::LegacySettings)),
+            "mcp.json" => Some(NotLoaded(Reason::Misplaced {
+                expected: ".kiro/settings/mcp.json",
+            })),
+            "cli.json" => Some(NotLoaded(Reason::Misplaced {
+                expected: ".kiro/settings/cli.json",
+            })),
+            "permissions.yaml" | "permissions.yml" => Some(NotLoaded(Reason::Misplaced {
+                expected: "~/.kiro/settings/permissions.yaml",
+            })),
+            "permissions.json" => Some(NotLoaded(Reason::Misplaced {
+                expected: "~/.kiro/settings/permissions.json",
+            })),
+            "settings.local.json" | "plugin.json" => Some(Type(FileType::Unknown)),
+            _ => None,
+        };
+    }
+
+    if is("steering") {
+        if filename.ends_with(".md") {
+            return Some(Type(FileType::KiroSteering));
+        }
+        if ends_with_ignore_ascii_case(filename, ".md") {
+            return Some(NotLoaded(Reason::ExtensionCase {
+                expected: ".md",
+                dir: ".kiro/steering",
+            }));
+        }
+        return None;
+    }
+
+    if is("agents") {
+        if filename.ends_with(".json") || filename.ends_with(".md") {
+            return Some(Type(FileType::KiroAgent));
+        }
+        for expected in [".json", ".md"] {
+            if ends_with_ignore_ascii_case(filename, expected) {
+                return Some(NotLoaded(Reason::ExtensionCase {
+                    expected,
+                    dir: ".kiro/agents",
+                }));
+            }
+        }
+        if ends_with_ignore_ascii_case(filename, ".jsonc")
+            || ends_with_ignore_ascii_case(filename, ".json5")
+        {
+            return Some(NotLoaded(Reason::UnsupportedExtension {
+                expected: ".json",
+                dir: ".kiro/agents",
+            }));
+        }
+        return None;
+    }
+
+    if is("hooks") {
+        if rel_dirs.len() > 1 {
+            return ends_with_ignore_ascii_case(filename, ".json")
+                .then_some(NotLoaded(Reason::NestedHookFile));
+        }
+        if filename.ends_with(".json") {
+            return Some(Type(FileType::KiroHookV3));
+        }
+        if ends_with_ignore_ascii_case(filename, ".kiro.hook") {
+            return Some(Type(FileType::KiroHook));
+        }
+        if ends_with_ignore_ascii_case(filename, ".json") {
+            return Some(NotLoaded(Reason::ExtensionCase {
+                expected: ".json",
+                dir: ".kiro/hooks",
+            }));
+        }
+        if [".jsonc", ".json5", ".yaml", ".yml"]
+            .iter()
+            .any(|ext| ends_with_ignore_ascii_case(filename, ext))
+        {
+            return Some(NotLoaded(Reason::UnsupportedExtension {
+                expected: ".json",
+                dir: ".kiro/hooks",
+            }));
+        }
+        return None;
+    }
+
+    if is("settings") {
+        if ends_with_ignore_ascii_case(filename, ".md") {
+            return None;
+        }
+        if rel_dirs.len() == 1 {
+            if filename.eq_ignore_ascii_case("mcp.json") {
+                return Some(Type(FileType::KiroMcp));
+            }
+            // The global ignore file (`~/.kiro/settings/kiroignore`).
+            if filename.eq_ignore_ascii_case("kiroignore") {
+                return Some(Type(FileType::KiroIgnore));
+            }
+            if filename.eq_ignore_ascii_case("cli.json") {
+                return Some(Type(FileType::KiroSettings));
+            }
+            if eq_any_ignore_ascii_case(filename, &["permissions.yaml", "permissions.json"]) {
+                return Some(Type(FileType::KiroPermissions));
+            }
+            if let Some(expected) = kiro_settings_near_miss(filename) {
+                return Some(NotLoaded(Reason::Misnamed { expected }));
+            }
+        }
+        // lsp.json, sandbox.json, IDE-style settings.json and anything else
+        // here are not Claude Code settings or generic MCP files.
+        return Some(Type(FileType::Unknown));
+    }
+
+    if is("workspace-roots") && rel_dirs.len() == 2 {
+        if eq_any_ignore_ascii_case(filename, &["permissions.yaml", "permissions.json"]) {
+            return Some(Type(FileType::KiroPermissions));
+        }
+        if let Some(expected) = kiro_settings_near_miss(filename)
+            && expected.starts_with("permissions.")
+        {
+            return Some(NotLoaded(Reason::Misnamed { expected }));
+        }
+        return None;
+    }
+
+    if is("workflows") {
+        let exact = KIRO_WORKFLOW_SUFFIXES
+            .iter()
+            .any(|suffix| filename.ends_with(suffix));
+        let any_case = KIRO_WORKFLOW_SUFFIXES
+            .iter()
+            .any(|suffix| ends_with_ignore_ascii_case(filename, suffix));
+        if rel_dirs.len() > 1 {
+            return any_case.then_some(NotLoaded(Reason::NestedWorkflow));
+        }
+        if exact {
+            return Some(Type(FileType::KiroWorkflow));
+        }
+        if any_case {
+            return Some(NotLoaded(Reason::WorkflowSuffix { case_only: true }));
+        }
+        if [".json", ".yaml", ".yml"]
+            .iter()
+            .any(|ext| ends_with_ignore_ascii_case(filename, ext))
+        {
+            return Some(NotLoaded(Reason::WorkflowSuffix { case_only: false }));
+        }
+        return None;
+    }
+
+    if is("powers") {
+        for root_len in [2, 3] {
+            if rel_dirs.len() < root_len || !is_kiro_power_root(&rel_dirs[..root_len]) {
+                continue;
+            }
+            let sub_dirs = &rel_dirs[root_len..];
+            if sub_dirs.is_empty() {
+                if filename.eq_ignore_ascii_case("POWER.md") {
+                    return Some(Type(FileType::KiroPower));
+                }
+                if filename.eq_ignore_ascii_case("plugin.json") {
+                    return Some(Type(FileType::KiroPowerPlugin));
+                }
+                if filename.eq_ignore_ascii_case("mcp.json") {
+                    return Some(Type(FileType::KiroMcp));
+                }
+            } else if is_kiro_power_steering(sub_dirs, filename) {
+                return Some(Type(FileType::KiroPowerSteering));
+            }
+        }
+        return None;
+    }
+
+    None
+}
+
+/// Classify Kiro files that are recognised without a `.kiro` directory:
+/// published powers and the V2 `.amazonq/cli-agents` fallback.
+fn classify_outside_kiro_dir(dirs: &[&str], filename: &str) -> Option<KiroClass> {
+    use KiroClass::Type;
+
+    // POWER.md is Kiro's legacy power manifest, and installing a power from a
+    // directory requires it (or plugin.json) at the power root. Published
+    // powers live at a repository root or in any folder, so the exact name is
+    // the signal. Documentation folders are skipped as for other Markdown;
+    // `examples/` is not, since a POWER.md there is an example power.
+    if filename == "POWER.md"
+        && !dirs.iter().any(|dir| {
+            !dir.eq_ignore_ascii_case("examples")
+                && DOCUMENTATION_DIRECTORIES
+                    .iter()
+                    .any(|doc| dir.eq_ignore_ascii_case(doc))
+        })
+    {
+        return Some(Type(FileType::KiroPower));
+    }
+
+    // `dev.kiro/` is Kiro's vendor-extension directory inside an Agent
+    // Plugins power, so `dev.kiro/steering/*.md` and `dev.kiro/INSTRUCTIONS.md`
+    // are power documents anywhere. A legacy `steering/` directory counts only
+    // in a power-named directory.
+    for depth in [1, 2] {
+        let Some(split) = dirs.len().checked_sub(depth) else {
+            continue;
+        };
+        let (power_root, sub_dirs) = dirs.split_at(split);
+        if is_kiro_power_steering(sub_dirs, filename)
+            && (sub_dirs[0].eq_ignore_ascii_case("dev.kiro") || is_named_power_root(power_root))
+        {
+            return Some(Type(FileType::KiroPowerSteering));
+        }
+    }
+
+    if is_named_power_root(dirs) {
+        match filename {
+            "plugin.json" => return Some(Type(FileType::KiroPowerPlugin)),
+            "mcp.json" => return Some(Type(FileType::KiroMcp)),
+            _ => {}
+        }
+    }
+
+    // V2 falls back to `<cwd>/.amazonq/cli-agents/` (top-level `*.json`) when
+    // `.kiro/agents/` is absent. `~/.aws/amazonq/cli-agents` is not read.
+    if filename.ends_with(".json") && dirs_end_with(dirs, &[".amazonq", "cli-agents"]) {
+        return Some(Type(FileType::KiroAgent));
+    }
+
+    None
+}
+
+fn classify_kiro(path: &Path) -> Option<KiroClass> {
+    let comps = normal_components(path);
+    let (filename, dirs) = comps.split_last()?;
+    let kiro_idx = kiro_dir_index(dirs);
+
+    // `.kiroignore` applies in the workspace root and in any subdirectory.
+    if *filename == ".kiroignore" {
+        return Some(KiroClass::Type(FileType::KiroIgnore));
+    }
+
+    if let Some(idx) = kiro_idx
+        && let Some(class) = classify_in_kiro_dir(&dirs[idx + 1..], filename)
+    {
+        return Some(class);
+    }
+    if let Some(class) = classify_outside_kiro_dir(dirs, filename) {
+        return Some(class);
+    }
+
+    // Kiro never reads Claude Code or Claude plugin files from its own tree,
+    // so keep the generic `settings.json` / `plugin.json` / `hooks/hooks.json`
+    // fallbacks away from it.
+    if kiro_idx.is_some()
+        && (eq_any_ignore_ascii_case(
+            filename,
+            &["settings.json", "settings.local.json", "plugin.json"],
+        ) || filename.eq_ignore_ascii_case("hooks.json") && dirs_end_with(dirs, &["hooks"]))
+    {
+        return Some(KiroClass::Type(FileType::Unknown));
+    }
+
+    is_kiro_managed_settings_path(path).then_some(KiroClass::Type(FileType::KiroPermissions))
+}
+
+/// Kiro's administrator policy file (`{"rules": [...]}`, deny/ask only), read
+/// by the IDE and the CLI on macOS, Linux and Windows.
+fn is_kiro_managed_settings_path(path: &Path) -> bool {
+    [
+        &[
+            "Library",
+            "Application Support",
+            "Kiro",
+            "managed-settings.json",
+        ][..],
+        &["etc", "kiro", "managed-settings.json"][..],
+        &["ProgramData", "Kiro", "managed-settings.json"][..],
+    ]
+    .iter()
+    .any(|suffix| path_ends_with_components_ignore_ascii_case(path, suffix))
+}
+
+/// Detect a Kiro file type, or `None` when the path is not a Kiro location.
+fn detect_kiro_file_type(path: &Path) -> Option<FileType> {
+    match classify_kiro(path)? {
+        KiroClass::Type(file_type) => Some(file_type),
+        KiroClass::NotLoaded(_) => Some(FileType::KiroNotLoaded),
+    }
+}
+
+/// The reason a `FileType::KiroNotLoaded` file is never loaded.
+pub(crate) fn kiro_not_loaded_reason(path: &Path) -> Option<KiroNotLoadedReason> {
+    match classify_kiro(path)? {
+        KiroClass::NotLoaded(reason) => Some(reason),
+        KiroClass::Type(_) => None,
+    }
+}
+
+/// The engines that load a Kiro agent file, from its path alone: V2 reads
+/// only top-level `.json` files (of `.kiro/agents/` or the
+/// `.amazonq/cli-agents/` fallback); V3 reads `.json` and `.md` at any depth
+/// under `.kiro/agents/` and never reads `.amazonq`. Combine it with
+/// `rules::kiro_engine::engines_for` so a check never blames an engine that
+/// does not read the file. Returns `None` for paths that are not agent files.
+#[allow(dead_code)] // Consumed by the Kiro agent validator at integration.
+pub(crate) fn kiro_agent_loaders(path: &Path) -> Option<KiroAgentLoaders> {
+    if detect_kiro_file_type(path) != Some(FileType::KiroAgent) {
+        return None;
+    }
+    let comps = normal_components(path);
+    let (filename, dirs) = comps.split_last()?;
+    let Some(idx) = kiro_dir_index(dirs).filter(|&idx| {
+        dirs.get(idx + 1)
+            .is_some_and(|dir| dir.eq_ignore_ascii_case("agents"))
+    }) else {
+        // `.amazonq/cli-agents/*.json`: the V2 fallback only.
+        return Some(KiroAgentLoaders {
+            v2: true,
+            v3: false,
+        });
+    };
+    let top_level = dirs.len() == idx + 2;
+    Some(KiroAgentLoaders {
+        v2: top_level && filename.ends_with(".json"),
+        v3: true,
+    })
+}
+
+/// The scope a `FileType::KiroPermissions` file is evaluated in, from its
+/// path. Administration files may hold only `deny` and `ask` rules (an
+/// `allow` there is fatal and fails the session closed).
+#[allow(dead_code)] // Consumed by the Kiro permissions validator at integration.
+pub(crate) fn kiro_permissions_scope(path: &Path) -> Option<KiroPermissionScope> {
+    if detect_kiro_file_type(path) != Some(FileType::KiroPermissions) {
+        return None;
+    }
+    if is_kiro_managed_settings_path(path) {
+        return Some(KiroPermissionScope::Administration);
+    }
+    let comps = normal_components(path);
+    let (_, dirs) = comps.split_last()?;
+    if dirs_end_with(dirs, &["settings"]) {
+        Some(KiroPermissionScope::User)
+    } else {
+        Some(KiroPermissionScope::Workspace)
+    }
 }
 
 fn is_excluded_filename(name: &str) -> bool {
@@ -346,90 +908,11 @@ pub fn detect_file_type(path: &Path) -> FileType {
         return FileType::CursorAgent;
     }
 
-    // Kiro steering files take precedence over filename-based matches
-    // (e.g., .kiro/steering/AGENTS.md should be KiroSteering, not ClaudeMd).
-    if ends_with_ignore_ascii_case(filename, ".md") && is_under_kiro_steering(path) {
-        return FileType::KiroSteering;
-    }
-
-    if filename.eq_ignore_ascii_case("POWER.md") && is_kiro_power(path) {
-        return FileType::KiroPower;
-    }
-
-    let is_reserved_agent_filename = [
-        "plugin.json",
-        "mcp.json",
-        "settings.json",
-        "settings.local.json",
-    ]
-    .iter()
-    .any(|reserved| filename.eq_ignore_ascii_case(reserved));
-
-    if (ends_with_ignore_ascii_case(filename, ".json")
-        || ends_with_ignore_ascii_case(filename, ".md"))
-        && path_contains_consecutive_components(path, ".kiro", "agents")
-        && !is_reserved_agent_filename
-        && !starts_with_ignore_ascii_case(filename, "mcp-")
-        && !ends_with_ignore_ascii_case(filename, ".mcp.json")
-    {
-        return FileType::KiroAgent;
-    }
-
-    if ends_with_ignore_ascii_case(filename, ".kiro.hook")
-        && parent_eq_ignore_ascii_case(parent, "hooks")
-        && parent_eq_ignore_ascii_case(grandparent, ".kiro")
-    {
-        return FileType::KiroHook;
-    }
-
-    // Kiro V3 standalone hook documents: .kiro/hooks/*.json (CLI V3 / IDE
-    // 1.0). The legacy .kiro.hook files are matched above; plain .json files
-    // directly under .kiro/hooks/ are the V3 standalone format documented at
-    // https://kiro.dev/docs/hooks/. mcp.json never lives here, but stay
-    // conservative and keep reserved names out.
-    if ends_with_ignore_ascii_case(filename, ".json")
-        && !filename.eq_ignore_ascii_case("mcp.json")
-        && parent_eq_ignore_ascii_case(parent, "hooks")
-        && parent_eq_ignore_ascii_case(grandparent, ".kiro")
-    {
-        return FileType::KiroHookV3;
-    }
-
-    if filename.eq_ignore_ascii_case("mcp.json")
-        && parent_eq_ignore_ascii_case(parent, "settings")
-        && parent_eq_ignore_ascii_case(grandparent, ".kiro")
-    {
-        return FileType::KiroMcp;
-    }
-
-    // User-scoped policies and the per-user workspace store. Kiro does not
-    // load repo-local permissions as workspace policy; detection is path-only
-    // so a checked-in template at the settings suffix can still be linted.
-    let great_grandparent = path
-        .parent()
-        .and_then(Path::parent)
-        .and_then(Path::parent)
-        .and_then(Path::file_name)
-        .and_then(|n| n.to_str());
-    if filename.eq_ignore_ascii_case("permissions.yaml")
-        && ((parent_eq_ignore_ascii_case(parent, "settings")
-            && parent_eq_ignore_ascii_case(grandparent, ".kiro"))
-            || (parent_eq_ignore_ascii_case(grandparent, "workspace-roots")
-                && parent_eq_ignore_ascii_case(great_grandparent, ".kiro")))
-    {
-        return FileType::KiroPermissions;
-    }
-
-    // .kiro/settings.json - global CLI preferences written by
-    // `kiro-cli settings <key> <value>`. Documented at
-    // https://kiro.dev/docs/cli/mcp/tool-search/ for toolSearch.* keys
-    // and elsewhere for other CLI preferences. Kiro writes this to
-    // ~/.kiro/settings.json globally; matching on the parent-directory
-    // name also covers project-local overrides if the user opts in.
-    if filename.eq_ignore_ascii_case("settings.json")
-        && parent_eq_ignore_ascii_case(parent, ".kiro")
-    {
-        return FileType::KiroSettings;
+    // Kiro files take precedence over filename-based matches
+    // (e.g., .kiro/steering/AGENTS.md is KiroSteering, not ClaudeMd, and
+    // .kiro/agents/mcp-manager.md is a Kiro agent, not a Claude agent).
+    if let Some(file_type) = detect_kiro_file_type(path) {
+        return file_type;
     }
 
     // Gemini CLI local agent markdown files live under `.gemini/agents/`.
@@ -1772,8 +2255,12 @@ mod tests {
     }
 
     #[test]
-    fn detect_kiro_power_avoids_non_kiro_powers_dirs() {
-        assert_ne!(
+    fn detect_kiro_power_avoids_documentation_dirs() {
+        // Published powers live at a repository root or in any folder
+        // (kiro.dev/docs/powers/create), so `tmp/kiro-powers/POWER.md` is now a
+        // power: POWER.md is Kiro's power manifest name. This test used to
+        // assert the opposite. Documentation folders are still skipped.
+        assert_eq!(
             detect_file_type(Path::new("tmp/kiro-powers/POWER.md")),
             FileType::KiroPower
         );
@@ -1789,9 +2276,13 @@ mod tests {
             detect_file_type(Path::new(".kiro/agents/reviewer.json")),
             FileType::KiroAgent
         );
+        // Both engines compare the extension case-sensitively, so
+        // `reviewer.JSON` is never loaded (it used to be a KiroAgent); it is
+        // KiroNotLoaded and gets KIRO-026. The directories still match
+        // case-insensitively.
         assert_eq!(
             detect_file_type(Path::new("home/.kiro/agents/reviewer.JSON")),
-            FileType::KiroAgent
+            FileType::KiroNotLoaded
         );
         assert_eq!(
             detect_file_type(Path::new("home/.KIRO/AGENTS/reviewer.json")),
@@ -1809,9 +2300,14 @@ mod tests {
             detect_file_type(Path::new(".kiro/agents/reviewer.md")),
             FileType::KiroAgent
         );
+        // Exact `.md` only (see detect_kiro_agent_json).
+        assert_eq!(
+            detect_file_type(Path::new("home/.KIRO/AGENTS/team/reviewer.md")),
+            FileType::KiroAgent
+        );
         assert_eq!(
             detect_file_type(Path::new("home/.KIRO/AGENTS/team/reviewer.MD")),
-            FileType::KiroAgent
+            FileType::KiroNotLoaded
         );
     }
 
@@ -1821,34 +2317,30 @@ mod tests {
             detect_file_type(Path::new(".kiro/settings/agent.json")),
             FileType::KiroAgent
         );
-        assert_ne!(
-            detect_file_type(Path::new(".kiro/agents/plugin.json")),
-            FileType::KiroAgent
-        );
-        assert_ne!(
-            detect_file_type(Path::new(".kiro/agents/settings.json")),
-            FileType::KiroAgent
-        );
-        assert_ne!(
-            detect_file_type(Path::new(".kiro/agents/mcp.json")),
-            FileType::KiroAgent
-        );
-        assert_ne!(
-            detect_file_type(Path::new(".kiro/agents/mcp-prod.json")),
-            FileType::KiroAgent
-        );
-        assert_ne!(
-            detect_file_type(Path::new(".kiro/agents/server.mcp.json")),
-            FileType::KiroAgent
-        );
-        assert_ne!(
-            detect_file_type(Path::new(".kiro/agents/settings.local.json")),
-            FileType::KiroAgent
-        );
-        assert_ne!(
-            detect_file_type(Path::new(".kiro/agents/SETTINGS.LOCAL.JSON")),
-            FileType::KiroAgent
-        );
+    }
+
+    #[test]
+    fn detect_kiro_agent_dir_reserved_names_are_agents() {
+        // Both engines load every top-level `*.json` of `.kiro/agents/` as an
+        // agent (V3 also every `*.md`), whatever the name, so these are Kiro
+        // agents. They used to be excluded and reached the Claude plugin,
+        // Claude settings and generic MCP validators instead.
+        for name in [
+            ".kiro/agents/plugin.json",
+            ".kiro/agents/settings.json",
+            ".kiro/agents/mcp.json",
+            ".kiro/agents/mcp-prod.json",
+            ".kiro/agents/server.mcp.json",
+            ".kiro/agents/settings.local.json",
+            ".kiro/agents/SETTINGS.LOCAL.json",
+            ".kiro/agents/mcp-manager.md",
+        ] {
+            assert_eq!(
+                detect_file_type(Path::new(name)),
+                FileType::KiroAgent,
+                "{name}"
+            );
+        }
     }
 
     #[test]
@@ -1870,8 +2362,13 @@ mod tests {
             FileType::KiroHookV3
         );
         assert_eq!(
-            detect_file_type(Path::new(".KIRO/HOOKS/global-audit.JSON")),
+            detect_file_type(Path::new(".KIRO/HOOKS/global-audit.json")),
             FileType::KiroHookV3
+        );
+        // V3 lists `.kiro/hooks/` and keeps names ending in `.json` exactly.
+        assert_eq!(
+            detect_file_type(Path::new(".KIRO/HOOKS/global-audit.JSON")),
+            FileType::KiroNotLoaded
         );
     }
 
@@ -1961,5 +2458,412 @@ mod tests {
             detect_file_type(Path::new(".cursor/hooks.json")),
             FileType::CursorHooks
         );
+    }
+
+    // ---- Kiro detection matrix (spec 1.1, 2.1, 3.1, 4.1, 5.1, 6.1-6.3) ----
+
+    fn assert_types(cases: &[(&str, FileType)]) {
+        for (path, expected) in cases {
+            assert_eq!(detect_file_type(Path::new(path)), *expected, "{path}");
+        }
+    }
+
+    #[test]
+    fn kiro_agents_match_where_each_engine_loads_them() {
+        use FileType::*;
+        assert_types(&[
+            (".kiro/agents/reviewer.json", KiroAgent),
+            ("/home/u/.kiro/agents/reviewer.json", KiroAgent),
+            // V3 recurses and reads `.md`; it also tries non-agent Markdown.
+            (".kiro/agents/team/planner.md", KiroAgent),
+            (".kiro/agents/team/deep/planner.json", KiroAgent),
+            (".kiro/agents/README.md", KiroAgent),
+            (".kiro/agents/AGENTS.md", KiroAgent),
+            (".kiro/agents/resources/LANE_SECURITY.md", KiroAgent),
+            (".kiro/agents/prompts/coder.md", KiroAgent),
+            (".kiro/agents/ada.json.attribution.json", KiroAgent),
+            // CLI 2.x falls back to `.amazonq/cli-agents/` (top level, JSON).
+            (".amazonq/cli-agents/qlocal.json", KiroAgent),
+            ("/home/u/.aws/amazonq/cli-agents/qglobal.json", Unknown),
+            (".amazonq/cli-agents/sub/nested.json", Unknown),
+            // Not loaded: other extensions and case variants.
+            (".kiro/agents/reviewer.yaml", Unknown),
+            (".kiro/agents/run.sh", Unknown),
+            (".kiro/agents/reviewer.jsonc", KiroNotLoaded),
+            (".kiro/agents/reviewer.Json", KiroNotLoaded),
+            // Other tools' agent directories are untouched.
+            (".claude/agents/reviewer.md", Agent),
+            ("agents/reviewer.md", Agent),
+            (".cursor/agents/reviewer.md", CursorAgent),
+            (".github/agents/reviewer.agent.md", CopilotAgent),
+            (".gemini/agents/reviewer.md", GeminiAgent),
+            ("kiro/agents/reviewer.json", Unknown),
+            (".kiro-old/agents/reviewer.json", Unknown),
+        ]);
+    }
+
+    #[test]
+    fn kiro_agent_loaders_follow_the_engines() {
+        let loaders = |path: &str| kiro_agent_loaders(Path::new(path));
+        let both = KiroAgentLoaders { v2: true, v3: true };
+        let v3 = KiroAgentLoaders {
+            v2: false,
+            v3: true,
+        };
+        let v2 = KiroAgentLoaders {
+            v2: true,
+            v3: false,
+        };
+        assert_eq!(loaders(".kiro/agents/a.json"), Some(both));
+        assert_eq!(loaders("/home/u/.kiro/agents/a.json"), Some(both));
+        assert_eq!(loaders(".kiro/agents/a.md"), Some(v3));
+        assert_eq!(loaders(".kiro/agents/team/a.json"), Some(v3));
+        assert_eq!(loaders(".amazonq/cli-agents/a.json"), Some(v2));
+        assert_eq!(loaders(".kiro/agents/a.JSON"), None);
+        assert_eq!(loaders(".kiro/hooks/a.json"), None);
+    }
+
+    #[test]
+    fn kiro_hooks_are_top_level_json_files() {
+        use FileType::*;
+        assert_types(&[
+            (".kiro/hooks/lint.json", KiroHookV3),
+            ("/home/u/.kiro/hooks/audit.json", KiroHookV3),
+            // V3 reads every top-level `.json`, whatever the name.
+            (".kiro/hooks/mcp.json", KiroHookV3),
+            (".kiro/hooks/hooks.json", KiroHookV3),
+            (".kiro/hooks/save.kiro.hook.json", KiroHookV3),
+            (".kiro/hooks/save.kiro.hook", KiroHook),
+            // No recursion.
+            (".kiro/hooks/team/lint.json", KiroNotLoaded),
+            (".kiro/hooks/team/save.kiro.hook", Unknown),
+            (".kiro/hooks/lint.yaml", KiroNotLoaded),
+            (".kiro/hooks/scripts/check.sh", Unknown),
+            (".kiro/hooks/README.md", Unknown),
+            // Other tools' hook files.
+            (".github/hooks/hooks.json", CopilotHooks),
+            ("my-plugin/hooks/hooks.json", Hooks),
+            (".cursor/hooks.json", CursorHooks),
+            ("hooks/lint.json", Unknown),
+        ]);
+    }
+
+    #[test]
+    fn kiro_mcp_is_settings_mcp_json_only() {
+        use FileType::*;
+        assert_types(&[
+            (".kiro/settings/mcp.json", KiroMcp),
+            ("/home/u/.kiro/settings/mcp.json", KiroMcp),
+            // Opened by path, so case-insensitive file systems find it.
+            (".KIRO/SETTINGS/MCP.JSON", KiroMcp),
+            (".kiro/mcp.json", KiroNotLoaded),
+            (".kiro/settings/mcp.jsonc", KiroNotLoaded),
+            (".kiro/settings/mcp.json ", KiroNotLoaded),
+            // Not Kiro files, and not generic MCP files either.
+            (".kiro/settings/aws-mcp.json", Unknown),
+            (".kiro/settings/mcp-servers.json", Unknown),
+            // Other tools' MCP files.
+            ("mcp.json", Mcp),
+            (".cursor/mcp.json", Mcp),
+            (".amazonq/mcp.json", Mcp),
+            (".roo/mcp.json", RooMcp),
+        ]);
+    }
+
+    #[test]
+    fn kiro_steering_is_recursive_markdown() {
+        use FileType::*;
+        assert_types(&[
+            (".kiro/steering/style.md", KiroSteering),
+            ("/home/u/.kiro/steering/team/style.md", KiroSteering),
+            (".kiro/steering/AGENTS.md", KiroSteering),
+            (".kiro/steering/banner/SKILL.md", KiroSteering),
+            (".kiro/steering/Style.MD", KiroNotLoaded),
+            (".kiro/steering/notes.txt", Unknown),
+            ("steering/style.md", GenericMarkdown),
+            (".windsurf/rules/style.md", WindsurfRule),
+        ]);
+    }
+
+    #[test]
+    fn kiro_skills_stay_agent_skills() {
+        use FileType::*;
+        assert_types(&[
+            (".kiro/skills/review/SKILL.md", Skill),
+            ("/home/u/.kiro/skills/review/SKILL.md", Skill),
+            (".KIRO/SKILLS/review/SKILL.md", Skill),
+            (".kiro/skills/review/references/guide.md", GenericMarkdown),
+            (".kiro/powers/installed/aws/skills/setup/SKILL.md", Skill),
+        ]);
+    }
+
+    #[test]
+    fn kiro_installed_powers_have_typed_parts() {
+        use FileType::*;
+        assert_types(&[
+            (".kiro/powers/aws/POWER.md", KiroPower),
+            ("/home/u/.kiro/powers/installed/aws/POWER.md", KiroPower),
+            (".kiro/powers/aws/power.md", KiroPower),
+            (".kiro/powers/installed/aws/plugin.json", KiroPowerPlugin),
+            (".kiro/powers/aws/plugin.json", KiroPowerPlugin),
+            (".kiro/powers/installed/aws/mcp.json", KiroMcp),
+            (".kiro/powers/aws/mcp.json", KiroMcp),
+            (".kiro/powers/aws/steering/patterns.md", KiroPowerSteering),
+            (
+                ".kiro/powers/installed/aws/steering/patterns.md",
+                KiroPowerSteering,
+            ),
+            (
+                ".kiro/powers/installed/aws/dev.kiro/steering/patterns.md",
+                KiroPowerSteering,
+            ),
+            (
+                ".kiro/powers/installed/aws/dev.kiro/INSTRUCTIONS.md",
+                KiroPowerSteering,
+            ),
+            // Steering is listed top-level only.
+            (".kiro/powers/aws/steering/sub/patterns.md", GenericMarkdown),
+            (".kiro/powers/installed.json", Unknown),
+            (".kiro/powers/aws/nested/plugin.json", Unknown),
+        ]);
+    }
+
+    #[test]
+    fn kiro_published_powers_are_recognised_by_kiro_signals_only() {
+        use FileType::*;
+        assert_types(&[
+            ("POWER.md", KiroPower),
+            ("arm-soc-migration/POWER.md", KiroPower),
+            ("power/POWER.md", KiroPower),
+            ("powers/kanon/POWER.md", KiroPower),
+            ("examples/security-audit/POWER.md", KiroPower),
+            ("docs/POWER.md", Unknown),
+            ("power.md", GenericMarkdown),
+            ("power/plugin.json", KiroPowerPlugin),
+            ("powers/supabase/plugin.json", KiroPowerPlugin),
+            ("power/mcp.json", KiroMcp),
+            ("powers/database-power/mcp.json", KiroMcp),
+            ("power/steering/patterns.md", KiroPowerSteering),
+            (
+                "powers/database-power/steering/patterns.md",
+                KiroPowerSteering,
+            ),
+            ("my-power/dev.kiro/steering/patterns.md", KiroPowerSteering),
+            ("my-power/dev.kiro/INSTRUCTIONS.md", KiroPowerSteering),
+            // Without a Kiro signal, plugin and MCP files keep their types.
+            ("plugin.json", Plugin),
+            ("my-power/plugin.json", Plugin),
+            (".claude-plugin/plugin.json", Plugin),
+            (
+                "/home/u/.claude/plugins/marketplaces/m/.claude-plugin/plugin.json",
+                Plugin,
+            ),
+            (".codex-plugin/plugin.json", CodexPlugin),
+            ("my-power/mcp.json", Mcp),
+            ("src/steering/patterns.md", GenericMarkdown),
+        ]);
+    }
+
+    #[test]
+    fn kiro_settings_files() {
+        use FileType::*;
+        assert_types(&[
+            (".kiro/settings/cli.json", KiroSettings),
+            ("/home/u/.kiro/settings/cli.json", KiroSettings),
+            // Not read by Kiro CLI (KIRO-026 when it holds CLI keys), and never
+            // Claude Code settings.
+            (".kiro/settings.json", KiroNotLoaded),
+            ("/home/u/.kiro/settings.json", KiroNotLoaded),
+            (".kiro/settings.local.json", Unknown),
+            (".kiro/settings/settings.json", Unknown),
+            ("packages/cli/.kiro/settings/settings.json", Unknown),
+            (".kiro/settings/lsp.json", Unknown),
+            (".kiro/settings/sandbox.json", Unknown),
+            (".kiro/cli.json", KiroNotLoaded),
+            (".kiro/plugin.json", Unknown),
+            (".kiro/specs/feature/settings.json", Unknown),
+            (".kiro/specs/feature/hooks/hooks.json", Unknown),
+            // Other tools' settings files.
+            (".claude/settings.json", Hooks),
+            ("settings.json", Hooks),
+            (".gemini/settings.json", GeminiSettings),
+            (".amp/settings.json", AmpSettings),
+        ]);
+    }
+
+    #[test]
+    fn kiro_permissions_files_and_scopes() {
+        use FileType::*;
+        use KiroPermissionScope::*;
+        let cases = [
+            (".kiro/settings/permissions.yaml", Some(User)),
+            ("/home/u/.kiro/settings/permissions.json", Some(User)),
+            (
+                "/home/u/.kiro/workspace-roots/0123456789abcdef/permissions.yaml",
+                Some(Workspace),
+            ),
+            (
+                "/home/u/.kiro/workspace-roots/0123456789abcdef/permissions.json",
+                Some(Workspace),
+            ),
+            (
+                "/Library/Application Support/Kiro/managed-settings.json",
+                Some(Administration),
+            ),
+            ("/etc/kiro/managed-settings.json", Some(Administration)),
+            (
+                "C:/ProgramData/Kiro/managed-settings.json",
+                Some(Administration),
+            ),
+        ];
+        for (path, scope) in cases {
+            assert_eq!(detect_file_type(Path::new(path)), KiroPermissions, "{path}");
+            assert_eq!(kiro_permissions_scope(Path::new(path)), scope, "{path}");
+        }
+        assert_types(&[
+            // Only `.yaml` and `.json` are opened.
+            (".kiro/settings/permissions.yml", KiroNotLoaded),
+            (".kiro/settings/ permissions.yaml", KiroNotLoaded),
+            (
+                "/home/u/.kiro/workspace-roots/abc/permissions.yml",
+                KiroNotLoaded,
+            ),
+            (".kiro/permissions.yaml", KiroNotLoaded),
+            ("/home/u/.kiro/workspace-roots/permissions.yaml", Unknown),
+            (".kiro/workspace-roots/a/b/permissions.yaml", Unknown),
+            // Claude Code's managed settings are unaffected.
+            (
+                "/Library/Application Support/ClaudeCode/managed-settings.json",
+                Hooks,
+            ),
+            ("other/managed-settings.json", Unknown),
+        ]);
+        assert_eq!(
+            kiro_permissions_scope(Path::new(".kiro/settings/mcp.json")),
+            None
+        );
+    }
+
+    #[test]
+    fn kiro_not_loaded_reasons() {
+        use KiroNotLoadedReason::*;
+        let reason = |path: &str| kiro_not_loaded_reason(Path::new(path));
+        assert_eq!(
+            reason(".kiro/agents/a.JSON"),
+            Some(ExtensionCase {
+                expected: ".json",
+                dir: ".kiro/agents"
+            })
+        );
+        assert_eq!(
+            reason(".kiro/steering/a.Md"),
+            Some(ExtensionCase {
+                expected: ".md",
+                dir: ".kiro/steering"
+            })
+        );
+        assert_eq!(
+            reason(".kiro/hooks/a.yml"),
+            Some(UnsupportedExtension {
+                expected: ".json",
+                dir: ".kiro/hooks"
+            })
+        );
+        assert_eq!(reason(".kiro/hooks/sub/a.json"), Some(NestedHookFile));
+        assert_eq!(
+            reason(".kiro/settings/permissions.yml"),
+            Some(Misnamed {
+                expected: "permissions.yaml"
+            })
+        );
+        assert_eq!(
+            reason(".kiro/settings/ cli.json"),
+            Some(Misnamed {
+                expected: "cli.json"
+            })
+        );
+        assert_eq!(
+            reason(".kiro/mcp.json"),
+            Some(Misplaced {
+                expected: ".kiro/settings/mcp.json"
+            })
+        );
+        assert_eq!(reason(".kiro/settings.json"), Some(LegacySettings));
+        assert_eq!(reason(".kiro/agents/a.json"), None);
+        assert_eq!(reason("settings.json"), None);
+    }
+
+    #[test]
+    fn kiro_workflows_are_top_level_recipe_files() {
+        use FileType::*;
+        assert_types(&[
+            (".kiro/workflows/plan.workflow.json", KiroWorkflow),
+            (".kiro/workflows/plan.workflow.yaml", KiroWorkflow),
+            (".kiro/workflows/plan.workflow.yml", KiroWorkflow),
+            ("/home/u/.kiro/workflows/review.workflow.json", KiroWorkflow),
+            // Near misses Kiro never loads (KIRO-026).
+            (".kiro/workflows/plan.json", KiroNotLoaded),
+            (".kiro/workflows/plan.yaml", KiroNotLoaded),
+            (".kiro/workflows/plan.Workflow.json", KiroNotLoaded),
+            (".kiro/workflows/team/plan.workflow.json", KiroNotLoaded),
+            (".kiro/workflows/README.md", Unknown),
+            (".kiro/workflows/watch-review.mjs", Unknown),
+            // Run output and other tools' workflow files.
+            (".kiro/workflow-output/status.json", Unknown),
+            (".github/workflows/ci.yml", Unknown),
+            (".windsurf/workflows/deploy.md", WindsurfWorkflow),
+            ("workflows/plan.workflow.json", Unknown),
+        ]);
+    }
+
+    #[test]
+    fn kiro_ignore_files() {
+        use FileType::*;
+        assert_types(&[
+            (".kiroignore", KiroIgnore),
+            ("packages/api/.kiroignore", KiroIgnore),
+            ("/home/u/.kiro/settings/kiroignore", KiroIgnore),
+            (".kiro/settings/kiroignore", KiroIgnore),
+            // Other tools' ignore files.
+            (".gitignore", Unknown),
+            (".geminiignore", GeminiIgnore),
+            (".rooignore", RooIgnore),
+            (".cursorignore", Unknown),
+            ("kiroignore", Unknown),
+        ]);
+    }
+
+    #[test]
+    fn kiro_power_skills() {
+        for path in [
+            ".kiro/powers/installed/aws/skills/setup/SKILL.md",
+            "/home/u/.kiro/powers/aws/skills/setup/SKILL.md",
+            "power/skills/setup/SKILL.md",
+            "powers/supabase/skills/setup/SKILL.md",
+        ] {
+            assert!(is_kiro_power_skill(Path::new(path)), "{path}");
+            assert_eq!(detect_file_type(Path::new(path)), FileType::Skill, "{path}");
+        }
+        for path in [
+            ".kiro/skills/setup/SKILL.md",
+            ".kiro/powers/aws/skills/SKILL.md",
+            ".kiro/powers/aws/skills/a/b/SKILL.md",
+            "plugins/x/skills/setup/SKILL.md",
+            ".claude/skills/setup/SKILL.md",
+            "my-power/skills/setup/SKILL.md",
+        ] {
+            assert!(!is_kiro_power_skill(Path::new(path)), "{path}");
+        }
+    }
+
+    #[test]
+    fn inside_kiro_dir() {
+        assert!(is_inside_kiro_dir(Path::new(
+            ".kiro/settings/settings.json"
+        )));
+        assert!(is_inside_kiro_dir(Path::new("/home/u/.KIRO/x.json")));
+        assert!(!is_inside_kiro_dir(Path::new(".kiro")));
+        assert!(!is_inside_kiro_dir(Path::new("kiro/settings.json")));
+        assert!(!is_inside_kiro_dir(Path::new(".claude/settings.json")));
     }
 }

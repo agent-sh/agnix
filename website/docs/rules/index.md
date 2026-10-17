@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `459` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `470` validation rules generated from `knowledge-base/rules.json`.
 `129` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -304,6 +304,7 @@ This section contains all `459` validation rules generated from `knowledge-base/
 | [KIRO-012](./generated/kiro-012.md) | Duplicate Steering Name | MEDIUM | Kiro Steering | No |
 | [KIRO-013](./generated/kiro-013.md) | Conflicting Inclusion Modes | MEDIUM | Kiro Steering | No |
 | [KIRO-014](./generated/kiro-014.md) | Markdown Structure Issues | LOW | Kiro Steering | No |
+| [KIRO-026](./generated/kiro-026.md) | Kiro Configuration File Never Loaded | MEDIUM | Kiro Steering | No |
 | [KR-SK-001](./generated/kr-sk-001.md) | Kiro Skill Uses Unsupported Field | MEDIUM | Kiro Skills | Yes (safe/unsafe) |
 | [KR-AG-001](./generated/kr-ag-001.md) | Unknown Field in Kiro Agent JSON | MEDIUM | Kiro Agents | No |
 | [KR-AG-002](./generated/kr-ag-002.md) | Invalid Kiro Agent Resource Protocol | HIGH | Kiro Agents | No |
@@ -350,6 +351,16 @@ This section contains all `459` validation rules generated from `knowledge-base/
 | [KR-SET-001](./generated/kr-set-001.md) | Invalid toolSearch.enabled Value | HIGH | Kiro Settings | Yes (safe) |
 | [KR-SET-002](./generated/kr-set-002.md) | Invalid toolSearch.minPct Value | MEDIUM | Kiro Settings | Yes (safe) |
 | [KR-SET-003](./generated/kr-set-003.md) | Invalid toolSearch.minTokens Value | MEDIUM | Kiro Settings | Yes (safe) |
+| [KR-WF-001](./generated/kr-wf-001.md) | Workflow Recipe Exceeds Kiro Limits | HIGH | Kiro Workflows | No |
+| [KR-WF-002](./generated/kr-wf-002.md) | Invalid Workflow Repeat Cap | HIGH | Kiro Workflows | No |
+| [KR-WF-003](./generated/kr-wf-003.md) | Workflow Recipe Suffix Conflict | MEDIUM | Kiro Workflows | No |
+| [KR-WF-004](./generated/kr-wf-004.md) | Invalid Workflow Recipe Document | HIGH | Kiro Workflows | No |
+| [KR-WF-005](./generated/kr-wf-005.md) | Interactive Workflow Step Inside Parallel | HIGH | Kiro Workflows | No |
+| [KR-WF-006](./generated/kr-wf-006.md) | Invalid Workflow Stop Condition | HIGH | Kiro Workflows | No |
+| [KR-WF-007](./generated/kr-wf-007.md) | Invalid Workflow Template Reference | HIGH | Kiro Workflows | No |
+| [KR-WF-008](./generated/kr-wf-008.md) | Invalid Workflow Watch Configuration | HIGH | Kiro Workflows | No |
+| [KR-WF-009](./generated/kr-wf-009.md) | Workflow Loop Stop File Never Written | MEDIUM | Kiro Workflows | No |
+| [KR-IGN-001](./generated/kr-ign-001.md) | Ineffective Kiro Ignore Negation | MEDIUM | Kiro Ignore | No |
 | [MCP-001](./generated/mcp-001.md) | Invalid JSON-RPC Version | HIGH | MCP | Yes (safe) |
 | [MCP-002](./generated/mcp-002.md) | Missing Required Tool Field | HIGH | MCP | No |
 | [MCP-003](./generated/mcp-003.md) | Invalid JSON Schema | HIGH | MCP | No |

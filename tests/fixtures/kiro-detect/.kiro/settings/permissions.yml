@@ -1,0 +1,4 @@
+rules:
+  - capability: shell
+    match: ["git status"]
+    effect: allow

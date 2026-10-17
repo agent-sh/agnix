@@ -91,22 +91,42 @@ pub enum FileType {
     WindsurfWorkflow,
     /// Legacy Windsurf rules file (.windsurfrules)
     WindsurfRulesLegacy,
-    /// Kiro steering files (.kiro/steering/*.md)
+    /// Kiro steering files (.kiro/steering/**/*.md)
     KiroSteering,
-    /// Kiro power definition files (POWER.md in Kiro power directories)
+    /// Kiro legacy power manifest (POWER.md at a power root: installed powers
+    /// under .kiro/powers and published powers anywhere)
     KiroPower,
-    /// Kiro custom agent definitions (.kiro/agents/**/*.json or *.md)
+    /// Kiro power Agent Plugins manifest (plugin.json at a power root:
+    /// .kiro/powers/<name>/, .kiro/powers/installed/<name>/, power/,
+    /// powers/<name>/)
+    KiroPowerPlugin,
+    /// Kiro power documents read raw by the agent (steering/*.md,
+    /// dev.kiro/steering/*.md, dev.kiro/INSTRUCTIONS.md in a power)
+    KiroPowerSteering,
+    /// Kiro custom agent definitions (.kiro/agents/**/*.json or *.md, and the
+    /// CLI 2.x fallback .amazonq/cli-agents/*.json)
     KiroAgent,
     /// Kiro IDE hook files (.kiro/hooks/*.kiro.hook)
     KiroHook,
     /// Kiro V3 standalone hook files (.kiro/hooks/*.json)
     KiroHookV3,
-    /// Kiro MCP settings (.kiro/settings/mcp.json)
+    /// Kiro MCP configuration (.kiro/settings/mcp.json, and the mcp.json of a
+    /// power: legacy Kiro format or Agent Plugins format)
     KiroMcp,
-    /// Kiro CLI settings (.kiro/settings.json or ~/.kiro/settings.json)
+    /// Kiro CLI settings (.kiro/settings/cli.json or ~/.kiro/settings/cli.json)
     KiroSettings,
-    /// Kiro capability policy (.kiro/settings/permissions.yaml or workspace-roots/<hash>/permissions.yaml)
+    /// Kiro capability policy (settings/permissions.{yaml,json},
+    /// workspace-roots/<hash>/permissions.{yaml,json}, managed-settings.json)
     KiroPermissions,
+    /// Kiro workflow recipes (.kiro/workflows/*.workflow.json, *.workflow.yaml,
+    /// *.workflow.yml; also ~/.kiro/workflows/)
+    KiroWorkflow,
+    /// Kiro ignore files (.kiroignore in the workspace root or a subdirectory,
+    /// ~/.kiro/settings/kiroignore)
+    KiroIgnore,
+    /// File in a Kiro configuration location that no Kiro engine loads, such
+    /// as .kiro/agents/reviewer.JSON or .kiro/settings/permissions.yml
+    KiroNotLoaded,
     /// Gemini CLI agent definition (.gemini/agents/*.md)
     GeminiAgent,
     /// Other .md files (for XML/import checks)
@@ -181,12 +201,17 @@ impl fmt::Display for FileType {
             FileType::WindsurfRulesLegacy => "WindsurfRulesLegacy",
             FileType::KiroSteering => "KiroSteering",
             FileType::KiroPower => "KiroPower",
+            FileType::KiroPowerPlugin => "KiroPowerPlugin",
+            FileType::KiroPowerSteering => "KiroPowerSteering",
             FileType::KiroAgent => "KiroAgent",
             FileType::KiroHook => "KiroHook",
             FileType::KiroHookV3 => "KiroHookV3",
             FileType::KiroMcp => "KiroMcp",
             FileType::KiroSettings => "KiroSettings",
             FileType::KiroPermissions => "KiroPermissions",
+            FileType::KiroWorkflow => "KiroWorkflow",
+            FileType::KiroIgnore => "KiroIgnore",
+            FileType::KiroNotLoaded => "KiroNotLoaded",
             FileType::GeminiAgent => "GeminiAgent",
             FileType::GenericMarkdown => "GenericMarkdown",
             FileType::Unknown => "Unknown",
@@ -242,12 +267,17 @@ mod tests {
             (FileType::WindsurfRulesLegacy, "WindsurfRulesLegacy"),
             (FileType::KiroSteering, "KiroSteering"),
             (FileType::KiroPower, "KiroPower"),
+            (FileType::KiroPowerPlugin, "KiroPowerPlugin"),
+            (FileType::KiroPowerSteering, "KiroPowerSteering"),
             (FileType::KiroAgent, "KiroAgent"),
             (FileType::KiroHook, "KiroHook"),
             (FileType::KiroHookV3, "KiroHookV3"),
             (FileType::KiroMcp, "KiroMcp"),
             (FileType::KiroSettings, "KiroSettings"),
             (FileType::KiroPermissions, "KiroPermissions"),
+            (FileType::KiroWorkflow, "KiroWorkflow"),
+            (FileType::KiroIgnore, "KiroIgnore"),
+            (FileType::KiroNotLoaded, "KiroNotLoaded"),
             (FileType::GeminiAgent, "GeminiAgent"),
             (FileType::GenericMarkdown, "GenericMarkdown"),
             (FileType::Unknown, "Unknown"),
@@ -302,12 +332,17 @@ mod tests {
             FileType::WindsurfRulesLegacy,
             FileType::KiroSteering,
             FileType::KiroPower,
+            FileType::KiroPowerPlugin,
+            FileType::KiroPowerSteering,
             FileType::KiroAgent,
             FileType::KiroHook,
             FileType::KiroHookV3,
             FileType::KiroMcp,
             FileType::KiroSettings,
             FileType::KiroPermissions,
+            FileType::KiroWorkflow,
+            FileType::KiroIgnore,
+            FileType::KiroNotLoaded,
             FileType::GeminiAgent,
             FileType::GenericMarkdown,
         ];
@@ -376,12 +411,17 @@ mod tests {
             FileType::WindsurfRulesLegacy,
             FileType::KiroSteering,
             FileType::KiroPower,
+            FileType::KiroPowerPlugin,
+            FileType::KiroPowerSteering,
             FileType::KiroAgent,
             FileType::KiroHook,
             FileType::KiroHookV3,
             FileType::KiroMcp,
             FileType::KiroSettings,
             FileType::KiroPermissions,
+            FileType::KiroWorkflow,
+            FileType::KiroIgnore,
+            FileType::KiroNotLoaded,
             FileType::GeminiAgent,
             FileType::Unknown,
         ];

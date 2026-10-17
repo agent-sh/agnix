@@ -1,0 +1,20 @@
+name: broken
+inputs:
+  task: prompt
+steps:
+  - type: step
+    id: plan
+    agent: wf-planner
+    prompt: "Plan {{task}} using {{review.output}}"
+  - type: repeat
+    id: fix-loop
+    onMaxIterations: pause
+    stopWhen: done
+    steps:
+      - type: step
+        id: plan
+        prompt: Fix the next item
+  - type: step
+    id: review
+    agent: semantic_reviewer
+    prompt: Review the changes

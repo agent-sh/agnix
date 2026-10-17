@@ -1,0 +1,12 @@
+{
+  "kiroAgent.configureMCP": "Enabled",
+  "statusLine": {
+    "type": "command",
+    "command": "node .kiro/statusline.js"
+  },
+  "hooks": {
+    "agentStop": [
+      { "matcher": ".*", "command": "node .kiro/hooks/notify.js" }
+    ]
+  }
+}

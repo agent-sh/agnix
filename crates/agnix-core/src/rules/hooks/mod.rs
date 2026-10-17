@@ -543,6 +543,13 @@ impl Validator for HooksValidator {
             return diagnostics;
         }
 
+        // Claude Code never reads settings or hooks files from a Kiro
+        // directory (`.kiro/settings/settings.json` holds Kiro IDE editor
+        // settings, for example), so Claude hook rules do not apply there.
+        if crate::file_types::is_inside_kiro_dir(path) {
+            return diagnostics;
+        }
+
         let raw_value: serde_json::Value = match serde_json::from_str(content) {
             Ok(v) => v,
             Err(e) => {

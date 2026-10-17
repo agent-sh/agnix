@@ -1,0 +1,5 @@
+{
+  "name": "reviewer",
+  "description": "Reviews changes",
+  "tools": ["read"]
+}

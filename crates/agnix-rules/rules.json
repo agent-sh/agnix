@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 459,
-  "last_updated": "2026-10-16",
+  "total_rules": 470,
+  "last_updated": "2026-10-17",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -8665,6 +8665,39 @@
       "bad_example": "---\ninclusion: always\n---\nNo heading, just text."
     },
     {
+      "id": "KIRO-026",
+      "name": "Kiro Configuration File Never Loaded",
+      "severity": "MEDIUM",
+      "category": "kiro-steering",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/configuration/",
+          "https://kiro.dev/docs/custom-agents/",
+          "https://kiro.dev/docs/hooks/",
+          "https://kiro.dev/docs/steering/",
+          "https://kiro.dev/docs/reference/settings/",
+          "https://kiro.dev/docs/permissions/",
+          "https://kiro.dev/docs/workflows/authoring/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".kiro/agents/reviewer.json\n.kiro/settings/permissions.yaml\n.kiro/settings/cli.json",
+      "bad_example": ".kiro/agents/reviewer.JSON\n.kiro/settings/permissions.yml\n.kiro/settings.json"
+    },
+    {
       "id": "KR-SK-001",
       "name": "Kiro Skill Uses Unsupported Field",
       "severity": "MEDIUM",
@@ -10017,6 +10050,285 @@
       },
       "good_example": "{\n  \"toolSearch.minTokens\": 50000\n}",
       "bad_example": "{\n  \"toolSearch.minTokens\": -1\n}"
+    },
+    {
+      "id": "KR-WF-001",
+      "name": "Workflow Recipe Exceeds Kiro Limits",
+      "severity": "HIGH",
+      "category": "kiro-workflows",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/workflows/authoring/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"plan-and-implement\", \"inputs\": {\"task\": \"prompt\"}, \"steps\": [{\"type\": \"step\", \"id\": \"plan\", \"agent\": \"wf-planner\", \"prompt\": \"Plan {{task}}\"}, {\"type\": \"step\", \"id\": \"implement\", \"agent\": \"wf-coder\", \"prompt\": \"Implement: {{previous.output}}\"}]}",
+      "bad_example": "{\"name\": \"dup\", \"steps\": [{\"type\": \"step\", \"id\": \"a\", \"agent\": \"wf-coder\", \"prompt\": \"x\"}, {\"type\": \"step\", \"id\": \"a\", \"agent\": \"wf-coder\", \"prompt\": \"y\"}]}"
+    },
+    {
+      "id": "KR-WF-002",
+      "name": "Invalid Workflow Repeat Cap",
+      "severity": "HIGH",
+      "category": "kiro-workflows",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/workflows/authoring/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"type\": \"repeat\", \"id\": \"loop\", \"maxIterations\": 10, \"onMaxIterations\": \"pause\", \"steps\": [{\"type\": \"step\", \"id\": \"work\", \"agent\": \"wf-coder\", \"prompt\": \"Next item\"}]}",
+      "bad_example": "{\"type\": \"repeat\", \"id\": \"loop\", \"steps\": [{\"type\": \"step\", \"id\": \"work\", \"agent\": \"wf-coder\", \"prompt\": \"Next item\"}]}"
+    },
+    {
+      "id": "KR-WF-003",
+      "name": "Workflow Recipe Suffix Conflict",
+      "severity": "MEDIUM",
+      "category": "kiro-workflows",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/workflows/authoring/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": ".kiro/workflows/plan.workflow.json",
+      "bad_example": ".kiro/workflows/plan.workflow.json\n.kiro/workflows/plan.workflow.yaml"
+    },
+    {
+      "id": "KR-WF-004",
+      "name": "Invalid Workflow Recipe Document",
+      "severity": "HIGH",
+      "category": "kiro-workflows",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/workflows/authoring/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"plan-and-implement\", \"inputs\": {\"task\": \"prompt\"}, \"steps\": [{\"type\": \"step\", \"id\": \"plan\", \"agent\": \"wf-planner\", \"prompt\": \"Plan {{task}}\"}, {\"type\": \"step\", \"id\": \"implement\", \"agent\": \"wf-coder\", \"prompt\": \"Implement: {{previous.output}}\"}]}",
+      "bad_example": "{\"name\": \"x\", \"steps\": [{\"type\": \"step\", \"id\": \"plan\", \"agent\": \"wf-planner\"}]}"
+    },
+    {
+      "id": "KR-WF-005",
+      "name": "Interactive Workflow Step Inside Parallel",
+      "severity": "HIGH",
+      "category": "kiro-workflows",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/workflows/authoring/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"type\": \"step\", \"id\": \"chat\", \"agent\": \"wf-coder\", \"prompt\": \"Ask me\", \"completion\": {\"completionSignal\": \"success\"}}",
+      "bad_example": "{\"type\": \"parallel\", \"id\": \"p\", \"joinPolicy\": \"all\", \"branches\": [{\"type\": \"step\", \"id\": \"chat\", \"agent\": \"wf-coder\", \"prompt\": \"Ask me\", \"completion\": {\"completionSignal\": \"success\"}}]}"
+    },
+    {
+      "id": "KR-WF-006",
+      "name": "Invalid Workflow Stop Condition",
+      "severity": "HIGH",
+      "category": "kiro-workflows",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/workflows/authoring/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"stopWhen\": \"wait-for-pr.terminal\"}",
+      "bad_example": "{\"stopCondition\": {\"fileCheck\": {\"path\": \"status.json\", \"jsonPath\": \"done\", \"equals\": true}}}"
+    },
+    {
+      "id": "KR-WF-007",
+      "name": "Invalid Workflow Template Reference",
+      "severity": "HIGH",
+      "category": "kiro-workflows",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/workflows/authoring/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"name\": \"plan-and-implement\", \"inputs\": {\"task\": \"prompt\"}, \"steps\": [{\"type\": \"step\", \"id\": \"plan\", \"agent\": \"wf-planner\", \"prompt\": \"Plan {{task}}\"}, {\"type\": \"step\", \"id\": \"implement\", \"agent\": \"wf-coder\", \"prompt\": \"Implement: {{previous.output}}\"}]}",
+      "bad_example": "{\"name\": \"x\", \"steps\": [{\"type\": \"step\", \"id\": \"a\", \"agent\": \"wf-coder\", \"prompt\": \"{{b.output}}\"}, {\"type\": \"step\", \"id\": \"b\", \"agent\": \"wf-coder\", \"prompt\": \"x\"}]}"
+    },
+    {
+      "id": "KR-WF-008",
+      "name": "Invalid Workflow Watch Configuration",
+      "severity": "HIGH",
+      "category": "kiro-workflows",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/workflows/authoring/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"type\": \"watch\", \"id\": \"review\", \"handler\": \"command\", \"config\": {\"command\": \"node watch-review.mjs\", \"pollIntervalSec\": 10}}",
+      "bad_example": "{\"type\": \"watch\", \"id\": \"review\", \"handler\": \"command\", \"config\": {\"command\": \"node\", \"args\": [\"watch-review.mjs\"], \"pollIntervalSec\": 5}}"
+    },
+    {
+      "id": "KR-WF-009",
+      "name": "Workflow Loop Stop File Never Written",
+      "severity": "MEDIUM",
+      "category": "kiro-workflows",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/workflows/authoring/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.26.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"type\": \"repeat\", \"id\": \"loop\", \"maxIterations\": 5, \"onMaxIterations\": \"pause\", \"stopCondition\": {\"fileCheck\": {\"path\": \"status.json\", \"jsonPath\": \"done\", \"value\": true}}, \"steps\": [{\"type\": \"step\", \"id\": \"work\", \"agent\": \"wf-coder\", \"prompt\": \"Do the next item and update status.json\"}]}",
+      "bad_example": "{\"type\": \"repeat\", \"id\": \"loop\", \"maxIterations\": 5, \"onMaxIterations\": \"pause\", \"stopCondition\": {\"fileCheck\": {\"path\": \"status.json\", \"jsonPath\": \"done\", \"value\": true}}, \"steps\": [{\"type\": \"step\", \"id\": \"work\", \"agent\": \"wf-coder\", \"prompt\": \"Do the next item\"}]}"
+    },
+    {
+      "id": "KR-IGN-001",
+      "name": "Ineffective Kiro Ignore Negation",
+      "severity": "MEDIUM",
+      "category": "kiro-ignore",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/kiroignore/"
+        ],
+        "verified_on": "2026-10-17",
+        "applies_to": {
+          "tool": "kiro"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": true
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "secrets/*\n!secrets/public.txt",
+      "bad_example": "secrets/\n!secrets/public.txt"
     },
     {
       "id": "MCP-001",
@@ -13468,8 +13780,8 @@
     },
     "kiro-steering": {
       "prefix": "KIRO",
-      "count": 14,
-      "description": "Kiro steering file validation rules"
+      "count": 15,
+      "description": "Kiro steering file validation and Kiro file placement rules"
     },
     "kiro-hooks": {
       "prefix": "KR-HK",
@@ -13494,7 +13806,17 @@
     "kiro-settings": {
       "prefix": "KR-SET",
       "count": 3,
-      "description": "Kiro CLI settings (.kiro/settings.json) rules"
+      "description": "Kiro CLI settings (.kiro/settings/cli.json) rules"
+    },
+    "kiro-workflows": {
+      "prefix": "KR-WF",
+      "count": 9,
+      "description": "Kiro workflow recipe (.kiro/workflows/*.workflow.{json,yaml,yml}) rules"
+    },
+    "kiro-ignore": {
+      "prefix": "KR-IGN",
+      "count": 1,
+      "description": "Kiro ignore file (.kiroignore) rules"
     },
     "claude-settings": {
       "prefix": "CC-SET",

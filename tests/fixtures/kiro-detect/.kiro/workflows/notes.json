@@ -1,0 +1,6 @@
+{
+  "name": "notes",
+  "steps": [
+    { "type": "step", "id": "summarize", "agent": "wf-planner", "prompt": "Summarize the notes" }
+  ]
+}

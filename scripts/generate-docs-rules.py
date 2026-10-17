@@ -51,6 +51,8 @@ CATEGORY_LABELS: Dict[str, str] = {
     "kiro-powers": "Kiro Powers",
     "kiro-steering": "Kiro Steering",
     "kiro-settings": "Kiro Settings",
+    "kiro-workflows": "Kiro Workflows",
+    "kiro-ignore": "Kiro Ignore",
     "amp-skills": "Amp Skills",
     "amp-checks": "Amp Checks",
     "roo-code-skills": "Roo Code Skills",
