@@ -7,7 +7,6 @@
 //! - CC-OS-002 (HIGH)   : keep-coding-instructions present but not a YAML bool
 //! - CC-OS-003 (MEDIUM) : unknown top-level frontmatter key
 //! - CC-OS-004 (MEDIUM) : body after closing `---` is empty/whitespace-only
-//! - CC-OS-005 (LOW)    : `name` value exceeds 64 characters
 //! - CC-OS-006 (HIGH)   : invalid output-style frontmatter syntax (YAML parse error)
 //!
 //! All rules are non-autofix except CC-OS-002, which safely unwraps an exact
@@ -26,11 +25,8 @@ const RULE_IDS: &[&str] = &[
     "CC-OS-002",
     "CC-OS-003",
     "CC-OS-004",
-    "CC-OS-005",
     "CC-OS-006",
 ];
-
-const NAME_MAX_LEN: usize = 64;
 
 /// Adapter so CC-OS-002 can reuse `find_yaml_value_range` on output-style frontmatter.
 struct OutputStyleFrontmatter<'a> {
@@ -139,11 +135,9 @@ impl Validator for OutputStyleValidator {
                         parsed.start_line,
                         0,
                         "CC-OS-006",
-                        format!("Invalid output-style frontmatter: {}", parse_error),
+                        rust_i18n::t!("rules.cc_os_006.message", error = parse_error.as_str()),
                     )
-                    .with_suggestion(
-                        "Fix the YAML syntax (close frontmatter with a line containing only `---`, escape special characters, etc).",
-                    ),
+                    .with_suggestion(rust_i18n::t!("rules.cc_os_006.suggestion")),
                 );
             }
             return diagnostics;
@@ -216,15 +210,29 @@ impl Validator for OutputStyleValidator {
         // CC-OS-003: unknown top-level frontmatter key (MEDIUM)
         if config.is_rule_enabled("CC-OS-003") {
             for unknown in &parsed.unknown_keys {
+                // "`force-for-plugin` | Plugin output styles only": this
+                // validator sees only .claude/output-styles/, where the key
+                // has no effect.
+                let (message, suggestion) = if unknown.key == "force-for-plugin" {
+                    (
+                        rust_i18n::t!("rules.cc_os_003.plugin_only_message"),
+                        rust_i18n::t!("rules.cc_os_003.plugin_only_suggestion"),
+                    )
+                } else {
+                    (
+                        rust_i18n::t!("rules.cc_os_003.message", key = unknown.key.as_str()),
+                        rust_i18n::t!("rules.cc_os_003.suggestion"),
+                    )
+                };
                 diagnostics.push(
                     Diagnostic::warning(
                         path.to_path_buf(),
                         unknown.line,
                         unknown.column,
                         "CC-OS-003",
-                        format!("Output style frontmatter has unknown key '{}'", unknown.key),
+                        message,
                     )
-                    .with_suggestion("Allowed keys: name, description, keep-coding-instructions."),
+                    .with_suggestion(suggestion),
                 );
             }
         }
@@ -237,36 +245,10 @@ impl Validator for OutputStyleValidator {
                     parsed.start_line,
                     0,
                     "CC-OS-004",
-                    "Output style has no body content - the file is a dead config".to_string(),
+                    rust_i18n::t!("rules.cc_os_004.message"),
                 )
-                .with_suggestion(
-                    "Add the system-prompt instructions for Claude Code below the closing `---`.",
-                ),
+                .with_suggestion(rust_i18n::t!("rules.cc_os_004.suggestion")),
             );
-        }
-
-        // CC-OS-005: name exceeds 64 chars (LOW)
-        if config.is_rule_enabled("CC-OS-005") {
-            if let Some(name) = schema.name.as_deref() {
-                if name.chars().count() > NAME_MAX_LEN {
-                    diagnostics.push(
-                        Diagnostic::info(
-                            path.to_path_buf(),
-                            parsed.start_line,
-                            0,
-                            "CC-OS-005",
-                            format!(
-                                "Output style `name` is {} characters; recommended maximum is {}",
-                                name.chars().count(),
-                                NAME_MAX_LEN
-                            ),
-                        )
-                        .with_suggestion(
-                            "Shorten the name so it fits in the /config picker without truncation.",
-                        ),
-                    );
-                }
-            }
         }
 
         diagnostics
@@ -546,34 +528,23 @@ mod tests {
         assert!(!diagnostics.iter().any(|d| d.rule == "CC-OS-004"));
     }
 
-    // ===== CC-OS-005 =====
+    // ===== CC-OS-005 (retired) =====
 
     #[test]
-    fn test_cc_os_005_long_name() {
-        let long = "a".repeat(65);
-        let content = format!("---\nname: {}\ndescription: y\n---\nBody", long);
-        let diagnostics = validate(&content);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-OS-005")
+    fn test_retired_cc_os_005_absent() {
+        let content = format!("---\nname: {}\ndescription: d\n---\nBody", "a".repeat(80));
+        assert!(!validate(&content).iter().any(|d| d.rule == "CC-OS-005"));
+    }
+
+    #[test]
+    fn test_cc_os_003_force_for_plugin_is_plugin_only() {
+        let content = "---\nname: X\ndescription: y\nforce-for-plugin: true\n---\nBody";
+        let hits: Vec<_> = validate(content)
+            .into_iter()
+            .filter(|d| d.rule == "CC-OS-003")
             .collect();
         assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].level, DiagnosticLevel::Info);
-    }
-
-    #[test]
-    fn test_cc_os_005_exact_length_ok() {
-        let exactly = "a".repeat(64);
-        let content = format!("---\nname: {}\ndescription: y\n---\nBody", exactly);
-        let diagnostics = validate(&content);
-        assert!(!diagnostics.iter().any(|d| d.rule == "CC-OS-005"));
-    }
-
-    #[test]
-    fn test_cc_os_005_short_name_ok() {
-        let content = "---\nname: Concise\ndescription: y\n---\nBody";
-        let diagnostics = validate(content);
-        assert!(!diagnostics.iter().any(|d| d.rule == "CC-OS-005"));
+        assert!(hits[0].message.contains("plugin"), "{}", hits[0].message);
     }
 
     // ===== CC-OS-006 =====
@@ -617,16 +588,13 @@ mod tests {
             "CC-OS-002",
             "CC-OS-003",
             "CC-OS-004",
-            "CC-OS-005",
             "CC-OS-006",
         ];
 
-        // Triggers CC-OS-001..005 (long name, non-bool keep, unknown key, empty body)
-        let long = "a".repeat(65);
-        let content_005 = format!(
-            "---\nname: {}\nkeep-coding-instructions: \"yes\"\nfoo: bar\n---\n   \n",
-            long
-        );
+        // Triggers CC-OS-001..004 (non-bool keep, unknown key, empty body).
+        // CC-OS-005 (name length) is retired: the docs state no limit.
+        let content_005 =
+            "---\nname: x\nkeep-coding-instructions: \"yes\"\nfoo: bar\n---\n   \n".to_string();
         // Triggers CC-OS-006 only (unclosed frontmatter)
         let content_006 = "---\nname: x".to_string();
 

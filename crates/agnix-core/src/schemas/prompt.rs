@@ -1,9 +1,7 @@
 //! Prompt engineering validation schema helpers
 //!
 //! Provides detection functions for:
-//! - PE-001: Critical content in middle ("lost in the middle")
 //! - PE-002: Chain-of-thought phrases on simple tasks
-//! - PE-003: Weak imperative language in critical sections
 //! - PE-004: Ambiguous instructions
 //! - PE-005: Redundant generic instructions
 //! - PE-006: Negative-only instructions without positive alternative
@@ -19,70 +17,15 @@ use regex::Regex;
 use crate::parsers::markdown::MAX_REGEX_INPUT_SIZE;
 use crate::regex_util::static_regex;
 
-static_regex!(fn critical_keyword_pattern, r"(?i)\b(critical|important|must|required|essential|mandatory|crucial|never|always)\b");
 static_regex!(fn cot_phrase_pattern, r"(?i)\b(think\s+step\s+by\s+step|let'?s\s+think|reason\s+through|break\s+(?:it\s+)?down\s+into\s+steps|work\s+through\s+this\s+(?:step\s+by\s+step|systematically))\b");
 static_regex!(fn simple_task_indicator_pattern, r"(?i)\b(read\s+(?:the\s+)?file|write\s+(?:the\s+)?file|copy\s+(?:the\s+)?file|move\s+(?:the\s+)?file|delete\s+(?:the\s+)?file|list\s+files|run\s+(?:the\s+)?(?:command|script)|execute\s+(?:the\s+)?(?:command|script)|format\s+(?:the\s+)?(?:code|output)|rename\s+(?:the\s+)?file|create\s+(?:a\s+)?(?:file|directory|folder)|check\s+(?:if|whether)\s+(?:file|directory)\s+exists)\b");
-static_regex!(fn weak_language_pattern, r"(?i)\b(should|try\s+to|consider|maybe|might|could|possibly|preferably|ideally|optionally)\b");
-static_regex!(fn critical_section_pattern, r"(?i)^#+\s*.*\b(critical|important|required|mandatory|rules|must|essential|security|danger)\b");
 static_regex!(fn ambiguous_term_pattern, r"(?i)\b(usually|sometimes|if\s+possible|when\s+appropriate|as\s+needed|often|occasionally|generally|typically|normally|frequently|regularly|commonly)\b");
-
-// ============================================================================
-// PE-001: Critical Content in Middle ("Lost in the Middle")
-// ============================================================================
-
-/// Critical content found in the middle zone of document
-#[derive(Debug, Clone)]
-pub struct CriticalInMiddle {
-    pub line: usize,
-    pub column: usize,
-    pub keyword: String,
-    pub position_percent: f64,
-}
-
-/// Find critical content positioned in the middle of the document (40-60%)
-///
-/// Based on "Lost in the Middle" research (Liu et al., 2023, TACL):
-/// LLMs have lower recall for content in the middle of documents, but better
-/// recall for content at the START and END. The 40-60% range is specifically
-/// the "lost in the middle" zone.
-///
-/// # Security
-///
-/// Returns early for content exceeding `MAX_REGEX_INPUT_SIZE` to prevent ReDoS.
-pub fn find_critical_in_middle_pe(content: &str) -> Vec<CriticalInMiddle> {
-    // Security: Skip regex processing for oversized input to prevent ReDoS
-    if content.len() > MAX_REGEX_INPUT_SIZE {
-        return Vec::new();
-    }
-
-    let mut results = Vec::new();
-    let pattern = critical_keyword_pattern();
-    let lines: Vec<&str> = content.lines().collect();
-    let total_lines = lines.len();
-
-    if total_lines < 10 {
-        // Too short to meaningfully apply this rule
-        return results;
-    }
-
-    for (line_num, line) in lines.iter().enumerate() {
-        if let Some(mat) = pattern.find(line) {
-            let position_percent = (line_num as f64 / total_lines as f64) * 100.0;
-
-            // Flag if in the middle 40-60% of the document (lost in the middle zone)
-            if (40.0..60.0).contains(&position_percent) {
-                results.push(CriticalInMiddle {
-                    line: line_num + 1,
-                    column: mat.start() + 1,
-                    keyword: mat.as_str().to_string(),
-                    position_percent,
-                });
-            }
-        }
-    }
-
-    results
-}
+// A line reads as an instruction when it has a directive word, or when it
+// starts (after a list marker and an optional leading hedge) with an
+// imperative verb. Descriptions such as "tests often fail on CI" are not
+// instructions, and PE-004's sources are about instructions.
+static_regex!(fn directive_word_pattern, r"(?i)\b(should|must|need(?:s)?\s+to|have\s+to|always|never|prefer|avoid|make\s+sure|ensure|do\s+not|don't|try\s+to)\b");
+static_regex!(fn imperative_start_pattern, r"(?i)^\s*(?:[-*+]\s+|\d+[.)]\s+)?(?:\*\*)?(?:(?:usually|sometimes|often|occasionally|generally|typically|normally|frequently|regularly|commonly|if\s+possible|when\s+appropriate|as\s+needed),?\s+)?(?:add|apply|ask|call|check|commit|create|do|document|follow|format|handle|include|keep|leave|limit|log|make|move|name|open|pin|place|put|read|remove|return|run|set|split|start|stop|test|update|use|verify|wrap|write)\b");
 
 // ============================================================================
 // PE-002: Chain-of-Thought on Simple Tasks
@@ -99,8 +42,11 @@ pub struct CotOnSimpleTask {
 
 /// Find chain-of-thought phrases used on simple tasks
 ///
-/// Research shows that CoT can actually hurt performance on simple, direct tasks
-/// that don't require multi-step reasoning (Wei et al., 2022).
+/// Anthropic's prompting guide prefers general instructions over prescriptive
+/// reasoning steps ("A prompt like "think thoroughly" often produces better
+/// reasoning than a hand-written step-by-step plan") and treats manual
+/// chain-of-thought as a fallback; a step-by-step instruction attached to a
+/// single file operation adds tokens without a reasoning task to apply them to.
 ///
 /// Only flags CoT phrases that are within proximity (5 lines) of a simple task indicator
 /// to avoid false positives when complex and simple tasks are in the same document.
@@ -162,17 +108,8 @@ pub fn find_cot_on_simple_tasks(content: &str) -> Vec<CotOnSimpleTask> {
 }
 
 // ============================================================================
-// PE-003: Weak Imperative Language in Critical Sections
+// Shared helpers
 // ============================================================================
-
-/// Weak language found in critical section
-#[derive(Debug, Clone)]
-pub struct WeakLanguageInCritical {
-    pub line: usize,
-    pub column: usize,
-    pub weak_term: String,
-    pub section_name: String,
-}
 
 /// Advance a byte position past the current line's terminator (LF or CRLF).
 /// Call after adding `line.len()` to `byte_pos`.
@@ -183,53 +120,6 @@ fn advance_past_line_ending(content: &[u8], byte_pos: &mut usize) {
     if content.get(*byte_pos) == Some(&b'\n') {
         *byte_pos += 1;
     }
-}
-
-/// Find weak imperative language in critical sections
-///
-/// Critical sections should use strong language (must/always/never) rather than
-/// weak language (should/try/consider) to ensure compliance.
-///
-/// # Security
-///
-/// Returns early for content exceeding `MAX_REGEX_INPUT_SIZE` to prevent ReDoS.
-pub fn find_weak_imperative_language(content: &str) -> Vec<WeakLanguageInCritical> {
-    // Security: Skip regex processing for oversized input to prevent ReDoS
-    if content.len() > MAX_REGEX_INPUT_SIZE {
-        return Vec::new();
-    }
-
-    let mut results = Vec::new();
-    let weak_pattern = weak_language_pattern();
-    let section_pattern = critical_section_pattern();
-
-    let mut current_section: Option<String> = None;
-
-    for (line_num, line) in content.lines().enumerate() {
-        // Check if this is a header line
-        if line.starts_with('#') {
-            if section_pattern.is_match(line) {
-                current_section = Some(line.trim_start_matches('#').trim().to_string());
-            } else {
-                // New non-critical header ends the critical section
-                current_section = None;
-            }
-        }
-
-        // Check for weak language in critical sections
-        if let Some(section_name) = &current_section {
-            if let Some(mat) = weak_pattern.find(line) {
-                results.push(WeakLanguageInCritical {
-                    line: line_num + 1,
-                    column: mat.start() + 1, // 1-indexed for diagnostics
-                    weak_term: mat.as_str().to_string(),
-                    section_name: section_name.clone(),
-                });
-            }
-        }
-    }
-
-    results
 }
 
 // ============================================================================
@@ -278,8 +168,15 @@ pub fn find_ambiguous_instructions(content: &str) -> Vec<AmbiguousInstruction> {
             continue;
         }
 
-        // Skip comment lines and shebang
-        if trimmed.starts_with("//") || trimmed.starts_with("#!") {
+        // Skip comment lines, shebang, headings and table rows
+        if trimmed.starts_with("//")
+            || trimmed.starts_with("#!")
+            || trimmed.starts_with('#')
+            || trimmed.starts_with('|')
+        {
+            continue;
+        }
+        if !directive_word_pattern().is_match(line) && !imperative_start_pattern().is_match(line) {
             continue;
         }
 
@@ -330,7 +227,13 @@ pub fn find_ambiguous_instructions(content: &str) -> Vec<AmbiguousInstruction> {
 // PE-005: Redundant Generic Instructions
 // ============================================================================
 
-static_regex!(fn redundant_instruction_pattern, r"(?i)\b(be helpful|be accurate|be concise|follow instructions|do your best|try your hardest|respond accurately|answer correctly|be thorough|be detailed|be precise|be clear|be professional|be consistent|be efficient)\b");
+// "be concise", "be thorough" and "be detailed" are not listed: they change
+// response length, and Anthropic now asks for them explicitly ("Prompt
+// explicitly for conciseness instead" for Claude Opus 5). Gemini's own sample
+// GEMINI.md also says "Be concise".
+static_regex!(fn redundant_instruction_pattern, r"(?i)\b(be helpful|be accurate|follow instructions|do your best|try your hardest|respond accurately|answer correctly|be precise|be clear|be professional|be consistent|be efficient|write\s+(?:good|clean)\s+code)\b");
+static_regex!(fn list_marker_pattern, r"^\s*(?:[-*+]|\d+[.)])\s+");
+static_regex!(fn filler_word_pattern, r"(?i)\b(?:and|or|always|please|also|be|to|helpful|accurate|accurately|precise|clear|professional|consistent|efficient|correct|correctly)\b");
 
 /// Redundant generic instruction found in content
 #[derive(Debug, Clone)]
@@ -344,6 +247,16 @@ pub struct RedundantInstruction {
     /// Byte length of the matched phrase
     #[allow(dead_code)] // parsed but not yet consumed by validators
     pub byte_len: usize,
+}
+
+/// True when `line` holds nothing but redundant generic phrases (plus list
+/// markers, punctuation and connecting words such as "and"), so deleting the
+/// line removes no project-specific instruction.
+pub fn is_only_redundant_instruction(line: &str) -> bool {
+    let without_marker = list_marker_pattern().replace(line, "");
+    let without_phrases = redundant_instruction_pattern().replace_all(&without_marker, " ");
+    let without_fillers = filler_word_pattern().replace_all(&without_phrases, " ");
+    !without_fillers.chars().any(char::is_alphanumeric)
 }
 
 /// Find redundant generic instructions that LLMs already follow by default
@@ -409,6 +322,31 @@ pub struct NegativeOnlyInstruction {
     pub text: String,
 }
 
+/// True when `rest` holds a second clause of at least two words after a
+/// clause separator.
+fn has_second_clause(rest: &str) -> bool {
+    [
+        " - ",
+        " — ",
+        " – ",
+        "; ",
+        ": ",
+        ". ",
+        ", instead",
+        ", so ",
+        " because ",
+    ]
+    .iter()
+    .filter_map(|separator| rest.find(separator).map(|i| &rest[i + separator.len()..]))
+    .any(|clause| {
+        clause
+            .split_whitespace()
+            .filter(|w| w.chars().any(char::is_alphanumeric))
+            .count()
+            >= 2
+    })
+}
+
 /// Find negative instructions that lack a positive alternative
 ///
 /// Instructions are more effective when they tell the LLM what to do
@@ -442,6 +380,13 @@ pub fn find_negative_only_instructions(content: &str) -> Vec<NegativeOnlyInstruc
         }
 
         if let Some(mat) = neg_pattern.find(line) {
+            // A second clause after a dash, semicolon, colon or full stop
+            // gives the alternative or the reason ("NEVER assume - always
+            // verify with tests"; "Don't add fallbacks. Fail loud."), which
+            // is what the guidance asks for.
+            if has_second_clause(&line[mat.end()..]) {
+                continue;
+            }
             // Check current line and next 2 lines for positive alternative,
             // but skip lines inside fenced code blocks
             let window_end = (line_num + 3).min(lines.len());
@@ -476,71 +421,16 @@ mod tests {
 
     #[test]
     fn test_regex_patterns_compile() {
-        let _ = critical_keyword_pattern();
         let _ = cot_phrase_pattern();
         let _ = simple_task_indicator_pattern();
-        let _ = weak_language_pattern();
-        let _ = critical_section_pattern();
         let _ = ambiguous_term_pattern();
+        let _ = directive_word_pattern();
+        let _ = imperative_start_pattern();
         let _ = redundant_instruction_pattern();
+        let _ = list_marker_pattern();
+        let _ = filler_word_pattern();
         let _ = negative_only_pattern();
         let _ = positive_alternative_pattern();
-    }
-
-    // ===== PE-001: Critical Content in Middle =====
-
-    #[test]
-    fn test_find_critical_in_middle() {
-        // Create 20 lines with "critical" at line 10 (50%)
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[10] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let results = find_critical_in_middle_pe(&content);
-        assert_eq!(results.len(), 1);
-        assert!(results[0].position_percent > 40.0);
-        assert!(results[0].position_percent < 60.0);
-        assert_eq!(results[0].keyword.to_lowercase(), "critical");
-    }
-
-    #[test]
-    fn test_critical_at_top_no_issue() {
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[1] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let results = find_critical_in_middle_pe(&content);
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_critical_at_bottom_no_issue() {
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[18] = "This is critical information.".to_string();
-        let content = lines.join("\n");
-
-        let results = find_critical_in_middle_pe(&content);
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_short_document_skipped() {
-        let content = "Critical info here.\nAnother line.";
-        let results = find_critical_in_middle_pe(content);
-        // Document too short (< 10 lines)
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_multiple_keywords_in_middle() {
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[9] = "This is important and essential.".to_string();
-        lines[10] = "This is critical and mandatory.".to_string();
-        let content = lines.join("\n");
-
-        let results = find_critical_in_middle_pe(&content);
-        // Should find multiple keywords in the middle zone
-        assert!(results.len() >= 2);
     }
 
     // ===== PE-002: Chain-of-Thought on Simple Tasks =====
@@ -598,74 +488,6 @@ Read the file and return its contents.
         // Simple task but no CoT, so no issue
         let results = find_cot_on_simple_tasks(content);
         assert!(results.is_empty());
-    }
-
-    // ===== PE-003: Weak Imperative Language =====
-
-    #[test]
-    fn test_weak_language_in_critical_section() {
-        let content = r#"# Critical Rules
-
-You should follow the coding style.
-Code could be formatted better.
-"#;
-        let results = find_weak_imperative_language(content);
-        assert_eq!(results.len(), 2);
-        assert!(
-            results
-                .iter()
-                .any(|r| r.weak_term.to_lowercase() == "should")
-        );
-        assert!(
-            results
-                .iter()
-                .any(|r| r.weak_term.to_lowercase() == "could")
-        );
-    }
-
-    #[test]
-    fn test_weak_language_outside_critical_section() {
-        let content = r#"# General Guidelines
-
-You should follow the coding style.
-"#;
-        // Not in a critical section
-        let results = find_weak_imperative_language(content);
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_weak_language_section_boundary() {
-        let content = r#"# Important Security Rules
-
-You should sanitize inputs.
-
-# Other Info
-
-You could do this too.
-"#;
-        let results = find_weak_imperative_language(content);
-        // Only "should" in critical section should be flagged
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].weak_term.to_lowercase(), "should");
-    }
-
-    #[test]
-    fn test_multiple_critical_sections() {
-        let content = r#"# Critical Rules
-
-You should do A.
-
-# General Section
-
-Normal content.
-
-# Mandatory Requirements
-
-You might want to consider B.
-"#;
-        let results = find_weak_imperative_language(content);
-        assert_eq!(results.len(), 2);
     }
 
     // ===== PE-004: Ambiguous Instructions =====
@@ -736,96 +558,15 @@ Never include sensitive data.
 
     #[test]
     fn test_ambiguous_context_captured() {
-        let content = "This rule is generally applicable to all files.";
+        // An instruction: "This rule is generally applicable" alone is a
+        // description and is not reported any more.
+        let content = "Apply this rule generally to all files.";
         let results = find_ambiguous_instructions(content);
         assert_eq!(results.len(), 1);
         assert!(results[0].context.contains("generally"));
     }
 
     // ===== Boundary Condition Tests =====
-
-    #[test]
-    fn test_pe_001_exactly_ten_lines_boundary() {
-        let lines: Vec<String> = (0..10).map(|i| format!("Line {}", i)).collect();
-        let content = lines.join("\n");
-
-        let results = find_critical_in_middle_pe(&content);
-        // No critical keyword in this content, so should be empty
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_pe_001_nine_lines_under_minimum() {
-        let lines: Vec<String> = (0..9).map(|i| format!("Line {}", i)).collect();
-        let content = lines.join("\n");
-
-        let results = find_critical_in_middle_pe(&content);
-        // Should be empty because content is shorter than 10 lines
-        assert!(results.is_empty());
-    }
-
-    #[test]
-    fn test_pe_001_eleven_lines_just_above_minimum() {
-        let mut lines: Vec<String> = (0..11).map(|i| format!("Line {}", i)).collect();
-        lines[5] = "This is critical information at 45%.".to_string();
-        let content = lines.join("\n");
-
-        let results = find_critical_in_middle_pe(&content);
-        // Line 5 out of 11 = 45%, which is in the 40-60% zone
-        assert_eq!(results.len(), 1);
-        assert!(results[0].position_percent >= 40.0 && results[0].position_percent <= 60.0);
-    }
-
-    #[test]
-    fn test_pe_003_word_boundary_hypercritical() {
-        let content = r#"# Hypercritical Information
-
-You should do X.
-"#;
-        let results = find_weak_imperative_language(content);
-        // With word boundaries, "Hypercritical" should NOT match "critical"
-        // so this should not be detected as a critical section
-        assert!(
-            results.is_empty(),
-            "Hypercritical should not match critical with word boundaries"
-        );
-    }
-
-    #[test]
-    fn test_pe_003_critical_case_insensitive() {
-        let content = r#"# CRITICAL INFORMATION
-
-You should do X.
-"#;
-        let results = find_weak_imperative_language(content);
-        // Should match despite case difference
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].weak_term.to_lowercase(), "should");
-    }
-
-    #[test]
-    fn test_pe_003_important_header_detected() {
-        let content = r#"# Important Configuration
-
-You should enable this.
-"#;
-        let results = find_weak_imperative_language(content);
-        // "Important" should trigger critical section recognition
-        assert_eq!(results.len(), 1);
-        assert!(results[0].section_name.to_lowercase().contains("important"));
-    }
-
-    #[test]
-    fn test_pe_003_required_header_detected() {
-        let content = r#"# Required Fields
-
-Code could be cleaner.
-"#;
-        let results = find_weak_imperative_language(content);
-        // "Required" should trigger critical section
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].weak_term.to_lowercase(), "could");
-    }
 
     #[test]
     fn test_pe_004_inline_code_backticks_still_flagged() {
@@ -852,61 +593,7 @@ Code could be cleaner.
         assert!(results.is_empty());
     }
 
-    #[test]
-    fn test_empty_string_all_validators() {
-        let empty = "";
-
-        let critical = find_critical_in_middle_pe(empty);
-        let cot = find_cot_on_simple_tasks(empty);
-        let weak = find_weak_imperative_language(empty);
-        let ambiguous = find_ambiguous_instructions(empty);
-
-        assert!(
-            critical.is_empty(),
-            "Empty content should have no critical in middle"
-        );
-        assert!(cot.is_empty(), "Empty content should have no CoT issues");
-        assert!(
-            weak.is_empty(),
-            "Empty content should have no weak language"
-        );
-        assert!(
-            ambiguous.is_empty(),
-            "Empty content should have no ambiguous terms"
-        );
-    }
-
-    #[test]
-    fn test_single_line_all_validators() {
-        let single = "This is critical.";
-
-        let critical = find_critical_in_middle_pe(single);
-        let cot = find_cot_on_simple_tasks(single);
-        let weak = find_weak_imperative_language(single);
-        let ambiguous = find_ambiguous_instructions(single);
-
-        // Single line is too short for PE-001 (< 10 lines)
-        assert!(critical.is_empty());
-        // No simple task or CoT phrase
-        assert!(cot.is_empty());
-        // No critical section header
-        assert!(weak.is_empty());
-        // No ambiguous terms in this specific line
-        assert!(ambiguous.is_empty());
-    }
-
     // ===== CRLF byte offset tests =====
-
-    #[test]
-    fn test_pe_003_crlf_locations() {
-        let content = "# Critical Rules\r\n\r\nYou should follow the style.\r\nAnother line.\r\n";
-        let results = find_weak_imperative_language(content);
-        assert_eq!(results.len(), 1);
-        assert_eq!(results[0].weak_term.to_lowercase(), "should");
-        assert_eq!(results[0].line, 3);
-        assert_eq!(results[0].column, 5);
-        assert_eq!(results[0].section_name, "Critical Rules");
-    }
 
     #[test]
     fn test_pe_005_crlf_byte_offsets() {
@@ -925,34 +612,10 @@ Code could be cleaner.
     // ===== ReDoS Protection Tests =====
 
     #[test]
-    fn test_find_critical_in_middle_oversized_input() {
-        // Create content larger than MAX_REGEX_INPUT_SIZE (65536 bytes)
-        let large_content = "a".repeat(MAX_REGEX_INPUT_SIZE + 1000);
-        let results = find_critical_in_middle_pe(&large_content);
-        // Should return empty to prevent ReDoS
-        assert!(
-            results.is_empty(),
-            "Oversized content should be skipped for ReDoS protection"
-        );
-    }
-
-    #[test]
     fn test_find_cot_on_simple_tasks_oversized_input() {
         // Create content larger than MAX_REGEX_INPUT_SIZE
         let large_content = "a".repeat(MAX_REGEX_INPUT_SIZE + 1000);
         let results = find_cot_on_simple_tasks(&large_content);
-        // Should return empty to prevent ReDoS
-        assert!(
-            results.is_empty(),
-            "Oversized content should be skipped for ReDoS protection"
-        );
-    }
-
-    #[test]
-    fn test_find_weak_imperative_language_oversized_input() {
-        // Create content larger than MAX_REGEX_INPUT_SIZE
-        let large_content = "a".repeat(MAX_REGEX_INPUT_SIZE + 1000);
-        let results = find_weak_imperative_language(&large_content);
         // Should return empty to prevent ReDoS
         assert!(
             results.is_empty(),
@@ -983,18 +646,86 @@ Code could be cleaner.
     }
 
     #[test]
-    fn test_find_redundant_be_concise() {
-        let content = "# Rules\n\nBe concise in your responses.";
-        let results = find_redundant_instructions(content);
-        assert_eq!(results.len(), 1);
-        assert!(results[0].phrase.to_lowercase().contains("be concise"));
+    fn test_response_length_instructions_are_not_redundant() {
+        // Anthropic: "Prompt explicitly for conciseness instead" (Opus 5);
+        // Gemini's sample GEMINI.md: "Be concise."
+        for content in [
+            "Be concise in your responses.",
+            "Be thorough when reviewing.",
+            "Be detailed.",
+        ] {
+            assert!(find_redundant_instructions(content).is_empty(), "{content}");
+        }
+    }
+
+    #[test]
+    fn test_find_write_clean_code() {
+        // best-practices Exclude column: "Self-evident practices like "write
+        // clean code""; Windsurf: "generic rules (e.g. "write good code")".
+        for content in ["- Write clean code.", "Always write good code"] {
+            let results = find_redundant_instructions(content);
+            assert_eq!(results.len(), 1, "{content}");
+        }
     }
 
     #[test]
     fn test_find_multiple_redundant() {
-        let content = "Be helpful.\nBe accurate.\nBe concise.";
+        let content = "Be helpful.\nBe accurate.\nWrite clean code.";
         let results = find_redundant_instructions(content);
         assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn test_is_only_redundant_instruction() {
+        assert!(is_only_redundant_instruction("Be helpful."));
+        assert!(is_only_redundant_instruction("- Be helpful and accurate."));
+        assert!(is_only_redundant_instruction("1. Always write clean code!"));
+        assert!(!is_only_redundant_instruction(
+            "Be helpful and accurate when responding."
+        ));
+        assert!(!is_only_redundant_instruction(
+            "Be precise about file paths: use absolute paths."
+        ));
+    }
+
+    #[test]
+    fn test_ambiguous_terms_only_in_instructions() {
+        // Descriptions and tables are not instructions.
+        for content in [
+            "Integration tests generally require running Valkey services.",
+            "| \"skill fires too often\" | best-practices.md |",
+            "## Usually asked questions",
+            "That can typically be done without any performance cost.",
+        ] {
+            assert!(find_ambiguous_instructions(content).is_empty(), "{content}");
+        }
+        for content in [
+            "- Commit frequently with meaningful messages",
+            "Usually format output as JSON.",
+            "If possible, write tests.",
+            "You should usually run the linter.",
+        ] {
+            assert_eq!(find_ambiguous_instructions(content).len(), 1, "{content}");
+        }
+    }
+
+    #[test]
+    fn test_negative_with_reason_or_alternative_clause() {
+        for content in [
+            "- NEVER assume - always verify with tests and benchmarks",
+            "- Don't add fallback paths. Fail loud on upload errors.",
+            "Do not edit generated files; regenerate them with make gen.",
+            "Never push to main because CI deploys it immediately.",
+        ] {
+            assert!(
+                find_negative_only_instructions(content).is_empty(),
+                "{content}"
+            );
+        }
+        assert_eq!(
+            find_negative_only_instructions("- Don't add compatibility shims.").len(),
+            1
+        );
     }
 
     #[test]
@@ -1139,47 +870,6 @@ Code could be cleaner.
     // ===== Precise Boundary Tests for MAX_REGEX_INPUT_SIZE =====
 
     #[test]
-    fn test_find_critical_in_middle_exactly_at_64kb_limit() {
-        // Build 20 lines with "critical" at line 10. The filler appended below contains no
-        // newlines, so total_lines = 20; line 10 is at exactly 50.0%, within the 40-60% middle zone.
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[10] = "This is critical information.".to_string();
-        let base = lines.join("\n");
-        // Pad final line to reach exactly MAX_REGEX_INPUT_SIZE
-        let needed = MAX_REGEX_INPUT_SIZE - base.len();
-        let content = format!("{}{}", base, "a".repeat(needed));
-        assert_eq!(
-            content.len(),
-            MAX_REGEX_INPUT_SIZE,
-            "Content must be exactly at the limit"
-        );
-        let results = find_critical_in_middle_pe(&content);
-        assert!(
-            !results.is_empty(),
-            "Content at exactly the limit should be processed"
-        );
-    }
-
-    #[test]
-    fn test_find_critical_in_middle_one_byte_over_limit() {
-        let mut lines: Vec<String> = (0..20).map(|i| format!("Line {}", i)).collect();
-        lines[10] = "This is critical information.".to_string();
-        let base = lines.join("\n");
-        let needed = MAX_REGEX_INPUT_SIZE - base.len() + 1;
-        let content = format!("{}{}", base, "a".repeat(needed));
-        assert_eq!(
-            content.len(),
-            MAX_REGEX_INPUT_SIZE + 1,
-            "Content must be one byte over the limit"
-        );
-        let results = find_critical_in_middle_pe(&content);
-        assert!(
-            results.is_empty(),
-            "Content one byte over the limit should be skipped"
-        );
-    }
-
-    #[test]
     fn test_find_cot_on_simple_tasks_exactly_at_64kb_limit() {
         // "read the file" near "think step by step" within 5 lines
         let base = "When you read the file, think step by step.\n";
@@ -1208,41 +898,6 @@ Code could be cleaner.
             "Content must be one byte over the limit"
         );
         let results = find_cot_on_simple_tasks(&content);
-        assert!(
-            results.is_empty(),
-            "Content one byte over the limit should be skipped"
-        );
-    }
-
-    #[test]
-    fn test_find_weak_imperative_language_exactly_at_64kb_limit() {
-        // Need a critical section header followed by weak language
-        let base = "# Critical Rules\nYou should follow the style.\n";
-        let needed = MAX_REGEX_INPUT_SIZE - base.len();
-        let content = format!("{}{}", base, "a".repeat(needed));
-        assert_eq!(
-            content.len(),
-            MAX_REGEX_INPUT_SIZE,
-            "Content must be exactly at the limit"
-        );
-        let results = find_weak_imperative_language(&content);
-        assert!(
-            !results.is_empty(),
-            "Content at exactly the limit should be processed"
-        );
-    }
-
-    #[test]
-    fn test_find_weak_imperative_language_one_byte_over_limit() {
-        let base = "# Critical Rules\nYou should follow the style.\n";
-        let needed = MAX_REGEX_INPUT_SIZE - base.len() + 1;
-        let content = format!("{}{}", base, "a".repeat(needed));
-        assert_eq!(
-            content.len(),
-            MAX_REGEX_INPUT_SIZE + 1,
-            "Content must be one byte over the limit"
-        );
-        let results = find_weak_imperative_language(&content);
         assert!(
             results.is_empty(),
             "Content one byte over the limit should be skipped"

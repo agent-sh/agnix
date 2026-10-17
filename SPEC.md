@@ -9,13 +9,13 @@
 |------|-------|-------|
 | Skills | SKILL.md | 33 |
 | Hooks | settings.json | 26 |
-| Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 10 |
+| Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 15 |
 | Instructions (Cross-Tool) | AGENTS.md, AGENTS.local.md, AGENTS.override.md | 5 |
 | Agents | agents/*.md | 18 |
 | Plugins | plugin.json | 17 |
 | Claude Output Styles | .claude/output-styles/*.md | 6 |
-| Claude Settings | .claude/settings.json | 33 |
-| Prompt Engineering | CLAUDE.md, AGENTS.md | 6 |
+| Claude Settings | .claude/settings.json | 35 |
+| Prompt Engineering | CLAUDE.md, AGENTS.md | 4 |
 | Cross-Platform | AGENTS.md | 11 |
 | MCP | tool definitions | 25 |
 | XML | all .md files | 3 |
@@ -174,7 +174,6 @@ All rules in `knowledge-base/VALIDATION-RULES.md`
 | PE-005 | WARN | Redundant generic instruction detected |
 | AGM-003 | WARN | Character limit exceeded (12000 chars) |
 | AGM-005 | WARN | Platform features without guard |
-| PE-001 | INFO | Critical content in middle |
 | PE-002 | INFO | Chain-of-thought on simple task |
 | CC-AG-001 | ERROR | Missing agent name field |
 | CC-AG-002 | ERROR | Missing agent description field |
@@ -187,7 +186,7 @@ All rules in `knowledge-base/VALIDATION-RULES.md`
 | CC-PL-003 | WARNING | Optional semver advice for dependency compatibility |
 | CC-PL-004 | ERROR/WARN | Missing required/recommended plugin field |
 | CC-PL-005 | ERROR | Empty plugin name |
-| XML-001 | ERROR | Unclosed XML tag |
+| XML-001 | WARN | Unclosed XML tag |
 ## CLI
 
 ```bash
@@ -257,7 +256,7 @@ exclude = ["node_modules/**", ".git/**", "target/**"]
 # Multiple blocks stack (set union); ordering does not matter.
 [[overrides]]
 paths = ["CLAUDE.md", "AGENTS.md"]
-disabled_rules = ["PE-003"]
+disabled_rules = ["PE-004"]
 ```
 
 ### Per-File Rule Overrides

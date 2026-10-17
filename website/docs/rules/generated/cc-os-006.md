@@ -13,7 +13,7 @@ keywords: ["CC-OS-006", "invalid output style frontmatter syntax", "claude-outpu
 - **Category**: `claude-output-styles`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

@@ -28,7 +28,7 @@ disabled_rules = []
 | `severity` | string | `Warning` | Minimum severity level: `Warning`, `Error`, or `Info` |
 | `max_files_to_validate` | int | `10000` | Maximum files to scan |
 | `locale` | string | `"en"` | Output locale |
-| `[rules].disabled_rules` | string[] | `[]` | Rule IDs to skip (e.g. `["PE-003"]`) |
+| `[rules].disabled_rules` | string[] | `[]` | Rule IDs to skip (e.g. `["PE-004"]`) |
 | `[rules].disabled_validators` | string[] | `[]` | Validator names to skip |
 | `[files]` | table | default excludes | Include or exclude non-standard files |
 | `[[overrides]]` | table array | `[]` | Per-file disabled rule overrides |

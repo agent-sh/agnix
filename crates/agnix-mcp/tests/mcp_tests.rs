@@ -352,7 +352,8 @@ mod rules_tests {
         assert!(agnix_rules::get_rule_name("AS-001").is_some());
         assert!(agnix_rules::get_rule_name("AS-004").is_some());
         assert!(agnix_rules::get_rule_name("CC-SK-001").is_some());
-        assert!(agnix_rules::get_rule_name("PE-001").is_some());
+        // PE-001 is retired; PE-004 is a current prompt-engineering rule.
+        assert!(agnix_rules::get_rule_name("PE-004").is_some());
         assert!(agnix_rules::get_rule_name("MCP-001").is_some());
     }
 }
@@ -402,7 +403,7 @@ mod output_format_tests {
             column: 10,
             end_line: None,
             end_column: None,
-            rule: "PE-003".to_string(),
+            rule: "PE-004".to_string(),
             suggestion: Some("Remove this".to_string()),
             fixes: vec![Fix {
                 start_byte: 0,

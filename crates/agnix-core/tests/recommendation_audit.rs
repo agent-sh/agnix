@@ -6,8 +6,9 @@ fn other_recommendations_are_informational() {
     let mut lines = vec!["Ordinary project guidance."; 20];
     lines[1] = "Read the file and think step by step.";
     lines[10] = "This is critical information.";
+    // PE-001 is retired (no vendor source); PE-002 stays informational.
     let cases = [
-        ("CLAUDE.md", lines.join("\n"), vec!["PE-001", "PE-002"]),
+        ("CLAUDE.md", lines.join("\n"), vec!["PE-002"]),
         (
             "AGENTS.md",
             "# Instructions\n- type: PreToolExecution\n  command: echo test\n".to_string(),
@@ -88,19 +89,25 @@ fn supported_agents_hierarchy_is_not_a_defect() {
 fn prose_recommendations_are_info_without_rewriting_fixes() {
     let dir = TempDir::new().unwrap();
     let path = dir.path().join("CLAUDE.md");
+    // CC-MEM-007 and PE-003 pushed for stronger wording and are retired;
+    // CC-MEM-017 now reports emphasis on many lines, as advice only.
     fs::write(
         &path,
-        "# Critical Rules\nYou should follow the style guide.\n",
+        "# Critical Rules\nYou should follow the style guide.\n- IMPORTANT: a\n- IMPORTANT: b\n- IMPORTANT: c\n- IMPORTANT: d\n- IMPORTANT: e\n- IMPORTANT: f\n",
     )
     .unwrap();
     let result = validate_file(&path, &LintConfig::default()).unwrap();
     for rule in ["CC-MEM-007", "PE-003"] {
-        let diag = result
-            .diagnostics()
-            .iter()
-            .find(|d| d.rule == rule)
-            .unwrap();
-        assert_eq!(diag.level, DiagnosticLevel::Info, "{rule}");
-        assert!(diag.fixes.is_empty(), "{rule} must not rewrite prose");
+        assert!(
+            !result.diagnostics().iter().any(|d| d.rule == rule),
+            "{rule} is retired"
+        );
     }
+    let diag = result
+        .diagnostics()
+        .iter()
+        .find(|d| d.rule == "CC-MEM-017")
+        .unwrap();
+    assert_eq!(diag.level, DiagnosticLevel::Info);
+    assert!(diag.fixes.is_empty(), "CC-MEM-017 must not rewrite prose");
 }

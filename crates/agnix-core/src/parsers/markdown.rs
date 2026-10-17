@@ -297,6 +297,13 @@ pub(crate) fn mask_code_spans(content: &str) -> String {
     mask_code(content, HtmlCommentMode::Preserve, b' ')
 }
 
+/// Like [`mask_code_spans`], but HTML comments are masked too. Claude Code
+/// strips block-level HTML comments from CLAUDE.md before Claude reads it, so
+/// prose checks on memory files look at neither code nor comments.
+pub(crate) fn mask_code_and_html_comments(content: &str) -> String {
+    mask_code(content, HtmlCommentMode::Skip, b' ')
+}
+
 /// Return `content` with every byte inside code, and inside HTML comments when
 /// `comment_mode` is `Skip`, replaced by the ASCII byte `fill`. Line breaks are
 /// kept, so offsets, lines and columns match the input.
@@ -934,6 +941,12 @@ fn scan_imports_in_text(
             let mut j = start;
             while j < bytes.len() {
                 let b = bytes[j];
+                // Claude Code: "To import a file whose path contains spaces,
+                // put a backslash before each space."
+                if b == b'\\' && bytes.get(j + 1) == Some(&b' ') {
+                    j += 2;
+                    continue;
+                }
                 let allowed = b.is_ascii_alphanumeric()
                     || matches!(b, b'_' | b'-' | b'.' | b'/' | b'\\' | b':' | b'~');
                 if !allowed {
@@ -962,7 +975,7 @@ fn scan_imports_in_text(
                 continue;
             }
 
-            let path = text[start..end].to_string();
+            let path = text[start..end].replace("\\ ", " ");
             if !is_probable_import_path(&path) {
                 i = j;
                 continue;
@@ -1323,6 +1336,18 @@ mod tests {
         assert_eq!(imports.len(), 2);
         assert_eq!(imports[0].path, "docs/guide.md");
         assert_eq!(imports[1].path, "README.md");
+    }
+
+    #[test]
+    fn test_extract_imports_backslash_escaped_spaces() {
+        // Claude Code memory "Import additional files": "To import a file whose
+        // path contains spaces, put a backslash before each space."
+        let imports = extract_imports("- API conventions @Design\\ Docs/api-conventions.md\n");
+        assert_eq!(imports.len(), 1);
+        assert_eq!(imports[0].path, "Design Docs/api-conventions.md");
+        // Without the backslash the path ends at the first space.
+        let imports = extract_imports("- see @docs/a.md now\n");
+        assert_eq!(imports[0].path, "docs/a.md");
     }
 
     #[test]

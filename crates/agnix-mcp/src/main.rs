@@ -145,7 +145,7 @@ impl schemars::JsonSchema for ToolsInput {
 pub struct GetRuleDocsInput {
     /// Rule ID
     #[schemars(
-        description = "Rule ID to look up documentation for. Format: PREFIX-NUMBER (e.g., 'AS-004', 'CC-SK-001', 'PE-003', 'MCP-001')"
+        description = "Rule ID to look up documentation for. Format: PREFIX-NUMBER (e.g., 'AS-004', 'CC-SK-001', 'PE-004', 'MCP-001')"
     )]
     pub rule_id: String,
 }
@@ -603,7 +603,7 @@ impl AgnixServer {
 
     /// Get documentation for a specific rule
     #[tool(
-        description = "Get the name of a specific validation rule by ID. Rule IDs follow patterns like AS-004 (Agent Skills), CC-SK-001 (Claude Code Skills), PE-003 (Prompt Engineering), MCP-001 (Model Context Protocol)."
+        description = "Get the name of a specific validation rule by ID. Rule IDs follow patterns like AS-004 (Agent Skills), CC-SK-001 (Claude Code Skills), PE-004 (Prompt Engineering), MCP-001 (Model Context Protocol)."
     )]
     async fn get_rule_docs(
         &self,

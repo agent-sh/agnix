@@ -89,10 +89,8 @@
     {
       "id": "CC-MEM-008",
       "removed_in": "0.58.0",
-      "reason": "Duplicate content-placement advice is covered by PE-001 and is not a loader constraint.",
-      "replaced_by": [
-        "PE-001"
-      ]
+      "reason": "Duplicate content-placement advice is not a loader constraint.",
+      "replaced_by": []
     },
     {
       "id": "AGM-006",
@@ -235,6 +233,82 @@
       "reason": "Unreachable: SKILL.md files are detected as Agent Skills, and AS-003 reports a missing description.",
       "replaced_by": [
         "AS-003"
+      ]
+    },
+    {
+      "id": "CC-MEM-007",
+      "removed_in": "0.59.0",
+      "reason": "It pushed for stronger constraint wording, which Anthropic's current prompting guidance advises against. CC-MEM-017 reports emphasis overuse instead.",
+      "replaced_by": [
+        "CC-MEM-017"
+      ]
+    },
+    {
+      "id": "PE-003",
+      "removed_in": "0.59.0",
+      "reason": "It pushed for stronger imperative wording, which Anthropic's current prompting guidance advises against. CC-MEM-017 reports emphasis overuse instead.",
+      "replaced_by": [
+        "CC-MEM-017"
+      ]
+    },
+    {
+      "id": "CC-MEM-009",
+      "removed_in": "0.59.0",
+      "reason": "Its 1,500-token budget had no source, and its fix advised @imports, which still load at startup. CC-MEM-014 checks the documented 200-line guidance.",
+      "replaced_by": [
+        "CC-MEM-014"
+      ]
+    },
+    {
+      "id": "PE-001",
+      "removed_in": "0.59.0",
+      "reason": "No vendor documents the lost-in-the-middle placement heuristic for instruction files, and it produced hundreds of info findings on real configs.",
+      "replaced_by": []
+    },
+    {
+      "id": "CC-OS-005",
+      "removed_in": "0.59.0",
+      "reason": "Claude Code documents no length limit for output style names.",
+      "replaced_by": []
+    },
+    {
+      "id": "CC-SET-014",
+      "removed_in": "0.59.0",
+      "reason": "Folded into CC-SET-034, which reports every settings key ignored at its scope from the settings reference.",
+      "replaced_by": [
+        "CC-SET-034"
+      ]
+    },
+    {
+      "id": "CC-SET-015",
+      "removed_in": "0.59.0",
+      "reason": "Folded into CC-SET-034, which reports every settings key ignored at its scope from the settings reference.",
+      "replaced_by": [
+        "CC-SET-034"
+      ]
+    },
+    {
+      "id": "CC-SET-021",
+      "removed_in": "0.59.0",
+      "reason": "Folded into CC-SET-034, which reports every settings key ignored at its scope from the settings reference.",
+      "replaced_by": [
+        "CC-SET-034"
+      ]
+    },
+    {
+      "id": "CC-SET-024",
+      "removed_in": "0.59.0",
+      "reason": "Folded into CC-SET-034, which reports every settings key ignored at its scope from the settings reference.",
+      "replaced_by": [
+        "CC-SET-034"
+      ]
+    },
+    {
+      "id": "CC-SET-032",
+      "removed_in": "0.59.0",
+      "reason": "Folded into CC-SET-034, which reports every settings key ignored at its scope from the settings reference.",
+      "replaced_by": [
+        "CC-SET-034"
       ]
     }
   ]

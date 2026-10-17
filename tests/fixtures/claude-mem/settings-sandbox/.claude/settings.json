@@ -1,0 +1,13 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "enableWeakerNestedSandbox": true,
+    "excludedCommands": ["docker *"],
+    "network": {
+      "allowUnixSockets": ["/var/run/docker.sock"]
+    },
+    "filesystem": {
+      "allowWrite": ["~/.zshrc"]
+    }
+  }
+}

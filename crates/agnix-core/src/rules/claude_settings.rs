@@ -18,17 +18,14 @@
 //! - `respondToBashCommands` boolean check (CC-SET-011, added in Claude Code v2.1.186).
 //! - `sandbox.credentials` shape check (CC-SET-012, added in Claude Code v2.1.187).
 //! - `autoMode.classifyAllShell` boolean check (CC-SET-013, added in Claude Code v2.1.193).
-//! - autoMode ignored in settings.local.json (CC-SET-014, changed in Claude Code v2.1.207).
-//! - pluginConfigs dead in project-level settings (CC-SET-015, changed in Claude Code v2.1.207).
-//! - deprecated Write/NotebookEdit/Glob permission-rule forms (CC-SET-016, added in Claude Code v2.1.210).
+//! - path rules on Write/NotebookEdit/MultiEdit/Glob, which Claude Code never
+//!   consults (CC-SET-016).
 //! - `sandbox.filesystem.disabled` boolean check (CC-SET-017, added in Claude Code v2.1.216).
 //! - `emojiCompletionEnabled` boolean check (CC-SET-018, added in Claude Code v2.1.217).
 //! - `sandbox.network.strictAllowlist` boolean check (CC-SET-019, added in Claude Code v2.1.219).
 //! - `workflowSizeGuideline` enum check (CC-SET-020, added in Claude Code v2.1.219).
-//! - ineffective project-level `remoteControlAtStartup: true` (CC-SET-021, changed in Claude Code v2.1.222).
 //! - `crossSessionInbound` enum check (CC-SET-022, added in Claude Code v2.1.224).
 //! - `dialogExpiry` enum check (CC-SET-023, added in Claude Code v2.1.224).
-//! - ineffective project-level `sandbox.ripgrep` (CC-SET-024, changed in Claude Code v2.1.232).
 //! - `modelPicker` scope and shape (CC-SET-025, added in Claude Code v2.1.242).
 //! - `promptCacheTtl` enum (CC-SET-026, added in Claude Code v2.1.242).
 //! - `subagentPromptCacheTtl` enum (CC-SET-027, added in Claude Code v2.1.242).
@@ -39,10 +36,20 @@
 //!   Claude Code v2.1.259).
 //! - `maxEffortLevel` and per-model caps use the documented effort enum
 //!   (CC-SET-031, added in Claude Code v2.1.267).
-//! - `allowedProviders` only takes effect in managed settings (CC-SET-032,
-//!   added in Claude Code v2.1.285).
 //! - `idleCompaction` boolean check (CC-SET-033, added in Claude Code v2.1.290;
 //!   surfaced by the v2.1.299 release notes).
+//! - keys and values Claude Code ignores in the file that sets them
+//!   (CC-SET-034, `scope.rs`). It replaced the per-key CC-SET-014 (autoMode),
+//!   CC-SET-015 (pluginConfigs), CC-SET-021 (remoteControlAtStartup),
+//!   CC-SET-024 (sandbox.ripgrep) and CC-SET-032 (allowedProviders), and the
+//!   type checks above skip keys it reports.
+//! - permission rules Claude Code skips or reads differently (CC-SET-035),
+//!   broad code-execution allow rules (CC-SET-036) and secret files with no
+//!   Read deny rule (CC-SET-039), in `permission_rules.rs`.
+//! - sandbox settings that weaken the sandbox from a repository (CC-SET-037,
+//!   `sandbox_weakening.rs`).
+//! - `claudeMdExcludes` and `autoMemoryDirectory` path shapes (CC-SET-040) and
+//!   `outputStyle` case (CC-OS-007), in `paths_and_styles.rs`.
 //!
 //! Runs on FileType::Hooks (which covers `.claude/settings.json` -
 //! see `file_types/detection.rs`). Skips non-Claude Code settings paths
@@ -57,7 +64,17 @@ use crate::{
 use rust_i18n::t;
 use std::{collections::HashMap, path::Path};
 
+mod paths_and_styles;
+mod permission_rules;
+mod sandbox_weakening;
+mod scope;
+#[cfg(test)]
+mod tests_new_rules;
+
+use scope::SettingsScope;
+
 const RULE_IDS: &[&str] = &[
+    "CC-OS-007",
     "CC-SET-001",
     "CC-SET-002",
     "CC-SET-003",
@@ -71,17 +88,13 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-011",
     "CC-SET-012",
     "CC-SET-013",
-    "CC-SET-014",
-    "CC-SET-015",
     "CC-SET-016",
     "CC-SET-017",
     "CC-SET-018",
     "CC-SET-019",
     "CC-SET-020",
-    "CC-SET-021",
     "CC-SET-022",
     "CC-SET-023",
-    "CC-SET-024",
     "CC-SET-025",
     "CC-SET-026",
     "CC-SET-027",
@@ -89,8 +102,13 @@ const RULE_IDS: &[&str] = &[
     "CC-SET-029",
     "CC-SET-030",
     "CC-SET-031",
-    "CC-SET-032",
     "CC-SET-033",
+    "CC-SET-034",
+    "CC-SET-035",
+    "CC-SET-036",
+    "CC-SET-037",
+    "CC-SET-039",
+    "CC-SET-040",
 ];
 
 /// Allowed values for `worktree.baseRef` per Claude Code v2.1.133 release notes.
@@ -167,12 +185,32 @@ impl Validator for ClaudeSettingsValidator {
         let Ok(value) = serde_json::from_str::<serde_json::Value>(content) else {
             return diagnostics;
         };
+        // The same document with source spans, for rules that point at a key
+        // or value.
+        let Ok(document) = crate::schemas::kiro_json::parse_json_document(content, false) else {
+            return diagnostics;
+        };
+        let root = &document.root;
+        let file_scope = settings_scope(path);
+        let fs = config.fs().as_ref();
+
+        // CC-SET-034 first: a key Claude Code ignores in this file gets the
+        // scope finding, not a type error on a value that has no effect.
+        let ignored = scope::check_ignored_at_scope(
+            path,
+            content,
+            root,
+            file_scope,
+            config.is_rule_enabled("CC-SET-034"),
+            &mut diagnostics,
+        );
+        let applies = |rule: &str, key: &str| config.is_rule_enabled(rule) && !ignored.covers(key);
 
         if config.is_rule_enabled("CC-SET-001") {
             validate_pr_url_template(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-002") {
+        if applies("CC-SET-002", "channelsEnabled") {
             validate_channels_enabled(path, content, &value, &mut diagnostics);
         }
 
@@ -180,11 +218,12 @@ impl Validator for ClaudeSettingsValidator {
             validate_worktree_base_ref(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-004") {
-            validate_sandbox_paths(path, content, &value, &mut diagnostics);
+        if applies("CC-SET-004", "sandbox.bwrapPath") || applies("CC-SET-004", "sandbox.socatPath")
+        {
+            validate_sandbox_paths(path, content, &value, &ignored, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-005") {
+        if applies("CC-SET-005", "parentSettingsBehavior") {
             validate_parent_settings_behavior(path, content, &value, &mut diagnostics);
         }
 
@@ -196,7 +235,7 @@ impl Validator for ClaudeSettingsValidator {
             validate_enforce_available_models(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-008") {
+        if applies("CC-SET-008", "sandbox.allowAppleEvents") {
             validate_sandbox_allow_apple_events(path, content, &value, &mut diagnostics);
         }
 
@@ -213,26 +252,24 @@ impl Validator for ClaudeSettingsValidator {
         }
 
         if config.is_rule_enabled("CC-SET-012") {
-            validate_sandbox_credentials(path, content, &value, &mut diagnostics);
+            validate_sandbox_credentials(path, content, &value, &ignored, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-013") {
+        if applies("CC-SET-013", "autoMode.classifyAllShell") {
             validate_auto_mode_classify_all_shell(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-014") {
-            validate_auto_mode_in_settings_local(path, content, &value, &mut diagnostics);
-        }
-
-        if config.is_rule_enabled("CC-SET-015") {
-            validate_plugin_configs_scope(path, content, &value, &mut diagnostics);
-        }
-
+        let entries = permission_rules::rule_entries(root);
         if config.is_rule_enabled("CC-SET-016") {
-            validate_deprecated_permission_tool_forms(path, content, &value, &mut diagnostics);
+            permission_rules::check_unconsulted_path_rules(
+                path,
+                content,
+                &entries,
+                &mut diagnostics,
+            );
         }
 
-        if config.is_rule_enabled("CC-SET-017") {
+        if applies("CC-SET-017", "sandbox.filesystem.disabled") {
             validate_sandbox_filesystem_disabled(path, content, &value, &mut diagnostics);
         }
 
@@ -240,7 +277,7 @@ impl Validator for ClaudeSettingsValidator {
             validate_emoji_completion_enabled(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-019") {
+        if applies("CC-SET-019", "sandbox.network.strictAllowlist") {
             validate_sandbox_network_strict_allowlist(path, content, &value, &mut diagnostics);
         }
 
@@ -248,23 +285,15 @@ impl Validator for ClaudeSettingsValidator {
             validate_workflow_size_guideline(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-021") {
-            validate_remote_control_at_startup_scope(path, content, &value, &mut diagnostics);
-        }
-
         if config.is_rule_enabled("CC-SET-022") {
             validate_cross_session_inbound(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-023") {
+        if applies("CC-SET-023", "dialogExpiry") {
             validate_dialog_expiry(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-024") {
-            validate_sandbox_ripgrep_scope(path, content, &value, &mut diagnostics);
-        }
-
-        if config.is_rule_enabled("CC-SET-025") {
+        if applies("CC-SET-025", "modelPicker") {
             validate_model_picker(path, content, &value, &mut diagnostics);
         }
 
@@ -276,7 +305,7 @@ impl Validator for ClaudeSettingsValidator {
             validate_subagent_prompt_cache_ttl(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-028") {
+        if applies("CC-SET-028", "feedbackDrafts") {
             validate_feedback_drafts(path, content, &value, &mut diagnostics);
         }
 
@@ -284,7 +313,7 @@ impl Validator for ClaudeSettingsValidator {
             validate_spinner_tips_override(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-030") {
+        if applies("CC-SET-030", "managedMcpServers") {
             validate_managed_mcp_servers(path, content, &value, &mut diagnostics);
         }
 
@@ -292,12 +321,46 @@ impl Validator for ClaudeSettingsValidator {
             validate_max_effort_level(path, content, &value, &mut diagnostics);
         }
 
-        if config.is_rule_enabled("CC-SET-032") {
-            validate_allowed_providers_scope(path, content, &value, &mut diagnostics);
-        }
-
         if config.is_rule_enabled("CC-SET-033") {
             validate_idle_compaction(path, content, &value, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-035") {
+            permission_rules::check_ineffective_rules(path, content, &entries, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-SET-036") {
+            permission_rules::check_broad_execution(
+                path,
+                content,
+                &entries,
+                file_scope,
+                &mut diagnostics,
+            );
+        }
+
+        // Settings a repository shares with everyone who clones it.
+        if file_scope == SettingsScope::Project {
+            if config.is_rule_enabled("CC-SET-037") {
+                sandbox_weakening::check_sandbox_weakening(path, content, root, &mut diagnostics);
+            }
+            if config.is_rule_enabled("CC-SET-039") {
+                permission_rules::check_secrets_not_denied(
+                    path,
+                    content,
+                    root,
+                    fs,
+                    &mut diagnostics,
+                );
+            }
+        }
+
+        if config.is_rule_enabled("CC-SET-040") {
+            paths_and_styles::check_memory_paths(path, content, root, &mut diagnostics);
+        }
+
+        if config.is_rule_enabled("CC-OS-007") {
+            paths_and_styles::check_output_style_case(path, content, root, fs, &mut diagnostics);
         }
 
         diagnostics
@@ -341,37 +404,6 @@ fn validate_idle_compaction(
         ),
         t!("rules.cc_set_033.suggestion"),
     ));
-}
-
-/// CC-SET-032: `allowedProviders` is an organization-managed setting.
-///
-/// Claude Code 2.1.285 introduced this policy to limit the API providers a
-/// machine may use. A repository-local setting cannot enforce a machine-wide
-/// provider boundary, so Claude Code only honors the key from managed settings.
-/// Null is treated as absent, matching the other settings scope checks.
-fn validate_allowed_providers_scope(
-    path: &Path,
-    content: &str,
-    value: &serde_json::Value,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let Some(field_value) = value.get("allowedProviders") else {
-        return;
-    };
-    if field_value.is_null() || is_claude_managed_settings_path(path) {
-        return;
-    }
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            find_key_line(content, "allowedProviders").unwrap_or(1),
-            0,
-            "CC-SET-032",
-            t!("rules.cc_set_032.message"),
-        )
-        .with_suggestion(t!("rules.cc_set_032.suggestion")),
-    );
 }
 
 /// CC-SET-031: effort caps use the same ordered effort vocabulary at the
@@ -489,6 +521,21 @@ fn validate_managed_mcp_servers(
                 .with_suggestion(t!("rules.cc_set_030.suggestion")),
             );
         }
+    }
+}
+
+/// Which settings file `path` is: managed settings, the user's
+/// `~/.claude/settings.json`, a repository's `.claude/settings.local.json`, or
+/// its shared `.claude/settings.json`.
+fn settings_scope(path: &Path) -> SettingsScope {
+    if is_claude_managed_settings_path(path) {
+        SettingsScope::Managed
+    } else if is_user_settings_path(path) {
+        SettingsScope::User
+    } else if path.file_name().and_then(|n| n.to_str()) == Some("settings.local.json") {
+        SettingsScope::Local
+    } else {
+        SettingsScope::Project
     }
 }
 
@@ -725,6 +772,7 @@ fn validate_sandbox_paths(
     path: &Path,
     content: &str,
     value: &serde_json::Value,
+    ignored: &scope::IgnoredKeys,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let Some(sandbox) = value.get("sandbox") else {
@@ -738,6 +786,10 @@ fn validate_sandbox_paths(
     };
 
     for field in SANDBOX_PATH_FIELDS {
+        // Managed-only: CC-SET-034 reports these in other files.
+        if ignored.covers(&format!("sandbox.{field}")) {
+            continue;
+        }
         let Some(field_value) = sandbox_obj.get(*field) else {
             continue;
         };
@@ -1129,6 +1181,7 @@ fn validate_sandbox_credentials(
     path: &Path,
     content: &str,
     value: &serde_json::Value,
+    ignored: &scope::IgnoredKeys,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let Some(credentials) = value.pointer("/sandbox/credentials") else {
@@ -1158,6 +1211,7 @@ fn validate_sandbox_credentials(
 
     if let Some(value) = credentials_obj.get("allowPlaintextInject")
         && !value.is_boolean()
+        && !ignored.covers("sandbox.credentials.allowPlaintextInject")
     {
         let line = find_key_line(content, "allowPlaintextInject")
             .or_else(|| find_key_line(content, "credentials"))
@@ -1177,11 +1231,13 @@ fn validate_sandbox_credentials(
         );
     }
 
+    let mask_honored = !ignored.covers(scope::MASK_ENTRIES_KEY);
     validate_sandbox_credential_entries(
         path,
         content,
         credentials_obj.get("files"),
         SandboxCredentialKind::File,
+        mask_honored,
         diagnostics,
     );
     validate_sandbox_credential_entries(
@@ -1189,8 +1245,15 @@ fn validate_sandbox_credentials(
         content,
         credentials_obj.get("envVars"),
         SandboxCredentialKind::EnvironmentVariable,
+        mask_honored,
         diagnostics,
     );
+    // AWS re-signing is read only from user, --settings or managed settings;
+    // CC-SET-034 reports it elsewhere, and its shape no longer matters there.
+    if ignored.covers("sandbox.credentials.awsPairs") || ignored.covers("sandbox.credentials.sigv4")
+    {
+        return;
+    }
     validate_sandbox_credential_aws_pairs(
         path,
         content,
@@ -1205,7 +1268,6 @@ fn validate_sandbox_credentials(
         credentials_obj,
         diagnostics,
     );
-    validate_sandbox_credential_aws_scope(path, content, credentials_obj, diagnostics);
 }
 
 #[derive(Clone, Copy)]
@@ -1235,6 +1297,7 @@ fn validate_sandbox_credential_entries(
     content: &str,
     value: Option<&serde_json::Value>,
     kind: SandboxCredentialKind,
+    mask_honored: bool,
     diagnostics: &mut Vec<Diagnostic>,
 ) {
     let Some(value) = value else {
@@ -1421,8 +1484,10 @@ fn validate_sandbox_credential_entries(
         }
 
         // Claude Code accepts these fields on deny entries but removes and
-        // ignores them before schema validation. Only mask entries use them.
-        if mode != Some("deny") {
+        // ignores them before schema validation. Only mask entries use them,
+        // and mask entries apply only where Claude Code honors them (CC-SET-034
+        // reports them in project and local settings).
+        if mode != Some("deny") && mask_honored {
             validate_sandbox_credential_inject_hosts(
                 path,
                 line,
@@ -2036,36 +2101,6 @@ fn validate_sandbox_credential_aws_tls_termination(
     );
 }
 
-fn validate_sandbox_credential_aws_scope(
-    path: &Path,
-    content: &str,
-    credentials: &serde_json::Map<String, serde_json::Value>,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let Some(feature) = sandbox_credential_aws_feature_label(credentials) else {
-        return;
-    };
-
-    if is_claude_managed_settings_path(path) || is_user_settings_path(path) {
-        return;
-    }
-
-    let line = find_key_line(content, "awsPairs")
-        .or_else(|| find_key_line(content, "sigv4"))
-        .or_else(|| find_key_line(content, "credentials"))
-        .unwrap_or(1);
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-012",
-            t!("rules.cc_set_012.aws_scope", feature = feature),
-        )
-        .with_suggestion(t!("rules.cc_set_012.aws_scope_suggestion")),
-    );
-}
-
 fn sandbox_credential_aws_feature_label(
     credentials: &serde_json::Map<String, serde_json::Value>,
 ) -> Option<String> {
@@ -2178,202 +2213,6 @@ fn validate_auto_mode_classify_all_shell(
         ),
         t!("rules.cc_set_013.suggestion"),
     ));
-}
-
-/// CC-SET-014: Warn when `autoMode` appears in `.claude/settings.local.json`.
-///
-/// Claude Code v2.1.207 stopped reading `autoMode` from the repo-resident
-/// `.claude/settings.local.json`; the key is silently ignored there. Auto
-/// mode configuration must live in `~/.claude/settings.json` instead.
-///
-/// Fires on any non-null value — the problem is presence in the wrong file,
-/// not value shape (CC-SET-013 covers the classifyAllShell shape and can
-/// co-fire). `null` is treated as field-absent, consistent with the rest of
-/// the CC-SET family. Does NOT fire on `settings.json` or
-/// `managed-settings.json` — `autoMode` is still read from those.
-fn validate_auto_mode_in_settings_local(
-    path: &Path,
-    content: &str,
-    value: &serde_json::Value,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let is_local = path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .map(|n| n == "settings.local.json")
-        .unwrap_or(false);
-    if !is_local {
-        return;
-    }
-
-    let Some(field_value) = value.get("autoMode") else {
-        return;
-    };
-    if field_value.is_null() {
-        return;
-    }
-
-    let line = find_key_line(content, "autoMode").unwrap_or(1);
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-014",
-            t!("rules.cc_set_014.message"),
-        )
-        .with_suggestion(t!("rules.cc_set_014.suggestion")),
-    );
-}
-
-/// CC-SET-015: Warn on `pluginConfigs` in project-level settings files.
-///
-/// Claude Code v2.1.207 changed where plugin option values are read: only
-/// user-level settings (`~/.claude/settings.json`), `--settings` files, and
-/// managed settings are honored. Repo-resident `.claude/settings.json` and
-/// `.claude/settings.local.json` no longer supply `pluginConfigs`; the key
-/// is silently ignored there. Managed settings files are honored, so they
-/// are skipped.
-///
-/// Fires on any non-null value; `null` is treated as field-absent,
-/// consistent with the CC-SET family. Note agnix lints repo checkouts —
-/// a user linting their home directory would hit a false positive on
-/// `~/.claude/settings.json`, the same accepted ambiguity discussed in the
-/// CC-SET-002 doc comment.
-fn validate_plugin_configs_scope(
-    path: &Path,
-    content: &str,
-    value: &serde_json::Value,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    if is_claude_managed_settings_path(path) {
-        return;
-    }
-
-    let Some(field_value) = value.get("pluginConfigs") else {
-        return;
-    };
-    if field_value.is_null() {
-        return;
-    }
-
-    let line = find_key_line(content, "pluginConfigs").unwrap_or(1);
-
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-015",
-            t!("rules.cc_set_015.message"),
-        )
-        .with_suggestion(t!("rules.cc_set_015.suggestion")),
-    );
-}
-
-/// CC-SET-016: Warn on deprecated path-scoped permission rule forms.
-///
-/// Claude Code v2.1.210 added a startup warning for permission entries of the
-/// form `Write(path)`, `NotebookEdit(path)`, and `Glob(path)`. These forms are
-/// deprecated; users should use `Edit(path)` or `Read(path)` instead.
-///
-/// Fires on `permissions.allow`, `permissions.deny`, and `permissions.ask`
-/// arrays in `.claude/settings.json`, `.claude/settings.local.json`, and
-/// `.claude/managed-settings.json`. For each deprecated entry:
-/// - `Write(...)` and `NotebookEdit(...)` → suggest `Edit(...)` with the same
-///   argument.
-/// - `Glob(...)` → suggest `Read(...)` with the same argument.
-///
-/// Only path-scoped forms (those with a `(`) are flagged; bare tool names like
-/// `"Write"` alone are NOT flagged — the deprecation is specifically for the
-/// `Write(path)` forms per the v2.1.210 release notes.
-///
-/// Non-array `permissions.allow/deny/ask`, non-string entries, and absent
-/// `permissions` key are silently skipped (other rules' concern).
-fn validate_deprecated_permission_tool_forms(
-    path: &Path,
-    content: &str,
-    value: &serde_json::Value,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let Some(permissions) = value.get("permissions") else {
-        return;
-    };
-    let Some(permissions_obj) = permissions.as_object() else {
-        return;
-    };
-
-    for array_key in &["allow", "deny", "ask"] {
-        let Some(arr) = permissions_obj.get(*array_key) else {
-            continue;
-        };
-        let Some(arr) = arr.as_array() else {
-            continue;
-        };
-
-        for entry in arr {
-            let Some(s) = entry.as_str() else {
-                continue;
-            };
-
-            // Only flag path-scoped forms: must contain '('
-            let replacement = s
-                .strip_prefix("Write(")
-                .or_else(|| s.strip_prefix("NotebookEdit("))
-                .map(|inner| format!("Edit({inner}"))
-                .or_else(|| s.strip_prefix("Glob(").map(|inner| format!("Read({inner}")));
-
-            let Some(replacement) = replacement else {
-                continue;
-            };
-
-            // Array string values aren't found by find_key_line (no trailing
-            // ':'), so fall back to the containing array key line.
-            let line = find_key_line(content, array_key)
-                .or_else(|| find_key_line(content, "permissions"))
-                .unwrap_or(1);
-
-            let mut diagnostic = Diagnostic::warning(
-                path.to_path_buf(),
-                line,
-                0,
-                "CC-SET-016",
-                t!(
-                    "rules.cc_set_016.message",
-                    rule = s,
-                    replacement = replacement.as_str()
-                ),
-            )
-            .with_suggestion(t!(
-                "rules.cc_set_016.suggestion",
-                rule = s,
-                replacement = replacement.as_str()
-            ));
-            // The documented replacement activates previously ignored path rules,
-            // so it changes permissions and must remain opt-in (unsafe).
-            if s.ends_with(')')
-                && !s.ends_with("()")
-                && let Some(tokens) = unambiguous_json_strings(content)
-                && let mut matches = tokens.iter().filter(|token| !token.3 && token.2 == s)
-                && let Some(token) = matches.next()
-                && matches.next().is_none()
-            {
-                diagnostic = diagnostic.with_fix(Fix::replace(
-                    token.0,
-                    token.1,
-                    serde_json::to_string(&replacement).expect("string serialization"),
-                    t!(
-                        "rules.cc_set_016.fix",
-                        rule = s,
-                        replacement = replacement.as_str()
-                    ),
-                    false,
-                ));
-            }
-            diagnostics.push(diagnostic);
-        }
-    }
 }
 
 /// CC-SET-017: Validate `sandbox.filesystem.disabled`. Claude Code 2.1.216
@@ -2522,37 +2361,6 @@ fn validate_workflow_size_guideline(
     );
 }
 
-/// CC-SET-021: Warn when project settings try to enable Remote Control.
-///
-/// Claude Code 2.1.222 stopped honoring `remoteControlAtStartup: true` in
-/// repo-local settings. A project may still set it to `false` to disable
-/// Remote Control, while enabling it must happen at user scope via `/config`.
-/// Managed settings remain an honored policy tier and are excluded.
-fn validate_remote_control_at_startup_scope(
-    path: &Path,
-    content: &str,
-    value: &serde_json::Value,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    if is_claude_managed_settings_path(path)
-        || value.get("remoteControlAtStartup") != Some(&serde_json::Value::Bool(true))
-    {
-        return;
-    }
-
-    let line = find_key_line(content, "remoteControlAtStartup").unwrap_or(1);
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-021",
-            t!("rules.cc_set_021.message"),
-        )
-        .with_suggestion(t!("rules.cc_set_021.suggestion")),
-    );
-}
-
 /// CC-SET-022: Validate the cross-session inbound-message policy enum.
 fn validate_cross_session_inbound(
     path: &Path,
@@ -2623,49 +2431,6 @@ fn validate_dialog_expiry(
     );
 }
 
-/// CC-SET-024: Warn when project settings override the sandbox ripgrep binary.
-///
-/// Claude Code 2.1.232 restricted `sandbox.ripgrep` to user settings, managed
-/// settings, and the `--settings` flag, so a checked-out repository can no
-/// longer point the sandbox at its own ripgrep. The same scope rule already
-/// covers `sandbox.credentials` masking (CC-SET-012), so user and managed
-/// settings are excluded here for the same reason.
-///
-/// Null is treated as "field absent" by JSON convention.
-fn validate_sandbox_ripgrep_scope(
-    path: &Path,
-    content: &str,
-    value: &serde_json::Value,
-    diagnostics: &mut Vec<Diagnostic>,
-) {
-    let Some(sandbox) = value.get("sandbox").and_then(|sandbox| sandbox.as_object()) else {
-        return;
-    };
-    match sandbox.get("ripgrep") {
-        None => return,
-        Some(field_value) if field_value.is_null() => return,
-        Some(_) => {}
-    }
-
-    if is_claude_managed_settings_path(path) || is_user_settings_path(path) {
-        return;
-    }
-
-    let line = find_key_line(content, "ripgrep")
-        .or_else(|| find_key_line(content, "sandbox"))
-        .unwrap_or(1);
-    diagnostics.push(
-        Diagnostic::warning(
-            path.to_path_buf(),
-            line,
-            0,
-            "CC-SET-024",
-            t!("rules.cc_set_024.message"),
-        )
-        .with_suggestion(t!("rules.cc_set_024.suggestion")),
-    );
-}
-
 /// CC-SET-025: Validate the user-or-managed `modelPicker` setting introduced
 /// in Claude Code 2.1.242. Repository-local values are ignored. At an honored
 /// scope the setting is an object with a required `options` array, optional
@@ -2684,19 +2449,9 @@ fn validate_model_picker(
         return;
     }
 
+    // Where the key is ignored, CC-SET-034 reports it and this check is
+    // not called.
     let line = find_key_line(content, "modelPicker").unwrap_or(1);
-    if !is_claude_managed_settings_path(path) && !is_user_settings_path(path) {
-        diagnostics.push(
-            Diagnostic::warning(
-                path.to_path_buf(),
-                line,
-                0,
-                "CC-SET-025",
-                t!("rules.cc_set_025.scope_message"),
-            )
-            .with_suggestion(t!("rules.cc_set_025.scope_suggestion")),
-        );
-    }
 
     let Some(object) = model_picker.as_object() else {
         diagnostics.push(model_picker_shape_diagnostic(
@@ -3275,8 +3030,13 @@ mod tests {
     use crate::{config::LintConfig, pipeline::validate_content, registry::ValidatorRegistry};
     use std::path::PathBuf;
 
+    /// Most checks here are type checks. Many keys are honored only in user
+    /// or managed settings, and in `.claude/settings.json` CC-SET-034 reports
+    /// them instead of the type check, so the default path is the managed
+    /// file, where every documented key is read. Scope tests use
+    /// `validate_at` with an explicit path.
     fn validate(content: &str) -> Vec<Diagnostic> {
-        validate_at(".claude/settings.json", content)
+        validate_at(".claude/managed-settings.json", content)
     }
 
     fn validate_at(path_str: &str, content: &str) -> Vec<Diagnostic> {
@@ -3544,23 +3304,28 @@ mod tests {
 
     #[test]
     fn test_cc_set_016_ambiguous_or_malformed_rules_have_no_fix() {
+        // Each array element is located by its own span, so a repeated rule
+        // gets an exact fix per entry. A malformed rule is CC-SET-035's, and
+        // an empty Glob() has no path to rewrite.
+        let repeated = r#"{"permissions":{"allow":["Write(x)","Write(x)"]}}"#;
+        let hits: Vec<_> = validate(repeated)
+            .into_iter()
+            .filter(|d| d.rule == "CC-SET-016")
+            .collect();
+        assert_eq!(hits.len(), 2);
+        assert!(hits.iter().all(|d| d.has_fixes()));
+        assert_ne!(hits[0].fixes[0].start_byte, hits[1].fixes[0].start_byte);
+
         for content in [
-            r#"{"permissions":{"allow":["Write(x)","Write(x)"]}}"#,
-            r#"{"permissions":{"allow":["Write(x)"]},"permissions":{"allow":["Write(x)"]}}"#,
             r#"{"permissions":{"allow":["Write(x"]}}"#,
             r#"{"permissions":{"allow":["Glob()"]}}"#,
         ] {
-            let diagnostics = validate(content);
-            let hits: Vec<_> = diagnostics
-                .iter()
-                .filter(|d| d.rule == "CC-SET-016")
-                .collect();
-            assert!(!hits.is_empty());
-            assert!(hits.iter().all(|d| !d.has_fixes()), "{content}");
+            assert!(
+                !validate(content).iter().any(|d| d.rule == "CC-SET-016"),
+                "{content}"
+            );
         }
     }
-
-    // ===== Scope guard: only runs on Claude Code settings =====
 
     #[test]
     fn test_ignores_non_claude_settings_path() {
@@ -3638,12 +3403,15 @@ mod tests {
                     .find(|diagnostic| diagnostic.rule == "CC-SET-012")
                     .is_some_and(|diagnostic| diagnostic.message.contains("reuses"))
             );
-            for rule in ["CC-SET-015", "CC-SET-021"] {
-                assert!(
-                    diagnostics.iter().all(|diagnostic| diagnostic.rule != rule),
-                    "unexpected project-scope {rule} for managed settings path {path}"
-                );
-            }
+            // pluginConfigs and remoteControlAtStartup are honored in
+            // managed settings, so CC-SET-034 (which replaced the
+            // per-key scope rules) stays quiet here.
+            assert!(
+                diagnostics
+                    .iter()
+                    .all(|diagnostic| diagnostic.rule != "CC-SET-034"),
+                "unexpected CC-SET-034 for managed settings path {path}"
+            );
         }
     }
 
@@ -4013,7 +3781,9 @@ mod tests {
         let mut config = LintConfig::default();
         config.rules_mut().disabled_rules = vec!["CC-SET-002".to_string()];
         let validator = ClaudeSettingsValidator;
-        let path = PathBuf::from(".claude/settings.json");
+        // channelsEnabled is managed-only; in .claude/settings.json CC-SET-034
+        // reports it instead.
+        let path = PathBuf::from(".claude/managed-settings.json");
         let diagnostics = validator.validate(&path, r#"{"channelsEnabled": "true"}"#, &config);
         assert!(diagnostics.is_empty());
     }
@@ -5262,24 +5032,6 @@ mod tests {
     }
 
     #[test]
-    fn test_sandbox_credentials_aws_resigning_flags_project_scopes() {
-        let content = r#"{
-          "sandbox": {
-            "network": {"tlsTerminate": {}},
-            "credentials": {"awsPairs": [], "sigv4": {}}
-          }
-        }"#;
-        for path in [".claude/settings.json", ".claude/settings.local.json"] {
-            let hits: Vec<_> = validate_at(path, content)
-                .into_iter()
-                .filter(|diagnostic| diagnostic.rule == "CC-SET-012")
-                .collect();
-            assert_eq!(hits.len(), 1, "expected one scope diagnostic for {path}");
-            assert!(hits[0].message.contains("project-level"));
-        }
-    }
-
-    #[test]
     fn test_sandbox_credentials_aws_resigning_allows_honored_scopes() {
         let content = r#"{
           "sandbox": {
@@ -5314,18 +5066,11 @@ mod tests {
             let tls_message = rust_i18n::t!(
                 "rules.cc_set_012.tls_terminate_required",
                 locale = locale,
-                feature = feature.clone()
-            );
-            let scope_message = rust_i18n::t!(
-                "rules.cc_set_012.aws_scope",
-                locale = locale,
                 feature = feature
             );
 
             assert!(tls_message.contains(conjunction));
-            assert!(scope_message.contains(conjunction));
             assert!(!tls_message.contains("awsPairs and sigv4"));
-            assert!(!scope_message.contains("awsPairs and sigv4"));
         }
     }
 
@@ -5363,14 +5108,6 @@ mod tests {
             (
                 rust_i18n::t!("rules.cc_set_012.sigv4_suggestion", locale = "es"),
                 "políticas",
-            ),
-            (
-                rust_i18n::t!(
-                    "rules.cc_set_012.aws_scope",
-                    locale = "es",
-                    feature = "awsPairs"
-                ),
-                "configuración",
             ),
         ];
 
@@ -5632,203 +5369,6 @@ mod tests {
         assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-013"));
     }
 
-    // ===== CC-SET-014: autoMode in settings.local.json =====
-
-    #[test]
-    fn test_auto_mode_in_settings_local_flags() {
-        let content = r#"{"autoMode": {"classifyAllShell": true}}"#;
-        let diagnostics = validate_at(".claude/settings.local.json", content);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-SET-014")
-            .collect();
-        assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
-    }
-
-    #[test]
-    fn test_auto_mode_in_settings_json_does_not_flag() {
-        // autoMode is still read from settings.json — must not fire CC-SET-014.
-        let content = r#"{"autoMode": {"classifyAllShell": true}}"#;
-        let diagnostics = validate_at(".claude/settings.json", content);
-        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-014"));
-    }
-
-    #[test]
-    fn test_auto_mode_in_managed_settings_does_not_flag() {
-        // managed-settings.json is honored — must not fire CC-SET-014.
-        let content = r#"{"autoMode": {"classifyAllShell": true}}"#;
-        let diagnostics = validate_at(".claude/managed-settings.json", content);
-        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-014"));
-    }
-
-    #[test]
-    fn test_auto_mode_absent_in_settings_local_is_fine() {
-        let content = r#"{"model": "claude-sonnet-4"}"#;
-        let diagnostics = validate_at(".claude/settings.local.json", content);
-        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-014"));
-    }
-
-    #[test]
-    fn test_auto_mode_null_in_settings_local_is_fine() {
-        let content = r#"{"autoMode": null}"#;
-        let diagnostics = validate_at(".claude/settings.local.json", content);
-        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-014"));
-    }
-
-    #[test]
-    fn test_auto_mode_in_settings_local_fires_for_any_non_null_type() {
-        // object, string, bool, number, array — all must produce exactly 1 CC-SET-014
-        for content in &[
-            r#"{"autoMode": {"classifyAllShell": true}}"#,
-            r#"{"autoMode": "enabled"}"#,
-            r#"{"autoMode": true}"#,
-            r#"{"autoMode": 1}"#,
-            r#"{"autoMode": []}"#,
-        ] {
-            let diagnostics = validate_at(".claude/settings.local.json", content);
-            let count = diagnostics
-                .iter()
-                .filter(|d| d.rule == "CC-SET-014")
-                .count();
-            assert_eq!(count, 1, "expected 1 CC-SET-014 for content: {}", content);
-        }
-    }
-
-    #[test]
-    fn test_auto_mode_in_settings_local_line_points_at_key() {
-        let content =
-            "{\n  \"model\": \"claude-sonnet-4\",\n  \"autoMode\": {\"classifyAllShell\": true}\n}";
-        let diagnostics = validate_at(".claude/settings.local.json", content);
-        let hit = diagnostics
-            .iter()
-            .find(|d| d.rule == "CC-SET-014")
-            .expect("CC-SET-014 diagnostic");
-        assert_eq!(hit.line, 3, "line must point at the autoMode key");
-    }
-
-    #[test]
-    fn test_auto_mode_in_settings_local_can_be_disabled() {
-        let mut builder = LintConfig::builder();
-        builder.disable_rule("CC-SET-014");
-        let config = builder.build().unwrap();
-        let validator = ClaudeSettingsValidator;
-        let path = PathBuf::from(".claude/settings.local.json");
-        let diagnostics = validator.validate(
-            &path,
-            r#"{"autoMode": {"classifyAllShell": true}}"#,
-            &config,
-        );
-        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-014"));
-    }
-
-    #[test]
-    fn test_auto_mode_in_settings_local_coexists_with_cc_set_013() {
-        // classifyAllShell with a bad type in settings.local.json should fire
-        // both CC-SET-013 (wrong type) and CC-SET-014 (wrong file).
-        let content = r#"{"autoMode": {"classifyAllShell": "true"}}"#;
-        let diagnostics = validate_at(".claude/settings.local.json", content);
-        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-013"));
-        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-014"));
-    }
-
-    // ===== CC-SET-015: pluginConfigs in project-level settings =====
-
-    #[test]
-    fn test_plugin_configs_in_settings_json_flags() {
-        let content = r#"{"pluginConfigs": {"my-plugin": {"apiKey": "abc"}}}"#;
-        let diagnostics = validate_at(".claude/settings.json", content);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-SET-015")
-            .collect();
-        assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
-    }
-
-    #[test]
-    fn test_plugin_configs_in_settings_local_flags() {
-        let content = r#"{"pluginConfigs": {"my-plugin": {"apiKey": "abc"}}}"#;
-        let diagnostics = validate_at(".claude/settings.local.json", content);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-SET-015")
-            .collect();
-        assert_eq!(hits.len(), 1);
-    }
-
-    #[test]
-    fn test_plugin_configs_in_managed_settings_does_not_flag() {
-        // managed-settings is an honored tier — must not fire CC-SET-015.
-        let content = r#"{"pluginConfigs": {"my-plugin": {"apiKey": "abc"}}}"#;
-        let diagnostics = validate_at(".claude/managed-settings.json", content);
-        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-015"));
-    }
-
-    #[test]
-    fn test_plugin_configs_absent_is_fine() {
-        let content = r#"{"model": "claude-sonnet-4"}"#;
-        let diagnostics = validate_at(".claude/settings.json", content);
-        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-015"));
-    }
-
-    #[test]
-    fn test_plugin_configs_null_is_fine() {
-        let content = r#"{"pluginConfigs": null}"#;
-        let diagnostics = validate_at(".claude/settings.json", content);
-        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-015"));
-    }
-
-    #[test]
-    fn test_plugin_configs_empty_object_flags() {
-        // An empty object is still a non-null value — the presence of the key
-        // is the problem regardless of whether nested config is populated.
-        let content = r#"{"pluginConfigs": {}}"#;
-        let diagnostics = validate_at(".claude/settings.json", content);
-        let hits: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-SET-015")
-            .collect();
-        assert_eq!(hits.len(), 1);
-    }
-
-    #[test]
-    fn test_plugin_configs_line_points_at_key() {
-        let content = "{\n  \"model\": \"claude-sonnet-4\",\n  \"pluginConfigs\": {\"p\": {}}\n}";
-        let diagnostics = validate_at(".claude/settings.json", content);
-        let hit = diagnostics
-            .iter()
-            .find(|d| d.rule == "CC-SET-015")
-            .expect("CC-SET-015 diagnostic");
-        assert_eq!(hit.line, 3, "line must point at the pluginConfigs key");
-    }
-
-    #[test]
-    fn test_plugin_configs_can_be_disabled() {
-        let mut builder = LintConfig::builder();
-        builder.disable_rule("CC-SET-015");
-        let config = builder.build().unwrap();
-        let validator = ClaudeSettingsValidator;
-        let path = PathBuf::from(".claude/settings.json");
-        let diagnostics = validator.validate(
-            &path,
-            r#"{"pluginConfigs": {"my-plugin": {"apiKey": "abc"}}}"#,
-            &config,
-        );
-        assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-015"));
-    }
-
-    #[test]
-    fn test_plugin_configs_coexists_with_other_cc_set_rules() {
-        // Both CC-SET-002 (channelsEnabled) and CC-SET-015 fire independently.
-        let content = r#"{"channelsEnabled": "true", "pluginConfigs": {"p": {}}}"#;
-        let diagnostics = validate_at(".claude/settings.json", content);
-        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-002"));
-        assert!(diagnostics.iter().any(|d| d.rule == "CC-SET-015"));
-    }
-
-    // ===== CC-SET-016: deprecated Write/NotebookEdit/Glob permission-rule forms =====
-
     #[test]
     fn test_write_in_allow_flags_with_edit_suggestion() {
         let content = r#"{"permissions": {"allow": ["Write(src/**)"]}}"#;
@@ -5839,10 +5379,11 @@ mod tests {
             .collect();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
-        let msg = &hits[0].message;
+        assert!(hits[0].message.contains("never consulted"));
+        let suggestion = hits[0].suggestion.as_deref().unwrap_or_default();
         assert!(
-            msg.contains("Edit(src/**)"),
-            "message should mention Edit replacement, got: {msg}"
+            suggestion.contains("Edit(src/**)"),
+            "suggestion should mention Edit replacement, got: {suggestion}"
         );
     }
 
@@ -5855,11 +5396,13 @@ mod tests {
             .filter(|d| d.rule == "CC-SET-016")
             .collect();
         assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Warning);
-        let msg = &hits[0].message;
+        // A deny rule that is never consulted protects nothing: error level.
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Error);
+        assert!(hits[0].message.contains("protects nothing"));
+        let suggestion = hits[0].suggestion.as_deref().unwrap_or_default();
         assert!(
-            msg.contains("Edit(notebooks/**)"),
-            "message should mention Edit replacement, got: {msg}"
+            suggestion.contains("Edit(notebooks/**)"),
+            "suggestion should mention Edit replacement, got: {suggestion}"
         );
     }
 
@@ -5872,10 +5415,13 @@ mod tests {
             .filter(|d| d.rule == "CC-SET-016")
             .collect();
         assert_eq!(hits.len(), 1);
-        let msg = &hits[0].message;
+        // An ask rule that is never consulted never prompts: error level.
+        assert_eq!(hits[0].level, crate::diagnostics::DiagnosticLevel::Error);
+        assert!(hits[0].message.contains("never consulted"));
+        let suggestion = hits[0].suggestion.as_deref().unwrap_or_default();
         assert!(
-            msg.contains("Read(docs/**)"),
-            "message should mention Read replacement, got: {msg}"
+            suggestion.contains("Read(docs/**)"),
+            "suggestion should mention Read replacement, got: {suggestion}"
         );
     }
 
@@ -5974,9 +5520,10 @@ mod tests {
 
     #[test]
     fn test_sandbox_filesystem_disabled_non_boolean_flags() {
+        // User-or-managed key: checked where Claude Code reads it.
         for invalid in [r#""true""#, "1", "[]", "{}"] {
             let content = format!(r#"{{"sandbox": {{"filesystem": {{"disabled": {invalid}}}}}}}"#);
-            let diagnostics = validate_at(".claude/settings.json", &content);
+            let diagnostics = validate_at(".claude/managed-settings.json", &content);
             let hits: Vec<_> = diagnostics
                 .iter()
                 .filter(|d| d.rule == "CC-SET-017")
@@ -5998,7 +5545,7 @@ mod tests {
     #[test]
     fn test_sandbox_filesystem_disabled_line_and_disable_config() {
         let content = "{\n  \"sandbox\": {\n    \"filesystem\": {\n      \"disabled\": \"false\"\n    }\n  }\n}";
-        let diagnostics = validate_at(".claude/settings.json", content);
+        let diagnostics = validate_at(".claude/managed-settings.json", content);
         let hit = diagnostics
             .iter()
             .find(|d| d.rule == "CC-SET-017")
@@ -6009,7 +5556,7 @@ mod tests {
         builder.disable_rule("CC-SET-017");
         let config = builder.build().unwrap();
         let validator = ClaudeSettingsValidator;
-        let path = PathBuf::from(".claude/settings.json");
+        let path = PathBuf::from(".claude/managed-settings.json");
         let diagnostics = validator.validate(&path, content, &config);
         assert!(diagnostics.iter().all(|d| d.rule != "CC-SET-017"));
     }
@@ -6105,78 +5652,6 @@ mod tests {
         }
     }
 
-    // ===== CC-SET-021: project-level Remote Control auto-start =====
-
-    #[test]
-    fn test_remote_control_at_startup_true_flags_project_settings() {
-        let content = r#"{"remoteControlAtStartup": true}"#;
-        for path in [".claude/settings.json", ".claude/settings.local.json"] {
-            let diagnostics = validate_at(path, content);
-            assert_eq!(
-                diagnostics
-                    .iter()
-                    .filter(|diagnostic| diagnostic.rule == "CC-SET-021")
-                    .count(),
-                1,
-                "expected one hit in {path}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_remote_control_at_startup_false_null_and_absent_are_valid() {
-        for content in [
-            r#"{"remoteControlAtStartup": false}"#,
-            r#"{"remoteControlAtStartup": null}"#,
-            r#"{"model": "sonnet"}"#,
-        ] {
-            assert!(
-                validate(content)
-                    .iter()
-                    .all(|diagnostic| diagnostic.rule != "CC-SET-021"),
-                "unexpected CC-SET-021 for {content}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_remote_control_at_startup_true_is_allowed_in_managed_settings() {
-        let diagnostics = validate_at(
-            ".claude/managed-settings.json",
-            r#"{"remoteControlAtStartup": true}"#,
-        );
-        assert!(
-            diagnostics
-                .iter()
-                .all(|diagnostic| diagnostic.rule != "CC-SET-021")
-        );
-    }
-
-    #[test]
-    fn test_remote_control_at_startup_diagnostic_points_to_key_and_can_be_disabled() {
-        let content = "{\n  \"model\": \"sonnet\",\n  \"remoteControlAtStartup\": true\n}";
-        let diagnostics = validate(content);
-        let diagnostic = diagnostics
-            .iter()
-            .find(|diagnostic| diagnostic.rule == "CC-SET-021")
-            .expect("CC-SET-021 diagnostic");
-        assert_eq!(diagnostic.line, 3);
-
-        let mut builder = LintConfig::builder();
-        builder.disable_rule("CC-SET-021");
-        let config = builder.build().expect("valid config");
-        let path = PathBuf::from(".claude/settings.json");
-        let per_file = config.for_path(&path);
-        assert!(
-            ClaudeSettingsValidator
-                .validate(&path, content, &per_file)
-                .iter()
-                .all(|diagnostic| diagnostic.rule != "CC-SET-021")
-        );
-    }
-
-    // ===== CC-SET-022: crossSessionInbound enum =====
-
     #[test]
     fn test_cross_session_inbound_documented_values_are_valid() {
         for value in ["accept", "hold", "refuse"] {
@@ -6231,87 +5706,6 @@ mod tests {
         }
     }
 
-    // ===== CC-SET-024: project-level sandbox.ripgrep =====
-
-    #[test]
-    fn test_sandbox_ripgrep_flags_project_settings() {
-        let content = r#"{"sandbox": {"ripgrep": "/opt/rg/bin/rg"}}"#;
-        for path in [".claude/settings.json", ".claude/settings.local.json"] {
-            assert_eq!(
-                validate_at(path, content)
-                    .iter()
-                    .filter(|diagnostic| diagnostic.rule == "CC-SET-024")
-                    .count(),
-                1,
-                "expected one hit in {path}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_sandbox_ripgrep_absent_null_and_other_sandbox_keys_are_valid() {
-        for content in [
-            r#"{"sandbox": {"enabled": true}}"#,
-            r#"{"sandbox": {"ripgrep": null}}"#,
-            r#"{"sandbox": null}"#,
-            r#"{"model": "sonnet"}"#,
-        ] {
-            assert!(
-                validate(content)
-                    .iter()
-                    .all(|diagnostic| diagnostic.rule != "CC-SET-024"),
-                "unexpected CC-SET-024 for {content}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_sandbox_ripgrep_is_allowed_in_managed_and_user_settings() {
-        let content = r#"{"sandbox": {"ripgrep": "/opt/rg/bin/rg"}}"#;
-        assert!(
-            validate_at(".claude/managed-settings.json", content)
-                .iter()
-                .all(|diagnostic| diagnostic.rule != "CC-SET-024")
-        );
-
-        let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))
-        else {
-            return;
-        };
-        let user_settings = PathBuf::from(home).join(".claude").join("settings.json");
-        assert!(
-            ClaudeSettingsValidator
-                .validate(&user_settings, content, &LintConfig::default())
-                .iter()
-                .all(|diagnostic| diagnostic.rule != "CC-SET-024")
-        );
-    }
-
-    #[test]
-    fn test_sandbox_ripgrep_diagnostic_points_to_key_and_can_be_disabled() {
-        let content =
-            "{\n  \"model\": \"sonnet\",\n  \"sandbox\": {\n    \"ripgrep\": \"rg\"\n  }\n}";
-        let diagnostic = validate(content)
-            .into_iter()
-            .find(|diagnostic| diagnostic.rule == "CC-SET-024")
-            .expect("CC-SET-024 diagnostic");
-        assert_eq!(diagnostic.line, 4);
-
-        let mut builder = LintConfig::builder();
-        builder.disable_rule("CC-SET-024");
-        let config = builder.build().expect("valid config");
-        let path = PathBuf::from(".claude/settings.json");
-        let per_file = config.for_path(&path);
-        assert!(
-            ClaudeSettingsValidator
-                .validate(&path, content, &per_file)
-                .iter()
-                .all(|diagnostic| diagnostic.rule != "CC-SET-024")
-        );
-    }
-
-    // ===== CC-SET-025: modelPicker scope and shape =====
-
     #[test]
     fn test_model_picker_valid_shape_is_allowed_in_managed_settings() {
         let content = r#"{
@@ -6349,21 +5743,6 @@ mod tests {
                 .iter()
                 .any(|diagnostic| diagnostic.rule == "CC-SET-025")
         );
-    }
-
-    #[test]
-    fn test_model_picker_flags_project_scope() {
-        let content = r#"{"modelPicker":{"options":[{"model":"opus"}]}}"#;
-        for path in [".claude/settings.json", ".claude/settings.local.json"] {
-            assert_eq!(
-                validate_at(path, content)
-                    .iter()
-                    .filter(|diagnostic| diagnostic.rule == "CC-SET-025")
-                    .count(),
-                1,
-                "expected one scope diagnostic for {path}"
-            );
-        }
     }
 
     #[test]
@@ -6718,37 +6097,6 @@ mod tests {
             "null effort caps should be treated as unset: {diagnostics:?}"
         );
     }
-
-    // ===== CC-SET-032: allowedProviders managed scope =====
-
-    #[test]
-    fn test_allowed_providers_requires_managed_settings() {
-        let content = r#"{"allowedProviders":["anthropic","bedrock"]}"#;
-        for path in [".claude/settings.json", ".claude/settings.local.json"] {
-            assert!(
-                validate_at(path, content)
-                    .iter()
-                    .any(|diagnostic| diagnostic.rule == "CC-SET-032"),
-                "expected CC-SET-032 for {path}"
-            );
-        }
-        assert!(
-            validate_at("/etc/claude-code/managed-settings.json", content)
-                .iter()
-                .all(|diagnostic| diagnostic.rule != "CC-SET-032")
-        );
-    }
-
-    #[test]
-    fn test_allowed_providers_null_is_absent() {
-        assert!(
-            validate_at(".claude/settings.json", r#"{"allowedProviders":null}"#)
-                .iter()
-                .all(|diagnostic| diagnostic.rule != "CC-SET-032")
-        );
-    }
-
-    // ===== CC-SET-026/027: prompt cache TTL enums =====
 
     #[test]
     fn test_prompt_cache_ttl_documented_values_are_valid() {

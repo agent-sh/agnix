@@ -13,7 +13,7 @@ keywords: ["CC-SET-008", "non-boolean sandbox.allowappleevents setting", "claude
 - **Category**: `Claude Settings`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-06-18`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["CC-SET-008", "non-boolean sandbox.allowappleevents setting", "claude
 
 - https://github.com/anthropics/claude-code/releases/tag/v2.1.181
 - https://code.claude.com/docs/en/settings
+- https://code.claude.com/docs/en/settings-reference
 
 ## Test Coverage Metadata
 

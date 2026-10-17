@@ -11,9 +11,9 @@ keywords: ["CC-MEM-010", "readme duplication", "claude memory", "validation", "a
 - **Rule ID**: `CC-MEM-010`
 - **Severity**: `MEDIUM`
 - **Category**: `Claude Memory`
-- **Normative Level**: `SHOULD`
+- **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-09`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 
@@ -23,7 +23,8 @@ keywords: ["CC-MEM-010", "readme duplication", "claude memory", "validation", "a
 
 ## Evidence Sources
 
-- https://github.com/anthropics/claude-code/tree/main/.claude/commands
+- https://code.claude.com/docs/en/best-practices
+- https://code.claude.com/docs/en/memory
 
 ## Test Coverage Metadata
 

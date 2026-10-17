@@ -13,7 +13,7 @@ keywords: ["CC-OS-003", "output style unknown frontmatter key", "claude-output-s
 - **Category**: `claude-output-styles`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-04-22`
+- **Verified On**: `2026-10-17`
 
 ## Applicability
 

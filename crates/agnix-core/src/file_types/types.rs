@@ -46,6 +46,12 @@ pub enum FileType {
     ClaudeRule,
     /// Claude Code output style files (.claude/output-styles/*.md)
     ClaudeOutputStyle,
+    /// Claude Code MEMORY.md indexes loaded at session start: subagent memory
+    /// (.claude/agent-memory/<agent>/, .claude/agent-memory-local/<agent>/)
+    /// and auto memory (.claude/projects/<project>/memory/)
+    ClaudeMemoryIndex,
+    /// .claudeignore, which Claude Code does not read
+    ClaudeIgnore,
     /// Cursor project rules (.cursor/rules/*.md, .cursor/rules/*.mdc, including nested dirs)
     CursorRule,
     /// Cursor hooks configuration (.cursor/hooks.json)
@@ -193,6 +199,8 @@ impl fmt::Display for FileType {
             FileType::CopilotPlugin => "CopilotPlugin",
             FileType::ClaudeRule => "ClaudeRule",
             FileType::ClaudeOutputStyle => "ClaudeOutputStyle",
+            FileType::ClaudeMemoryIndex => "ClaudeMemoryIndex",
+            FileType::ClaudeIgnore => "ClaudeIgnore",
             FileType::CursorRule => "CursorRule",
             FileType::CursorHooks => "CursorHooks",
             FileType::CursorAgent => "CursorAgent",
@@ -266,6 +274,8 @@ mod tests {
             (FileType::CopilotPlugin, "CopilotPlugin"),
             (FileType::ClaudeRule, "ClaudeRule"),
             (FileType::ClaudeOutputStyle, "ClaudeOutputStyle"),
+            (FileType::ClaudeMemoryIndex, "ClaudeMemoryIndex"),
+            (FileType::ClaudeIgnore, "ClaudeIgnore"),
             (FileType::CursorRule, "CursorRule"),
             (FileType::CursorHooks, "CursorHooks"),
             (FileType::CursorAgent, "CursorAgent"),

@@ -772,13 +772,14 @@ fn test_format_json_contains_memory_rules() {
     use std::io::Write;
 
     // CC-MEM rules require specific content patterns to trigger
-    // Create a fixture with weak constraint advice (CC-MEM-007)
+    // Create a fixture with emphasis on many lines (CC-MEM-017; the weak
+    // wording rule CC-MEM-007 is retired)
     let temp_dir = tempfile::tempdir().unwrap();
     let claude_md = temp_dir.path().join("CLAUDE.md");
     let mut file = fs::File::create(&claude_md).unwrap();
     writeln!(
         file,
-        "# Critical Rules\n\nYou should follow the coding style."
+        "# Rules\n- IMPORTANT: a\n- MUST b\n- NEVER c\n- ALWAYS d\n- CRITICAL: e\n- IMPORTANT: f"
     )
     .unwrap();
 
@@ -894,13 +895,14 @@ fn test_format_sarif_results_include_memory_diagnostics() {
     use std::io::Write;
 
     // CC-MEM rules require specific content patterns to trigger
-    // Create a fixture with weak constraint advice (CC-MEM-007)
+    // Create a fixture with emphasis on many lines (CC-MEM-017; the weak
+    // wording rule CC-MEM-007 is retired)
     let temp_dir = tempfile::tempdir().unwrap();
     let claude_md = temp_dir.path().join("CLAUDE.md");
     let mut file = fs::File::create(&claude_md).unwrap();
     writeln!(
         file,
-        "# Critical Rules\n\nYou should follow the coding style."
+        "# Rules\n- IMPORTANT: a\n- MUST b\n- NEVER c\n- ALWAYS d\n- CRITICAL: e\n- IMPORTANT: f"
     )
     .unwrap();
 

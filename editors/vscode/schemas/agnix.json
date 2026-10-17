@@ -183,11 +183,11 @@
       "additionalProperties": false
     },
     "OverrideConfig": {
-      "description": "Per-file rule suppression override.\n\nEach `[[overrides]]` block carves a set of rule IDs out of validation for\nfiles matching any of its `paths` globs. Multiple blocks stack (set union)\non top of the global `rules.disabled_rules`. Absent or empty `overrides`\npreserves the existing behavior (backwards compatible).\n\n# Example\n\n```toml\n[[overrides]]\npaths = [\".claude/CLAUDE.md\", \"docs/agents/**/*.md\"]\ndisabled_rules = [\"PE-001\"]\n```",
+      "description": "Per-file rule suppression override.\n\nEach `[[overrides]]` block carves a set of rule IDs out of validation for\nfiles matching any of its `paths` globs. Multiple blocks stack (set union)\non top of the global `rules.disabled_rules`. Absent or empty `overrides`\npreserves the existing behavior (backwards compatible).\n\n# Example\n\n```toml\n[[overrides]]\npaths = [\".claude/CLAUDE.md\", \"docs/agents/**/*.md\"]\ndisabled_rules = [\"PE-004\"]\n```",
       "type": "object",
       "properties": {
         "disabled_rules": {
-          "description": "Rule IDs to disable for files matching `paths` (e.g., [\"PE-001\"])",
+          "description": "Rule IDs to disable for files matching `paths` (e.g., [\"PE-004\"])",
           "type": "array",
           "default": [],
           "items": {

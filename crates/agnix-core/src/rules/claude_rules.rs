@@ -1,8 +1,11 @@
-//! `.claude/rules/*.md` frontmatter validation rules (CC-MEM-011, CC-MEM-012)
+//! `.claude/rules/**/*.md` validation rules
 //!
 //! Validates:
 //! - CC-MEM-011: Invalid paths glob in rules (HIGH) - glob patterns must be valid
 //! - CC-MEM-012: Rules file unknown frontmatter key (MEDIUM) - only `paths` is known
+//!
+//! Rule-file length (CC-MEM-014) and emphasis (CC-MEM-017) are checked by
+//! `ClaudeMdValidator`, which also runs on `FileType::ClaudeRule`.
 
 use crate::{
     config::PerFileLintConfig,
@@ -68,24 +71,28 @@ impl Validator for ClaudeRulesValidator {
             return diagnostics;
         }
 
-        // Parse frontmatter - if no frontmatter, nothing to validate
-        let parsed = match parse_frontmatter(content) {
-            Some(p) => p,
-            None => return diagnostics,
+        let parsed = parse_frontmatter(content);
+
+        // Parse frontmatter - if no frontmatter, nothing more to validate
+        let Some(parsed) = parsed else {
+            return diagnostics;
         };
 
-        // If there's a parse error, emit a diagnostic and return early
+        // "If the YAML between the markers doesn't parse, Claude Code ignores the
+        // frontmatter and loads the rule as if it had no `paths`."
         if let Some(ref parse_error) = parsed.parse_error {
-            diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    parsed.start_line,
-                    0,
-                    "CC-MEM-011",
-                    format!("Invalid frontmatter: {}", parse_error),
-                )
-                .with_suggestion("Close frontmatter with a line containing only `---`."),
-            );
+            if config.is_rule_enabled("CC-MEM-011") {
+                diagnostics.push(
+                    Diagnostic::error(
+                        path.to_path_buf(),
+                        parsed.start_line,
+                        0,
+                        "CC-MEM-011",
+                        t!("rules.cc_mem_011.parse_error", error = parse_error.as_str()),
+                    )
+                    .with_suggestion(t!("rules.cc_mem_011.parse_error_suggestion")),
+                );
+            }
             return diagnostics;
         }
 
@@ -169,7 +176,10 @@ fn find_pattern_line(raw: &str, pattern: &str, start_line: usize) -> Option<usiz
             }
         }
     }
-    None
+    // A comma-separated `paths` string keeps every pattern on one line.
+    raw.lines()
+        .position(|line| line.contains(pattern))
+        .map(|i| start_line + 1 + i)
 }
 
 #[cfg(test)]
@@ -529,5 +539,109 @@ paths:
                 "'{path}' is not under .claude/rules and must be skipped, got: {diagnostics:?}"
             );
         }
+    }
+
+    // ===== CC-MEM-011: comma-separated paths and escapes =====
+
+    #[test]
+    fn test_cc_mem_011_comma_separated_string_checks_each_pattern() {
+        // "Accepts a YAML list or a comma-separated string": each pattern is
+        // validated on its own, so the bad one is reported by name.
+        let content = "---\npaths: \"src/**/*.{ts,tsx}, photos [2024/**\"\n---\n# Rule\n";
+        let diagnostics = validate_rule(content);
+        let hits: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-MEM-011")
+            .collect();
+        assert_eq!(hits.len(), 1, "{diagnostics:?}");
+        assert!(
+            hits[0].message.contains("'photos [2024/**'"),
+            "{}",
+            hits[0].message
+        );
+        assert!(hits[0].message.contains("item 2"));
+        assert_eq!(hits[0].line, 2);
+    }
+
+    #[test]
+    fn test_cc_mem_011_parse_error_respects_disabled_rule() {
+        let mut config = LintConfig::default();
+        config.rules_mut().disabled_rules = vec!["CC-MEM-011".to_string()];
+        let diagnostics = validate_rule_with_config("---\npaths: [\n---\n# Rule\n", &config);
+        assert!(!diagnostics.iter().any(|d| d.rule == "CC-MEM-011"));
+    }
+
+    #[test]
+    fn test_cc_mem_011_parse_error_says_rule_loads_everywhere() {
+        let diagnostics = validate_rule("---\npaths: [\n---\n# Rule\n");
+        let hit = diagnostics
+            .iter()
+            .find(|d| d.rule == "CC-MEM-011")
+            .expect("CC-MEM-011");
+        assert!(
+            hit.message.contains("as if it had no paths"),
+            "{}",
+            hit.message
+        );
+    }
+
+    // ===== CC-MEM-014 / CC-MEM-017 on rule files (ClaudeMdValidator) =====
+
+    fn validate_rule_as_memory(content: &str) -> Vec<Diagnostic> {
+        crate::rules::claude_md::ClaudeMdValidator.validate(
+            Path::new(".claude/rules/my-rule.md"),
+            content,
+            &LintConfig::default(),
+        )
+    }
+
+    #[test]
+    fn test_cc_mem_014_rule_file_over_limit() {
+        // Frontmatter is removed before the rule loads, so it does not count.
+        let body: String = (1..=200).map(|i| format!("- rule {i}\n")).collect();
+        let at_limit = format!("---\npaths:\n  - src/**\n---\n{body}");
+        assert!(
+            !validate_rule_as_memory(&at_limit)
+                .iter()
+                .any(|d| d.rule == "CC-MEM-014")
+        );
+
+        let over = format!("{body}- one more\n");
+        let hit = validate_rule_as_memory(&over)
+            .into_iter()
+            .find(|d| d.rule == "CC-MEM-014")
+            .expect("CC-MEM-014");
+        assert_eq!(hit.level, DiagnosticLevel::Warning);
+        assert!(hit.message.contains("201 lines"));
+        // An unconditional rule is told to add paths.
+        assert!(
+            hit.suggestion
+                .as_deref()
+                .unwrap_or_default()
+                .contains("paths field")
+        );
+    }
+
+    #[test]
+    fn test_cc_mem_017_rule_file_lines_include_frontmatter_offset() {
+        let body: String = (0..6).map(|i| format!("- NEVER do thing {i}\n")).collect();
+        let content = format!("---\npaths:\n  - src/**\n---\n{body}");
+        let hit = validate_rule_as_memory(&content)
+            .into_iter()
+            .find(|d| d.rule == "CC-MEM-017")
+            .expect("CC-MEM-017");
+        assert_eq!((hit.line, hit.column), (5, 3));
+    }
+
+    #[test]
+    fn test_cc_mem_011_escaped_bracket_is_valid() {
+        // memory "Path-specific rules": "To match a literal `[` in a file
+        // name, escape it as `photos \\[2024/**`."
+        let content = "---\npaths:\n  - \"photos \\\\[2024/**\"\n---\n# Rule\n";
+        let diagnostics = validate_rule(content);
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "CC-MEM-011"),
+            "{diagnostics:?}"
+        );
     }
 }

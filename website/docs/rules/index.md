@@ -1,7 +1,7 @@
 # Rules Reference
 
-This section contains all `569` validation rules generated from `knowledge-base/rules.json`.
-`131` rules have automatic fixes.
+This section contains all `574` validation rules generated from `knowledge-base/rules.json`.
+`132` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
 |------|------|----------|----------|----------|
@@ -77,8 +77,6 @@ This section contains all `569` validation rules generated from `knowledge-base/
 | [CC-MEM-002](./generated/cc-mem-002.md) | Circular Import | HIGH | Claude Memory | No |
 | [CC-MEM-003](./generated/cc-mem-003.md) | Import Depth Exceeds 4 | HIGH | Claude Memory | No |
 | [CC-MEM-004](./generated/cc-mem-004.md) | Invalid Command Reference | MEDIUM | Claude Memory | No |
-| [CC-MEM-007](./generated/cc-mem-007.md) | Weak Constraint Language | LOW | Claude Memory | No |
-| [CC-MEM-009](./generated/cc-mem-009.md) | Token Count Exceeded | MEDIUM | Claude Memory | No |
 | [CC-MEM-010](./generated/cc-mem-010.md) | README Duplication | MEDIUM | Claude Memory | No |
 | [CC-MEM-011](./generated/cc-mem-011.md) | Invalid Paths Glob in Rules | HIGH | Claude Memory | No |
 | [CC-MEM-012](./generated/cc-mem-012.md) | Rules File Unknown Frontmatter Key | MEDIUM | Claude Memory | Yes (unsafe) |
@@ -86,9 +84,16 @@ This section contains all `569` validation rules generated from `knowledge-base/
 | [CC-OS-002](./generated/cc-os-002.md) | Output Style Invalid keep-coding-instructions Type | HIGH | claude-output-styles | Yes (unsafe) |
 | [CC-OS-003](./generated/cc-os-003.md) | Output Style Unknown Frontmatter Key | MEDIUM | claude-output-styles | No |
 | [CC-OS-004](./generated/cc-os-004.md) | Output Style Empty Body | MEDIUM | claude-output-styles | No |
-| [CC-OS-005](./generated/cc-os-005.md) | Output Style Name Exceeds Length | LOW | claude-output-styles | No |
 | [CC-OS-006](./generated/cc-os-006.md) | Invalid Output Style Frontmatter Syntax | HIGH | claude-output-styles | No |
-| [CC-MEM-014](./generated/cc-mem-014.md) | CLAUDE.md Exceeds Line Limit | MEDIUM | Claude Memory | No |
+| [CC-OS-007](./generated/cc-os-007.md) | outputStyle Case Mismatch | MEDIUM | claude-output-styles | Yes (unsafe) |
+| [CC-MEM-014](./generated/cc-mem-014.md) | Instruction File Exceeds 200 Lines | MEDIUM | Claude Memory | No |
+| [CC-MEM-015](./generated/cc-mem-015.md) | Always-Loaded Instructions Exceed Combined Size | LOW | Claude Memory | No |
+| [CC-MEM-016](./generated/cc-mem-016.md) | MEMORY.md Exceeds Load Limit | MEDIUM | Claude Memory | No |
+| [CC-MEM-017](./generated/cc-mem-017.md) | Emphasis Overuse | LOW | Claude Memory | No |
+| [CC-MEM-018](./generated/cc-mem-018.md) | AGENTS.md Not Imported | LOW | Claude Memory | No |
+| [CC-MEM-019](./generated/cc-mem-019.md) | Import Path Quoted or Split by a Space | MEDIUM | Claude Memory | No |
+| [CC-MEM-020](./generated/cc-mem-020.md) | Personal Claude File Not Gitignored | LOW | Claude Memory | No |
+| [CC-MEM-021](./generated/cc-mem-021.md) | Directory Tree or File Listing in CLAUDE.md | LOW | Claude Memory | No |
 | [CC-PL-001](./generated/cc-pl-001.md) | Plugin Manifest Not in .claude-plugin/ | HIGH | Claude Plugins | No |
 | [CC-PL-002](./generated/cc-pl-002.md) | Components in .claude-plugin/ | HIGH | Claude Plugins | No |
 | [CC-PL-003](./generated/cc-pl-003.md) | Invalid Semver | LOW | Claude Plugins | Yes (unsafe) |
@@ -137,17 +142,13 @@ This section contains all `569` validation rules generated from `knowledge-base/
 | [CC-SET-011](./generated/cc-set-011.md) | Non-boolean respondToBashCommands Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-012](./generated/cc-set-012.md) | Invalid sandbox.credentials Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-013](./generated/cc-set-013.md) | Non-boolean autoMode.classifyAllShell Setting | MEDIUM | Claude Settings | Yes (unsafe) |
-| [CC-SET-014](./generated/cc-set-014.md) | autoMode Setting Ignored in settings.local.json | MEDIUM | Claude Settings | No |
-| [CC-SET-015](./generated/cc-set-015.md) | Dead pluginConfigs in Project-Level Settings | MEDIUM | Claude Settings | No |
-| [CC-SET-016](./generated/cc-set-016.md) | Deprecated Tool-Scoped Permission Rule Form | LOW | Claude Settings | Yes (unsafe) |
+| [CC-SET-016](./generated/cc-set-016.md) | File Path Rule Never Consulted | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-017](./generated/cc-set-017.md) | Non-boolean sandbox.filesystem.disabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-018](./generated/cc-set-018.md) | Non-boolean emojiCompletionEnabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-019](./generated/cc-set-019.md) | Non-boolean sandbox.network.strictAllowlist Setting | MEDIUM | Claude Settings | Yes (unsafe) |
 | [CC-SET-020](./generated/cc-set-020.md) | Invalid workflowSizeGuideline Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-021](./generated/cc-set-021.md) | Ineffective Project Remote Control Auto-start | MEDIUM | Claude Settings | No |
 | [CC-SET-022](./generated/cc-set-022.md) | Invalid crossSessionInbound Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-023](./generated/cc-set-023.md) | Invalid dialogExpiry Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-024](./generated/cc-set-024.md) | Ineffective Project sandbox.ripgrep Override | MEDIUM | Claude Settings | No |
 | [CC-SET-025](./generated/cc-set-025.md) | Invalid modelPicker Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-026](./generated/cc-set-026.md) | Invalid promptCacheTtl Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-027](./generated/cc-set-027.md) | Invalid subagentPromptCacheTtl Setting | MEDIUM | Claude Settings | No |
@@ -155,8 +156,14 @@ This section contains all `569` validation rules generated from `knowledge-base/
 | [CC-SET-029](./generated/cc-set-029.md) | Invalid spinnerTipsOverride Shape | MEDIUM | Claude Settings | No |
 | [CC-SET-030](./generated/cc-set-030.md) | Local Command in managedMcpServers | HIGH | Claude Settings | No |
 | [CC-SET-031](./generated/cc-set-031.md) | Invalid maxEffortLevel Setting | MEDIUM | Claude Settings | No |
-| [CC-SET-032](./generated/cc-set-032.md) | Ineffective Project allowedProviders Setting | MEDIUM | Claude Settings | No |
 | [CC-SET-033](./generated/cc-set-033.md) | Idle Compaction Not Boolean | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-034](./generated/cc-set-034.md) | Settings Key Ignored at This Scope | MEDIUM | Claude Settings | No |
+| [CC-SET-035](./generated/cc-set-035.md) | Ineffective Permission Rule Syntax | HIGH | Claude Settings | No |
+| [CC-SET-036](./generated/cc-set-036.md) | Broad Code-Execution Allow Rule | MEDIUM | Claude Settings | No |
+| [CC-SET-037](./generated/cc-set-037.md) | Sandbox Weakened by Repository Settings | MEDIUM | Claude Settings | No |
+| [CC-SET-038](./generated/cc-set-038.md) | .claudeignore Has No Effect | MEDIUM | Claude Settings | No |
+| [CC-SET-039](./generated/cc-set-039.md) | Secret Files Not Denied | LOW | Claude Settings | No |
+| [CC-SET-040](./generated/cc-set-040.md) | Memory Path Setting Cannot Match | MEDIUM | Claude Settings | No |
 | [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
 | [CDX-001](./generated/cdx-001.md) | Invalid Approval Mode | HIGH | Codex CLI | Yes (unsafe) |
 | [CDX-002](./generated/cdx-002.md) | Invalid Full Auto Error Mode | HIGH | Codex CLI | Yes (unsafe) |
@@ -486,11 +493,9 @@ This section contains all `569` validation rules generated from `knowledge-base/
 | [OC-008](./generated/oc-008.md) | Invalid Permission Config | HIGH | OpenCode | Yes (unsafe) |
 | [OC-009](./generated/oc-009.md) | Invalid Variable Substitution | MEDIUM | OpenCode | No |
 | [OC-SK-001](./generated/oc-sk-001.md) | OpenCode Skill Uses Unsupported Field | MEDIUM | OpenCode Skills | Yes (safe/unsafe) |
-| [PE-001](./generated/pe-001.md) | Lost in the Middle | LOW | Prompt Engineering | No |
 | [PE-002](./generated/pe-002.md) | Chain-of-Thought on Simple Task | LOW | Prompt Engineering | No |
-| [PE-003](./generated/pe-003.md) | Weak Imperative Language | LOW | Prompt Engineering | No |
 | [PE-004](./generated/pe-004.md) | Ambiguous Instructions | MEDIUM | Prompt Engineering | No |
-| [PE-005](./generated/pe-005.md) | Redundant Generic Instructions | MEDIUM | Prompt Engineering | Yes (safe) |
+| [PE-005](./generated/pe-005.md) | Redundant Generic Instructions | MEDIUM | Prompt Engineering | Yes (unsafe) |
 | [PE-006](./generated/pe-006.md) | Negative-Only Instructions | MEDIUM | Prompt Engineering | No |
 | [RC-SK-001](./generated/rc-sk-001.md) | Roo Code Skill Uses Unsupported Field | MEDIUM | Roo Code Skills | Yes (safe/unsafe) |
 | [REF-001](./generated/ref-001.md) | Import File Not Found | HIGH | References | No |
@@ -508,9 +513,9 @@ This section contains all `569` validation rules generated from `knowledge-base/
 | [WS-003](./generated/ws-003.md) | Empty or Oversized Windsurf Workflow File | MEDIUM | windsurf | No |
 | [WS-004](./generated/ws-004.md) | Legacy .windsurfrules File Detected | LOW | windsurf | No |
 | [WS-SK-001](./generated/ws-sk-001.md) | Windsurf Skill Uses Unsupported Field | MEDIUM | Windsurf Skills | Yes (safe/unsafe) |
-| [XML-001](./generated/xml-001.md) | Unclosed XML Tag | HIGH | XML | Yes (unsafe) |
-| [XML-002](./generated/xml-002.md) | Mismatched Closing Tag | HIGH | XML | Yes (unsafe) |
-| [XML-003](./generated/xml-003.md) | Unmatched Closing Tag | HIGH | XML | Yes (unsafe) |
+| [XML-001](./generated/xml-001.md) | Unclosed XML Tag | MEDIUM | XML | Yes (unsafe) |
+| [XML-002](./generated/xml-002.md) | Mismatched Closing Tag | MEDIUM | XML | Yes (unsafe) |
+| [XML-003](./generated/xml-003.md) | Unmatched Closing Tag | MEDIUM | XML | Yes (unsafe) |
 | [XP-001](./generated/xp-001.md) | Platform-Specific Feature in Generic Config | LOW | Cross-Platform | No |
 | [XP-002](./generated/xp-002.md) | AGENTS.md Platform Compatibility | MEDIUM | Cross-Platform | No |
 | [XP-003](./generated/xp-003.md) | Hard-Coded Platform Paths | MEDIUM | Cross-Platform | No |

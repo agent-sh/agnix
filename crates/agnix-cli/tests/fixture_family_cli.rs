@@ -152,7 +152,8 @@ fn test_cli_codex_invalid_fixture_counts() {
 
 #[test]
 fn test_cli_reports_pe_fixtures() {
-    let source = workspace_root().join("tests/fixtures/prompt/pe-001-critical-in-middle.md");
+    // PE-001 is retired; PE-004 is reported for the ambiguous-term fixture.
+    let source = workspace_root().join("tests/fixtures/prompt/pe-004-ambiguous.md");
     let content = std::fs::read_to_string(&source)
         .unwrap_or_else(|_| panic!("Failed to read {}", source.display()));
 
@@ -161,5 +162,5 @@ fn test_cli_reports_pe_fixtures() {
     std::fs::write(&claude_path, content).unwrap();
 
     let json = run_json(temp.path());
-    assert_has_rule(&json, "PE-001");
+    assert_has_rule(&json, "PE-004");
 }

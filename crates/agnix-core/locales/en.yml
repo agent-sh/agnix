@@ -393,25 +393,69 @@ rules:
   cc_mem_006:
     message: Negative instruction '%{text}' without positive alternative
     suggestion: 'Add a positive alternative: ''Instead, do...'' or ''Use X instead.'''
-  cc_mem_007:
-    message: Weak constraint '%{text}' in critical section '%{section}'
-    suggestion: 'Use strong language in critical sections: ''must'', ''always'', ''required''.'
-    fix: Replace '%{text}' with stronger language
   cc_mem_008:
     message: Critical keyword '%{keyword}' at %{percent} percent of document (middle zone)
     suggestion: Move critical content to the top or bottom of the document for better recall.
-  cc_mem_009:
-    message: File exceeds recommended token limit (~%{tokens} tokens, limit is %{limit})
-    suggestion: Consider using @import to split content into multiple files.
   cc_mem_010:
-    message: 'CLAUDE.md has %{overlap} percent overlap with README.md (threshold: %{threshold} percent)'
-    suggestion: CLAUDE.md should complement README, not duplicate it. Remove duplicated sections.
+    message: "%{file} has %{overlap} percent word overlap with README.md (agnix heuristic threshold: %{threshold} percent)"
+    suggestion: "Claude can read the README when it needs it. Keep pitfalls, rationale and conventions in CLAUDE.md, and cut what repeats the README or what Claude can derive from the code."
   cc_mem_011:
     message: 'Invalid glob pattern ''%{pattern}'' in paths field (item %{index}): %{error}'
     suggestion: 'Fix the glob pattern syntax. Valid examples: ''src/**/*.ts'', ''*.rs'', ''tests/**/*.test.js'''
+    parse_error: "Invalid rule frontmatter (%{error}); Claude Code ignores the frontmatter and loads this rule in every session as if it had no paths"
+    parse_error_suggestion: "Fix the YAML between the --- markers (close it with a line containing only ---) so the paths field applies."
   cc_mem_012:
     message: Unknown frontmatter key '%{key}' in .claude/rules file
     suggestion: Only 'paths' is a recognized key in .claude/rules/*.md frontmatter. Remove '%{key}' or check for typos.
+  cc_mem_014:
+    message: "%{file} has %{lines} lines; Claude Code recommends keeping each CLAUDE.md under %{limit} lines because longer files use more context and reduce adherence"
+    suggestion: "Move guidance that applies to part of the codebase into path-scoped .claude/rules/ files and multi-step procedures into skills. @imports and CLAUDE.local.md also load at launch, so they do not reduce context."
+    rule_message: "Rule file has %{lines} lines; Claude Code counts each rules file as a separate instruction file and recommends under %{limit} lines"
+    rule_suggestion: "Add a paths field so the rule loads only for matching files, split it into narrower rules, or move procedures into a skill."
+    rule_scoped_suggestion: "Split the rule into narrower path-scoped rules, or move procedures into a skill."
+    import_message: "Imported file '@%{import}' has %{lines} lines; Claude Code counts each @path import as a separate instruction file and recommends under %{limit} lines"
+    import_suggestion: "Imports load at launch with the file that names them. Move part-of-codebase guidance into path-scoped .claude/rules/ files and procedures into skills, or trim the imported file."
+  cc_mem_015:
+    message: "Instruction files loaded at launch total %{lines} lines across %{files} files (%{breakdown}); Claude Code warns when files add up past a combined limit (agnix heuristic: %{limit} lines)"
+    suggestion: "Add paths to rules that apply to part of the codebase so they load on demand, move procedures into skills, and trim content Claude can derive from the code."
+  cc_mem_016:
+    message: "MEMORY.md has %{lines} lines and %{bytes} bytes; Claude Code loads only the first 200 lines or 25KB, so everything from line %{line} on is not loaded"
+    suggestion: "Keep one line per entry in MEMORY.md, move detail into topic files, and merge or drop stale entries."
+  cc_mem_017:
+    message: "%{count} lines use emphasis such as IMPORTANT, MUST or NEVER (first at lines %{lines}); Claude Code advises emphasizing only the one line Claude keeps skipping, because emphasis on many lines makes none stand out"
+    suggestion: "Write the instructions in plain, specific language and give the reason behind each; keep emphasis for a single instruction Claude keeps missing. Current Claude models over-trigger on aggressive wording such as 'CRITICAL: You MUST'."
+  cc_mem_018:
+    prose_message: "%{file} asks Claude in prose to read AGENTS.md ('%{text}'); Claude sees AGENTS.md only if it decides to open the file"
+    prose_suggestion: "Replace the sentence with an @AGENTS.md import, or delete CLAUDE.md so Claude Code reads AGENTS.md directly."
+    local_message: "CLAUDE.local.md stops Claude Code from reading the AGENTS.md next to it: with no CLAUDE.md here or above, CLAUDE.local.md counts as the project's CLAUDE.md"
+    local_suggestion: "Add a CLAUDE.md that contains @AGENTS.md, or set Project instructions to claude-md-and-agents-md in /config."
+  cc_mem_019:
+    quoted_message: "Import %{import} is quoted, so Claude Code does not import it"
+    quoted_suggestion: "Remove the quotes and put a backslash before each space: %{escaped}"
+    space_message: "Import @%{import} ends at the first space, so Claude Code looks for '%{import}' instead of '%{intended}'"
+    space_suggestion: "Put a backslash before each space in the path: %{escaped}"
+  cc_mem_020:
+    message: "%{file} holds personal settings or notes and no .gitignore rule covers it, so it can be committed"
+    suggestion: "Add %{file} to .gitignore."
+  cc_mem_021:
+    tree_message: "CLAUDE.md has a %{lines}-line directory tree; Claude can derive directory layouts from the code, and /doctor proposes cutting them"
+    listing_message: "CLAUDE.md has a %{items}-item file-by-file listing; Claude Code's best practices list file-by-file descriptions of the codebase as content to leave out"
+    suggestion: "Keep the parts of the layout Claude would get wrong (pitfalls, rationale, conventions that differ from tool defaults) and cut the rest."
+  cc_os_003:
+    message: "Output style frontmatter has unknown key '%{key}'; Claude Code ignores misspelled fields without an error"
+    suggestion: "Use name, description or keep-coding-instructions, or check the key for typos."
+    plugin_only_message: "force-for-plugin applies only to output styles shipped in a plugin; Claude Code ignores it in .claude/output-styles/"
+    plugin_only_suggestion: "Remove force-for-plugin, or move the style into a plugin's output-styles/ directory."
+  cc_os_004:
+    message: "Output style has no instructions after the frontmatter; selecting it adds nothing and, without keep-coding-instructions: true, also drops Claude Code's software engineering instructions"
+    suggestion: "Write the style's instructions for Claude below the closing ---."
+  cc_os_006:
+    message: "Invalid output-style frontmatter (%{error}); Claude Code loads the style under its file name with no fields set"
+    suggestion: "Fix the YAML syntax (close the frontmatter with a line containing only ---, quote values with special characters)."
+  cc_os_007:
+    message: "outputStyle '%{value}' differs from the %{kind} style '%{expected}' only in case; the value is case-sensitive, so Claude Code uses the Default style"
+    suggestion: 'Write "outputStyle": "%{expected}".'
+    fix: "Replace with '%{expected}' (selects that style)"
   agm_001:
     message: 'Invalid markdown: %{description}'
     suggestion: Fix the markdown syntax error -- check for unclosed tags, mismatched headers, or invalid link syntax
@@ -1222,24 +1266,18 @@ rules:
   kr_mcp_015:
     message: "Kiro MCP server '%{server}' auto-approves every tool with autoApprove [\"*\"]; Kiro advises auto-approving only trusted, read-only tools with limited scope"
     suggestion: "List the specific tool names to auto-approve (Kiro CLI V3 ignores autoApprove and approves MCP tools through permission rules)"
-  pe_001:
-    message: Critical keyword '%{keyword}' at %{percent} percent of document (40-60 percent is the 'lost in the middle' zone)
-    suggestion: Move critical content to the start or end of the document for better recall
   pe_002:
     message: Chain-of-thought phrase '%{phrase}' used with simple task '%{task}'
-    suggestion: Remove chain-of-thought instructions for simple tasks; CoT can hurt performance on direct operations
-  pe_003:
-    message: Weak language '%{term}' in critical section '%{section}'
-    suggestion: Use strong language (must/always/never) in critical sections for better compliance
+    suggestion: "Drop the step-by-step instruction for this simple operation; for real reasoning tasks a general instruction such as 'think thoroughly' usually works better than a prescribed plan"
   pe_004:
     message: Ambiguous term '%{term}' creates unclear instruction
-    suggestion: Replace with specific criteria or remove ambiguity (e.g., 'always' instead of 'usually')
+    suggestion: "Replace the hedge with a condition Claude can check (e.g., 'when the change touches src/api/'), or state the rule without it"
   pe_005:
-    message: Redundant instruction '%{phrase}' - LLMs already follow this by default
-    suggestion: Remove generic instructions and focus on project-specific behavior and constraints
+    message: "Generic instruction '%{phrase}' adds no project-specific guidance"
+    suggestion: "Remove it, or replace it with the concrete convention it stands for (e.g., 'Use 2-space indentation' instead of 'write clean code')"
   pe_006:
     message: Negative instruction '%{text}' without positive alternative
-    suggestion: Add a positive alternative after negative instructions (e.g., 'Instead, use...')
+    suggestion: "Say what to do instead (e.g., 'Instead, use...'), or give the reason for the prohibition"
   cc_pl_001:
     message: plugin.json must be located in .claude-plugin/ directory
     suggestion: Move plugin.json to .claude-plugin/plugin.json
@@ -2165,26 +2203,15 @@ rules:
     aws_features_both: awsPairs and sigv4
     tls_terminate_required: AWS credential re-signing via sandbox.credentials.%{feature} requires sandbox.network.tlsTerminate to be an object
     tls_terminate_suggestion: 'Set sandbox.network.tlsTerminate to an object such as {}, or remove the AWS credential re-signing settings.'
-    aws_scope: AWS credential re-signing via sandbox.credentials.%{feature} is ignored in project-level .claude settings
-    aws_scope_suggestion: Move the AWS credential re-signing settings to ~/.claude/settings.json, a --settings file, or managed settings.
   cc_set_013:
     message: autoMode.classifyAllShell must be a boolean when present (got %{actual}); Claude Code 2.1.193+ documents this
       auto-mode setting as a strict true/false toggle
     suggestion: Set autoMode.classifyAllShell to an unquoted true or false, or remove it to keep the default auto-mode
       classifier scope.
-  cc_set_014:
-    message: autoMode in .claude/settings.local.json is silently ignored as of Claude Code 2.1.207; the key is only read
-      from ~/.claude/settings.json
-    suggestion: Move autoMode configuration to ~/.claude/settings.json (your global user settings file) where Claude Code
-      2.1.207+ reads it.
-  cc_set_015:
-    message: pluginConfigs in project-level .claude settings is silently ignored since Claude Code 2.1.207; plugin option
-      values are only read from user settings, --settings files, and managed settings
-    suggestion: Move pluginConfigs to ~/.claude/settings.json (user-level), pass it via the --settings flag, or configure
-      it in managed settings; remove it from the project-level file.
   cc_set_016:
-    message: "'%{rule}' is a deprecated permission-rule form as of Claude Code 2.1.210; use '%{replacement}' instead"
-    suggestion: "Replace '%{rule}' with '%{replacement}' in your permissions list."
+    message: "'%{rule}' in permissions.%{list} is never consulted: Claude Code checks file permissions against Edit(path) and Read(path) rules only"
+    deny_message: "'%{rule}' in permissions.%{list} is never consulted, so it protects nothing: Claude Code checks file permissions against Edit(path) and Read(path) rules only"
+    suggestion: "Replace '%{rule}' with '%{replacement}'; Edit rules cover every file-editing tool, Read rules every file-reading tool."
     fix: "Replace '%{rule}' with '%{replacement}' (changes permission enforcement)"
   cc_set_017:
     message: sandbox.filesystem.disabled must be a boolean when present (got %{actual}); Claude Code 2.1.216+ uses this
@@ -2200,26 +2227,13 @@ rules:
   cc_set_020:
     message: workflowSizeGuideline must be unrestricted, small, medium, or large (got %{actual})
     suggestion: Set workflowSizeGuideline to one of unrestricted, small, medium, or large.
-  cc_set_021:
-    message: 'remoteControlAtStartup: true cannot enable Remote Control from project settings in Claude Code 2.1.222+;
-      this value is ignored'
-    suggestion: Enable Remote Control in user settings with /config, or set this field to false to disable it for the
-      project.
   cc_set_022:
     message: crossSessionInbound must be accept, hold, or refuse (got %{actual})
     suggestion: Set crossSessionInbound to accept, hold, or refuse.
   cc_set_023:
     message: dialogExpiry must be 60s, 5m, 10m, or never (got %{actual})
     suggestion: Set dialogExpiry to 60s, 5m, 10m, or never.
-  cc_set_024:
-    message: sandbox.ripgrep is ignored in project settings in Claude Code 2.1.232+; only user settings, managed
-      settings, and the --settings flag can override the sandbox ripgrep binary
-    suggestion: Move the sandbox.ripgrep override to your user settings at ~/.claude/settings.json, to managed settings,
-      or to a --settings file, and remove it from the repository.
   cc_set_025:
-    scope_message: modelPicker is ignored in project and local settings in Claude Code 2.1.242+; it is honored only
-      from user settings, managed settings, and --settings files
-    scope_suggestion: Move modelPicker to user settings, managed settings, or a --settings file and remove it from the repository.
     shape_message: 'Invalid modelPicker setting: %{reason}'
     shape_suggestion: Use an object with an options array of rows containing a non-empty model string, optional string
       label and description fields, and an optional boolean replaceBuiltInOptions.
@@ -2262,12 +2276,83 @@ rules:
   cc_set_031:
     invalid: "%{location} must be one of low, medium, high, xhigh, or max"
     suggestion: Set the effort cap to low, medium, high, xhigh, or max.
-  cc_set_032:
-    message: allowedProviders is only honored in Claude Code managed settings
-    suggestion: Move allowedProviders to your organization's managed-settings.json.
   cc_set_033:
     message: idleCompaction must be a boolean (got %{actual})
     suggestion: Set idleCompaction to a strict true/false boolean; adjust the 200K-token minimum with CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS instead.
+  cc_set_034:
+    managed_message: "'%{key}' has no effect in %{file}: Claude Code reads it only from managed settings"
+    managed_suggestion: "Deploy '%{key}' through managed settings (managed-settings.json, an MDM profile, or server-managed settings), or remove it."
+    user_or_managed_message: "'%{key}' has no effect in %{file}: Claude Code reads it only from user settings, --settings, or managed settings"
+    user_or_managed_suggestion: "Move '%{key}' to ~/.claude/settings.json, or remove it from the repository."
+    user_local_or_managed_message: "'%{key}' has no effect in %{file}: a repository's shared settings can't set it; Claude Code reads it from user, local, or managed settings"
+    user_local_or_managed_suggestion: "Move '%{key}' to .claude/settings.local.json or ~/.claude/settings.json."
+    user_message: "'%{key}' has no effect in %{file}: Claude Code reads it only from ~/.claude/settings.json"
+    user_suggestion: "Move '%{key}' to ~/.claude/settings.json."
+    global_config_message: "'%{key}' has no effect in %{file}: it is a global config key that Claude Code reads only from ~/.claude.json"
+    global_config_suggestion: "Change '%{key}' with /config, which writes ~/.claude.json, and remove it from this file."
+    removed_global_config_message: "'%{key}' has no effect in %{file}: current Claude Code no longer reads it, and older releases read it only from ~/.claude.json"
+    removed_global_config_suggestion: "Remove '%{key}'."
+    true_ignored_message: "'%{key}: true' has no effect in %{file}: Claude Code ignores true in repository settings (false still applies)"
+    true_ignored_suggestion: "Set '%{key}' to true in ~/.claude/settings.json, or set it to false here to turn it off for the project."
+    default_mode_message: "permissions.defaultMode '%{mode}' has no effect in %{file}: auto and bypassPermissions don't take effect from project or local settings"
+    default_mode_suggestion: "Set defaultMode '%{mode}' in ~/.claude/settings.json, or choose default, acceptEdits, plan, or dontAsk for the project."
+    env_repository_message: "env variable '%{var}' has no effect in %{file}: Claude Code drops it from project and local settings"
+    env_repository_suggestion: "Set '%{var}' in your shell, ~/.claude/settings.json, or managed settings."
+    env_everywhere_message: "env variable '%{var}' has no effect in %{file}: Claude Code ignores it in every settings file and reads it only from the launch environment"
+    env_everywhere_suggestion: "Remove '%{var}' from env."
+    mask_entry_message: "mask entry in sandbox.credentials.%{array} has no effect in %{file}: Claude Code honors mask entries only from user settings, managed settings, and --settings"
+    mask_entry_suggestion: "Move the mask entry to ~/.claude/settings.json or managed settings; deny entries still apply from the repository."
+    spinner_tips_message: "spinnerTipsOverride.%{field} has no effect in %{file}: from project and local settings Claude Code reads plain string tips only"
+    spinner_tips_suggestion: "Use plain string tips here, or move tip objects, tipsFile, label and excludeDefault to ~/.claude/settings.json."
+    self_hosted_environment_message: "A self-hosted remote.defaultEnvironmentId (ccpool_...) has no effect in %{file}: Claude Code reads it only from user or managed settings, or --settings"
+    self_hosted_environment_suggestion: "Set the self-hosted environment ID in ~/.claude/settings.json, or pick it with /remote-env."
+  cc_set_035:
+    malformed_message: "Permission rule '%{rule}' is malformed, so Claude Code skips it: rules take the form Tool or Tool(content) and must end at the closing parenthesis"
+    malformed_suggestion: "Rewrite the rule so it ends at its closing parenthesis, for example Bash(ls *) instead of Bash(ls) x."
+    mcp_parentheses_message: "Permission rule '%{rule}' is skipped: Claude Code skips any mcp__ rule with parentheses in a settings file"
+    mcp_parentheses_suggestion: "Use the tool name without parentheses (mcp__server__tool), or pass a parameter rule with --disallowedTools."
+    primary_field_message: "Permission rule '%{rule}' is ignored: a parameter rule can't match the primary field '%{field}', because a compound command would bypass it"
+    primary_field_suggestion: "Use the tool's own specifier instead, such as Bash(rm *), Read(./path), or WebFetch(domain:host)."
+    unanchored_glob_message: "Allow rule '%{rule}' is skipped and approves nothing: allow rules accept tool-name globs only after a literal mcp__<server>__ prefix"
+    unanchored_glob_suggestion: "Name the server, for example mcp__github__*, or list the tools to allow."
+    colon_star_message: "In '%{rule}' the ':*' is not at the end, so Claude Code reads the colon as a literal character and the rule matches nothing it was meant to"
+    colon_star_suggestion: "Use ':*' only as a trailing wildcard, or write the space form, for example Bash(git push *)."
+    wildcard_subcommand_message: "Allow rule '%{rule}' has a * before the subcommand, so it also approves any options inserted there (for git, -c and --exec-path can run arbitrary commands); Claude Code warns about it at startup"
+    wildcard_subcommand_suggestion: "Replace the * with the exact value, or put every * after the subcommand, for example Bash(git status *)."
+    single_slash_message: "In '%{rule}' the path '%{specifier}' starts with one slash, which anchors at the settings source, not the filesystem root"
+    single_slash_suggestion: "Write %{tool}(/%{specifier}) with two leading slashes for an absolute path, or ~/ for a home-relative path."
+    unknown_tool_message: "Permission %{list} rule '%{rule}' names '%{tool}', which matches no Claude Code tool, so the rule matches nothing; Claude Code warns about it at startup"
+    unknown_tool_suggestion: "Use the canonical tool name from the Claude Code tools reference."
+    unknown_tool_case_suggestion: "Tool names are case-sensitive: write '%{tool}'."
+  cc_set_036:
+    blanket_message: "Allow rule '%{rule}' approves every shell command; Claude Code drops it when auto mode starts"
+    interpreter_message: "Allow rule '%{rule}' approves an interpreter with any arguments, which runs arbitrary code; Claude Code drops wildcarded interpreters when auto mode starts"
+    program_wildcard_message: "Allow rule '%{rule}' starts with *, so any program matches"
+    runner_message: "Allow rule '%{rule}' approves whatever command follows the runner, including arbitrary code"
+    script_runner_message: "Allow rule '%{rule}' runs any script the repository defines; Claude Code drops package-manager run commands when auto mode starts"
+    agent_message: "Allow rule '%{rule}' approves every subagent; Claude Code drops Agent allow rules when auto mode starts"
+    monitor_message: "Allow rule '%{rule}' approves every Monitor command, which runs through the shell; Claude Code drops Monitor allow rules when auto mode starts"
+    suggestion: "Allow the specific commands instead, for example Bash(npm run test) or Bash(devbox run npm test)."
+  cc_set_037:
+    flag_message: "sandbox.%{key} weakens the sandbox for everyone who clones this repository"
+    flag_suggestion: "Remove sandbox.%{key} from the shared settings; set it in ~/.claude/settings.json where it is needed, or block it with false in managed settings."
+    docker_socket_message: "sandbox.network.allowUnixSockets allows '%{socket}', which effectively grants access to the host system through the Docker socket"
+    docker_socket_suggestion: "Remove the Docker socket from allowUnixSockets, or run docker through a narrow excludedCommands pattern."
+    excluded_message: "sandbox.excludedCommands entry '%{command}' runs everything that tool can do outside the sandbox, with full access"
+    excluded_suggestion: "Use a narrower pattern, such as 'docker compose *', or allow the extra path or host with allowWrite or allowedDomains instead."
+    allow_write_message: "sandbox.filesystem.allowWrite grants writes to '%{target}', where a written file can run code outside the sandbox"
+    allow_write_suggestion: "Grant only the directories the tool needs, never $PATH directories, system configuration, or shell startup files."
+  cc_set_038:
+    message: "Claude Code does not read .claudeignore (%{entries} entries), so these paths are not protected"
+    suggestion: 'Move the entries into Read deny rules in .claude/settings.json, for example "permissions": {"deny": ["Read(./.env)", "Read(./secrets/**)"]}.'
+  cc_set_039:
+    message: "The project has %{files} but no Read deny rule covers it; Claude Code can read files with API keys or secrets"
+    suggestion: 'Add Read deny rules, for example "permissions": {"deny": ["%{example}"]}.'
+  cc_set_040:
+    exclude_message: "claudeMdExcludes pattern '%{pattern}' never matches: Claude Code matches patterns against absolute file paths"
+    exclude_suggestion: "Write an absolute path or a glob that can match one, for example **/%{pattern}."
+    memory_dir_message: "autoMemoryDirectory '%{value}' must be an absolute path or start with ~/"
+    memory_dir_suggestion: "Use an absolute path or a ~/ path, for example ~/my-memory-dir."
   cc_pl_016:
     message: Plugin name '%{name}' is not kebab-case
     suggestion: Use lowercase letters, digits, and hyphens only. Claude Code rejects names with control or invisible characters.
