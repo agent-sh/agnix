@@ -364,7 +364,17 @@ fn kiro_config(kiro: Option<&str>, fs: Option<Arc<MockFileSystem>>) -> LintConfi
 fn agent_rules(diagnostics: &[Diagnostic]) -> Vec<(String, DiagnosticLevel)> {
     let mut rules: Vec<_> = diagnostics
         .iter()
-        .filter(|d| d.rule.starts_with("KR-AG-") || d.rule == "KR-HK-005" || d.rule == "KR-HK-006")
+        .filter(|d| {
+            d.rule.starts_with("KR-AG-")
+                || [
+                    "KR-HK-005",
+                    "KR-HK-006",
+                    "KR-HK-021",
+                    "KR-HK-027",
+                    "KR-HK-029",
+                ]
+                .contains(&d.rule.as_str())
+        })
         .map(|d| (d.rule.clone(), d.level))
         .collect();
     rules.sort_by(|a, b| a.0.cmp(&b.0));
@@ -426,9 +436,9 @@ fn kiro_agent_fixtures_report_what_kiro_rejects() {
             "invalid-v3-hooks.json",
             include_str!("../../../tests/fixtures/kiro-agents/.kiro/agents/invalid-v3-hooks.json"),
             &[
-                ("KR-AG-025", Warning),
                 ("KR-HK-005", Warning),
                 ("KR-HK-006", Error),
+                ("KR-HK-021", Warning),
             ],
         ),
         (

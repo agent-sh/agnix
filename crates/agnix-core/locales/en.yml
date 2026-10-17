@@ -1242,10 +1242,7 @@ rules:
     allowed_star: 'allowedTools does not support the "*" wildcard, so this entry trusts nothing'
     allowed_star_suggestion: Use @builtin, @server, or glob patterns such as "@server/*" to pre-approve groups of tools
   kr_ag_025:
-    v3: 'Hook matcher ''%{matcher}'' names a Kiro CLI 2.x tool that V3 does not have, so the hook never fires in V3'
     v2: 'Hook matcher ''%{matcher}'' names a Kiro CLI V3 tool id that Kiro CLI 2.x does not know, so the hook never fires in 2.x'
-    v3_suggestion: 'Use the V3 matcher ''%{replacement}'''
-    v3_remove_suggestion: Remove the hook or match the replacement tool (for AWS, the MCP server's @server/tool)
     v2_suggestion: 'Use the Kiro CLI 2.x name ''%{replacement}'''
   kr_ag_026:
     timeout_in_object: '%{hook} sets ''timeout'', which object-form hooks do not read; Kiro CLI 2.x uses timeout_ms (milliseconds, default 30000) and V3 its 60-second default'

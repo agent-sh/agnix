@@ -15,6 +15,8 @@
 //! the spans of a parsed JSON document, and [`FrontmatterIndex`] finds keys in
 //! Markdown agent frontmatter.
 
+use crate::schemas::kiro_hook_v3::{resolve_trigger, trigger_case_insensitive_match};
+
 /// Which engine reads a top-level agent field.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum FieldOrigin {
@@ -252,21 +254,6 @@ pub(crate) fn v2_equivalent_for_v3_tool(name: &str) -> Option<&'static str> {
     })
 }
 
-/// Hook matchers that name a CLI 2.x tool V3 does not have: neither a V3 id or
-/// tag nor a substring of one, so the hook never fires in V3 (spec 1.8 "V2 hook
-/// matchers", 2.6). Returns the V3 matcher to use instead, if there is one.
-pub(crate) fn v3_matcher_replacement(matcher: &str) -> Option<Option<&'static str>> {
-    Some(match matcher {
-        "fs_read" | "fsRead" => Some("read"),
-        "glob" => Some("file_search"),
-        "fsWrite" => Some("write"),
-        "execute_cmd" | "executeBash" | "executeCmd" => Some("shell"),
-        "use_subagent" | "agent_crew" | "agentCrew" => Some("subagent"),
-        "use_aws" | "thinking" | "todo" | "todo_list" | "tool_search" => None,
-        _ => return None,
-    })
-}
-
 /// Claude Code tool names, a common porting mistake: Kiro names are
 /// lowercase and case-sensitive, so these select and trust nothing.
 pub(crate) fn claude_code_tool_replacement(name: &str) -> Option<&'static str> {
@@ -313,35 +300,10 @@ pub(crate) const V2_HOOK_TRIGGERS: &[&str] = &[
     "stop",
 ];
 
-/// The canonical V3 trigger for a trigger name, using V3's exact-case alias
-/// map (spec 2.5). `AgentSpawn` is not an alias.
-pub(crate) fn v3_canonical_trigger(trigger: &str) -> Option<&'static str> {
-    Some(match trigger {
-        "SessionStart" | "sessionStart" | "agentSpawn" => "SessionStart",
-        "SessionEnd" => "SessionEnd",
-        "Stop" | "stop" | "agentStop" => "Stop",
-        "PreToolUse" | "preToolUse" => "PreToolUse",
-        "PostToolUse" | "postToolUse" => "PostToolUse",
-        "PreTaskExec" | "preTaskExecution" => "PreTaskExec",
-        "PostTaskExec" | "postTaskExecution" => "PostTaskExec",
-        "UserPromptSubmit" | "userPromptSubmit" | "promptSubmit" => "UserPromptSubmit",
-        "PostFileCreate" | "fileCreated" => "PostFileCreate",
-        "PostFileSave" | "fileEdited" | "AfterFileEdit" => "PostFileSave",
-        "PostFileDelete" | "fileDeleted" => "PostFileDelete",
-        "Manual" | "userTriggered" => "Manual",
-        _ => return None,
-    })
-}
-
 /// The CLI 2.x object-form key a misspelled key most likely means, when the
 /// two differ only in case or are V3 names for the same trigger.
 pub(crate) fn v2_trigger_for(key: &str) -> Option<&'static str> {
-    let canonical = v3_canonical_trigger(key)
-        .or_else(|| v3_canonical_trigger_ignoring_case(key))
-        .or_else(|| {
-            key.eq_ignore_ascii_case("agentSpawn")
-                .then_some("SessionStart")
-        })?;
+    let canonical = resolve_trigger(key).or_else(|| trigger_case_insensitive_match(key))?;
     Some(match canonical {
         "SessionStart" => "agentSpawn",
         "UserPromptSubmit" => "userPromptSubmit",
@@ -350,28 +312,6 @@ pub(crate) fn v2_trigger_for(key: &str) -> Option<&'static str> {
         "Stop" => "stop",
         _ => return None,
     })
-}
-
-/// The canonical V3 trigger whose name equals `trigger` ignoring ASCII case.
-pub(crate) fn v3_canonical_trigger_ignoring_case(trigger: &str) -> Option<&'static str> {
-    const CANONICAL: &[&str] = &[
-        "SessionStart",
-        "SessionEnd",
-        "Stop",
-        "PreToolUse",
-        "PostToolUse",
-        "PreTaskExec",
-        "PostTaskExec",
-        "UserPromptSubmit",
-        "PostFileCreate",
-        "PostFileSave",
-        "PostFileDelete",
-        "Manual",
-    ];
-    CANONICAL
-        .iter()
-        .copied()
-        .find(|name| name.eq_ignore_ascii_case(trigger))
 }
 
 /// Keys of a CLI 2.x object-form hook entry (spec 2.2). `description` is
@@ -943,9 +883,6 @@ mod tests {
 
     #[test]
     fn trigger_tables_follow_v3_alias_map() {
-        assert_eq!(v3_canonical_trigger("agentSpawn"), Some("SessionStart"));
-        assert_eq!(v3_canonical_trigger("AgentSpawn"), None);
-        assert_eq!(v3_canonical_trigger("fileEdited"), Some("PostFileSave"));
         assert_eq!(v2_trigger_for("PreToolUse"), Some("preToolUse"));
         assert_eq!(v2_trigger_for("SessionStart"), Some("agentSpawn"));
         assert_eq!(v2_trigger_for("AgentSpawn"), Some("agentSpawn"));

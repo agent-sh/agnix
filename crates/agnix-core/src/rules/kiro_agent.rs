@@ -68,8 +68,11 @@ use crate::schemas::kiro_agent::{
     PERMISSION_POLICY_PRESETS, PathSegment, V2_HOOK_ENTRY_FIELDS, V2_HOOK_TRIGGERS,
     V2_MARKER_FIELDS, V3_MARKER_FIELDS, V3_RESERVED_AGENT_IDS, V3Replacement,
     case_variant_of_known_tool, claude_code_tool_replacement, field_origin, strip_jsonc,
-    v2_equivalent_for_v3_tool, v2_tool_group, v2_trigger_for, v3_canonical_trigger,
-    v3_canonical_trigger_ignoring_case, v3_matcher_replacement, v3_replacement_for_v2_tool,
+    v2_equivalent_for_v3_tool, v2_tool_group, v2_trigger_for, v3_replacement_for_v2_tool,
+};
+use crate::schemas::kiro_hook_v3::{
+    MatcherSubject, foreign_tool_names, is_tool_selector, matches_everything, resolve_trigger,
+    tool_matcher_matches_builtin, trigger_case_insensitive_match,
 };
 use crate::schemas::kiro_permissions::VALID_PERMISSION_CAPABILITIES;
 
@@ -1128,7 +1131,11 @@ impl Ctx<'_> {
                     let legacy_include = field == "useLegacyMcpJson"
                         && self.root().get(field) == Some(&Value::Bool(true))
                         && !self.root().contains_key("includeMcpJson");
-                    if legacy_include {
+                    // useLegacyMcpJson: false (or alongside includeMcpJson,
+                    // a KR-AG-018 duplicate) changes nothing in either engine.
+                    if field == "useLegacyMcpJson" && !legacy_include {
+                        None
+                    } else if legacy_include {
                         Some((
                             if self.engines.v3 { Warning } else { Info },
                             t!("rules.kr_ag_001.legacy_mcp_json"),
@@ -2873,7 +2880,7 @@ impl Ctx<'_> {
         for (trigger, entries) in map {
             let key_path = [K("hooks"), K(trigger)];
             let v2_valid = V2_HOOK_TRIGGERS.contains(&trigger.as_str());
-            let v3_trigger = v3_canonical_trigger(trigger);
+            let v3_trigger = resolve_trigger(trigger);
             if !v2_valid && self.enabled("KR-HK-005") {
                 self.report_object_trigger(out, map, trigger, v3_trigger);
             }
@@ -2944,12 +2951,22 @@ impl Ctx<'_> {
                     ),
                 }
                 match entry.get("matcher") {
-                    Some(Value::String(matcher)) if tool_trigger || v2_valid => {
+                    Some(Value::String(matcher)) => {
                         if tool_trigger {
-                            self.check_matcher(out, matcher, &field("matcher"));
+                            self.check_tool_matcher(
+                                out,
+                                Some(matcher),
+                                &entry_path,
+                                index,
+                                trigger,
+                            );
                         }
                     }
-                    Some(Value::String(_)) | None => {}
+                    None => {
+                        if tool_trigger {
+                            self.check_tool_matcher(out, None, &entry_path, index, trigger);
+                        }
+                    }
                     Some(other) => {
                         if self.engines.v2 {
                             self.push_hook_entry(
@@ -3230,7 +3247,7 @@ impl Ctx<'_> {
                     None
                 }
                 Some(Value::String(trigger)) => {
-                    let canonical = v3_canonical_trigger(trigger);
+                    let canonical = resolve_trigger(trigger);
                     if canonical.is_none() {
                         self.report_array_trigger(out, index, trigger, &location);
                     }
@@ -3248,10 +3265,12 @@ impl Ctx<'_> {
                 }
             };
             self.check_hook_action(out, entry, index, &location);
+            let tool_trigger = matches!(canonical, Some("PreToolUse" | "PostToolUse"));
             match entry.get("matcher") {
                 Some(Value::String(matcher)) => {
-                    if matches!(canonical, Some("PreToolUse" | "PostToolUse")) {
-                        self.check_matcher(out, matcher, &field("matcher"));
+                    if tool_trigger {
+                        let trigger = canonical.unwrap_or_default();
+                        self.check_tool_matcher(out, Some(matcher), &entry_path, index, trigger);
                     }
                 }
                 Some(other) => self.push_hook_entry(
@@ -3261,7 +3280,12 @@ impl Ctx<'_> {
                     &location,
                     format!("matcher must be a string, found {}", json_type_name(other)),
                 ),
-                None => {}
+                None => {
+                    if tool_trigger {
+                        let trigger = canonical.unwrap_or_default();
+                        self.check_tool_matcher(out, None, &entry_path, index, trigger);
+                    }
+                }
             }
             if let Some(timeout) = entry.get("timeout") {
                 match timeout {
@@ -3383,7 +3407,7 @@ impl Ctx<'_> {
             return;
         }
         let path = [K("hooks"), I(index), K("trigger")];
-        let replacement = v3_canonical_trigger_ignoring_case(trigger).or_else(|| {
+        let replacement = trigger_case_insensitive_match(trigger).or_else(|| {
             trigger
                 .eq_ignore_ascii_case("agentSpawn")
                 .then_some("SessionStart")
@@ -3526,11 +3550,105 @@ impl Ctx<'_> {
         }
     }
 
-    /// KR-AG-025: a tool-trigger matcher that names a tool an engine does not have.
-    fn check_matcher(&self, out: &mut Vec<Diagnostic>, matcher: &str, path: &[PathSegment<'_>]) {
-        if !self.enabled("KR-AG-025") {
+    /// Matcher checks for a tool-trigger hook (`matcher` is `None` when the
+    /// key is absent). For V3 the hooks validator's rules apply: KR-HK-027
+    /// (no specific matcher), KR-HK-021 (CLI 2.x or Claude Code names that
+    /// match no V3 tool) and KR-HK-029 (unanchored regex alternation).
+    /// KR-AG-025 covers the reverse case: a V3 tool id in a matcher Kiro
+    /// CLI 2.x reads.
+    fn check_tool_matcher(
+        &self,
+        out: &mut Vec<Diagnostic>,
+        matcher: Option<&str>,
+        entry_path: &[PathSegment<'_>],
+        index: usize,
+        trigger: &str,
+    ) {
+        let mut matcher_path = entry_path.to_vec();
+        matcher_path.push(K("matcher"));
+        let offset = match matcher {
+            Some(_) => self.at(&matcher_path, Anchor::Value),
+            None => self.at(entry_path, Anchor::Value),
+        };
+        if self.engines.v3
+            && self.enabled("KR-HK-027")
+            && matches_everything(matcher, MatcherSubject::Tool)
+        {
+            out.push(
+                self.diag(
+                    Info,
+                    "KR-HK-027",
+                    offset,
+                    t!("rules.kr_hk_027.message", index = index, trigger = trigger),
+                )
+                .with_suggestion(t!("rules.kr_hk_027.suggestion")),
+            );
+        }
+        let Some(matcher) = matcher else {
+            return;
+        };
+        if (self.engines.v3 || self.migration) && self.enabled("KR-HK-021") {
+            let names = if !matcher.contains('@')
+                && !matcher.contains("mcp_")
+                && tool_matcher_matches_builtin(matcher) == Some(false)
+            {
+                foreign_tool_names(matcher)
+            } else {
+                Vec::new()
+            };
+            if !names.is_empty() {
+                let names = names
+                    .iter()
+                    .map(|(name, origin, replacement)| {
+                        t!(
+                            "rules.kr_hk_021.name",
+                            name = *name,
+                            origin = *origin,
+                            replacement = *replacement
+                        )
+                        .to_string()
+                    })
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                let level = if self.engines.v3 { Warning } else { Info };
+                let diagnostic = self
+                    .diag(
+                        level,
+                        "KR-HK-021",
+                        offset,
+                        t!(
+                            "rules.kr_hk_021.message",
+                            index = index,
+                            matcher = matcher,
+                            names = names
+                        ),
+                    )
+                    .with_suggestion(t!("rules.kr_hk_021.suggestion"));
+                out.push(self.assume(diagnostic));
+                return;
+            }
+        }
+        if self.engines.v3
+            && self.enabled("KR-HK-029")
+            && !is_tool_selector(matcher)
+            && matcher.contains(['|', '('])
+            && !(matcher.starts_with('^') && matcher.ends_with('$'))
+        {
+            out.push(
+                self.diag(
+                    Info,
+                    "KR-HK-029",
+                    offset,
+                    t!("rules.kr_hk_029.message", index = index, matcher = matcher),
+                )
+                .with_suggestion(t!("rules.kr_hk_029.suggestion")),
+            );
+        }
+        if !self.engines.v2 || !self.enabled("KR-AG-025") {
             return;
         }
+        // CLI 2.x matchers are tool names, aliases or globs; split a plain
+        // alternation so each name is checked.
         let is_name = |part: &str| {
             !part.is_empty()
                 && part.chars().all(|ch| {
@@ -3541,31 +3659,8 @@ impl Ctx<'_> {
         if !parts.iter().all(|part| is_name(part)) {
             return;
         }
-        let offset = self.at(path, Anchor::Value);
         for part in parts {
-            if (self.engines.v3 || self.migration)
-                && let Some(replacement) = v3_matcher_replacement(part)
-            {
-                let level = if self.engines.v3 { Warning } else { Info };
-                let suggestion = match replacement {
-                    Some(replacement) => {
-                        t!("rules.kr_ag_025.v3_suggestion", replacement = replacement)
-                    }
-                    None => t!("rules.kr_ag_025.v3_remove_suggestion"),
-                };
-                let diagnostic = self
-                    .diag(
-                        level,
-                        "KR-AG-025",
-                        offset,
-                        t!("rules.kr_ag_025.v3", matcher = part),
-                    )
-                    .with_suggestion(suggestion);
-                out.push(self.assume(diagnostic));
-            }
-            if self.engines.v2
-                && let Some(equivalent) = v2_equivalent_for_v3_tool(part)
-            {
+            if let Some(equivalent) = v2_equivalent_for_v3_tool(part) {
                 let diagnostic = self
                     .diag(
                         Warning,
@@ -5088,30 +5183,40 @@ mod tests {
 
     #[test]
     fn hook_matchers_that_never_fire() {
+        // V3-targeted agent hooks get the hooks validator's matcher rules.
         let universal = json(
             serde_json::json!({"name": "a", "allowedTools": [], "permissions": {"rules": []}, "hooks": {
-                "preToolUse": [{"command": "x", "matcher": "fs_read"}, {"command": "y", "matcher": "fs_write|glob"}, {"command": "z", "matcher": "grep"}]
+                "preToolUse": [
+                    {"command": "x", "matcher": "fs_read"},
+                    {"command": "y", "matcher": "fs_write|glob"},
+                    {"command": "z", "matcher": "grep"},
+                    {"command": "w"},
+                    {"command": "v", "matcher": "*"}
+                ]
             }}),
         );
         let run = check("a.json", &universal);
-        let messages: Vec<_> = run
-            .rule("KR-AG-025")
-            .iter()
-            .map(|d| (d.level, d.message.clone()))
-            .collect();
-        assert_eq!(messages.len(), 2, "{messages:#?}");
+        let foreign = run.one("KR-HK-021");
+        assert_eq!(foreign.level, DiagnosticLevel::Warning);
+        assert!(foreign.message.contains("fs_read"), "{}", foreign.message);
+        assert_eq!(run.one("KR-HK-029").level, DiagnosticLevel::Info);
+        assert_eq!(run.rule("KR-HK-027").len(), 2, "{:#?}", run.diagnostics);
+        run.none("KR-AG-025");
+        // The array form too.
+        let array = r#"{"name": "a", "hooks": [{"name": "h", "trigger": "PreToolUse", "matcher": "Bash", "action": {"type": "command", "command": "x"}}]}"#;
         assert!(
-            messages
-                .iter()
-                .all(|(level, _)| *level == DiagnosticLevel::Warning)
+            check("a.json", array)
+                .one("KR-HK-021")
+                .message
+                .contains("Bash")
         );
-        let v2 =
-            r#"{"name": "a", "hooks": {"preToolUse": [{"command": "x", "matcher": "use_aws"}]}}"#;
-        assert_eq!(
-            check_with("a.json", v2, None, &[]).one("KR-AG-025").level,
-            DiagnosticLevel::Info
-        );
-        check_with("a.json", v2, Some("2.x"), &[]).none("KR-AG-025");
+        // CLI 2.x-only profile: a migration note, and no V3 scope notes.
+        let v2 = r#"{"name": "a", "hooks": {"preToolUse": [{"command": "x", "matcher": "use_aws"}, {"command": "y"}]}}"#;
+        let v2_run = check_with("a.json", v2, None, &[]);
+        assert_eq!(v2_run.one("KR-HK-021").level, DiagnosticLevel::Info);
+        v2_run.none("KR-HK-027");
+        check_with("a.json", v2, Some("2.x"), &[]).none("KR-HK-021");
+        // A V3 tool id in a matcher CLI 2.x reads.
         let v3_ids =
             r#"{"name": "a", "hooks": {"preToolUse": [{"command": "x", "matcher": "read_file"}]}}"#;
         assert!(
@@ -5121,11 +5226,12 @@ mod tests {
                 .contains("2.x")
         );
         // Not a tool trigger: matchers are ignored there.
-        check(
+        let stop = check(
             "a.json",
             r#"{"name": "a", "hooks": {"stop": [{"command": "x", "matcher": "fs_read"}]}}"#,
-        )
-        .none("KR-AG-025");
+        );
+        stop.none("KR-AG-025");
+        stop.none("KR-HK-021");
     }
 
     // ----- survey additions: KR-AG-006, KR-AG-029, KR-AG-030, legacy fields ----
@@ -5292,10 +5398,12 @@ mod tests {
         check_with("a.json", v2, Some("2.x"), &[]).none("KR-AG-001");
         // With includeMcpJson set, useLegacyMcpJson is only a CLI 2.x duplicate.
         let both = r#"{"name": "a", "useLegacyMcpJson": true, "includeMcpJson": true, "permissions": {"rules": []}}"#;
-        assert_eq!(
-            check("a.json", both).one("KR-AG-001").level,
-            DiagnosticLevel::Info
-        );
+        check("a.json", both).none("KR-AG-001");
+        check(
+            "a.json",
+            r#"{"name": "a", "useLegacyMcpJson": false, "permissions": {"rules": []}}"#,
+        )
+        .none("KR-AG-001");
     }
 
     // ----- misc ------------------------------------------------------------------

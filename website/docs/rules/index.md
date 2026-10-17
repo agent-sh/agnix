@@ -328,7 +328,7 @@ This section contains all `487` validation rules generated from `knowledge-base/
 | [KR-AG-022](./generated/kr-ag-022.md) | Reserved or Duplicate Kiro Agent Name | MEDIUM | Kiro Agents | No |
 | [KR-AG-023](./generated/kr-ag-023.md) | Invalid Inline MCP Server in Kiro Agent | HIGH | Kiro Agents | No |
 | [KR-AG-024](./generated/kr-ag-024.md) | Kiro Agent Tool Name Matches No Tool | MEDIUM | Kiro Agents | No |
-| [KR-AG-025](./generated/kr-ag-025.md) | Kiro Agent Hook Matcher Never Fires | MEDIUM | Kiro Agents | No |
+| [KR-AG-025](./generated/kr-ag-025.md) | Agent Hook Matcher Never Fires in Kiro CLI 2.x | MEDIUM | Kiro Agents | No |
 | [KR-AG-026](./generated/kr-ag-026.md) | Kiro Agent Hook Timeout Field or Unit Mismatch | MEDIUM | Kiro Agents | No |
 | [KR-AG-027](./generated/kr-ag-027.md) | Kiro Agent Hook Field Ignored | MEDIUM | Kiro Agents | No |
 | [KR-AG-028](./generated/kr-ag-028.md) | Agent File Not Loaded by Kiro CLI 2.x | MEDIUM | Kiro Agents | No |

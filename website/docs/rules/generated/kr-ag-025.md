@@ -1,9 +1,9 @@
 ---
 id: kr-ag-025
-title: "KR-AG-025: Kiro Agent Hook Matcher Never Fires - Kiro Agents"
+title: "KR-AG-025: Agent Hook Matcher Never Fires in Kiro CLI 2.x"
 sidebar_label: "KR-AG-025"
-description: "agnix rule KR-AG-025 checks for kiro agent hook matcher never fires in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
-keywords: ["KR-AG-025", "kiro agent hook matcher never fires", "kiro agents", "validation", "agnix", "linter"]
+description: "agnix rule KR-AG-025 checks for agent hook matcher never fires in kiro cli 2.x in kiro agents files. Severity: MEDIUM. See examples and fix guidance."
+keywords: ["KR-AG-025", "agent hook matcher never fires in kiro cli 2.x", "kiro agents", "validation", "agnix", "linter"]
 ---
 
 ## Summary
@@ -23,9 +23,9 @@ keywords: ["KR-AG-025", "kiro agent hook matcher never fires", "kiro agents", "v
 
 ## Evidence Sources
 
-- https://kiro.dev/docs/hooks/types/
+- https://kiro.dev/docs/cli/2x-reference/
 - https://kiro.dev/docs/cli/v3/hooks-migration/
-- https://kiro.dev/docs/cli/v3/upgrade-agent/
+- https://kiro.dev/docs/reference/built-in-tools/
 
 ## Test Coverage Metadata
 
@@ -40,11 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"name": "review-agent", "hooks": [{"name": "audit", "trigger": "PreToolUse", "matcher": "fs_read", "action": {"type": "command", "command": "./audit.sh"}}]}
+{"name": "review-agent", "hooks": {"preToolUse": [{"matcher": "read_file", "command": "./audit.sh"}]}}
 ```
 
 ### Valid
 
 ```json
-{"name": "review-agent", "hooks": [{"name": "audit", "trigger": "PreToolUse", "matcher": "read", "action": {"type": "command", "command": "./audit.sh"}}]}
+{"name": "review-agent", "hooks": {"preToolUse": [{"matcher": "fs_read", "command": "./audit.sh"}]}}
 ```
