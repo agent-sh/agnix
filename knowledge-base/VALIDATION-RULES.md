@@ -244,7 +244,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SK-005 [HIGH] Invalid Agent Type
 **Requirement**: agent MUST be: Explore, Plan, general-purpose, or custom kebab-case name (1-64 chars, pattern: `^[a-z0-9]+(-[a-z0-9]+)*$`)
 **Detection**: Check against built-in agents or validate kebab-case format
-**Fix**: Auto-fix (unsafe) -- replace invalid agent with 'general-purpose'
+**Fix**: Auto-fix (unsafe) - replace invalid agent with 'general-purpose'
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-sk-006"></a>
@@ -1066,7 +1066,7 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 ### CC-HK-013 [HIGH] Async on Non-Command Hook
 **Requirement**: `async: true` MUST only appear on `type: "command"` hooks
 **Detection**: Check for `async` field on prompt or agent hook types
-**Fix**: Auto-fix (safe) -- remove the `async` field line
+**Fix**: Auto-fix (safe) - remove the `async` field line
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-014"></a>
@@ -1080,14 +1080,14 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 ### CC-HK-015 [MEDIUM] Model on Command Hook
 **Requirement**: `model` field MUST only appear on prompt or agent hooks
 **Detection**: Check for `model` field on command hook types
-**Fix**: Auto-fix (safe) -- remove the `model` field line
+**Fix**: Auto-fix (safe) - remove the `model` field line
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-016"></a>
 ### CC-HK-016 [HIGH] Unknown Hook Type
 **Requirement**: Hook `type` MUST be one of the five handler types. Vendor text: "There are five types" - `command`, `http`, `mcp_tool`, `prompt`, `agent` (hooks, "Hook handler fields")
 **Detection**: `type` is not one of the five strings, or is not a string
-**Fix**: Auto-fix (unsafe) -- replace unknown hook type with the closest valid type
+**Fix**: Auto-fix (unsafe) - replace unknown hook type with the closest valid type
 **Source**: code.claude.com/docs/en/hooks
 
 <a id="cc-hk-018"></a>
@@ -1280,7 +1280,7 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 ### CC-AG-008 [HIGH] Invalid Memory Scope
 **Requirement**: `memory` field MUST be `user`, `project`, or `local`
 **Detection**: Check `memory` value against allowed list
-**Fix**: Auto-fix (unsafe) -- replace with closest valid memory scope
+**Fix**: Auto-fix (unsafe) - replace with closest valid memory scope
 **Source**: code.claude.com/docs/en/sub-agents
 
 <a id="cc-ag-009"></a>
