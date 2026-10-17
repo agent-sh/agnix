@@ -8,9 +8,11 @@
 //! - KR-HK-003: Hook missing action
 //! - KR-HK-004: Pre/Post tool hook missing toolTypes
 //! - KR-HK-009: Command uses absolute path
-//! - KR-HK-010: Secrets in hook command
 //! - KR-HK-016: v1 hook document saved as `.kiro.hook`
 //! - KR-HK-026: invalid JSON or wrongly typed fields
+//!
+//! KR-HK-010 (secrets in a hook command) covers both hook formats, so the V3
+//! validator owns it; see `validate_legacy_migration`.
 
 use crate::{
     config::PerFileLintConfig,
@@ -31,7 +33,6 @@ const RULE_IDS: &[&str] = &[
     "KR-HK-003",
     "KR-HK-004",
     "KR-HK-009",
-    "KR-HK-010",
     "KR-HK-016",
     "KR-HK-026",
 ];
@@ -149,18 +150,19 @@ fn has_corresponding_v3_hook(
     false
 }
 
-/// Legacy-file checks owned by the V3 validator: the KR-HK-014 placement
-/// hint and the KR-HK-028 broad file pattern note. IDE legacy manual hooks
-/// remain runnable, and agentSpawn appears in the IDE migration mapping:
-/// neither is evidence of a misplaced CLI-only hook.
+/// Legacy-file checks owned by the V3 validator: the KR-HK-010 secret check,
+/// the KR-HK-014 placement hint and the KR-HK-028 broad file pattern note.
+/// IDE legacy manual hooks remain runnable, and agentSpawn appears in the IDE
+/// migration mapping: neither is evidence of a misplaced CLI-only hook.
 pub(super) fn validate_legacy_migration(
     path: &Path,
     content: &str,
     config: &PerFileLintConfig<'_>,
 ) -> Vec<Diagnostic> {
+    let secrets = config.is_rule_enabled("KR-HK-010");
     let hint = config.is_rule_enabled("KR-HK-014");
     let broad = config.is_rule_enabled("KR-HK-028");
-    if !hint && !broad {
+    if !secrets && !hint && !broad {
         return Vec::new();
     }
     let Ok(root) = serde_json::from_str::<Value>(content) else {
@@ -170,17 +172,34 @@ pub(super) fn validate_legacy_migration(
         return Vec::new(); // KR-HK-016 covers it
     }
     let hook = KiroIdeHook::from_value(&root);
-    if hook.enabled == Some(false) {
-        return Vec::new();
-    }
-    let Some(event) = hook.event.as_ref() else {
-        return Vec::new();
-    };
     let locator = Locator {
         content,
         spans: OnceCell::new(),
     };
     let mut diagnostics = Vec::new();
+    // A committed credential leaks whether or not the hook is enabled.
+    if secrets
+        && let Some(command) = hook.run_command.as_ref()
+        && command_has_secret(command.value)
+    {
+        let (line, column) = locator.at(&command.path);
+        diagnostics.push(
+            Diagnostic::error(
+                path.to_path_buf(),
+                line,
+                column,
+                "KR-HK-010",
+                t!("rules.kr_hk_010.message"),
+            )
+            .with_suggestion(t!("rules.kr_hk_010.suggestion")),
+        );
+    }
+    if hook.enabled == Some(false) {
+        return diagnostics;
+    }
+    let Some(event) = hook.event.as_ref() else {
+        return diagnostics;
+    };
     if hint
         && CLI_ONLY_EVENTS.contains(&event.value)
         && !has_corresponding_v3_hook(path, event.value, &hook, config)
@@ -530,19 +549,6 @@ impl Validator for KiroHookValidator {
                     .with_suggestion(t!("rules.kr_hk_009.suggestion")),
                 );
             }
-            if config.is_rule_enabled("KR-HK-010") && command_has_secret(command.value) {
-                let (line, column) = locator.at(&command.path);
-                diagnostics.push(
-                    Diagnostic::error(
-                        path.to_path_buf(),
-                        line,
-                        column,
-                        "KR-HK-010",
-                        t!("rules.kr_hk_010.message"),
-                    )
-                    .with_suggestion(t!("rules.kr_hk_010.suggestion")),
-                );
-            }
         }
 
         diagnostics
@@ -591,11 +597,12 @@ fn is_reference(value: &str) -> bool {
         || value.starts_with("{{")
 }
 
-/// KR-HK-010: literal credentials in a command. Prefixes must start a word
-/// and be followed by a token-shaped body (so `flask-lint` and `task-check`
-/// are not keys), and `key=value` / `Bearer value` only count when the value
-/// is a literal, not a `$VAR`, `${VAR}`, `$(cmd)` or `%VAR%` reference.
-fn command_has_secret(command: &str) -> bool {
+/// KR-HK-010: literal credentials in a hook command, in either hook format.
+/// Prefixes must start a word and be followed by a token-shaped body (so
+/// `flask-lint` and `task-check` are not keys), and `key=value` /
+/// `Bearer value` only count when the value is a literal, not a `$VAR`,
+/// `${VAR}`, `$(cmd)` or `%VAR%` reference.
+pub(super) fn command_has_secret(command: &str) -> bool {
     let bytes = command.as_bytes();
     let lower = command.to_ascii_lowercase();
     let word_start = |at: usize| at == 0 || !bytes[at - 1].is_ascii_alphanumeric();
@@ -659,6 +666,17 @@ mod tests {
 
     fn rules(diagnostics: &[Diagnostic]) -> Vec<&str> {
         diagnostics.iter().map(|d| d.rule.as_str()).collect()
+    }
+
+    /// Both validators the registry runs on a `.kiro.hook` file.
+    fn validate_both(content: &str) -> Vec<Diagnostic> {
+        let mut diagnostics = validate(content);
+        diagnostics.extend(crate::rules::kiro_hook_v3::KiroV3HookValidator.validate(
+            Path::new(".kiro/hooks/example.kiro.hook"),
+            content,
+            &LintConfig::default(),
+        ));
+        diagnostics
     }
 
     #[test]
@@ -927,7 +945,7 @@ mod tests {
         ] {
             assert!(!command_has_secret(command), "{command}");
         }
-        let diagnostics = validate(
+        let diagnostics = validate_both(
             r#"{"when":{"type":"promptSubmit"},"then":{"type":"runCommand","command":"python -m flask-lint && npm run task-check --token=$TOKEN"}}"#,
         );
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
@@ -936,9 +954,20 @@ mod tests {
     #[test]
     fn test_kr_hk_010_points_at_command() {
         let content = "{\n  \"when\": {\"type\": \"promptSubmit\"},\n  \"then\": {\"type\": \"runCommand\", \"command\": \"curl -d api_key=mysecretkey123\"}\n}";
-        let diagnostics = validate(content);
+        // The V3 validator owns KR-HK-010 for both formats.
+        assert!(validate(content).is_empty());
+        let diagnostics = validate_both(content);
         assert_eq!(rules(&diagnostics), ["KR-HK-010"]);
         assert_eq!(diagnostics[0].line, 3);
+    }
+
+    #[test]
+    fn test_kr_hk_010_reports_disabled_hooks() {
+        // A committed credential leaks whether or not the hook runs.
+        let diagnostics = validate_both(
+            r#"{"enabled":false,"when":{"type":"agentStop"},"then":{"type":"runCommand","command":"curl -d api_key=mysecretkey123"}}"#,
+        );
+        assert_eq!(rules(&diagnostics), ["KR-HK-010"]);
     }
 
     #[test]

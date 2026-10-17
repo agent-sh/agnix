@@ -19,11 +19,12 @@ keywords: ["KR-HK-010", "secrets in hook command", "kiro hooks", "validation", "
 
 - **Tool**: `kiro`
 - **Version Range**: `unspecified`
-- **Spec Revision**: `IDE 0.x .kiro.hook`
+- **Spec Revision**: `v1 hook files and IDE 0.x .kiro.hook`
 
 ## Evidence Sources
 
 - https://kiro.dev/docs/mcp/security/
+- https://kiro.dev/docs/hooks/
 - https://kiro.dev/docs/ide/0x-reference/
 
 ## Test Coverage Metadata
@@ -39,11 +40,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 ### Invalid
 
 ```json
-{"when": {"type": "agentStop"}, "then": {"type": "runCommand", "command": "curl -H 'Authorization: Bearer sk-live-4f9a8b7c6d5e4f3a2b1c'"}}
+{"version": "v1", "hooks": [{"name": "notify", "trigger": "Stop", "action": {"type": "command", "command": "curl -H 'Authorization: Bearer sk-live-4f9a8b7c6d5e4f3a2b1c'"}}]}
 ```
 
 ### Valid
 
 ```json
-{"when": {"type": "agentStop"}, "then": {"type": "runCommand", "command": "deploy --token=$DEPLOY_TOKEN"}}
+{"version": "v1", "hooks": [{"name": "notify", "trigger": "Stop", "action": {"type": "command", "command": "deploy --token=$DEPLOY_TOKEN"}}]}
 ```

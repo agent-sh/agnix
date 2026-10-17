@@ -9852,12 +9852,13 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://kiro.dev/docs/mcp/security/",
+          "https://kiro.dev/docs/hooks/",
           "https://kiro.dev/docs/ide/0x-reference/"
         ],
         "verified_on": "2026-10-17",
         "applies_to": {
           "tool": "kiro",
-          "spec_revision": "IDE 0.x .kiro.hook"
+          "spec_revision": "v1 hook files and IDE 0.x .kiro.hook"
         },
         "normative_level": "MUST",
         "tests": {
@@ -9869,8 +9870,8 @@
       "fix": {
         "autofix": false
       },
-      "good_example": "{\"when\": {\"type\": \"agentStop\"}, \"then\": {\"type\": \"runCommand\", \"command\": \"deploy --token=$DEPLOY_TOKEN\"}}",
-      "bad_example": "{\"when\": {\"type\": \"agentStop\"}, \"then\": {\"type\": \"runCommand\", \"command\": \"curl -H 'Authorization: Bearer sk-live-4f9a8b7c6d5e4f3a2b1c'\"}}",
+      "good_example": "{\"version\": \"v1\", \"hooks\": [{\"name\": \"notify\", \"trigger\": \"Stop\", \"action\": {\"type\": \"command\", \"command\": \"deploy --token=$DEPLOY_TOKEN\"}}]}",
+      "bad_example": "{\"version\": \"v1\", \"hooks\": [{\"name\": \"notify\", \"trigger\": \"Stop\", \"action\": {\"type\": \"command\", \"command\": \"curl -H 'Authorization: Bearer sk-live-4f9a8b7c6d5e4f3a2b1c'\"}}]}",
       "security": {
         "cwe": [
           "CWE-798",

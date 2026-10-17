@@ -6,6 +6,8 @@
 //! single malformed hook makes it skip the whole file; only an unrecognized
 //! trigger name skips just that hook. Unknown keys are stripped silently.
 //!
+//! - KR-HK-010: hardcoded secrets in `action.command` or
+//!   `confirm.confirmCommand` (also legacy `.kiro.hook` run commands)
 //! - KR-HK-011: `version` missing or not `"v1"` (file skipped)
 //! - KR-HK-012: invalid JSON, wrapper shape, `name` / `trigger` / `action`
 //!   presence and types, unknown trigger names
@@ -44,6 +46,7 @@ use serde_json::{Map, Value};
 use std::{cell::OnceCell, path::Path};
 
 const RULE_IDS: &[&str] = &[
+    "KR-HK-010",
     "KR-HK-011",
     "KR-HK-012",
     "KR-HK-013",
@@ -1286,6 +1289,7 @@ impl Ctx<'_> {
         }
     }
 
+    /// KR-HK-010: literal credentials in the command.
     /// KR-HK-023: the engine substitutes only `${WORKSPACE_ROOT}` in
     /// `action.command` (and only `$HOME` in `confirmCommand`); event data
     /// arrives as JSON on stdin and the environment only gains
@@ -1298,6 +1302,16 @@ impl Ctx<'_> {
         command: &str,
         confirm_command: bool,
     ) {
+        if super::kiro_hook::command_has_secret(command) {
+            self.push(
+                Finding::error(
+                    "KR-HK-010",
+                    At::Value(command_path),
+                    t!("rules.kr_hk_010.message"),
+                )
+                .suggest(t!("rules.kr_hk_010.suggestion")),
+            );
+        }
         let mut messages = Vec::new();
         for placeholder in template_placeholders(command) {
             messages.push(t!(
@@ -2113,6 +2127,33 @@ mod tests {
             ))),
             ["KR-HK-023"]
         );
+    }
+
+    #[test]
+    fn test_kr_hk_010_secret_in_v1_command() {
+        let content = "{\n  \"version\": \"v1\",\n  \"hooks\": [\n    {\n      \"name\": \"notify\",\n      \"trigger\": \"Stop\",\n      \"action\": {\"type\": \"command\", \"command\": \"curl -H 'Authorization: Bearer sk-live-4f9a8b7c6d5e4f3a2b1c' https://example.com\"}\n    }\n  ]\n}";
+        let diagnostics = validate(content);
+        assert_eq!(rules(&diagnostics), ["KR-HK-010"]);
+        assert_eq!(diagnostics[0].level, DiagnosticLevel::Error);
+        assert_eq!(diagnostics[0].line, 7);
+        // The confirmation command runs in a shell too.
+        let confirm = serde_json::json!({"question": "Go?", "confirmCommand": "notify --token=ghp_abcdefghijklmnopqrstuvwxyz0123456789", "options": [{"id": "y", "label": "Y", "run": true}]});
+        assert_eq!(
+            rules(&validate(&command_hook(
+                serde_json::json!({"confirm": confirm})
+            ))),
+            ["KR-HK-010"]
+        );
+        // References resolved at run time are not secrets.
+        for command in [
+            "deploy --token=$DEPLOY_TOKEN",
+            "curl -H \"Authorization: Bearer ${GITHUB_TOKEN}\" https://x",
+        ] {
+            let diagnostics = validate(&hook_doc(
+                serde_json::json!({"name": "a", "trigger": "Stop", "action": {"type": "command", "command": command}}),
+            ));
+            assert!(diagnostics.is_empty(), "{command}: {diagnostics:?}");
+        }
     }
 
     #[test]

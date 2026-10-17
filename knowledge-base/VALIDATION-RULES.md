@@ -3345,10 +3345,10 @@ Kiro IDE 0.x stored each hook in `.kiro/hooks/*.kiro.hook`: `{ "name", "descript
 
 <a id="kr-hk-010"></a>
 ### KR-HK-010 [HIGH] Secrets in Hook Command
-**Requirement**: IDE hook commands MUST NOT contain hardcoded credentials
-**Detection**: A token prefix that starts a word and is followed by a token-shaped body (`sk-` with 16+ characters, `ghp_` / `gho_` / `github_pat_` with 30+, `xoxb-` / `xoxp-` with 10+, `glpat-` with 20+, `AKIA` + 16 uppercase characters), or a literal value after `api_key=`, `apikey=`, `api-key=`, `token=`, `password=`, `secret=` or `Bearer `. Values that are references (`$VAR`, `${VAR}`, `$(cmd)`, `%VAR%`, `<...>`, `{{...}}`) or shorter than 8 characters are not secrets, so `flask-lint`, `task-check` and `--token=$DEPLOY_TOKEN` are not reported.
-**Fix**: No auto-fix (use environment variables)
-**Source**: kiro.dev/docs/mcp/security ("Never hardcode API keys or tokens in configuration files"), kiro.dev/docs/ide/0x-reference. The hooks pages say nothing about secrets.
+**Requirement**: Kiro hook commands MUST NOT contain hardcoded credentials
+**Detection**: Checks `action.command` and `confirm.confirmCommand` in `.kiro/hooks/*.json` (and `~/.kiro/hooks/*.json`), and the run command of legacy `.kiro.hook` files, enabled or not (a committed credential leaks either way). Reports a token prefix that starts a word and is followed by a token-shaped body (`sk-` with 16+ characters, `ghp_` / `gho_` / `github_pat_` with 30+, `xoxb-` / `xoxp-` with 10+, `glpat-` with 20+, `AKIA` + 16 uppercase characters), or a literal value after `api_key=`, `apikey=`, `api-key=`, `token=`, `password=`, `secret=` or `Bearer `. Values that are references (`$VAR`, `${VAR}`, `$(cmd)`, `%VAR%`, `<...>`, `{{...}}`) or shorter than 8 characters are not secrets, so `flask-lint`, `task-check` and `--token=$DEPLOY_TOKEN` are not reported. The diagnostic points at the command value. (This section lists the rule because it started with IDE hooks; since 0.59.0 it also covers v1 hook files.)
+**Fix**: No auto-fix (use environment variables; the hook process inherits Kiro's environment)
+**Source**: kiro.dev/docs/mcp/security ("Never hardcode API keys or tokens in configuration files"), kiro.dev/docs/hooks, kiro.dev/docs/ide/0x-reference. The hooks pages say nothing about secrets.
 
 <a id="kr-hk-016"></a>
 ### KR-HK-016 [HIGH] V3 Hook File Saved as .kiro.hook
