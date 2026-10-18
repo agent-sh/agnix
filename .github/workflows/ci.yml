@@ -53,6 +53,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: node --test scripts/preflight.test.js
 
+      - name: CodeQL pin consistency
+        if: matrix.os == 'ubuntu-latest'
+        run: node scripts/check-codeql-pins.js
+
       - name: Format check
         if: matrix.os == 'ubuntu-latest'
         run: cargo fmt --check --all
