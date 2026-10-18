@@ -818,7 +818,12 @@ mod tests {
         assert_eq!(as_025.len(), 1, "{diagnostics:?}");
         // Reported on the later path in walk order, naming the other copy.
         assert!(as_025[0].file.ends_with(".claude/skills/review/SKILL.md"));
-        assert!(as_025[0].message.contains(&agents.display().to_string()));
+        assert!(
+            as_025[0]
+                .message
+                .replace('\\', "/")
+                .contains(&agents.to_string_lossy().replace('\\', "/"))
+        );
         assert!(
             as_025[0].message.contains("cursor"),
             "{}",

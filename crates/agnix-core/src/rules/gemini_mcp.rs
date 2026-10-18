@@ -283,8 +283,9 @@ fn check_extension_portability(sink: &mut JsonSink<'_, '_>, server: &JsonMember,
     let cwd_is_extension = cwd.is_some_and(|(_, cwd)| cwd.starts_with(EXTENSION_PATH_VAR));
     let inside_extension = |text: &str| -> bool {
         let candidate = Path::new(text);
-        if candidate.is_absolute() {
-            return root.is_absolute() && candidate.starts_with(root);
+        // Node treats a path rooted at the current Windows drive as absolute.
+        if candidate.has_root() {
+            return root.has_root() && candidate.starts_with(root);
         }
         false
     };

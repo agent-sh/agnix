@@ -481,8 +481,8 @@ impl Cx<'_, '_, '_> {
                 continue;
             }
             // `~/` and absolute entries are documented and machine-specific;
-            // they are not checked.
-            if entry.starts_with('~') || Path::new(entry).is_absolute() || roots.is_empty() {
+            // Node also accepts a path rooted at the current Windows drive.
+            if entry.starts_with('~') || Path::new(entry).has_root() || roots.is_empty() {
                 continue;
             }
             if !roots.iter().any(|root| fs.exists(&root.join(entry))) {
