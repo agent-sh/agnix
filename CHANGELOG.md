@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CC-AG-003** follows the current sub-agents reference. A subagent `model` is `sonnet`, `opus`, `haiku`, `fable`, a `claude-*` model ID, or `inherit`. `default`, `best`, `opusplan`, `sonnet[1m]`, and `opus[1m]` stay valid on skills and are rejected on subagents.
 
 ### Changed
+- Update serde_json, schemars and toml, and refresh the Claude Code, setup-node and download-artifact action pins with their documentation.
 - Cursor release baseline is 3.25.9. The stable endpoint returned a version marker only. The public changelog since 3.24.18 does not change rules, hooks, or MCP schema.
 
 ## [0.59.0] - 2026-10-17
