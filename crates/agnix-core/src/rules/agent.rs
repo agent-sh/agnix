@@ -53,12 +53,12 @@ fn humanize_yaml_error(raw: &str) -> String {
     msg
 }
 
-/// Valid model values per CC-AG-003 (short aliases).
+/// Valid model aliases for subagent frontmatter (CC-AG-003).
 ///
-/// Shared with the skill validator (CC-SK-001) so the two lists cannot drift:
-/// the sub-agents reference says `model` "Accepts the same values as the
-/// `--model` flag", which is the model-config alias table.
-use crate::schemas::skill::VALID_MODEL_ALIASES as VALID_MODELS;
+/// The sub-agents reference lists `sonnet`, `opus`, `haiku`, `fable`, a full
+/// model ID, or `inherit`. It no longer says the field accepts every
+/// `--model` alias, so this is not the skill validator's list.
+const VALID_MODELS: &[&str] = &["fable", "sonnet", "opus", "haiku", "inherit"];
 
 /// Check if a model value is valid: either a known short alias or a full model ID
 /// matching the `claude-*` pattern.
@@ -2530,22 +2530,17 @@ Agent instructions"#
         }
     }
 
-    /// `model` "Accepts the same values as the `--model` flag", which is the
-    /// model-config alias table. `fable` and the rest were rejected before.
+    /// Sub-agents reference, "Choose a model": aliases are `sonnet`, `opus`,
+    /// `haiku`, or `fable`, plus a full model ID or `inherit`.
     #[test]
     fn test_cc_ag_003_documented_model_aliases_accepted() {
         for model in [
-            "default",
-            "best",
             "fable",
             "sonnet",
             "opus",
             "haiku",
-            "opusplan",
-            "sonnet[1m]",
-            "opus[1m]",
             "inherit",
-            "claude-opus-5",
+            "claude-opus-5-5",
         ] {
             let content = format!(
                 r#"---
@@ -2565,6 +2560,32 @@ Agent instructions"#
             assert!(
                 cc_ag_003.is_empty(),
                 "documented model value '{model}' must be accepted, got: {cc_ag_003:?}"
+            );
+        }
+    }
+
+    /// The sub-agents page no longer documents these `--model` aliases on a
+    /// subagent. Skills still accept them.
+    #[test]
+    fn test_cc_ag_003_retired_model_aliases_rejected() {
+        for model in ["default", "best", "opusplan", "sonnet[1m]", "opus[1m]"] {
+            let content = format!(
+                r#"---
+name: my-agent
+description: A test agent
+model: {model}
+---
+Agent instructions"#
+            );
+            let diagnostics = validate(&content);
+            let cc_ag_003: Vec<_> = diagnostics
+                .iter()
+                .filter(|d| d.rule == "CC-AG-003")
+                .collect();
+            assert_eq!(
+                cc_ag_003.len(),
+                1,
+                "retired subagent model '{model}' must be rejected, got: {cc_ag_003:?}"
             );
         }
     }

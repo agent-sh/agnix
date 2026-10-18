@@ -276,7 +276,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="cc-sk-001"></a>
 ### CC-SK-001 [HIGH] Invalid Model Value
 **Requirement**: model MUST be a documented Claude Code model alias, a full `claude-*` model ID, or `inherit`. The skill reference accepts the same values as `/model`: `default`, `best`, `fable`, `sonnet`, `opus`, `haiku`, `opusplan`, `sonnet[1m]`, `opus[1m]`.
-**Detection**: `!VALID_MODEL_ALIASES.contains(model) && !model.starts_with("claude-")`; shared with CC-AG-003
+**Detection**: `!VALID_MODEL_ALIASES.contains(model) && !model.starts_with("claude-")`. Not shared with CC-AG-003; subagents use a shorter alias list.
 **Fix**: Replace with closest valid option
 **Source**: code.claude.com/docs/en/skills, code.claude.com/docs/en/model-config
 
@@ -1381,8 +1381,8 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 <a id="cc-ag-003"></a>
 ### CC-AG-003 [HIGH] Invalid Model Value
-**Requirement**: model MUST be a documented alias, a full `claude-*` model ID, or `inherit`. The sub-agents reference says `model` "Accepts the same values as the `--model` flag", i.e. the model-config alias table: `default`, `best`, `fable`, `sonnet`, `opus`, `haiku`, `opusplan`, `sonnet[1m]`, `opus[1m]`.
-**Detection**: `!VALID_MODEL_ALIASES.contains(model) && !model.starts_with("claude-")`. The alias list is shared with CC-SK-001 so the two cannot drift.
+**Requirement**: model MUST be `sonnet`, `opus`, `haiku`, `fable`, a full `claude-*` model ID, or `inherit`. The sub-agents reference no longer says this field accepts every `--model` alias. `default`, `best`, `opusplan`, `sonnet[1m]`, and `opus[1m]` stay valid on skills (CC-SK-001) and are rejected here.
+**Detection**: `!VALID_MODELS.contains(model) && !model.starts_with("claude-")`. The subagent list is separate from CC-SK-001.
 **Fix**: Replace with valid value
 **Source**: code.claude.com/docs/en/sub-agents, code.claude.com/docs/en/model-config
 

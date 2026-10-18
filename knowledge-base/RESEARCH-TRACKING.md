@@ -2,7 +2,7 @@
 
 > Master document for tracking AI tool ecosystem changes, research updates, and community feedback.
 
-**Last Updated**: 2026-10-17
+**Last Updated**: 2026-10-18
 **Review Cadence**: Monthly (1st week of each month)
 **Related**: [MONTHLY-REVIEW.md](./MONTHLY-REVIEW.md) | [VALIDATION-RULES.md](./VALIDATION-RULES.md) | [INDEX.md](./INDEX.md)
 
@@ -27,7 +27,7 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md`, `.github/hooks/hooks.json`, `.github/workflows/copilot-setup-steps.yml`, `.github/skills/*/SKILL.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Weekly | 2026-10-05 | COP, CP-SK |
 | Cline | `.clinerules` (file or dir), `.cline/rules/**/*.md`, `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/customization/cline-rules | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-16 | CLN, CL-SK |
-| Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md` (Cursor also reads `.claude/agents/**/*.md`, `.codex/agents/**/*.md`, and corresponding user-level agent directories for compatibility), `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-10-16 | CUR, MCP, CR-SK |
+| Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md` (Cursor also reads `.claude/agents/**/*.md`, `.codex/agents/**/*.md`, and corresponding user-level agent directories for compatibility), `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-10-18 | CUR, MCP, CR-SK |
 
 ### B Tier (test on significant changes if time permits)
 
@@ -207,6 +207,8 @@ Tracking community input that influences rule development, tool support decision
 
 | Date | Source | Feedback | Action Taken | Issue/PR |
 |------|--------|----------|-------------|----------|
+| 2026-10-18 | Cursor stable update endpoint (#1688) | Endpoint returned 3.25.9 (issue opened at 3.25.6). Notes payload empty. Changelog since 3.24.18 is cloud agents, canvases, Environments API, and the Origin marketplace | Baseline-only advance to the live version. No rules, hooks, or MCP schema change | #1688 |
+| 2026-10-18 | Claude Code sub-agents reference (spec drift #1691) | Model field row is `sonnet`, `opus`, `haiku`, `fable`, a full model ID, or `inherit`. Alias bullet is those four names. The "same values as `--model`" sentence is gone from this field | CC-AG-003 no longer shares the skill alias list. Skills unchanged. Spec hashes not refreshed: live pages moved again after the sentinel | #1691 |
 | 2026-10-17 | Roo Code shutdown (docs.roocode.com, RooCodeInc/Roo-Code archived) | "The Roo Code Extension was shut down on May 15th."; last release v3.54.0 | Dropped Roo Code: removed ROO-001 through ROO-006, the Roo file types and detection, and the release baseline; `rules.roo_code` is a deprecated no-op | -- |
 | 2026-10-16 | Codex CLI rust-v0.163.0 tagged schema (#1673) | Root `include_environment_context_time`, `js_repl_node_module_dirs`, `js_repl_node_path` and 67 new `[features]` flags (instant_interrupt, recommended_plugins, ultrafast_mode, write_stdin_approval etc.); retired patched zsh flags get a migration notice upstream | Extended the two key allowlists and added a tagged-schema regression | #1673 |
 | 2026-10-16 | Claude Code v2.1.299 (#1666) | `idleCompaction` boolean settings key documented (added 2.1.290, surfaced 2.1.299) with `CLAUDE_CODE_IDLE_COMPACT_MIN_TOKENS` env knob | Added CC-SET-033 boolean check; env vars are not settings keys so no rule | #1666 |

@@ -1233,7 +1233,7 @@
           "https://code.claude.com/docs/en/sub-agents",
           "https://code.claude.com/docs/en/model-config"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-10-18",
         "applies_to": {
           "tool": "claude-code"
         },
