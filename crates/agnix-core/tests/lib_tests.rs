@@ -5906,7 +5906,7 @@ fn test_mcp_secret_rules_cover_agents_and_skills_once() {
         let mut rules: Vec<&str> = result
             .diagnostics
             .iter()
-            .filter(|d| d.file.to_string_lossy().contains(part))
+            .filter(|d| d.file.ends_with(part))
             .filter(|d| matches!(d.rule.as_str(), "MCP-018" | "MCP-028" | "XP-SK-003"))
             .map(|d| d.rule.as_str())
             .collect();
