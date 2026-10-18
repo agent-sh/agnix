@@ -709,6 +709,7 @@ mod tests {
         assert!(
             shadowed[0]
                 .message
+                .replace('\\', "/")
                 .contains(".opencode/skills/release/SKILL.md")
         );
         let winner = OpenCodeSkillValidator.validate(

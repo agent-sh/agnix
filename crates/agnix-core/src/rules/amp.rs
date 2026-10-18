@@ -961,9 +961,12 @@ mod tests {
         let diagnostics = validate_with_config("/p/pkg/AGENTS.md", content, &config);
         let files: Vec<_> = rule(&diagnostics, "AMP-003")
             .iter()
-            .map(|d| d.file.to_string_lossy().to_string())
+            .map(|d| d.file.as_path())
             .collect();
-        assert_eq!(files, ["/p/pkg/docs/ts.md", "/p/shared.md"]);
+        assert_eq!(
+            files,
+            [Path::new("/p/pkg/docs/ts.md"), Path::new("/p/shared.md")]
+        );
     }
 
     #[test]

@@ -361,9 +361,10 @@ fn test_kr_set_010_duplicate_key_points_at_the_ignored_one() {
 
 #[test]
 fn test_workspace_settings_decision() {
-    let home = Path::new("/home/u");
+    let home = std::path::absolute("/home/u").unwrap();
     let decide = |p: &str, kiro_home: Option<&str>| {
-        workspace_settings_decision(Path::new(p), Some(home), kiro_home.map(Path::new))
+        let kiro_home = kiro_home.map(|p| std::path::absolute(p).unwrap());
+        workspace_settings_decision(Path::new(p), Some(&home), kiro_home.as_deref())
     };
     assert_eq!(decide("/home/u/.kiro/settings/cli.json", None), Some(false));
     assert_eq!(

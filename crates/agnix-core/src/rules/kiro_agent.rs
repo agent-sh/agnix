@@ -4573,7 +4573,10 @@ mod tests {
         let diagnostic = missing.one("KR-AG-021");
         assert_eq!(diagnostic.level, DiagnosticLevel::Error);
         assert!(
-            diagnostic.message.contains("/w/.kiro/agents/prompts/a.md"),
+            diagnostic
+                .message
+                .replace('\\', "/")
+                .contains("/w/.kiro/agents/prompts/a.md"),
             "{}",
             diagnostic.message
         );

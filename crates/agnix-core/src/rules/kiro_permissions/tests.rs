@@ -347,9 +347,10 @@ fn kiro_permissions_corpus_true_positives_keep_their_rules() {
 
 #[test]
 fn kiro_permissions_location_decision() {
-    let home = Path::new("/home/u");
+    let home = std::path::absolute("/home/u").unwrap();
     let loaded = |p: &str, kiro_home: Option<&str>| {
-        permissions_file_is_loaded(Path::new(p), Some(home), kiro_home.map(Path::new))
+        let kiro_home = kiro_home.map(|p| std::path::absolute(p).unwrap());
+        permissions_file_is_loaded(Path::new(p), Some(&home), kiro_home.as_deref())
     };
     assert_eq!(
         loaded("/home/u/.kiro/settings/permissions.yaml", None),
@@ -377,7 +378,13 @@ fn kiro_permissions_location_decision() {
         loaded("/opt/k/settings/permissions.json", Some("/opt/k")),
         Some(true)
     );
+    #[cfg(not(windows))]
     assert_eq!(loaded("/etc/kiro/managed-settings.json", None), Some(true));
+    #[cfg(windows)]
+    assert_eq!(
+        loaded(r"C:\ProgramData\Kiro\managed-settings.json", None),
+        Some(true)
+    );
     assert_eq!(
         loaded("/home/u/it/managed-settings.json", None),
         Some(false)

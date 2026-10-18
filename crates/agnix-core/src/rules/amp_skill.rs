@@ -515,6 +515,7 @@ mod tests {
         assert!(
             diagnostics[0]
                 .message
+                .replace('\\', "/")
                 .contains("/p/.agents/skills/deploy/SKILL.md")
         );
         // Byte-identical copies are deliberate.
