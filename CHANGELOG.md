@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Update rustls-webpki to 0.103.16 and webpki-root-certs to 1.0.10 to reject distrusted emSign certificate chains (RUSTSEC-2026-0382, RUSTSEC-2026-0383).
+- Update the website's follow-redirects lockfile to 1.16.1 (GHSA-q3jh-wrc6-jgq8, GHSA-8r9p-f939-6h3c).
+
 ### Fixed
 - Windows rooted paths in OpenCode instructions and Gemini extension commands follow Node path semantics. Path-sensitive tests use native locations and separator-independent comparisons.
 - **CC-AG-003** follows the current sub-agents reference. A subagent `model` is `sonnet`, `opus`, `haiku`, `fable`, a `claude-*` model ID, or `inherit`. `default`, `best`, `opusplan`, `sonnet[1m]`, and `opus[1m]` stay valid on skills and are rejected on subagents.
