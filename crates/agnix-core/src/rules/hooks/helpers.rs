@@ -225,6 +225,8 @@ const NOTIFICATION_MATCHERS: &[&str] = &[
     "quota_auto_resume_fired",
     "quota_auto_resume_stale",
     "quota_auto_resume_disabled",
+    // Current hooks reference, Notification matcher values (reviewed 2026-10-22).
+    "plugin_notification",
 ];
 const COMPACT_MATCHERS: &[&str] = &["manual", "auto"];
 const CONFIG_CHANGE_MATCHERS: &[&str] = &[

@@ -16,12 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **PE-006** checks native AGENTS.md when Claude Code is explicitly selected, including mixed-tool runs. Unscoped shared files retain their existing checks. The warning identifies Claude prompting guidance. (#1705)
+- **CC-HK-025** accepts the documented `plugin_notification` Notification matcher, including exact alternatives, without suppressing unknown matcher warnings.
 - Windows rooted paths in OpenCode instructions and Gemini extension commands follow Node path semantics. Path-sensitive tests use native locations and separator-independent comparisons.
 - **CC-AG-003** follows the current sub-agents reference. A subagent `model` is `sonnet`, `opus`, `haiku`, `fable`, a `claude-*` model ID, or `inherit`. `default`, `best`, `opusplan`, `sonnet[1m]`, and `opus[1m]` stay valid on skills and are rejected on subagents.
 
 ### Changed
+- Review Claude Code v2.1.304 against v2.1.299 release notes; no new validation constraints. Session-wide skill-hook budgets and mod API changes are runtime behavior, not new per-file schema rules.
+- Review OpenCode 2 v2.1.0 against the v2.0.32 tagged config schemas; no new validation constraints. The new `experimental.todo` option is already accepted.
+- Review Kiro CLI 2.32.0; no new validation constraints. Official workflow authoring docs assign Powers/MCP access to agents, not new step fields.
+- Review Cursor 3.26.13 alert against live stable marker 3.27.6 and current official references; no new validation constraints. No per-patch schema diff is published.
+- Refresh the five reviewed Claude spec baselines with current source hashes; see [the source-backed review](knowledge-base/reviews/2026-10-22-tool-spec-triage.md) for scope and remaining gaps.
 - Update serde_json, schemars and toml, and refresh the Claude Code, setup-node and download-artifact action pins with their documentation.
-- Cursor release baseline is 3.25.9. The stable endpoint returned a version marker only. The public changelog since 3.24.18 does not change rules, hooks, or MCP schema.
 
 ## [0.59.0] - 2026-10-17
 
