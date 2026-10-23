@@ -1606,9 +1606,9 @@ pub(crate) fn config_has_v2_markers(root: &Node) -> bool {
 }
 
 /// Evidence that a directory tree uses OpenCode: the nearest directory, from
-/// `start` up to the filesystem root (at most 16 levels), that has an
-/// `opencode.json(c)` or a `.opencode/` directory. Returns that directory and
-/// the release lines its config targets.
+/// `start` up to the Git worktree root (inclusive), or the filesystem root
+/// outside a checkout, at most 16 levels. An `opencode.json(c)` or `.opencode/`
+/// directory marks a project. Returns its directory and targeted release lines.
 pub(crate) fn find_opencode_project(
     start: &Path,
     config: &PerFileLintConfig<'_>,
@@ -1625,6 +1625,12 @@ pub(crate) fn find_opencode_project(
         .filter(|candidate| fs.is_file(candidate))
         .collect();
         if configs.is_empty() && !fs.is_dir(&dir.join(".opencode")) {
+            // OpenCode's project config search stops at the worktree root.
+            // A linked worktree has a .git file rather than a directory.
+            let git = dir.join(".git");
+            if fs.is_dir(&git) || fs.is_file(&git) {
+                break;
+            }
             continue;
         }
         let v2 = configs.iter().any(|path| {
