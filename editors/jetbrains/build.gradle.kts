@@ -1,5 +1,6 @@
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 
 plugins {
     id("java")
@@ -32,13 +33,16 @@ dependencies {
         // LSP4IJ - JetBrains LSP Support
         plugin("com.redhat.devtools.lsp4ij:0.14.0")
         bundledPlugin("org.intellij.plugins.markdown")
+        testFramework(TestFrameworkType.Platform)
 
         pluginVerifier()
         zipSigner()
     }
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.0")
 }
 
 intellijPlatform {

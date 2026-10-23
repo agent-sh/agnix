@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **JetBrains** keeps `SKILL.md` on the native Markdown file type so the Markdown editor and preview remain available. The agnix icon and filename-based LSP support are preserved. (#1700)
+
 ## [0.59.1] - 2026-10-23
 
 ### Security

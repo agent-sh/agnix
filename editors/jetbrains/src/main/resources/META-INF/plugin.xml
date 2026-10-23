@@ -49,13 +49,8 @@
         <applicationService
             serviceImplementation="io.agnix.jetbrains.settings.AgnixSettings"/>
 
-        <!-- File Types -->
-        <fileType
-            name="SKILL.md"
-            implementationClass="io.agnix.jetbrains.filetype.SkillFileType"
-            fieldName="INSTANCE"
-            language="Markdown"
-            fileNames="SKILL.md"/>
+        <!-- Preserve native Markdown editor/preview support; customize only the icon. -->
+        <fileIconProvider implementation="io.agnix.jetbrains.filetype.AgnixSkillIconProvider"/>
 
         <!-- Notifications -->
         <notificationGroup

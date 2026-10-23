@@ -1,28 +1,18 @@
 package io.agnix.jetbrains.filetype
 
-import com.intellij.openapi.fileTypes.LanguageFileType
+import com.intellij.ide.FileIconProvider
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import io.agnix.jetbrains.AgnixIcons
-import org.intellij.plugins.markdown.lang.MarkdownLanguage
 import javax.swing.Icon
 
 /**
- * File type for SKILL.md files.
- *
- * Extends Markdown language with custom icon for better identification.
+ * Decorates skills without replacing the native Markdown file type.
+ * Markdown preview and editor providers use that native type, not just its language.
  */
-class SkillFileType private constructor() : LanguageFileType(MarkdownLanguage.INSTANCE) {
-
-    override fun getName(): String = "SKILL.md"
-
-    override fun getDescription(): String = "Agent Skills specification file"
-
-    override fun getDefaultExtension(): String = "md"
-
-    override fun getIcon(): Icon = AgnixIcons.AGNIX
-
-    companion object {
-        @JvmField
-        val INSTANCE = SkillFileType()
+class AgnixSkillIconProvider : FileIconProvider {
+    override fun getIcon(file: VirtualFile, flags: Int, project: Project?): Icon? {
+        return if (!file.isDirectory && file.name == "SKILL.md") AgnixIcons.AGNIX else null
     }
 }
 
