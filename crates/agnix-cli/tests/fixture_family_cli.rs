@@ -70,6 +70,56 @@ fn count_rule(json: &serde_json::Value, rule: &str) -> usize {
         .unwrap_or(0)
 }
 
+#[test]
+fn opencode_project_detection_respects_repository_boundaries() {
+    // OpenCode searches project configuration up to the worktree root. A
+    // configuration in an enclosing checkout or home is not project evidence.
+    for git_file in [false, true] {
+        for marker in [
+            "opencode.json",
+            "opencode.jsonc",
+            ".opencode/opencode.json",
+            ".opencode/opencode.jsonc",
+            ".opencode",
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let outer = temp.path().join(marker);
+            if marker == ".opencode" {
+                std::fs::create_dir_all(&outer).unwrap();
+            } else {
+                std::fs::create_dir_all(outer.parent().unwrap()).unwrap();
+                std::fs::write(&outer, "{}").unwrap();
+            }
+            let root = temp.path().join("project");
+            let nested = root.join("nested");
+            std::fs::create_dir_all(&nested).unwrap();
+            if git_file {
+                std::fs::write(root.join(".git"), "gitdir: ../worktree-metadata\n").unwrap();
+            } else {
+                std::fs::create_dir(root.join(".git")).unwrap();
+            }
+            let file = nested.join("CLAUDE.md");
+            std::fs::write(&file, "# Project instructions\n").unwrap();
+            let outside = run_json(&file);
+            assert_eq!(
+                count_rule(&outside, "OC-AGM-003"),
+                0,
+                "outside marker {marker}, git_file={git_file}: {outside}"
+            );
+
+            // The same marker at the root still applies to nested files.
+            let inside = root.join(marker);
+            if marker == ".opencode" {
+                std::fs::create_dir_all(&inside).unwrap();
+            } else {
+                std::fs::create_dir_all(inside.parent().unwrap()).unwrap();
+                std::fs::write(&inside, "{}").unwrap();
+            }
+            assert_has_rule(&run_json(&file), "OC-AGM-003");
+        }
+    }
+}
+
 macro_rules! make_cli_test {
     ($name:ident, $path:expr, [$($rule:expr),+ $(,)?]) => {
         #[test]

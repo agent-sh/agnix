@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CC-HK-025** accepts the documented `plugin_notification` Notification matcher, including exact alternatives, without suppressing unknown matcher warnings.
 - Codex `[tui]` configuration accepts `presets`, the rust-v0.164.0 `/presets` input slots, instead of warning about an unknown key.
 - **CDX-HK-005** accepts the rust-v0.164.0 `PreModelRequest` and `PostModelRequest` hook events. They are observation-only: matchers are not compiled and `additionalContext` is not interpreted, so they stay out of the matcher and context event sets.
+- OpenCode project detection stops at the Git worktree root, including linked worktrees, so enclosing configuration does not add unrelated instruction or skill diagnostics. Root-local configuration still applies to nested files. (#1724)
 
 ### Changed
 - Review Codex CLI rust-v0.164.0 against the rust-v0.163.0 tagged `config.schema.json`. Beyond the two fixes above, the new MCP OAuth fields, plugin provisioning metadata and `permissions.network` mitm v2 options live one level below the surfaces agnix key-checks; no other validation change. Baseline rust-v0.164.0.
