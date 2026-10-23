@@ -145,6 +145,21 @@ fn release_workflow_pins_latest_versioned_docs_to_the_release_tag() {
         .expect("failed to read release workflow")
         .replace("\r\n", "\n");
 
+    let docs_job = workflow
+        .split("  version-docs:\n")
+        .nth(1)
+        .expect("release workflow must define a version-docs job");
+    let checkout = docs_job
+        .split("\n      - ")
+        .find(|step| step.starts_with("uses: actions/checkout@"))
+        .expect("version-docs must check out the release source");
+    assert!(
+        checkout
+            .lines()
+            .any(|line| line.trim() == "ref: ${{ github.ref }}"),
+        "version-docs must snapshot the immutable release tag, not post-release main"
+    );
+
     assert!(
         workflow.contains("- name: Pin versioned docs links to the release tag"),
         "release workflow must pin repository links after cutting a docs snapshot"
