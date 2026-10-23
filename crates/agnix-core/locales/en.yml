@@ -1846,7 +1846,7 @@ rules:
     message: "Generic instruction '%{phrase}' adds no project-specific guidance"
     suggestion: "Remove it, or replace it with the concrete convention it stands for (e.g., 'Use 2-space indentation' instead of 'write clean code')"
   pe_006:
-    message: Negative instruction '%{text}' without positive alternative
+    message: "Claude prompting guidance: negative instruction '%{text}' without positive alternative"
     suggestion: "Say what to do instead (e.g., 'Instead, use...'), or give the reason for the prohibition"
   cc_pl_001:
     message: plugin.json must be located in .claude-plugin/ directory
