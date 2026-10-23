@@ -10,6 +10,7 @@ Features:
 
 - Validation for `SKILL.md`, `CLAUDE.md`, `AGENTS.md`, `.claude/settings.json`, `*.mcp.json`, `.cursor/rules/*.mdc`, and related files
 - Diagnostics with quick fixes and hover docs through `agnix-lsp`
+- Native Markdown highlighting and preview, including for `SKILL.md`
 - Automatic `agnix-lsp` install/update via LSP4IJ server installer flow
 - Actions to restart the server, validate current file, and open settings
 
