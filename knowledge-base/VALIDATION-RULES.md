@@ -5110,7 +5110,7 @@ Rules for `.kiroignore` (workspace root or any subdirectory; Kiro CLI V3 and IDE
 
 ## PROMPT ENGINEERING RULES
 
-Each rule runs only on files whose vendor documents its advice: CLAUDE.md and CLAUDE.local.md get PE-002, PE-004, PE-005 and PE-006; AGENTS.md, AGENTS.local.md and AGENTS.override.md get PE-004 and PE-005; Cursor rule files get PE-004; GEMINI.md gets none (Gemini advises "**Use negative constraints:** Explicitly telling the agent what _not_ to do ... is often more effective than vague positive instructions.").
+Each rule runs only on files whose vendor documents its advice: CLAUDE.md and CLAUDE.local.md get PE-002, PE-004, PE-005 and PE-006; AGENTS.md, AGENTS.local.md and AGENTS.override.md get PE-004 and PE-005. Native AGENTS.md also gets PE-006 when `tools` includes `claude-code` (including mixed-tool runs), or the legacy `target` selects `ClaudeCode` without a `tools` list. Claude Code can read AGENTS.md directly since v2.1.277; it does not read AGENTS.local.md, AGENTS.override.md or files beneath `.agents/`. Cursor rule files get PE-004; GEMINI.md gets none (Gemini advises "**Use negative constraints:** Explicitly telling the agent what _not_ to do ... is often more effective than vague positive instructions.").
 
 <a id="pe-002"></a>
 ### PE-002 [LOW] Chain-of-Thought on Simple Task
@@ -5135,10 +5135,10 @@ Each rule runs only on files whose vendor documents its advice: CLAUDE.md and CL
 
 <a id="pe-006"></a>
 ### PE-006 [MEDIUM] Negative-Only Instructions
-**Requirement**: In Claude memory files, a negative instruction SHOULD say what to do instead: "**Tell Claude what to do instead of what not to do**". Not applied to GEMINI.md or AGENTS.md, since Gemini advises the opposite.
-**Detection**: Check for "don't/never/avoid" without "instead/rather/prefer" within a 3-line window, in CLAUDE.md and CLAUDE.local.md. A second clause on the same line after a dash, semicolon, colon, full stop or "because" counts as the alternative or the reason.
+**Requirement**: In Claude memory files, a negative instruction SHOULD say what to do instead: "**Tell Claude what to do instead of what not to do**". Also applies to native AGENTS.md when Claude Code is explicitly selected, even alongside other tools. The diagnostic identifies Claude prompting guidance. Unscoped AGENTS.md, AGENTS.local.md, AGENTS.override.md, AGENTS.md beneath `.agents/` and GEMINI.md are excluded.
+**Detection**: Check for "don't/do not/never/avoid" without "instead/rather/prefer" within a 3-line window, in CLAUDE.md, CLAUDE.local.md and Claude-targeted AGENTS.md. A second clause on the same line after a dash, semicolon, colon, full stop or "because" counts as the alternative or the reason. Rule disabling and per-file overrides still apply.
 **Fix**: Add positive alternative (e.g., "Instead, use..."), or give the reason
-**Source**: platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
+**Source**: platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices, code.claude.com/docs/en/memory#agents-md
 
 ---
 

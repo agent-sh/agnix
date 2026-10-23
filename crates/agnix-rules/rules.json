@@ -16928,15 +16928,16 @@
     {
       "id": "PE-006",
       "name": "Negative-Only Instructions",
-      "description": "Detects negative instructions (don't, never, avoid) that lack a positive alternative. Instructions are more effective when they tell the LLM what to do instead of only what not to do.",
+      "description": "Detects negative instructions without a positive alternative or reason in Claude memory files and native AGENTS.md outside .agents/ when Claude Code is explicitly selected, including mixed-tool runs. This is Claude prompting guidance; unscoped shared AGENTS.md files are excluded.",
       "severity": "MEDIUM",
       "category": "prompt-engineering",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices"
+          "https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices",
+          "https://code.claude.com/docs/en/memory#agents-md"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-10-23",
         "applies_to": {
           "tool": "claude-code"
         },

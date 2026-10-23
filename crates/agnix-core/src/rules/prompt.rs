@@ -10,10 +10,10 @@
 //! - PE-005: redundant generic instructions (be helpful, write clean code).
 //!   Claude memory files (best-practices Exclude column) and AGENTS.md (also
 //!   Windsurf, VS Code and Copilot code review).
-//! - PE-006: negative-only instructions. Claude memory files only ("Tell
-//!   Claude what to do instead of what not to do"); Gemini advises the
-//!   opposite ("Use negative constraints"), so GEMINI.md and AGENTS.md, which
-//!   Gemini can read, are skipped.
+//! - PE-006: negative-only instructions. Claude memory files and native
+//!   AGENTS.md when Claude Code is explicitly selected ("Tell Claude what to
+//!   do instead of what not to do"). Unscoped AGENTS.md and GEMINI.md are
+//!   skipped because Gemini advises "Use negative constraints".
 
 use crate::{
     FileType,
@@ -90,7 +90,28 @@ impl Validator for PromptValidator {
     ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
         let audience = Audience::of(path);
-        let enabled = |rule: &str| audience.runs(rule) && config.is_rule_enabled(rule);
+        // AGENTS.md is also a Claude instruction file when the run selects
+        // Claude Code. Do not infer that audience for an unscoped shared file
+        // or for AGENTS.local.md / AGENTS.override.md, which Claude ignores.
+        // The explicit tools list takes precedence over the legacy target,
+        // just as it does in the main rule filter.
+        let claude_agents_md = audience == Audience::AgentsMd
+            && path.file_name().is_some_and(|name| name == "AGENTS.md")
+            && !path
+                .components()
+                .any(|component| component.as_os_str() == ".agents")
+            && if config.tools().is_empty() {
+                config.target().tool_name() == Some("claude-code")
+            } else {
+                config
+                    .tools()
+                    .iter()
+                    .any(|tool| tool.eq_ignore_ascii_case("claude-code"))
+            };
+        let enabled = |rule: &str| {
+            (audience.runs(rule) || (rule == "PE-006" && claude_agents_md))
+                && config.is_rule_enabled(rule)
+        };
 
         // PE-002: Chain-of-thought on simple tasks
         if enabled("PE-002") {

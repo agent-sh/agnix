@@ -483,9 +483,14 @@ fn test_cc_mem_020_local_file_not_gitignored() {
 
 #[test]
 fn test_cc_mem_020_outside_git_repository() {
-    let dir = TempDir::new().unwrap();
-    let local = write(dir.path(), "CLAUDE.local.md", "notes\n");
-    assert!(!rules_at(&local, "notes\n").contains(&"CC-MEM-020".into()));
+    // A host's temporary directory can itself be inside a Git repository.
+    // Model the absence of all ancestor markers instead of assuming it.
+    let filesystem = std::sync::Arc::new(crate::MockFileSystem::new());
+    let local = Path::new("not-a-repository/CLAUDE.local.md");
+    filesystem.add_file(local, "notes\n");
+    let config = LintConfig::builder().fs(filesystem).build().unwrap();
+    let diagnostics = ClaudeMdValidator.validate(local, "notes\n", &config);
+    assert!(diagnostics.iter().all(|d| d.rule != "CC-MEM-020"));
 }
 
 // ===== CC-MEM-021 =====
