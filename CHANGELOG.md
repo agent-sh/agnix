@@ -7,23 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.2] - 2026-10-24
+
 ### Fixed
 - **JetBrains** keeps `SKILL.md` on the native Markdown file type so the Markdown editor and preview remain available. The agnix icon and filename-based LSP support are preserved. (#1700)
-
-## [0.59.1] - 2026-10-23
-
-### Security
-- Update Tokio to 1.53.3 for the AsyncFd I/O-safety advisory (RUSTSEC-2026-0386).
-- Update rustls-webpki to 0.103.16 and webpki-root-certs to 1.0.10 to reject distrusted emSign certificate chains (RUSTSEC-2026-0382, RUSTSEC-2026-0383).
-- Update the website's follow-redirects lockfile to 1.16.1 (GHSA-q3jh-wrc6-jgq8, GHSA-8r9p-f939-6h3c).
-
-### Fixed
-- **PE-006** checks native AGENTS.md when Claude Code is explicitly selected, including mixed-tool runs. Unscoped shared files retain their existing checks. The warning identifies Claude prompting guidance. (#1705)
 - **CC-HK-025** accepts the documented `plugin_notification` Notification matcher, including exact alternatives, without suppressing unknown matcher warnings.
 - Codex `[tui]` configuration accepts `presets`, the rust-v0.164.0 `/presets` input slots, instead of warning about an unknown key.
 - **CDX-HK-005** accepts the rust-v0.164.0 `PreModelRequest` and `PostModelRequest` hook events. They are observation-only: matchers are not compiled and `additionalContext` is not interpreted, so they stay out of the matcher and context event sets.
-- Windows rooted paths in OpenCode instructions and Gemini extension commands follow Node path semantics. Path-sensitive tests use native locations and separator-independent comparisons.
-- **CC-AG-003** follows the current sub-agents reference. A subagent `model` is `sonnet`, `opus`, `haiku`, `fable`, a `claude-*` model ID, or `inherit`. `default`, `best`, `opusplan`, `sonnet[1m]`, and `opus[1m]` stay valid on skills and are rejected on subagents.
 
 ### Changed
 - Review Codex CLI rust-v0.164.0 against the rust-v0.163.0 tagged `config.schema.json`. Beyond the two fixes above, the new MCP OAuth fields, plugin provisioning metadata and `permissions.network` mitm v2 options live one level below the surfaces agnix key-checks; no other validation change. Baseline rust-v0.164.0.
@@ -34,7 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Review Kiro CLI 2.32.0; no new validation constraints. Official workflow authoring docs assign Powers/MCP access to agents, not new step fields.
 - Review Cursor 3.26.13 alert against live stable marker 3.27.6 and current official references; no new validation constraints. No per-patch schema diff is published.
 - Refresh the five reviewed Claude spec baselines with current source hashes; see [the source-backed review](knowledge-base/reviews/2026-10-22-tool-spec-triage.md) for scope and remaining gaps.
+
+## [0.59.1] - 2026-10-23
+
+### Security
+- Update Tokio to 1.53.3 for the AsyncFd I/O-safety advisory (RUSTSEC-2026-0386).
+- Update rustls-webpki to 0.103.16 and webpki-root-certs to 1.0.10 to reject distrusted emSign certificate chains (RUSTSEC-2026-0382, RUSTSEC-2026-0383).
+- Update the website's follow-redirects lockfile to 1.16.1 (GHSA-q3jh-wrc6-jgq8, GHSA-8r9p-f939-6h3c).
+
+### Fixed
+- **PE-006** checks native AGENTS.md when Claude Code is explicitly selected, including mixed-tool runs. Unscoped shared files retain their existing checks. The warning identifies Claude prompting guidance. (#1705)
+- Windows rooted paths in OpenCode instructions and Gemini extension commands follow Node path semantics. Path-sensitive tests use native locations and separator-independent comparisons.
+- **CC-AG-003** follows the current sub-agents reference. A subagent `model` is `sonnet`, `opus`, `haiku`, `fable`, a `claude-*` model ID, or `inherit`. `default`, `best`, `opusplan`, `sonnet[1m]`, and `opus[1m]` stay valid on skills and are rejected on subagents.
+
+### Changed
 - Update serde_json, schemars and toml, and refresh the Claude Code, setup-node and download-artifact action pins with their documentation.
+- Cursor release baseline is 3.25.9. The stable endpoint returned a version marker only. The public changelog since 3.24.18 does not change rules, hooks, or MCP schema.
 
 ## [0.59.0] - 2026-10-17
 

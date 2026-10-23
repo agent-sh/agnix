@@ -7,13 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.2] - 2026-10-24
+
+### Fixed
+
+- Preserve the native Markdown file type for `SKILL.md`, retaining the Markdown preview and editor layouts alongside agnix diagnostics. Keep the skill icon through a file icon provider. (#1700)
+
+## [0.59.1] - 2026-10-23
+
 ### Added
 
 - WSL execution mode for `agnix-lsp` (#1346). On Windows, projects that live inside a WSL distribution can now run the language server inside that distribution without JetBrains Remote Development. Enable **Run agnix-lsp inside WSL (Windows only)** in Settings > Tools > agnix, optionally name the distribution (empty reuses the distribution the project is opened from, detected from its `\\wsl$\` or `\\wsl.localhost\` path), and give the absolute Linux path to `agnix-lsp`. The server is started as an argument list via `wsl.exe --distribution <name> --exec <path>` - no shell is involved, so spaces in paths need no quoting - and document/workspace URIs are translated between Windows and Linux paths (including `/mnt/<drive>` automounts) at the LSP request and response boundary. Host-local binary installation and download are skipped while WSL mode is on, invalid configuration is rejected in the settings dialog, and a launch-time notification with a "Settings" action reports misconfiguration. Native launches keep their existing behavior.
 
 ### Fixed
-
-- Preserve the native Markdown file type for `SKILL.md`, retaining the Markdown preview and editor layouts alongside agnix diagnostics. Keep the skill icon through a file icon provider. (#1700)
 
 - Render `SKILL.md` files with Markdown syntax highlighting instead of
   registering them as plain text. (#1265)
