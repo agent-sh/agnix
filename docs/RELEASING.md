@@ -4,7 +4,8 @@
 
 1. Update `[workspace.package].version` and the internal `agnix-rules` / `agnix-core` dependency versions in root `Cargo.toml`. Keep the unpublished root test package at `0.0.0`. Refresh `Cargo.lock`, then synchronize distribution manifests:
    ```bash
-   cargo metadata --format-version 1 --no-deps >/dev/null
+   cargo update --workspace
+   cargo metadata --locked --format-version 1 --no-deps >/dev/null
    bash scripts/sync-versions.sh 0.X.Y
    ```
    Run a locked workspace check before tagging to verify all six crate versions in `Cargo.lock`. The sync script updates npm, Python, editor and plugin manifests, not Rust versions.

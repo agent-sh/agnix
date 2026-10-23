@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.1] - 2026-10-23
+
 ### Security
 - Update Tokio to 1.53.3 for the AsyncFd I/O-safety advisory (RUSTSEC-2026-0386).
 - Update rustls-webpki to 0.103.16 and webpki-root-certs to 1.0.10 to reject distrusted emSign certificate chains (RUSTSEC-2026-0382, RUSTSEC-2026-0383).
