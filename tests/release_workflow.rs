@@ -149,6 +149,14 @@ fn release_workflow_pins_latest_versioned_docs_to_the_release_tag() {
         .split("  version-docs:\n")
         .nth(1)
         .expect("release workflow must define a version-docs job");
+    let pr_title = docs_job
+        .lines()
+        .find(|line| line.trim_start().starts_with("--title "))
+        .expect("version-docs must set a PR title before creation");
+    assert!(
+        pr_title.contains("[skip changelog]"),
+        "generated docs must skip the changelog gate at PR creation, before labels arrive"
+    );
     let checkout = docs_job
         .split("\n      - ")
         .find(|step| step.starts_with("uses: actions/checkout@"))

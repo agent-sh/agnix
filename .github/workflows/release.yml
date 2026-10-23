@@ -846,10 +846,11 @@ jobs:
             if [ -n "$EXISTING_PR" ]; then
               echo "PR #${EXISTING_PR} already exists for $BRANCH, updated with force push"
             else
+              # The opened event precedes labels, so put the skip marker in the title.
               gh pr create \
                 --base main \
                 --head "$BRANCH" \
-                --title "docs: version ${{ steps.version.outputs.version }} docs" \
+                --title "docs: version ${{ steps.version.outputs.version }} docs [skip changelog]" \
                 --body "Auto-generated versioned docs snapshot for v${{ steps.version.outputs.version }}, including updated rule docs and site data." \
                 --label "documentation" \
                 --label "skip-changelog"
