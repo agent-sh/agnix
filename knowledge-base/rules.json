@@ -2425,7 +2425,7 @@
           "https://code.claude.com/docs/en/hooks",
           "https://code.claude.com/docs/en/hooks-guide"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-10-22",
         "applies_to": {
           "tool": "claude-code",
           "file_types": [

@@ -16,12 +16,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **PE-006** checks native AGENTS.md when Claude Code is explicitly selected, including mixed-tool runs. Unscoped shared files retain their existing checks. The warning identifies Claude prompting guidance. (#1705)
+- **CC-HK-025** accepts the documented `plugin_notification` Notification matcher, including exact alternatives, without suppressing unknown matcher warnings.
+- Codex `[tui]` configuration accepts `presets`, the rust-v0.164.0 `/presets` input slots, instead of warning about an unknown key.
+- **CDX-HK-005** accepts the rust-v0.164.0 `PreModelRequest` and `PostModelRequest` hook events. They are observation-only: matchers are not compiled and `additionalContext` is not interpreted, so they stay out of the matcher and context event sets.
 - Windows rooted paths in OpenCode instructions and Gemini extension commands follow Node path semantics. Path-sensitive tests use native locations and separator-independent comparisons.
 - **CC-AG-003** follows the current sub-agents reference. A subagent `model` is `sonnet`, `opus`, `haiku`, `fable`, a `claude-*` model ID, or `inherit`. `default`, `best`, `opusplan`, `sonnet[1m]`, and `opus[1m]` stay valid on skills and are rejected on subagents.
 
 ### Changed
+- Review Codex CLI rust-v0.164.0 against the rust-v0.163.0 tagged `config.schema.json`. Beyond the two fixes above, the new MCP OAuth fields, plugin provisioning metadata and `permissions.network` mitm v2 options live one level below the surfaces agnix key-checks; no other validation change. Baseline rust-v0.164.0.
+- Review Gemini CLI v0.65.0 (#1702): fixes plus custom OTLP telemetry headers nested under the already-known `telemetry` object; no top-level `.gemini/settings.json` additions. Baseline-only advance.
+- Baseline-only advances after release-notes review: Claude Code v2.1.309 (fixes only), Cline v4.1.25 (cloud sessions and model catalog), Cursor 3.27.12 (version marker only), Kiro CLI 2.33.1 (workspace trust stores per-workspace state under `~/.kiro/workspace-roots`; the permissions files are unchanged), OpenCode v1.19.4 (Bun runtime security bump), OpenCode 2 v2.1.4 (`experimental.background_compaction` and `experimental.location_idle_timeout`, accepted by the open experimental object) and Amp `self-hosted-orbs` (new `amp orb provider` command).
+- Review Claude Code v2.1.304 against v2.1.299 release notes; no new validation constraints. Session-wide skill-hook budgets and mod API changes are runtime behavior, not new per-file schema rules.
+- Review OpenCode 2 v2.1.0 against the v2.0.32 tagged config schemas; no new validation constraints. The new `experimental.todo` option is already accepted.
+- Review Kiro CLI 2.32.0; no new validation constraints. Official workflow authoring docs assign Powers/MCP access to agents, not new step fields.
+- Review Cursor 3.26.13 alert against live stable marker 3.27.6 and current official references; no new validation constraints. No per-patch schema diff is published.
+- Refresh the five reviewed Claude spec baselines with current source hashes; see [the source-backed review](knowledge-base/reviews/2026-10-22-tool-spec-triage.md) for scope and remaining gaps.
 - Update serde_json, schemars and toml, and refresh the Claude Code, setup-node and download-artifact action pins with their documentation.
-- Cursor release baseline is 3.25.9. The stable endpoint returned a version marker only. The public changelog since 3.24.18 does not change rules, hooks, or MCP schema.
 
 ## [0.59.0] - 2026-10-17
 

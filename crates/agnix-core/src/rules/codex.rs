@@ -384,6 +384,7 @@ const KNOWN_TUI_KEYS: &[&str] = &[
     "notifications",
     "pet",
     "pet_anchor",
+    "presets",
     "question_esc_back",
     "raw_output_mode",
     "rendering",
@@ -4611,6 +4612,60 @@ whimsy = true
             validate_config(&misspelled)
                 .iter()
                 .any(|d| d.message.contains("worktreess"))
+        );
+    }
+
+    #[test]
+    fn test_codex_0_164_0_schema_additions_are_accepted_in_toml_and_json() {
+        // Keys added between the tagged rust-v0.163.0 and rust-v0.164.0
+        // codex-rs/core/config.schema.json files: [tui].presets (the /presets
+        // input slots), enterprise MCP OAuth fields inside `oauth`, plugin
+        // provisioning metadata, and permissions.network mitm v2 keys
+        // (version/ports/schemes, injected-header placeholder). agnix only
+        // key-checks the surfaces these live on one level deep, so the new
+        // nested fields must pass without touching their parent allowlists
+        // except for tui.presets.
+        let toml = r#"
+[tui.presets.ship]
+label = "Ship it"
+input = "cargo test"
+
+[mcp_servers.enterprise]
+url = "https://mcp.example.com/mcp"
+
+[mcp_servers.enterprise.oauth]
+client_id = "id"
+client_secret = "secret"
+token_endpoint_auth_method = "client_secret_post"
+
+[plugins.remote]
+enabled = true
+auto_provision = true
+release_id = "rel_1"
+remote_plugin_id = "org/plugin"
+
+[permissions.network.mitm]
+version = 2
+
+[permissions.network.mitm.hooks.substitute]
+host = "api.example.com"
+ports = [443]
+schemes = ["https"]
+"#;
+        let json = serde_json::to_string(&toml::from_str::<toml::Value>(toml).unwrap()).unwrap();
+        for diagnostics in [validate_config(toml), validate_config_json(&json)] {
+            assert!(
+                diagnostics
+                    .iter()
+                    .all(|d| !matches!(d.rule.as_str(), "CDX-004" | "CDX-CFG-006" | "CDX-CFG-011")),
+                "{diagnostics:?}"
+            );
+        }
+        let misspelled = toml.replace("[tui.presets.ship]", "[tui.presetz.ship]");
+        assert!(
+            validate_config(&misspelled)
+                .iter()
+                .any(|d| d.message.contains("tui.presetz"))
         );
     }
 

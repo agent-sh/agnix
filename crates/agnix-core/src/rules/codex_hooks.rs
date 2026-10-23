@@ -58,6 +58,12 @@ pub(crate) const CODEX_HOOK_EVENTS: &[&str] = &[
     "SubagentStop",
     "Stop",
     "Interrupt",
+    // rust-v0.164.0 observation-only model-request lifecycle hooks: output is
+    // logged and never interpreted, matchers are not compiled, and
+    // `additionalContext` is not honored, so they stay out of
+    // MATCHER_EVENTS/CONTEXT_EVENTS.
+    "PreModelRequest",
+    "PostModelRequest",
 ];
 
 /// Events whose command hooks can return `additionalContext`; Codex ignores
@@ -1099,6 +1105,21 @@ mod tests {
             rules(&run(".codex/hooks.json", limits)),
             ["CDX-HK-004", "CDX-HK-004"]
         );
+    }
+
+    #[test]
+    fn model_request_lifecycle_hooks_from_0_164_0_are_known_events() {
+        // rust-v0.164.0 added PreModelRequest/PostModelRequest to HookEventsToml.
+        // They are observation-only (matchers are not compiled, output is only
+        // logged), so a misspelling still flags CDX-HK-005 while the real
+        // names and a stray matcher stay clean.
+        let valid = r#"{"hooks": {
+            "PreModelRequest": [{"hooks": [{"type": "command", "command": "x"}]}],
+            "PostModelRequest": [{"matcher": "gpt-*", "hooks": [{"type": "command", "command": "x"}]}]
+        }}"#;
+        assert!(run(".codex/hooks.json", valid).is_empty());
+        let misspelled = r#"{"hooks": {"PreModelReques": []}}"#;
+        assert_eq!(rules(&run(".codex/hooks.json", misspelled)), ["CDX-HK-005"]);
     }
 
     #[test]
