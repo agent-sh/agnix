@@ -4713,6 +4713,9 @@ fn test_validate_project_file_input_valid_file_no_errors() {
     .unwrap();
 
     let mut config = LintConfig::default();
+    // Test Claude file selection without inheriting another tool's project
+    // from the host's ancestors of the temporary directory.
+    config.set_tools(vec!["claude-code".to_string()]);
     config.rules_mut().disabled_rules = vec!["VER-001".to_string()];
 
     let target_file = temp.path().join("CLAUDE.md");
