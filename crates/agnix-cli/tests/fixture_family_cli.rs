@@ -299,6 +299,9 @@ fn test_cli_reports_agents_md_layout_rules() {
     // fixtures inside this repository are nested, so the project is built at
     // run time.
     let project = tempfile::TempDir::new().unwrap();
+    // Make the repository-root precondition explicit, independent of where
+    // the temporary directory and the default configuration are created.
+    std::fs::create_dir(project.path().join(".git")).unwrap();
     std::fs::write(
         project.path().join("AGENTS.md"),
         "# Project\n\nA date parser.\n\n## Style\n\nUse tabs.\n",
