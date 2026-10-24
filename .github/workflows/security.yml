@@ -64,6 +64,19 @@ jobs:
         # iai-callgrind and have no safe upstream upgrade yet.
         run: cargo audit --deny warnings --ignore RUSTSEC-2025-0141 --ignore RUSTSEC-2026-0173
 
+  npm:
+    name: npm Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Audit website and editor dependencies including development tools
+        run: |
+          npm --prefix website audit --include=dev --audit-level=low
+          npm --prefix editors/vscode audit --include=dev --audit-level=low
+
   # Additional supply chain security with cargo-deny
   deny:
     name: Dependency Check

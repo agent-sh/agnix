@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Patch the VS Code publishing/test dependency graph with MSAL Node 7.1.1 and serialize-javascript 7.1.4. Scope the MSAL override to Azure Identity and require serializer 7.1.3 or newer in both npm projects. The extension runtime bundle is unchanged.
+- Audit both website and VS Code lockfiles in CI, including development dependencies and low-severity advisories.
+
 ## [0.59.3] - 2026-10-24
 
 ### Fixed
