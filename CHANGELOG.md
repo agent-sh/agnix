@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.3] - 2026-10-24
+
 ### Fixed
 - **MCP** updates rmcp to 3.6.0: accept integral floating-point request IDs, reject conflicting JSON-RPC request/response fields, and recover after incoming lines exceed the SDK's 16 MiB framing limit. Real stdio integration checks cover handshake, tools, exact frame boundaries, recovery and EOF shutdown.
 

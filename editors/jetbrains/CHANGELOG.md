@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.3] - 2026-10-24
+
+### Changed
+
+- Update the default language-server download to agnix-lsp 0.59.3.
+
 ## [0.59.2] - 2026-10-24
 
 ### Fixed
