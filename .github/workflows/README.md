@@ -30,40 +30,40 @@ cache poisoning from pull requests.
 
 When updating actions, use these SHA commits. Generated from the workflow
 files themselves - if this table and a `uses:` line disagree, the workflow
-is authoritative (last verified: 2026-07-31).
+is authoritative (last verified: 2026-10-24).
 
 ```yaml
 # GitHub Official Actions
 actions/add-to-project@v2.0.0: 5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd
 actions/attest@v4.2.2: 1e69f48acb82d1966a394da916b4c1698aa569d6
-actions/checkout@v7.0.0: 9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+actions/checkout@v7.0.1: 3d3c42e5aac5ba805825da76410c181273ba90b1
 actions/configure-pages@v6.0.0: 45bfe0192ca1faeb007ade9deae92b16b8254a0d
-actions/deploy-pages@v5.0.0: cd2ce8fcbc39b97be8ca5fce6e763baed58fa128
+actions/deploy-pages@v5.0.1: 368f82528645a54fb793d4d04e342629a3f51346
 actions/download-artifact@v8.0.2: 9000827ccba6bdab643e8b6fd33ac0654aef8333
-actions/setup-java@v5.6.0: 03ad4de0992f5dab5e18fcb136590ce7c4a0ac95
+actions/setup-java@v6.0.1: de7274f081f381c8f8158605e0321c36c376e2e6
 actions/setup-node@v7.1.0: 949feb2413d6458794dcd2491c4babbbce0c15c1
 actions/setup-python@v7.0.0: 5fda3b95a4ea91299a34e894583c3862153e4b97
-actions/stale@v10.4.0: 1e223db275d687790206a7acac4d1a11bd6fe629
-actions/upload-artifact@v7.0.1: 043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+actions/stale@v11.0.0: 4391f3da665fdf50b6810c1a66712fb9ba21aa93
+actions/upload-artifact@v7.0.2: cf430e030ddbb5b0abf93d22962f4752f3646cd9
 actions/upload-pages-artifact@v5.0.0: fc324d3547104276b827a68afc52ff2a11cc49c9
 rhysd/actionlint@v1.7.12: 914e7df21a07ef503a81201c76d2b11c789d3fca
 
 # Rust Tooling
-Swatinem/rust-cache@v2: c19371144df3bb44fab255c43d04cbc2ab54d1c4
+Swatinem/rust-cache@v2.9.3: d1527c8f67ef9af357290475d4af4b0fab8f12e0
 dtolnay/rust-toolchain@stable: 4be9e76fd7c4901c61fb841f559994984270fce7
-taiki-e/install-action@v2.87.18: dfae9bf3d6f6c6f20ef4ebb3486c01a51341ff12
+taiki-e/install-action@v2.87.29: 8cca0918f8471c33515202b73f56ab27f2bed283
 
 # Security
 EmbarkStudios/cargo-deny-action@v2.1.1: 3c6349835b2b7b196a839186cb8b78e02f7b5f25
-github/codeql-action/analyze@v4.38.3: 24c54180a607b1449ed407dd24f251e4e9147c8d
-github/codeql-action/init@v4.38.3: 24c54180a607b1449ed407dd24f251e4e9147c8d
-github/codeql-action/upload-sarif@v4.38.3: 24c54180a607b1449ed407dd24f251e4e9147c8d
+github/codeql-action/analyze@v4.39.0: 6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee
+github/codeql-action/init@v4.39.0: 6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee
+github/codeql-action/upload-sarif@v4.39.0: 6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee
 
 # Release
-softprops/action-gh-release@v3.0.2: 3d0d9888cb7fd7b750713d6e236d1fcb99157228
+softprops/action-gh-release@v3.0.3: efb35369e0ad2afab669f228072c1b0d510eae64
 
 # Claude Code
-anthropics/claude-code-action@v1.0.250: a26b07d8c778b0c43f64618e5fd29fd0f8af72e8
+anthropics/claude-code-action@v1.0.255: e4a6faad497d33dbc7144135c75e41f82f0bf6c0
 ```
 
 ## Updating Action Versions
@@ -78,6 +78,9 @@ When a new version of an action is released:
 3. Update all occurrences in workflow files
 4. Update this README with the new SHA
 5. Test the workflows on a feature branch before merging
+
+Local preflight and CI check every SHA-pinned action against this table.
+CodeQL init, analyze and upload-sarif must also share the same SHA.
 
 ## Workflow Overview
 

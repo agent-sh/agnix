@@ -44,6 +44,8 @@ run() {
 }
 
 run 'Format' cargo fmt --check --all
+run 'Workflow action pins' node scripts/check-codeql-pins.js
+run 'Action pin regression tests' node --test scripts/check-codeql-pins.test.js
 run 'Rule bookkeeping' node scripts/sync-rule-bookkeeping.js --check --skip-docs
 run 'Rule count tables' python3 scripts/check-rule-counts.py
 run 'Locale copies' bash scripts/check-locale-sync.sh

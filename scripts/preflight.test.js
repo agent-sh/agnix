@@ -64,6 +64,8 @@ test('default quick mode works from a nested directory with spaces and never com
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Quick preflight/);
   assert.match(f.commands(), /cargo\|fmt --check --all\|2\|2\|2/);
+  assert.match(f.commands(), /node\|scripts\/check-codeql-pins.js/);
+  assert.match(f.commands(), /node\|--test scripts\/check-codeql-pins.test.js/);
   assert.match(f.commands(), /node\|scripts\/sync-rule-bookkeeping.js --check --skip-docs/);
   assert.match(f.commands(), /python3\|scripts\/check-rule-counts.py/);
   assert.doesNotMatch(f.commands(), /clippy|cargo\|test|cargo\|run/);

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **MCP** updates rmcp to 3.6.0: accept integral floating-point request IDs, reject conflicting JSON-RPC request/response fields, and recover after incoming lines exceed the SDK's 16 MiB framing limit. Real stdio integration checks cover handshake, tools, exact frame boundaries, recovery and EOF shutdown.
+
+### Security
+- Update the website's development/build dependencies to body-parser 1.20.9, fast-uri 3.1.9 and launch-editor 2.14.2 for their current advisories. The published documentation remains a static site.
+
+### Changed
+- Update uuid to 1.29.0, arc-swap to 1.9.3 and the proptest test dependency to 1.12.0.
+- Upgrade Docusaurus to 3.10.2 and remove the legacy gray-matter/argparse/sprintf-js dependency chain. The original sprintf-js advisory was withdrawn; this part is dependency maintenance.
+- Refresh five GitHub Actions dependencies and synchronize the workflow pin reference. Local preflight and CI now check every SHA-pinned action against the table, while retaining the shared-SHA requirement for CodeQL.
+
 ## [0.59.2] - 2026-10-24
 
 ### Fixed
