@@ -30,6 +30,7 @@ impl Peer {
         let project = tempfile::tempdir().unwrap();
         let mut child = Command::new(binary)
             .current_dir(project.path())
+            .env("RUST_LOG", "warn")
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
