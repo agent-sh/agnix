@@ -34,7 +34,6 @@ is authoritative (last verified: 2026-10-24).
 
 ```yaml
 # GitHub Official Actions
-actions/add-to-project@v2.0.0: 5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd
 actions/attest@v4.2.2: 1e69f48acb82d1966a394da916b4c1698aa569d6
 actions/checkout@v7.0.1: 3d3c42e5aac5ba805825da76410c181273ba90b1
 actions/configure-pages@v6.0.0: 45bfe0192ca1faeb007ade9deae92b16b8254a0d
