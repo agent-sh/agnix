@@ -43,7 +43,6 @@ When user runs `agentsys` and selects OpenCode:
 ├── delivery-approval.md
 ├── sync-docs.md
 ├── audit-project.md       # From plugins/audit-project/commands/
-├── ship.md                 # From plugins/ship/commands/
 └── drift-detect-scan.md   # From plugins/drift-detect/commands/scan.md
 
 ~/.config/opencode/opencode.json  # MCP config added
@@ -450,7 +449,6 @@ workflow_status
 # Should list agentsys commands
 /next-task
 /deslop
-/ship
 ```
 
 ### Verify State Directory
@@ -733,7 +731,7 @@ When user selects "always" for a permission:
 "permission.ask": async (input, output) => {
   const workflowPatterns = {
     "git push": "deny",      // Block during review
-    "gh pr create": "deny",  // Only /ship creates PRs
+    "gh pr create": "deny",  // Block PR creation during review
     "npm publish": "deny"    // Block publishing
   }
 
