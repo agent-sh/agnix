@@ -195,7 +195,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="as-015"></a>
 ### AS-015 [MEDIUM] Claude API Upload Size Exceeds 30MB
 **Requirement**: Claude API skill uploads MUST be under 30 MB uncompressed ("Total upload size must be under 30 MB (uncompressed)"). Local Claude Code skill directories have no documented size cap; this rule emits an upload-readiness warning.
-**Detection**: `directory_size > 30 * 1024 * 1024`; honor top-level `exclude` and `[files].exclude`.
+**Detection**: `directory_size > 30 * 1024 * 1024`; honor top-level `exclude`, `[files].exclude`, parent/nested `.ignore` files, repository `.gitignore` files and Git global excludes. Like project traversal, ignore `.git/info/exclude`. Skip symlinks, hidden subdirectories and `node_modules` at every depth, matching bundled-skill scans. Without the filesystem feature, configured exclusions and directory skips still apply, but Git ignore matching is unavailable.
 **Fix**: Remove large assets before uploading to the Claude API.
 **Source**: platform.claude.com/docs/en/build-with-claude/skills-guide
 
@@ -245,7 +245,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### AS-024 [LOW] Unpinned Package-Runner Command in Skill
 **Requirement**: One-off package-runner commands in a skill SHOULD pin a version: "**Pin versions** (e.g., `npx eslint@9.0.0`) so the command behaves the same over time."
 **Detection**: In SKILL.md code spans and fences: `npx`, `bunx`, `pnpm dlx`, `yarn dlx`, `uvx`, `uv tool run`, `pipx run` running a package without an exact version (or with a floating tag or range), and `go run <module>` without `@version` (the page accepts `@latest` for go run). Packages a `package.json` in the skill directory or an ancestor up to the repository root (or the lint root) depends on or defines (its `name` and `bin` commands), and binaries in `node_modules/.bin`, are local and skipped. Plain `npx`/`bunx` on a project build or test tool (`tsc`, `tsx`, `jest`, `vitest`, `mocha`, `playwright`, `wrangler`, `vite`, ...) is skipped too: npx runs the project's installed copy, which a pinned version would bypass. Info level.
-**Fix**: No auto-fix - pin a version (for example `npx eslint@9.0.0`)
+**Fix**: No auto-fix - pin an exact version (for example `npx eslint@9.0.0`). Major-only examples such as `eslint@9` on the source page select a changing version; this reproducibility advice deliberately asks for an exact version.
 **Source**: agentskills.io/skill-creation/using-scripts
 
 <a id="as-025"></a>
@@ -425,13 +425,13 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 ### CC-SK-027 [LOW] Legacy Custom Command File
 **Requirement**: New commands SHOULD be skills. Vendor text: "a Markdown file in `.claude/commands/` is the older format and still works. It supports the same frontmatter except `name` and `paths`. To find the name you type to invoke it, see How a skill gets its command name. Prefer a skill for new work, since skills also support supporting files." (skills, "Choose where skills load")
 **Detection**: every `.claude/commands/**/*.md` file (a new file type) gets one migration note (info); when it sets `name` or `paths`, the note says those fields have no effect. Command files get no other skill rules: they are a legacy form the current release still loads.
-**Fix**: Manual - move the file to `.claude/skills/<name>/SKILL.md`
+**Fix**: Manual - move the file to `.claude/skills/<name>/SKILL.md`. For a nested command such as `frontend/component.md`, explain that `/frontend:component` becomes `/component` and callers need updating.
 **Source**: code.claude.com/docs/en/skills
 
 <a id="cc-sk-028"></a>
 ### CC-SK-028 [MEDIUM] Injected Command Not Run
 **Requirement**: `!` command injection SHOULD use a form Claude Code runs. Vendor text: "The inline form is only recognized when `!` appears at the start of a line or immediately after whitespace. If `!` follows another character, as in `` KEY=!`cmd` ``, the placeholder is left as literal text and the command does not run." and "`No shell command in <name> was run` means one of the file's `!` commands contains a raw control character other than tab or newline, so none of them runs." (skills, "Inject dynamic context")
-**Detection**: in prose (outside code spans and fences), `` !` `` preceded by a non-whitespace character on the same line; and, in a file with a recognized `!` command or a ```` ```! ```` block, any control character other than tab, newline or carriage return
+**Detection**: in prose (outside code spans and fences), `` !` `` preceded by a non-whitespace character on the same line; and a control character other than tab, newline or carriage return inside a recognized inline command or closed executable ```` ```! ```` block. Explicit `shell: powershell` also refuses U+FEFF and U+180E. Control characters in frontmatter, surrounding prose and ordinary code examples do not trigger this rule.
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/skills
 

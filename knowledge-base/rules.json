@@ -1073,7 +1073,7 @@
         "source_urls": [
           "https://agentskills.io/skill-creation/using-scripts"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-10-28",
         "applies_to": {},
         "normative_level": "BEST_PRACTICE",
         "tests": {
@@ -4386,7 +4386,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/skills"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-10-28",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -4411,9 +4411,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/skills"
+          "https://code.claude.com/docs/en/skills",
+          "https://code.claude.com/docs/en/errors#no-shell-command-in-a-skill-or-command-was-run"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-10-28",
         "applies_to": {
           "tool": "claude-code"
         },

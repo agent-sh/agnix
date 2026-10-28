@@ -13,7 +13,7 @@ keywords: ["CC-SK-028", "injected command not run", "claude skills", "validation
 - **Category**: `Claude Skills`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-10-28`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-SK-028", "injected command not run", "claude skills", "validation
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/skills
+- https://code.claude.com/docs/en/errors#no-shell-command-in-a-skill-or-command-was-run
 
 ## Test Coverage Metadata
 

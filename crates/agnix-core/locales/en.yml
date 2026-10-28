@@ -146,8 +146,8 @@ rules:
     message: Bundled file '%{path}' is not mentioned in SKILL.md or another skill file, so the agent may not know it exists
     suggestion: List '%{path}' in SKILL.md and say when to use it, or remove it
   as_024:
-    message: Command runs '%{package}' without a pinned version
-    suggestion: Pin a version (for example 'npx eslint@9.0.0') so the skill behaves the same over time
+    message: Command runs '%{package}' without an exact version pin
+    suggestion: Pin an exact version (for example 'npx eslint@9.0.0'); major-only versions and ranges can change over time
   as_025:
     message: Skill '%{name}' is also defined in %{other}; %{clients} read both locations, so one copy is shadowed
     suggestion: Rename one skill or keep a single copy, unless the override is intended
@@ -2584,11 +2584,12 @@ rules:
     message: Legacy custom command file; Claude Code still loads .claude/commands files, but skills are the current format
     ignored_fields: Legacy custom command file sets %{fields}, which have no effect in .claude/commands files; skills are the current format and support them
     suggestion: Move it to .claude/skills/%{name}/SKILL.md when convenient; the command keeps the same /%{name} name
+    nested_suggestion: Move it to .claude/skills/%{name}/SKILL.md when convenient; this changes /%{command} to /%{name}, so update callers
   cc_sk_028:
     unrecognized: Injected command in '%{snippet}' is left as literal text and never runs; Claude Code recognizes !`...` only at the start of a line or after whitespace
     unrecognized_suggestion: Put whitespace before the ! or move the placeholder to the start of a line
-    control_character: File contains a raw control character, so Claude Code runs none of its injected !`...` commands
-    control_character_suggestion: Remove control characters other than tab and newline from the file
+    control_character: Injected command contains a control character or a disallowed format character, so Claude Code runs none of the file's injected commands
+    control_character_suggestion: Remove control characters other than tab and newline from the injected command; PowerShell also refuses U+FEFF and U+180E
   cc_sk_030:
     message: Skill name '%{name}' contains the reserved word '%{word}', so claude.ai and the Claude API reject the skill on upload
     suggestion: Rename the skill if it may be uploaded; Claude Code itself still loads it

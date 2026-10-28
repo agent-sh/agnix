@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-10-22T11:44:07Z",
+  "last_updated": "2026-10-28T21:15:09Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -28,7 +28,7 @@
       "mcp-spec": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/index.md",
-        "hash": "44e96c2715af9074905a5c47ff7c6c0bb77a50000eb577ed772242a077efd086",
+        "hash": "10a982e47c02684d10c24c6a7d9ab19f424eab767ac31e7c1595cc469cfda0b5",
         "github_repo": "modelcontextprotocol/modelcontextprotocol",
         "rules": [
           "MCP-001",
@@ -55,7 +55,7 @@
       "mcp-spec-tools": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/server/tools.md",
-        "hash": "465e76457fe4ce0825efde208fc2ea4f00877fd72e0610a663a11a21812a484b",
+        "hash": "2e0808ce801b61502f1a227f2bf965e5a2ebbadd9b62fcbfa78a3f0abd362856",
         "rules": [
           "MCP-002",
           "MCP-003",
@@ -71,7 +71,7 @@
       "mcp-spec-resources": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/resources",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/server/resources.md",
-        "hash": "dbe6654048bc5e0b31de2f401d1d6d23d7a48b6730ce436fe0558bc46d626b75",
+        "hash": "d910e577dad5f6955c01ef36f4b4b1a47c264002b7668b0e878a4f870254195e",
         "rules": [
           "MCP-015"
         ]
@@ -79,7 +79,7 @@
       "mcp-spec-prompts": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/prompts",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/server/prompts.md",
-        "hash": "0719ebea71899029d37f56691308369d6cda170647376ead96b097e994c59da0",
+        "hash": "c7084a0df8d45571c246770ba0be4d5738ee2faa981e6a8c8e3180805827e1fb",
         "rules": [
           "MCP-016"
         ]
@@ -87,7 +87,7 @@
       "mcp-spec-transports": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports.md",
-        "hash": "89251827c733dabd578cb9a2bd225dcb76849a3496ac2d3aab1d969334ff789c",
+        "hash": "e7782ecc90710a0f544a4521dbec9534d9b787da358aef63d98650c14331a1e7",
         "rules": [
           "MCP-009",
           "MCP-010",
@@ -102,7 +102,7 @@
       "mcp-spec-security": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/security_best_practices",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/security_best_practices.md",
-        "hash": "bb9f423d0bb7189d06559c60a9e209b696da2eab5f15d225f6b2b09ed346688e",
+        "hash": "9c9917dcde72102aff5e6cc0354f9433cade906e752aaae81d46e8ad6db584bd",
         "rules": [
           "MCP-018",
           "MCP-019",
@@ -112,7 +112,7 @@
       "mcp-spec-versioning": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning.md",
-        "hash": "4d897c03643058bde4a7b812271e5e5fa0ac2add4a1ed198594bc22621903055",
+        "hash": "a9ae76726d1fe3fe479759ed228f495f016ce621ccd7d16c76845ce2851c9d62",
         "rules": [
           "MCP-008",
           "MCP-020"
@@ -121,7 +121,7 @@
       "claude-code-memory": {
         "url": "https://code.claude.com/docs/en/memory",
         "content_url": "https://code.claude.com/docs/en/memory.md",
-        "hash": "6dde753aa5ee3890d12ef290b4ce5341776a99a4c7f0f682ab28b7e0f9ff03a5",
+        "hash": "4b5b5e9cb544f0959e0e8f41abdb2b8d75139eb5e31513b2e8b01ea2990e552e",
         "rules": [
           "CC-MEM-001",
           "CC-MEM-002",
@@ -139,7 +139,7 @@
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-        "hash": "d8a5f4bcd12107d3045ea7ceeb84dd35704b356063d2322f8b5564d743c524b9",
+        "hash": "4dd52664edb08c9d73e04daa59c0e25a10db17a4a8d9e52525bd1dd5c65980d8",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -165,7 +165,7 @@
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-        "hash": "24761a9f1e2c06fcfa92220ea58a10907c20ab2303944b39849203662517f004",
+        "hash": "942a10cce0b454dc75b1953db4d431732d8bf3cb76a494abb6b53e7b28b63648",
         "rules": [
           "AS-021",
           "CC-SK-001",
@@ -184,7 +184,7 @@
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
         "content_url": "https://code.claude.com/docs/en/plugins-reference.md",
-        "hash": "84d600cf53b13538827c2b162802d7d0bf54c4d874c01ae4e2b12fcfe32943d9",
+        "hash": "429d7f0315da20fade015644ad9756de8ef335c8a7fdb825d55d23d3371f1d9c",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -201,7 +201,7 @@
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
         "content_url": "https://code.claude.com/docs/en/sub-agents.md",
-        "hash": "8bf34515042be7bf00009c7234e0c21771e31f659dc5e6c8961812d10738caa2",
+        "hash": "7ee4221bb9e94cb2394ad23bc55180f0bd2ef123dcbf68097d8f6a5d73d3a62b",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",
@@ -266,7 +266,7 @@
       "cursor-rules": {
         "url": "https://cursor.com/docs/rules",
         "content_url": "https://cursor.com/docs/rules.md",
-        "hash": "c420f217cd1c61bceb55d42966b16d1b3d537e16f040a082c6903e490deb83b3",
+        "hash": "dda30726ed0e9f714e42b4660973d64a87ba4d1f70269f175ab53e6f9cb2f7a4",
         "rules": [
           "CUR-001",
           "CUR-002",
@@ -285,7 +285,7 @@
       "cursor-hooks": {
         "url": "https://cursor.com/docs/hooks",
         "content_url": "https://cursor.com/docs/hooks.md",
-        "hash": "f3e90a345003a8cedfe8376d5f97d3ce6375c9f921e37cd5879b146f824ebaae",
+        "hash": "d2532ce50b144ec80f8c301654420362ada749784e7eb4869bcacaf10e2cfb1d",
         "rules": [
           "CUR-010",
           "CUR-011",
@@ -302,7 +302,7 @@
       "cursor-subagents": {
         "url": "https://cursor.com/docs/subagents",
         "content_url": "https://cursor.com/docs/subagents.md",
-        "hash": "07141f46cdcabd4ff7aa6ad8c5264d01cabca0adb2b5763febe26c7d9a2b73e1",
+        "hash": "d3ddbe27ff9d9fa35412d648b424450a2ec8229eaa0b8109e861e2622786f84c",
         "rules": [
           "CUR-014",
           "CUR-015",
@@ -314,7 +314,7 @@
       "cursor-environment": {
         "url": "https://cursor.com/docs/cloud-agent/setup",
         "content_url": "https://cursor.com/docs/cloud-agent/setup.md",
-        "hash": "2f23f3e863b9faea5feb2b13d789ddf646cc1e18a47f5f243cb9c2fd83edb5cb",
+        "hash": "fea35174b16030d35dce458cb78e194ecb22275480f8679ed792883db7946103",
         "rules": [
           "CUR-016",
           "CUR-031",
@@ -332,7 +332,7 @@
       "cursor-mcp": {
         "url": "https://cursor.com/docs/mcp",
         "content_url": "https://cursor.com/docs/mcp.md",
-        "hash": "a6eee295326b0fbb72f5101371838c81b609e94fd351959908b858dc253abb37",
+        "hash": "de104ff30abcf9ce98fa88336aa374658880a7d1e4e8d5a3ed81106fcd5dd91d",
         "rules": [
           "CUR-024",
           "MCP-009",
@@ -353,7 +353,7 @@
       "github-copilot": {
         "url": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions",
         "content_url": "https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/add-custom-instructions/add-repository-instructions.md",
-        "hash": "fa2dc87c7ae8118db1df44caf4ccb30c61f30007b6d2a78a01587d9412e942d2",
+        "hash": "a7f25f9ffa4c37166add506ada0a4925dc31ebf2fcf7752e211f115ee799e0ee",
         "rules": [
           "COP-001",
           "COP-002",

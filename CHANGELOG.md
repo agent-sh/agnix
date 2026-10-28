@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Skill validation** ignores gitignored payloads and nested dependency directories when checking the upload size (AS-015), explains exact version pins (AS-024), names nested legacy commands correctly during migration (CC-SK-027), and limits injected-command control-character findings to the commands themselves (CC-SK-028). Thanks to @izkreny for the reproductions in #1738.
+
 ### Changed
+- Review Claude Code v2.1.310-v2.1.311, OpenCode 2 v2.2.0, Cursor 3.27.22 and the 18 changed specification sources from #1733. Refresh reviewed baselines; existing validators accept the new OpenCode model types, prompt-cache TTL settings and experimental media storage.
 - Remove the unused GitHub project-board automation and its action pin reference.
 - The OpenCode reference in `knowledge-base/agent-docs/` no longer lists the retired agentsys `/ship` command.
 
