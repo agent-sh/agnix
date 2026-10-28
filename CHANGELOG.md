@@ -7,11 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Skill validation** ignores gitignored payloads and nested dependency directories when checking the upload size (AS-015), explains exact version pins (AS-024), names nested legacy commands correctly during migration (CC-SK-027), and limits injected-command control-character findings to the commands themselves (CC-SK-028). Thanks to @izkreny for the reproductions in #1738.
+
 ### Changed
+- Review Claude Code v2.1.310-v2.1.311, OpenCode 2 v2.2.0, Cursor 3.27.22 and the 18 changed specification sources from #1733. Refresh reviewed baselines; existing validators accept the new OpenCode model types, prompt-cache TTL settings and experimental media storage.
 - Remove the unused GitHub project-board automation and its action pin reference.
 - The OpenCode reference in `knowledge-base/agent-docs/` no longer lists the retired agentsys `/ship` command.
 
 ### Security
+- Remove the docs site's unused SVGR/deepmerge dependency chain (GHSA-gcqx-w48m-w2h4). Register the existing docs, pages, sitemap, debug and classic theme plugins directly instead of installing the full preset.
 - Patch the VS Code publishing/test dependency graph with MSAL Node 7.1.1 and serialize-javascript 7.1.4. Scope the MSAL override to Azure Identity and require serializer 7.1.3 or newer in both npm projects. The extension runtime bundle is unchanged.
 - Audit both website and VS Code lockfiles in CI, including development dependencies and low-severity advisories.
 

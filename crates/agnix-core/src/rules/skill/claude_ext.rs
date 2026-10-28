@@ -147,6 +147,25 @@ impl ValidationContext<'_> {
             .and_then(|s| s.to_str())
             .unwrap_or("name")
             .to_string();
+        let normalized = self.path.to_string_lossy().replace('\\', "/");
+        let command = normalized
+            .rsplit_once(".claude/commands/")
+            .map(|(_, relative)| {
+                relative
+                    .strip_suffix(".md")
+                    .unwrap_or(relative)
+                    .replace('/', ":")
+            })
+            .unwrap_or_else(|| stem.clone());
+        let suggestion = if command == stem {
+            t!("rules.cc_sk_027.suggestion", name = stem.as_str())
+        } else {
+            t!(
+                "rules.cc_sk_027.nested_suggestion",
+                name = stem.as_str(),
+                command = command.as_str()
+            )
+        };
         let (line, col, message) = match ignored.first() {
             Some(field) => {
                 let (line, col) = self.frontmatter_key_line_col(field);
@@ -163,7 +182,7 @@ impl ValidationContext<'_> {
         };
         self.diagnostics.push(
             Diagnostic::info(self.path.to_path_buf(), line, col, "CC-SK-027", message)
-                .with_suggestion(t!("rules.cc_sk_027.suggestion", name = stem.as_str())),
+                .with_suggestion(suggestion),
         );
     }
 
@@ -341,7 +360,7 @@ impl ValidationContext<'_> {
     /// character, as in `KEY=!`cmd``, the placeholder is left as literal text
     /// and the command does not run", and a raw control character other than
     /// tab or newline in any `!` command means none of them runs.
-    pub(super) fn validate_cc_injected_commands(&mut self) {
+    pub(super) fn validate_cc_injected_commands(&mut self, frontmatter: &SkillFrontmatter) {
         if !self.config.is_rule_enabled("CC-SK-028") {
             return;
         }
@@ -349,9 +368,17 @@ impl ValidationContext<'_> {
         let body = self.body();
         let masked = crate::parsers::markdown::mask_code_spans(body);
         let mut unrecognized = None;
-        let mut has_injection = body
-            .lines()
-            .any(|line| line.trim_start().starts_with("```!"));
+        let powershell = frontmatter.shell.as_deref() == Some("powershell");
+        let control_character = |command: &str| {
+            command
+                .char_indices()
+                .find(|(_, c)| {
+                    (c.is_control() && !matches!(c, '\t' | '\n' | '\r'))
+                        || (powershell && matches!(c, '\u{feff}' | '\u{180e}'))
+                })
+                .map(|(offset, _)| offset)
+        };
+        let mut control_offset = None;
         for (pos, _) in body.match_indices("!`") {
             // The `!` must be prose: masked text keeps it, code turns it to a space.
             if masked.as_bytes().get(pos) != Some(&b'!') {
@@ -359,13 +386,25 @@ impl ValidationContext<'_> {
             }
             let before = body[..pos].chars().next_back();
             match before {
-                None => has_injection = true,
-                Some(c) if c.is_whitespace() => has_injection = true,
+                None => {}
+                Some(c) if c.is_whitespace() => {}
                 Some(_) => {
                     if unrecognized.is_none() {
                         unrecognized = Some(pos);
                     }
+                    continue;
                 }
+            }
+            let start = pos + 2;
+            if let Some(end) = body[start..].find('`')
+                && let Some(offset) = control_character(&body[start..start + end])
+            {
+                control_offset.get_or_insert(start + offset);
+            }
+        }
+        for (command, start) in crate::parsers::markdown::injected_command_fences(body) {
+            if let Some(offset) = control_character(command) {
+                control_offset.get_or_insert(start + offset);
             }
         }
         if let Some(pos) = unrecognized {
@@ -384,14 +423,8 @@ impl ValidationContext<'_> {
                 .with_suggestion(t!("rules.cc_sk_028.unrecognized_suggestion")),
             );
         }
-        if has_injection
-            && let Some(offset) = self
-                .content
-                .char_indices()
-                .find(|(_, c)| c.is_control() && !matches!(c, '\t' | '\n' | '\r'))
-                .map(|(i, _)| i)
-        {
-            let (line, col) = self.line_col_at(offset);
+        if let Some(offset) = control_offset {
+            let (line, col) = self.line_col_at(body_start + offset);
             self.diagnostics.push(
                 Diagnostic::warning(
                     self.path.to_path_buf(),
@@ -822,7 +855,7 @@ mod validator_tests {
         assert_eq!(hits[0].line, 6);
         let diagnostics = validate(
             ".claude/skills/x/SKILL.md",
-            "---\nname: x\ndescription: Shows status. Use when asked.\n---\nBranch: !`git status`\nbell \u{7} here\n",
+            "---\nname: x\ndescription: Shows status. Use when asked.\n---\nBranch: !`git status \u{7}`\n",
         );
         assert!(
             diagnostics

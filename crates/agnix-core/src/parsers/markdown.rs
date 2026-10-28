@@ -542,7 +542,33 @@ enum HtmlCommentMode {
 fn scan_non_code_spans(
     content: &str,
     comment_mode: HtmlCommentMode,
+    callback: impl FnMut(&str, usize),
+) {
+    scan_markdown_spans(content, comment_mode, callback, |_, _, _| {});
+}
+
+/// Contents and source offsets of closed executable fences, using the same
+/// Markdown structure as prose scanning (including lists and code examples).
+pub(crate) fn injected_command_fences(content: &str) -> Vec<(&str, usize)> {
+    let mut commands = Vec::new();
+    scan_markdown_spans(
+        content,
+        HtmlCommentMode::Skip,
+        |_, _| {},
+        |info, text, start| {
+            if info.trim() == "!" {
+                commands.push((text, start));
+            }
+        },
+    );
+    commands
+}
+
+fn scan_markdown_spans<'a>(
+    content: &'a str,
+    comment_mode: HtmlCommentMode,
     mut callback: impl FnMut(&str, usize),
+    mut fence_callback: impl FnMut(&'a str, &'a str, usize),
 ) {
     let bytes = content.as_bytes();
     let len = bytes.len();
@@ -553,6 +579,8 @@ fn scan_non_code_spans(
     let mut fence_char: u8 = b'`';
     let mut fence_min_len: usize = 3;
     let mut fence_indent: usize = 0;
+    let mut fence_info = "";
+    let mut fence_start = 0;
     let mut in_indented_code = false;
     let mut can_start_indented_code = true;
     // The indentation at which the content of the current list item starts.
@@ -613,7 +641,14 @@ fn scan_non_code_spans(
                 let run = after.bytes().take_while(|&b| b == fence_char).count();
                 if run >= fence_min_len {
                     let rest = &after[run..];
-                    if rest.bytes().all(|b| b == b' ') {
+                    if rest.bytes().all(|b| matches!(b, b' ' | b'\t')) {
+                        if fence_char == b'`' {
+                            fence_callback(
+                                fence_info,
+                                &content[fence_start..line_start],
+                                fence_start,
+                            );
+                        }
                         // Closing fence found - exit fenced mode
                         in_fence = false;
                         can_start_indented_code = true;
@@ -666,6 +701,8 @@ fn scan_non_code_spans(
             fence_char = ch;
             fence_min_len = run;
             fence_indent = n_leading;
+            fence_info = after[run..].trim();
+            fence_start = line_end;
             pos = line_end;
             continue;
         }

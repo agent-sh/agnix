@@ -13,7 +13,7 @@ keywords: ["CC-SK-027", "legacy custom command file", "claude skills", "validati
 - **Category**: `Claude Skills`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-10-28`
 
 ## Applicability
 

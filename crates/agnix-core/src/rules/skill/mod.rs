@@ -2372,7 +2372,7 @@ impl Validator for SkillValidator {
             ctx.validate_cc_upload_constraints(&frontmatter);
             ctx.validate_cc_description_style(&frontmatter);
             ctx.validate_cc_vague_name(&frontmatter);
-            ctx.validate_cc_injected_commands();
+            ctx.validate_cc_injected_commands(&frontmatter);
             ctx.validate_cc_plugin_vars();
             ctx.validate_cc_frontmatter_hooks();
             ctx.validate_cc_listing_budget();

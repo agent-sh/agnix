@@ -70,41 +70,49 @@ const config = {
     },
   ],
 
-  presets: [
+  themes: [
     [
-      'classic',
+      require.resolve('@docusaurus/theme-classic'),
       {
-        docs: {
-          path: 'docs',
-          routeBasePath: 'docs',
-          sidebarPath: require.resolve('./sidebars.js'),
-          editUrl: 'https://github.com/agent-sh/agnix/tree/main/website/',
-          showLastUpdateTime: true,
-          lastVersion: '0.59.3',
-          ...(includedDocVersions ? { onlyIncludeVersions: includedDocVersions } : {}),
-          versions: {
-            current: {
-              label: 'next',
-              path: 'next',
-              banner: 'unreleased',
-            },
-          },
-        },
-        sitemap: {
-          changefreq: 'weekly',
-          priority: 0.5,
-          lastmod: 'date',
-          filename: 'sitemap.xml',
-        },
-        blog: false,
-        theme: {
-          customCss: require.resolve('./src/css/custom.css'),
-        },
+        customCss: require.resolve('./src/css/custom.css'),
       },
     ],
   ],
 
+  // Register the plugins this site uses directly. The classic preset also
+  // installs an unused SVGR pipeline with an unpatched deepmerge advisory.
   plugins: [
+    [
+      require.resolve('@docusaurus/plugin-content-docs'),
+      {
+        path: 'docs',
+        routeBasePath: 'docs',
+        sidebarPath: require.resolve('./sidebars.js'),
+        editUrl: 'https://github.com/agent-sh/agnix/tree/main/website/',
+        showLastUpdateTime: true,
+        lastVersion: '0.59.3',
+        ...(includedDocVersions ? { onlyIncludeVersions: includedDocVersions } : {}),
+        versions: {
+          current: {
+            label: 'next',
+            path: 'next',
+            banner: 'unreleased',
+          },
+        },
+      },
+    ],
+    require.resolve('@docusaurus/plugin-content-pages'),
+    ...(process.env.NODE_ENV === 'production'
+      ? [[
+          require.resolve('@docusaurus/plugin-sitemap'),
+          {
+            changefreq: 'weekly',
+            priority: 0.5,
+            lastmod: 'date',
+            filename: 'sitemap.xml',
+          },
+        ]]
+      : [require.resolve('@docusaurus/plugin-debug')]),
     ...(enableLocalSearch
       ? [
           [

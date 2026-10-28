@@ -393,15 +393,13 @@ pub(super) fn directory_size_until(
         .chain(config.files_config().exclude.iter())
         .filter_map(|pattern| compile_single_exclude_pattern(pattern).ok())
         .collect::<Vec<_>>();
-    let root_dir = if exclude_patterns.is_empty() {
-        None
-    } else {
-        config.root_dir().map(|root| root.as_path())
-    };
+    let root_dir = config.root_dir().map(|root| root.as_path()).unwrap_or(path);
 
     let mut total = 0u64;
     let mut stack = vec![path.to_path_buf()];
     while let Some(current) = stack.pop() {
+        #[cfg(feature = "filesystem")]
+        let ignored = skill_directory_ignores(&current, root_dir, fs);
         let entries = match fs.read_dir(&current) {
             Ok(entries) => entries,
             Err(_) => continue,
@@ -410,22 +408,34 @@ pub(super) fn directory_size_until(
             if entry.metadata.is_symlink {
                 continue;
             }
-            let relative_path = root_dir.map(|root| normalize_rel_path(&entry.path, root));
+            #[cfg(feature = "filesystem")]
+            if ignored
+                .iter()
+                .rev()
+                .find_map(|matcher| {
+                    let result = matcher.matched(&entry.path, entry.metadata.is_dir);
+                    (!result.is_none()).then_some(result)
+                })
+                .is_some_and(|result| result.is_ignore())
+            {
+                continue;
+            }
+            let relative_path = normalize_rel_path(&entry.path, root_dir);
             if entry.metadata.is_dir {
-                if relative_path
-                    .as_deref()
-                    .is_some_and(|path| should_prune_dir(path, &exclude_patterns))
-                {
+                // Match the other bundled-skill scans at every nesting level.
+                let hidden_or_dependency = entry
+                    .path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .is_some_and(|name| name.starts_with('.') || name == "node_modules");
+                if hidden_or_dependency || should_prune_dir(&relative_path, &exclude_patterns) {
                     continue;
                 }
                 stack.push(entry.path.clone());
                 continue;
             }
             if entry.metadata.is_file {
-                if relative_path
-                    .as_deref()
-                    .is_some_and(|path| is_excluded_file(path, &exclude_patterns))
-                {
+                if is_excluded_file(&relative_path, &exclude_patterns) {
                     continue;
                 }
                 total = total.saturating_add(entry.metadata.len);
@@ -436,4 +446,60 @@ pub(super) fn directory_size_until(
         }
     }
     total
+}
+
+/// Build through the FileSystem abstraction so virtual and real files agree.
+/// Child ignore files override parents, and .ignore takes priority over .gitignore.
+#[cfg(feature = "filesystem")]
+fn skill_directory_ignores(
+    directory: &Path,
+    lint_root: &Path,
+    fs: &dyn FileSystem,
+) -> Vec<ignore::gitignore::Gitignore> {
+    let ancestors: Vec<_> = directory
+        .ancestors()
+        .take_while(|p| !p.as_os_str().is_empty())
+        .collect();
+    let repository = ancestors
+        .iter()
+        .copied()
+        .find(|p| fs.exists(&p.join(".git")));
+    let root = repository.unwrap_or(lint_root);
+    let directories: Vec<_> = ancestors
+        .iter()
+        .copied()
+        .take_while(|p| p.starts_with(root))
+        .collect();
+    let mut matchers = Vec::new();
+    if repository.is_some() {
+        // WalkBuilder enables global Git excludes, but deliberately disables
+        // .git/info/exclude. Keep that same distinction here.
+        let (global, _) = ignore::gitignore::GitignoreBuilder::new(root).build_global();
+        matchers.push(global);
+    }
+    let mut add = |dir: &Path, path: std::path::PathBuf| {
+        if let Ok(content) = fs.read_to_string(&path) {
+            let mut builder = ignore::gitignore::GitignoreBuilder::new(dir);
+            for line in content.lines() {
+                let _ = builder.add_line(Some(path.clone()), line);
+            }
+            if let Ok(matcher) = builder.build() {
+                matchers.push(matcher);
+            }
+        }
+    };
+    for filename in [".gitignore", ".ignore"] {
+        if filename == ".gitignore" && repository.is_none() {
+            continue;
+        }
+        let scope = if filename == ".ignore" {
+            &ancestors
+        } else {
+            &directories
+        };
+        for dir in scope.iter().rev() {
+            add(dir, dir.join(filename));
+        }
+    }
+    matchers
 }
