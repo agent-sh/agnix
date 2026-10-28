@@ -463,7 +463,9 @@
         "gemini_policy",
         "gemini_hooks",
         "gemini_mcp",
-        "mcp"
+        "mcp",
+        "skill",
+        "per_client_skill"
       ],
       "github_repo": "google-gemini/gemini-cli",
       "last_known_version": "v0.66.0",
@@ -477,7 +479,9 @@
           ".gemini/agents/*.md (local agent definitions, validated by GeminiAgentValidator)",
           ".gemini/commands/**/*.toml (custom commands)",
           ".gemini/policies/*.toml and admin policy directories (policy engine)",
-          "<extension>/hooks/hooks.json (extension hooks)"
+          "<extension>/hooks/hooks.json (extension hooks)",
+          ".gemini/skills/*/SKILL.md",
+          ".agents/skills/*/SKILL.md (shared, scoped by tools)"
         ],
         "relevant": [
           "Changes to .gemini/settings.json top-level keys",
@@ -488,12 +492,13 @@
           "Custom command TOML fields (prompt, description) and {{args}}, !{...}, @{...} injection syntax",
           "Policy engine TOML rule schema and policy file locations",
           "Hook events, matchers and timeout units in settings.json and extension hooks/hooks.json",
-          "MCP server fields in settings.json and gemini-extension.json (transport, trust)"
+          "MCP server fields in settings.json and gemini-extension.json (transport, trust)",
+          "Skill frontmatter and delimiter parsing, BOM handling, SKILL.md field shapes, and discovery under .gemini/skills and .agents/skills"
         ],
         "irrelevant": [
           "Model additions / Gemini 2.x version bumps",
           "Tool call performance and caching",
-          "/memory inbox UX and skill-extraction ergonomics",
+          "/memory inbox and skill recommendation UI that do not change skill files",
           "Provider plumbing"
         ]
       }
