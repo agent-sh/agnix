@@ -1317,7 +1317,8 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
         }
     }
 
-    let amp = &baselines["tools"]["amp"];
+    // Shipped Amp validators remain compatibility-only; no active release poll.
+    let amp = &baselines["retired_tools"]["amp"];
     assert!(
         amp["validators"]
             .as_array()
@@ -1334,20 +1335,11 @@ fn test_refreshed_release_surfaces_match_research_inventory() {
             .any(|surface| surface == "AGENTS.md"),
         "amp baseline must track AGENTS.md"
     );
-    let amp_row = research
-        .lines()
-        .find(|line| line.starts_with("| amp |"))
-        .expect("RESEARCH-TRACKING.md must contain an amp row");
-    let amp_rule_prefixes: std::collections::BTreeSet<_> = amp_row
-        .split('|')
-        .rfind(|cell| !cell.trim().is_empty())
-        .expect("amp research inventory row must have a Rule Prefix cell")
-        .split(',')
-        .map(str::trim)
-        .collect();
+    assert_eq!(amp["tracked"], false);
+    assert!(baselines["tools"]["amp"].is_null());
     assert!(
-        amp_rule_prefixes.contains("AGM"),
-        "amp research inventory must include the shared AGM rule prefix"
+        !research.lines().any(|line| line.starts_with("| amp |")),
+        "Amp must not be advertised in the active support inventory"
     );
 }
 

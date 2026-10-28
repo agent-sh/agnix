@@ -77,7 +77,7 @@ fn normalize_repo_url(url: &str) -> Option<String> {
 }
 
 #[test]
-#[ignore = "run via CI Kiro S-tier gate step"]
+#[ignore = "run via CI Kiro compatibility gate step"]
 fn kiro_target_still_disables_claude_rules() {
     let temp_dir = tempfile::tempdir().unwrap();
     let steering_dir = temp_dir.path().join(".kiro").join("steering");
@@ -164,7 +164,7 @@ fn kiro_target_still_disables_claude_rules() {
 }
 
 #[test]
-#[ignore = "run via CI Kiro S-tier gate step"]
+#[ignore = "run via CI Kiro compatibility gate step"]
 fn readme_supported_tools_still_lists_kiro_surface() {
     let path = workspace_root().join("README.md");
     let readme = fs::read_to_string(&path)
@@ -196,25 +196,25 @@ fn readme_supported_tools_still_lists_kiro_surface() {
 }
 
 #[test]
-#[ignore = "run via CI Kiro S-tier gate step"]
-fn project_memory_marks_kiro_as_s_tier() {
+#[ignore = "run via CI Kiro compatibility gate step"]
+fn project_memory_marks_kiro_as_a_tier() {
     for relative in std::iter::once("AGENTS.md") {
         let path = workspace_root().join(relative);
         let content = fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("Failed to read {}: {}", path.display(), e));
 
-        let s_tier_line = content
+        let a_tier_line = content
             .lines()
-            .find(|line| line.starts_with("- **S** (test always):"))
-            .unwrap_or_else(|| panic!("{relative} must define an S-tier support line"));
+            .find(|line| line.starts_with("- **A** (test on major changes):"))
+            .unwrap_or_else(|| panic!("{relative} must define an A-tier support line"));
         let b_tier_line = content
             .lines()
-            .find(|line| line.starts_with("- **B** (test if time permits):"))
+            .find(|line| line.starts_with("- **B** (test on significant changes):"))
             .unwrap_or_else(|| panic!("{relative} must define a B-tier support line"));
 
         assert!(
-            s_tier_line.contains("Kiro CLI"),
-            "{relative} must list Kiro CLI in S tier"
+            a_tier_line.contains("Kiro CLI"),
+            "{relative} must list Kiro CLI in A tier"
         );
         assert!(
             !b_tier_line.contains("Kiro CLI"),
@@ -224,7 +224,7 @@ fn project_memory_marks_kiro_as_s_tier() {
 }
 
 #[test]
-#[ignore = "run via CI Kiro S-tier gate step"]
+#[ignore = "run via CI Kiro compatibility gate step"]
 fn kiro_rules_still_documented_in_validation_rules() {
     let rules_path = workspace_root().join("knowledge-base/rules.json");
     let rules_content = fs::read_to_string(&rules_path)
@@ -276,7 +276,7 @@ fn kiro_rules_still_documented_in_validation_rules() {
 }
 
 #[test]
-#[ignore = "run via CI Kiro S-tier gate step"]
+#[ignore = "run via CI Kiro compatibility gate step"]
 fn real_world_manifest_has_explicit_kiro_coverage() {
     let path = workspace_root().join("tests/real-world/repos.yaml");
     let content = fs::read_to_string(&path)

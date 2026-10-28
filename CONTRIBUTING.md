@@ -192,18 +192,17 @@ All new rules must include:
 
 ## Tool Tier System
 
-agnix organizes tool support into tiers based on community adoption and maintenance commitment:
+agnix organizes tool support into owner-selected maintenance priorities. A tier does not imply that a validator already exists; the research inventory records implemented coverage and pending work separately.
 
 | Tier | Policy | Testing Requirement |
 |------|--------|---------------------|
 | **S** | Test always | Every CI run validates against these tools |
 | **A** | Test on major changes | Tested when changes affect tool-specific rules |
-| **B** | Test on significant changes if time permits | Spot-tested on large changes |
-| **C** | Community reports fixes only | Fixes accepted via community issues |
-| **D** | No active support, nice to have | Can try once in a while, mainly if users request |
-| **E** | No support, community contributions only | Full community support and contributions |
+| **B** | Test on significant changes | Spot-tested when affected |
+| **C** | Community-reported maintenance | Verify fixes for reported problems |
+| **D** | Nice-to-have maintenance | Preserve existing validation; check specification drift monthly and fix reported problems |
 
-Current tier assignments are documented in [`knowledge-base/RESEARCH-TRACKING.md`](./knowledge-base/RESEARCH-TRACKING.md). When proposing a tier change, open a GitHub issue with adoption data to support the change.
+Current assignments and coverage are documented in [`knowledge-base/RESEARCH-TRACKING.md`](./knowledge-base/RESEARCH-TRACKING.md). The machine-readable roster is `.github/tool-release-baselines.json`: `tools` contains active tiers, `retired_tools` holds historical compatibility baselines and `excluded_tools` lists dropped products. Retired entries are not polled. Existing Amp and Windsurf/Devin validators remain for compatibility, outside active support. Propose tier changes through a GitHub issue; the owner decides the roster.
 
 ## Community Feedback
 

@@ -13,10 +13,14 @@ class ReleaseSources(unittest.TestCase):
     def poll(self, kiro, devin, fetch_fails=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            tools = json.loads((ROOT / '.github/tool-release-baselines.json').read_text())['tools']
-            tools = {name: tools[name] for name in ['kiro', 'windsurf']}
+            baselines = json.loads((ROOT / '.github/tool-release-baselines.json').read_text())
+            # Retain extractor coverage using an explicit historical fixture.
+            # The production watcher never traverses retired_tools.
+            tools = {'kiro': baselines['tools']['kiro'],
+                     'windsurf': baselines['retired_tools']['windsurf']}
             for tool in tools.values():
                 tool['last_known_version'] = '0.0.0'
+                tool['tracked'] = True
             (root / 'baseline.json').write_text(json.dumps({'tools': tools}))
             (root / 'kiro.html').write_text(kiro)
             (root / 'devin.md').write_text(devin)

@@ -21,7 +21,7 @@ Before starting the monthly review:
 
 ## Per-Tier Review Checklist
 
-### S Tier: Claude Code, Codex CLI, OpenCode
+### S Tier: Claude Code, Codex CLI
 
 These tools have automated monitoring. The review focuses on confirming automation is working and catching anything automated checks miss.
 
@@ -35,38 +35,44 @@ These tools have automated monitoring. The review focuses on confirming automati
 **Sources to check**:
 - https://code.claude.com/docs/en (all sections)
 - https://developers.openai.com/codex/ (AGENTS.md guide, changelog)
-- https://opencode.ai/docs/ (rules, config)
 
-### A Tier: GitHub Copilot, Cline, Cursor
+### A Tier: Kiro CLI, OpenCode, Pi
 
-These tools have automated monthly monitoring. Review confirms accuracy and checks for major changes.
+Kiro, both OpenCode lines and Pi have automated release monitoring. OpenCode also has weekly specification monitoring. Pi-specific validation is pending; its existing subagent recognition only prevents Claude false positives.
 
-- [ ] Verify spec-drift monthly alerts are firing for A-tier sources
+- [ ] Verify weekly spec-drift alerts and release tracking for available A-tier sources
 - [ ] Manually check each tool's documentation for changes
 - [ ] Verify rule coverage matches current tool capabilities
 - [ ] Note any significant feature additions that need new rules
 
 **Sources to check**:
-- https://docs.github.com/en/copilot/customizing-copilot
-- https://docs.cline.bot/features/cline-rules/overview
-- https://cursor.com/docs/rules
-- https://cursor.com/docs/hooks
-- https://cursor.com/docs/subagents
-- https://cursor.com/docs/cloud-agent/setup
+- https://kiro.dev/changelog/cli/
+- https://opencode.ai/docs/ and https://opencode.ai/v2/docs/
+- https://github.com/earendil-works/pi
 
-### B/C Tier: Kiro CLI, amp, pi, gemini cli, continue, Antigravity
+### B Tier: Antigravity CLI, Grok Code
 
-Spot-check for significant changes only. Do not invest significant time here.
+Review significant configuration changes from the official Antigravity and Grok Build CLI documentation. These tools have manual source entries and pending validators; do not equate a tier with implemented support.
 
 - [ ] Quick scan of documentation pages for breaking changes
 - [ ] Note any tools that have gained significant community adoption (potential tier upgrade)
 - [ ] Check if any tools have been deprecated or discontinued
 
-### D/E Tier: Tabnine, Codeium, Amazon Q, Windsurf, Aider, SourceGraph Cody, others
+### C Tier: Muse Code, Kimi Code
 
-- [ ] Check if any D/E tools have gained enough adoption to warrant a tier upgrade
-- [ ] Review any community-submitted issues requesting tool support
-- [ ] Note any new AI coding tools that should be added to the watchlist
+- [ ] Review community reports and documented configuration changes
+- [ ] Check Muse Code's official changelog manually and Kimi Code's automated release reports
+- [ ] Keep missing tool-specific validation explicit in the research inventory
+
+### D Tier: GitHub Copilot, Cline, Cursor, legacy Gemini CLI
+
+- [ ] Check monthly D-tier specification drift and existing release reports
+- [ ] Maintain existing validators and verify fixes for reported problems
+- [ ] Treat Gemini CLI as legacy; research Antigravity contracts independently
+
+### Dropped tools
+
+Do not monitor Continue, Aider, Amazon Q, Tabnine, Codeium, Devin/Windsurf or Amp. Existing Amp/Windsurf checks are legacy compatibility only. Roo Code remains removed. Kiro's `.amazonq` fallback is not standalone Amazon Q support.
 
 ---
 
@@ -163,7 +169,8 @@ After completing the review:
 
 #### Automated Monitoring Status
 
-- **spec-drift.yml**: Running successfully on weekly (S-tier) and monthly (A-tier) schedules
+- **Historical snapshot**: The notes below describe the February 2026 review, not the current roster or monitoring schedule. Use the checklist above and RESEARCH-TRACKING.md for current policy.
+- **spec-drift.yml**: Ran on weekly (S-tier) and monthly (A-tier) schedules at that time
 - **mcp-release-watch.yml**: Running successfully, monitoring MCP GitHub releases
 - **spec-baselines.json**: 12 sources tracked with SHA256 content hashes
 

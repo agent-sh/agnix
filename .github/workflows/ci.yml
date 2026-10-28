@@ -58,6 +58,7 @@ jobs:
         run: |
           bash scripts/check-tool-releases.test.sh
           python3 scripts/check-tool-release-sources.test.py
+          python3 scripts/tool-support-policy.test.py
 
       - name: Action pin consistency
         if: matrix.os == 'ubuntu-latest'
@@ -91,7 +92,7 @@ jobs:
         # rules are added or rescoped (see #981).
         run: cargo run -p agnix-cli --bin agnix -- eval tests/eval.yaml
 
-      - name: Kiro S-tier Gate
+      - name: Kiro compatibility gate
         if: matrix.os == 'ubuntu-latest' && env.FULL_TEST_SUITE == 'true'
         run: cargo test --locked -p agnix-cli --test kiro_ci_gate -- --include-ignored
 
