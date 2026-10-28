@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The OpenCode reference in `knowledge-base/agent-docs/` no longer lists the retired agentsys `/ship` command.
 
 ### Security
+- Remove the docs site's unused SVGR/deepmerge dependency chain (GHSA-gcqx-w48m-w2h4). Register the existing docs, pages, sitemap, debug and classic theme plugins directly instead of installing the full preset.
 - Patch the VS Code publishing/test dependency graph with MSAL Node 7.1.1 and serialize-javascript 7.1.4. Scope the MSAL override to Azure Identity and require serializer 7.1.3 or newer in both npm projects. The extension runtime bundle is unchanged.
 - Audit both website and VS Code lockfiles in CI, including development dependencies and low-severity advisories.
 
