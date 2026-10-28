@@ -53,6 +53,12 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: node --test scripts/preflight.test.js
 
+      - name: Test tool release watcher
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          bash scripts/check-tool-releases.test.sh
+          python3 scripts/check-tool-release-sources.test.py
+
       - name: Action pin consistency
         if: matrix.os == 'ubuntu-latest'
         run: |

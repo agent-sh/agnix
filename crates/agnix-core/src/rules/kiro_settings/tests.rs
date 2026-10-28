@@ -436,12 +436,12 @@ fn test_does_not_panic_on_non_ascii_content() {
 }
 
 #[test]
-fn test_settings_table_matches_kiro_cli_2_32_1() {
-    assert_eq!(SETTINGS.len(), 140);
+fn test_settings_table_includes_kiro_234_workflow_launch() {
+    assert_eq!(SETTINGS.len(), 141);
     let mut keys: Vec<_> = SETTINGS.iter().map(|s| s.key).collect();
     keys.sort_unstable();
     keys.dedup();
-    assert_eq!(keys.len(), 140, "duplicate keys in SETTINGS");
+    assert_eq!(keys.len(), SETTINGS.len(), "duplicate keys in SETTINGS");
     assert!(setting("chat.uiMode").unwrap().global_only);
     assert!(!setting("chat.defaultAgent").unwrap().global_only);
 }

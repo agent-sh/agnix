@@ -334,6 +334,16 @@ pub struct FrontmatterParts {
 
 /// Split frontmatter and body from content.
 pub fn split_frontmatter(content: &str) -> FrontmatterParts {
+    split_frontmatter_inner(content, false)
+}
+
+/// Gemini CLI 0.66 accepts horizontal whitespace after both delimiters.
+/// Keep that client-specific behavior separate from the generic parser.
+pub(crate) fn split_gemini_frontmatter(content: &str) -> FrontmatterParts {
+    split_frontmatter_inner(content, true)
+}
+
+fn split_frontmatter_inner(content: &str, delimiter_whitespace: bool) -> FrontmatterParts {
     let (content, bom_offset) = match content.strip_prefix('\u{FEFF}') {
         Some(content) => (content, '\u{FEFF}'.len_utf8()),
         None => (content, 0),
@@ -357,7 +367,15 @@ pub fn split_frontmatter(content: &str) -> FrontmatterParts {
 
     // Skip the newline that follows the opening --- delimiter so that
     // the extracted frontmatter starts at the first content character.
-    let newline_len = if rest.starts_with("\r\n") {
+    let newline_len = if delimiter_whitespace {
+        rest.find('\n')
+            .filter(|end| {
+                rest[..*end]
+                    .bytes()
+                    .all(|b| matches!(b, b' ' | b'\t' | b'\r'))
+            })
+            .map_or(0, |end| end + 1)
+    } else if rest.starts_with("\r\n") {
         2
     } else if rest.starts_with('\n') {
         1
@@ -368,9 +386,26 @@ pub fn split_frontmatter(content: &str) -> FrontmatterParts {
     let frontmatter_start = trim_offset + 3 + newline_len;
 
     // Find closing ---
-    if let Some(end_pos) = rest.find("\n---") {
+    let closing = rest.match_indices("\n---").find(|(pos, _)| {
+        !delimiter_whitespace
+            || rest[pos + 4..]
+                .split('\n')
+                .next()
+                .unwrap_or_default()
+                .bytes()
+                .all(|b| matches!(b, b' ' | b'\t' | b'\r'))
+    });
+    if let Some((end_pos, _)) = closing {
         let frontmatter = rest.get(newline_len..end_pos).unwrap_or("");
-        let body = &rest[end_pos + 4..]; // Skip \n---
+        let closing_whitespace = if delimiter_whitespace {
+            rest[end_pos + 4..]
+                .bytes()
+                .take_while(|b| matches!(b, b' ' | b'\t'))
+                .count()
+        } else {
+            0
+        };
+        let body = &rest[end_pos + 4 + closing_whitespace..];
         FrontmatterParts {
             has_frontmatter: true,
             has_closing: true,
@@ -379,7 +414,7 @@ pub fn split_frontmatter(content: &str) -> FrontmatterParts {
             frontmatter_start,
             // end_pos is relative to `rest` (= trimmed[trim_offset+3..]), so body_start
             // does not include newline_len - it accounts for the full \n--- (4 bytes).
-            body_start: trim_offset + 3 + end_pos + 4,
+            body_start: trim_offset + 3 + end_pos + 4 + closing_whitespace,
         }
     } else {
         // No closing marker - treat entire file as body

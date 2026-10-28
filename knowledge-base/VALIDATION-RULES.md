@@ -202,7 +202,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 <a id="as-016"></a>
 ### AS-016 [HIGH] Skill Parse Error
 **Requirement**: SKILL.md frontmatter MUST be valid YAML and match the Agent Skills field types ("The most common issue is unquoted values containing colons"). `metadata` is "A map from string keys to string values" in the spec. Claude Code takes "Free-form YAML map" metadata, and the Kiro V3 engine checks only that `metadata` is an object, so non-string metadata values are not reported for Claude Code and Kiro skills.
-**Detection**: YAML syntax or typed-frontmatter parse error, including non-string `metadata` keys or values for clients other than Claude Code and Kiro
+**Detection**: YAML syntax or typed-frontmatter parse error, including non-string `metadata` keys or values for clients other than Claude Code and Kiro. Gemini CLI 0.66 skill delimiters may carry trailing spaces or tabs; preserve source offsets when extracting that frontmatter. Other clients retain their existing delimiter parsing.
 **Fix**: Fix YAML syntax errors and use string keys and values in `metadata`
 **Source**: agentskills.io/specification, agentskills.io/client-implementation/adding-skills-support, code.claude.com/docs/en/skills, kiro.dev/docs/skills
 
@@ -3637,6 +3637,7 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 <a id="cdx-cfg-011"></a>
 ### CDX-CFG-011 [MEDIUM] Invalid Feature Flag Name or Shape
 **0.154 schema refresh**: Accept `reasoning_effort_override`, `unified_exec_tty`, `windows_sandbox_service`, and `worktrees`. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json).
+**0.165 schema refresh**: Accept `guardian_recorded_items`, `guardianv3`, `prediction_preserve_parent_tools` and `tui_multi_backend` in TOML, JSON and YAML configs. `guardianv3` accepts the tagged schema's boolean or `{ enabled: boolean }` form.
 **Requirement**: Keys under `[features]` SHOULD use known Codex feature flag names; `non_prefixed_mcp_tool_names` MUST be a boolean or an object with optional boolean `enabled` and string-array `server_names`
 **Detection**: Parse config, report unknown keys under `features`, and validate the structured `non_prefixed_mcp_tool_names` value
 **Fix**: No auto-fix (remove unsupported flags or rename)
@@ -4935,6 +4936,7 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 ### KR-SET-005 [LOW] Unknown Kiro CLI Setting
 **Requirement**: Keys SHOULD be Kiro CLI settings (`kiro-cli settings` refuses to write other keys).
 **Detection**: Info for any other top-level key (`chat.autoCompact`, third-party keys), with a suggestion for a close or known spelling. Kiro ignores these keys.
+**2.34 reference refresh**: `chat.workflowLaunch` is a documented string setting with `when-asked`, `large-tasks` and `delegate-all` choices. KR-SET-008/009 check its type and choices; no undocumented scope restriction is inferred.
 **Fix**: No auto-fix - correct or remove the key.
 **Source**: kiro.dev/docs/reference/settings
 

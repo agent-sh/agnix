@@ -5,6 +5,8 @@
 # Per-tool source type is declared in the baselines file:
 #   - github_repo                       -> GitHub releases API (latest stable, tag fallback)
 #   - html_url + version_regex          -> HTTP GET + first regex match (HTML/JSON/RSS)
+#     Optional content_url selects the fetched body; version_extractor uses a
+#     structured source parser instead of a generic first-match regex.
 #   - commit_repo + commit_path         -> latest commit SHA touching a file path
 #                                          (for specs published as docs with no
 #                                          releases/tags, e.g. agentskills.io)
@@ -25,11 +27,12 @@
 #
 # Exit codes:
 #   0 - completed successfully (whether or not new releases were found)
-#   1 - configuration error (invalid baselines file, unknown tool filter, etc.)
+#   1 - configuration or source error (incomplete polls do not emit updates)
 
 set -euo pipefail
 
 BASELINES_FILE="${BASELINES_FILE:-.github/tool-release-baselines.json}"
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 GENERAL_LABEL="tool-release"
 ISSUE_BODY_LIMIT=50000  # GitHub issue body cap is 65535; leave room for header/footer
 UPDATE_BASELINES="${UPDATE_BASELINES:-false}"
@@ -101,6 +104,7 @@ UPDATES_JSON='[]'
 NEW_COUNT=0
 SKIP_COUNT=0
 OK_COUNT=0
+ERROR_COUNT=0
 
 for raw_id in "${TOOL_IDS[@]}"; do
   tool_id="${raw_id%$'\r'}"  # strip stray CR (cross-platform tolerance)
@@ -120,7 +124,9 @@ for raw_id in "${TOOL_IDS[@]}"; do
   repo=$(jq -r --arg id "$tool_id" '.tools[$id].github_repo // ""' "$BASELINES_FILE")
   release_tag_regex=$(jq -r --arg id "$tool_id" '.tools[$id].release_tag_regex // ""' "$BASELINES_FILE")
   html_url=$(jq -r --arg id "$tool_id" '.tools[$id].html_url // ""' "$BASELINES_FILE")
+  content_url=$(jq -r --arg id "$tool_id" '.tools[$id].content_url // .tools[$id].html_url // ""' "$BASELINES_FILE")
   version_regex=$(jq -r --arg id "$tool_id" '.tools[$id].version_regex // ""' "$BASELINES_FILE")
+  version_extractor=$(jq -r --arg id "$tool_id" '.tools[$id].version_extractor // ""' "$BASELINES_FILE")
   commit_repo=$(jq -r --arg id "$tool_id" '.tools[$id].commit_repo // ""' "$BASELINES_FILE")
   commit_path=$(jq -r --arg id "$tool_id" '.tools[$id].commit_path // ""' "$BASELINES_FILE")
   baseline_version=$(jq -r --arg id "$tool_id" '.tools[$id].last_known_version' "$BASELINES_FILE")
@@ -130,25 +136,26 @@ for raw_id in "${TOOL_IDS[@]}"; do
     # GitHub releases path
     echo "[check] $tool_id (tier=$tier) repo=$repo baseline=$baseline_version"
     if [[ -n "$release_tag_regex" ]]; then
-      releases_json=$(gh api "repos/$repo/releases?per_page=100" 2>/dev/null || echo "")
+      releases_json=$(gh api "repos/$repo/releases?per_page=100" || echo "")
       if [[ -n "$releases_json" ]]; then
         release_json=$(select_github_release_json "$releases_json" "$release_tag_regex")
       else
         release_json=""
       fi
     else
-      release_json=$(gh api "repos/$repo/releases/latest" 2>/dev/null || echo "")
+      release_json=$(gh api "repos/$repo/releases/latest" || echo "")
     fi
 
     if [[ -z "$release_json" ]]; then
-      tags_json=$(gh api "repos/$repo/tags?per_page=100" 2>/dev/null || echo "")
+      tags_json=$(gh api "repos/$repo/tags?per_page=100" || echo "")
       if [[ -n "$release_tag_regex" ]]; then
         latest_tag=$(jq -r --arg regex "$release_tag_regex" '[.[] | .name | select(test($regex))][0] // empty' <<<"$tags_json")
       else
         latest_tag=$(jq -r '.[0].name // empty' <<<"$tags_json")
       fi
       if [[ -z "$latest_tag" ]]; then
-        echo "  WARN: no releases or tags found for $repo matching '${release_tag_regex:-any stable tag}' (will retry on next run)"
+        echo "  ERROR: no releases or tags found for $repo matching '${release_tag_regex:-any stable tag}'"
+        ERROR_COUNT=$((ERROR_COUNT+1))
         continue
       fi
       latest_version="$latest_tag"
@@ -161,19 +168,33 @@ for raw_id in "${TOOL_IDS[@]}"; do
       published_at=$(echo "$release_json" | jq -r '.published_at // ""')
       release_body=$(echo "$release_json" | jq -r '.body // ""')
     fi
-  elif [[ -n "$html_url" && -n "$version_regex" ]]; then
+  elif [[ -n "$html_url" && ( -n "$version_regex" || -n "$version_extractor" ) ]]; then
     # HTML scrape path - fetch page and extract first regex match
     echo "[check] $tool_id (tier=$tier) html=$html_url baseline=$baseline_version"
-    page_content=$(curl -sL --max-time 30 "$html_url" 2>/dev/null || echo "")
+    if ! page_content=$(curl -fsSL --max-time 30 "$content_url"); then
+      echo "  ERROR: failed to fetch $content_url"
+      ERROR_COUNT=$((ERROR_COUNT+1))
+      continue
+    fi
     if [[ -z "$page_content" ]]; then
-      echo "  WARN: failed to fetch $html_url (will retry on next run)"
+      echo "  ERROR: empty source body from $content_url"
+      ERROR_COUNT=$((ERROR_COUNT+1))
       continue
     fi
     # `|| true` rescues the pipeline when grep matches nothing (exit 1 under
     # pipefail would abort the whole script before the WARN/continue below).
-    latest_version=$(echo "$page_content" | grep -oE "$version_regex" | head -1 || true)
+    if [[ -n "$version_extractor" ]]; then
+      if ! latest_version=$(python3 "$script_dir/extract-tool-release.py" "$version_extractor" <<< "$page_content"); then
+        echo "  ERROR: $version_extractor could not extract a release from $content_url"
+        ERROR_COUNT=$((ERROR_COUNT+1))
+        continue
+      fi
+    else
+      latest_version=$(echo "$page_content" | grep -oE "$version_regex" | head -1 || true)
+    fi
     if [[ -z "$latest_version" ]]; then
-      echo "  WARN: regex '$version_regex' matched nothing on $html_url (page format may have changed - update version_regex in baselines)"
+      echo "  ERROR: regex '$version_regex' matched nothing on $content_url"
+      ERROR_COUNT=$((ERROR_COUNT+1))
       continue
     fi
     # If the regex captured a URL (e.g., RSS item link), promote it to release_url and use
@@ -200,14 +221,16 @@ for raw_id in "${TOOL_IDS[@]}"; do
     # Pass path/per_page as fields so gh handles URL-encoding (paths contain
     # `/`). `-X GET` is required: gh api otherwise switches to POST when fields
     # are present, which would hit the wrong method and return an object.
-    commit_json=$(gh api -X GET "repos/$commit_repo/commits" -f path="$commit_path" -F per_page=1 2>/dev/null || echo "")
+    commit_json=$(gh api -X GET "repos/$commit_repo/commits" -f path="$commit_path" -F per_page=1 || echo "")
     if [[ -z "$commit_json" ]]; then
       echo "  WARN: commits API call failed for $commit_repo:$commit_path (will retry on next run)"
+      ERROR_COUNT=$((ERROR_COUNT+1))
       continue
     fi
     latest_sha=$(echo "$commit_json" | jq -r '.[0].sha // empty')
     if [[ -z "$latest_sha" ]]; then
       echo "  WARN: no commits found for $commit_repo:$commit_path (will retry on next run)"
+      ERROR_COUNT=$((ERROR_COUNT+1))
       continue
     fi
     latest_version="${latest_sha:0:12}"
@@ -215,14 +238,17 @@ for raw_id in "${TOOL_IDS[@]}"; do
     commit_subject=$(echo "$commit_json" | jq -r '.[0].commit.message // ""' | head -1)
     release_url="https://github.com/$commit_repo/commits/HEAD/$commit_path"
     published_at=$(echo "$commit_json" | jq -r '.[0].commit.committer.date // ""')
+    # shellcheck disable=SC2016 # Markdown code spans are literal text.
     release_body=$(printf 'Spec file `%s` changed in `%s`.\n\n**Latest commit:** [`%s`](%s) - %s\n\nDiff the spec against the AS-* rules and bump `SpecRevisions.agent_skills_spec` / `knowledge-base/RESEARCH-TRACKING.md` if it moved.' "$commit_path" "$commit_repo" "$latest_version" "$commit_html" "$commit_subject")
   else
     echo "  ERROR: $tool_id is marked tracked but has none of: github_repo, (html_url + version_regex), or (commit_repo + commit_path)" >&2
+    ERROR_COUNT=$((ERROR_COUNT+1))
     continue
   fi
 
   if [[ -z "$latest_version" ]]; then
     echo "  WARN: could not determine latest version for $tool_id"
+    ERROR_COUNT=$((ERROR_COUNT+1))
     continue
   fi
 
@@ -262,7 +288,7 @@ for raw_id in "${TOOL_IDS[@]}"; do
         extracted=$(node "$script_dir/glm-extract.js" "$display_name" "$latest_version" "$release_url" 2>"$glm_stderr" <<< "$page_content" || true)
         if [[ -n "$extracted" ]]; then
           release_body="${extracted}"$'\n\n---\n*Notes auto-extracted via GLM from ['"$release_url"']('"$release_url"').*'
-          echo "  [glm] extracted $(echo "$extracted" | wc -c) chars of release notes"
+          echo "  [glm] extracted ${#extracted} chars of release notes"
         else
           echo "  WARN: GLM extraction returned empty (stderr: $(head -1 "$glm_stderr" 2>/dev/null)) - using stub"
         fi
@@ -287,7 +313,7 @@ sys.stdout.write(m.group(1).strip() if m else "")
           # not release_url (the per-article URL that the version_regex pulled
           # out and rewrote earlier). The two differ for amp.
           release_body="${extracted}"$'\n\n---\n*Notes extracted from the first `<item>` description in ['"$html_url"']('"$html_url"').*'
-          echo "  [rss_cdata] extracted $(echo "$extracted" | wc -c) chars of release notes"
+          echo "  [rss_cdata] extracted ${#extracted} chars of release notes"
         else
           echo "  WARN: rss_cdata regex matched nothing in $html_url - using stub"
         fi
@@ -374,7 +400,7 @@ sys.stdout.write(m.group(1).strip() if m else "")
         2>"$triage_stderr" <<< "$release_body" || true)
       if [[ -n "$triage_out" ]]; then
         agnix_triage="$triage_out"
-        echo "  [triage] produced $(echo "$triage_out" | wc -c) chars of agnix-focused summary"
+        echo "  [triage] produced ${#triage_out} chars of agnix-focused summary"
       else
         echo "  WARN: GLM triage returned empty (stderr: $(head -1 "$triage_stderr" 2>/dev/null)) - posting raw changelog only"
       fi
@@ -523,7 +549,12 @@ BODY
 done
 
 echo ""
-echo "Summary: ok=$OK_COUNT new=$NEW_COUNT skipped=$SKIP_COUNT"
+echo "Summary: ok=$OK_COUNT new=$NEW_COUNT skipped=$SKIP_COUNT errors=$ERROR_COUNT"
+
+if [[ "$ERROR_COUNT" -gt 0 ]]; then
+  echo "ERROR: release poll incomplete; refusing to emit partial baseline updates" >&2
+  exit 1
+fi
 
 # Emit baseline updates to the job summary for easy copy/paste
 if [[ "$UPDATE_BASELINES" == "true" && -n "${GITHUB_STEP_SUMMARY:-}" ]]; then

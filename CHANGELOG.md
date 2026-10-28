@@ -8,9 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Accept Codex 0.165 feature flags, Kiro's documented `chat.workflowLaunch` setting, and Gemini CLI 0.66 skill delimiter whitespace. Resolve Gemini-owned skills without applying Claude-only checks.
+- Detect Kiro patch releases and Devin Desktop stable versions from their canonical changelog structures. Release-watch source failures now fail the poll and prevent partial baseline suggestions.
 - **Skill validation** ignores gitignored payloads and nested dependency directories when checking the upload size (AS-015), explains exact version pins (AS-024), names nested legacy commands correctly during migration (CC-SK-027), and limits injected-command control-character findings to the commands themselves (CC-SK-028). Thanks to @izkreny for the reproductions in #1738.
 
 ### Changed
+- Review all twelve release markers: Claude Code 2.1.312, Codex 0.165.0, OpenCode 1.19.5 and 2.2.0, Kiro 2.34.2, Copilot 0.43.0, Cline 4.1.26, Cursor 3.27.22, Amp personal self-hosted orbs, Gemini CLI 0.66.0, Devin Desktop 3.11.228 and the unchanged Agent Skills spec commit. Baseline-only advances add no new validation constraints for Claude Code, OpenCode 1, Cline, Amp and Devin Desktop. Roo Code remains retired.
 - Review Claude Code v2.1.310-v2.1.311, OpenCode 2 v2.2.0, Cursor 3.27.22 and the 18 changed specification sources from #1733. Refresh reviewed baselines; existing validators accept the new OpenCode model types, prompt-cache TTL settings and experimental media storage.
 - Remove the unused GitHub project-board automation and its action pin reference.
 - The OpenCode reference in `knowledge-base/agent-docs/` no longer lists the retired agentsys `/ship` command.

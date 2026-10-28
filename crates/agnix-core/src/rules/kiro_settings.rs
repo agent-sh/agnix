@@ -19,7 +19,8 @@
 //!   workspace level").
 //!
 //! The key list and value types come from `kiro-cli settings list --all`
-//! 2.32.1 (140 keys). A value of the wrong type is not coerced: the Q
+//! 2.32.1 (140 keys), plus `chat.workflowLaunch` from the 2.34 reference.
+//! A value of the wrong type is not coerced: the Q
 //! Developer CLI lineage reads settings with typed getters that return no
 //! value, so Kiro falls back to the default.
 //!
@@ -246,6 +247,12 @@ const SETTINGS: &[SettingSpec] = &[
     spec("chat.disableInheritingDefaultResources", Bool, false, &[]),
     spec("chat.enableAutoAgentUpgrade", Bool, true, &[]),
     spec("chat.enableWorkflows", Bool, false, &[]),
+    spec(
+        "chat.workflowLaunch",
+        Str,
+        false,
+        &["when-asked", "large-tasks", "delegate-all"],
+    ),
     spec("chat.enableMainAgentSubagentTool", Bool, false, &[]),
     spec("chat.highPerformanceMode", Bool, true, &[]),
     spec("chat.enableC2s", Bool, true, &[]),

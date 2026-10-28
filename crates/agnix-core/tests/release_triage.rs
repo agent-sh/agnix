@@ -2,6 +2,137 @@ use agnix_core::{LintConfig, ValidatorRegistry, validate_content};
 use std::path::Path;
 
 #[test]
+fn kiro_234_accepts_documented_workflow_launch_choices() {
+    for launch in ["when-asked", "large-tasks", "delegate-all"] {
+        let content = serde_json::json!({"chat.workflowLaunch": launch});
+        let diagnostics = validate_content(
+            Path::new(".kiro/settings/cli.json"),
+            &content.to_string(),
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(diagnostics.is_empty(), "{launch}: {diagnostics:?}");
+    }
+    for (value, rule) in [
+        (serde_json::json!(true), "KR-SET-008"),
+        (serde_json::json!("automatic"), "KR-SET-009"),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(".kiro/settings/cli.json"),
+            &serde_json::json!({"chat.workflowLaunch":value}).to_string(),
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == rule),
+            "{diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn gemini_066_accepts_updated_skill_delimiters_and_private_network_oauth_option() {
+    let registry = ValidatorRegistry::with_defaults();
+    for content in [
+        "---\nname: review\ndescription: Use when reviewing code\n---\nReview code.\n",
+        "\u{feff}--- \t\nname: review\ndescription: Use when reviewing code\n--- \t\nReview code.\n",
+        "\u{feff}--- \t\r\nname: review\r\ndescription: Use when reviewing code\r\n--- \t\r\nReview code.\r\n",
+    ] {
+        for (path, config) in [
+            (".gemini/skills/review/SKILL.md", LintConfig::default()),
+            (
+                ".agents/skills/review/SKILL.md",
+                LintConfig::builder()
+                    .tools(vec!["gemini-cli".into()])
+                    .build()
+                    .unwrap(),
+            ),
+        ] {
+            let diagnostics = validate_content(Path::new(path), content, &config, &registry);
+            assert!(
+                diagnostics
+                    .iter()
+                    .all(|d| !["AS-001", "AS-003", "AS-016"].contains(&d.rule.as_str())),
+                "{path}: {diagnostics:?}"
+            );
+        }
+    }
+    let diagnostics = validate_content(
+        Path::new(".gemini/settings.json"),
+        r#"{"mcpServers":{"enterprise":{"httpUrl":"https://mcp.example.com/mcp","oauth":{"enabled":true,"allowPrivateNetwork":true}}}}"#,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+}
+
+#[test]
+fn gemini_skills_do_not_inherit_claude_only_rules() {
+    let content = "---\nname: claude-review\ndescription: Use when reviewing code\ncontext: not-a-claude-context\n---\nReview code.\n";
+    for (path, config) in [
+        (
+            ".gemini/skills/claude-review/SKILL.md",
+            LintConfig::default(),
+        ),
+        (
+            ".agents/skills/claude-review/SKILL.md",
+            LintConfig::builder()
+                .tools(vec!["gemini-cli".into()])
+                .build()
+                .unwrap(),
+        ),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(path),
+            content,
+            &config,
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(
+            diagnostics.iter().all(|d| !d.rule.starts_with("CC-SK-")),
+            "{diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn cline_4126_persisted_rule_toggle_is_accepted() {
+    let diagnostics = validate_content(
+        Path::new(".cline/rules/review.md"),
+        "---\nname: review\ndisabled: true\npaths:\n  - \"**/*.rs\"\n---\nCheck unsafe blocks.\n",
+        &LintConfig::default(),
+        &ValidatorRegistry::with_defaults(),
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+}
+
+#[test]
+fn codex_0165_accepts_tagged_feature_flags_in_all_config_formats() {
+    for (file, content) in [
+        (
+            ".codex/config.toml",
+            "[auto_review]\ntimeout_ms = 0\n[features]\nguardian_recorded_items = true\nprediction_preserve_parent_tools = true\ntui_multi_backend = true\n[features.guardianv3]\nenabled = true\n",
+        ),
+        (
+            ".codex/config.json",
+            r#"{"auto_review":{"timeout_ms":0},"features":{"guardian_recorded_items":true,"prediction_preserve_parent_tools":true,"tui_multi_backend":true,"guardianv3":{"enabled":true}}}"#,
+        ),
+        (
+            ".codex/config.yaml",
+            "auto_review:\n  timeout_ms: 0\nfeatures:\n  guardian_recorded_items: true\n  prediction_preserve_parent_tools: true\n  tui_multi_backend: true\n  guardianv3:\n    enabled: true\n",
+        ),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(file),
+            content,
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(diagnostics.is_empty(), "{file}: {diagnostics:?}");
+    }
+}
+
+#[test]
 fn codex_0161_accepts_daybreak_opt_in() {
     let diagnostics = validate_content(
         Path::new(".codex/config.toml"),
