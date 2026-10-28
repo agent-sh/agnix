@@ -573,9 +573,13 @@ struct ValidationContext<'a> {
 
 impl<'a> ValidationContext<'a> {
     fn new(path: &'a Path, content: &'a str, config: &'a PerFileLintConfig<'a>) -> Self {
-        let parts = split_frontmatter(content);
-        let line_starts = compute_line_starts(content);
         let client = resolve_skill_client(path, config);
+        let parts = if client == SkillClient::Gemini {
+            crate::parsers::frontmatter::split_gemini_frontmatter(content)
+        } else {
+            split_frontmatter(content)
+        };
+        let line_starts = compute_line_starts(content);
         Self {
             path,
             content,

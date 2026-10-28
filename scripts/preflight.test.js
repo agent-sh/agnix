@@ -39,7 +39,7 @@ fi
     fs.writeFileSync(path.join(root, 'bin', tool), stub, { mode: 0o755 });
   }
   // The real locale and glibc scripts are tested elsewhere. Here verify dispatch.
-  for (const script of ['check-locale-sync.sh', 'check-glibc-floor.test.sh']) {
+  for (const script of ['check-locale-sync.sh', 'check-glibc-floor.test.sh', 'check-tool-releases.test.sh']) {
     fs.writeFileSync(path.join(root, 'scripts', script), 'exit 0\n');
   }
   const log = path.join(root, 'commands.log');
@@ -82,6 +82,7 @@ test('full mode retains validation gates and honors explicit resource limits', (
     'kiro_ci_gate -- --include-ignored', 'npm/test/install-helpers.test.js',
     '-m unittest discover -s pypi/test', '--test scripts/glm-extract.test.js',
     '--test scripts/preflight.test.js', 'schema --output', '. --config .agnix.toml',
+    'scripts/check-tool-release-sources.test.py',
   ]) assert.ok(commands.includes(command), command);
   assert.match(commands, /\|3\|1\|4/);
   assert.deepEqual(fs.readdirSync(path.join(f.root, 'tmp')), []);

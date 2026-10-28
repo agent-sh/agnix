@@ -27,6 +27,7 @@ pub(crate) enum SkillClient {
     Windsurf,
     Kiro,
     Amp,
+    Gemini,
     /// A skill directory several clients read (`.agents/skills/`), under a
     /// scope that does not narrow it to one of them. The Agent Skills
     /// baseline applies; no client's field list does, and neither do the
@@ -48,6 +49,7 @@ const AGENTS_SKILLS_READERS: &[SkillClient] = &[
     SkillClient::Copilot,
     SkillClient::OpenCode,
     SkillClient::Cursor,
+    SkillClient::Gemini,
 ];
 
 /// Universal frontmatter fields supported by the Agent Skills specification.
@@ -318,6 +320,7 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
         }
         ".windsurf" => SkillClient::Windsurf,
         ".kiro" => SkillClient::Kiro,
+        ".gemini" => SkillClient::Gemini,
         _ => kiro_skill_client(&components),
     }
 }
@@ -437,6 +440,7 @@ fn skill_client_from_tool_str(tool: &str) -> Option<SkillClient> {
         "copilot" | "github-copilot" => SkillClient::Copilot,
         "windsurf" => SkillClient::Windsurf,
         "amp" => SkillClient::Amp,
+        "gemini" | "gemini-cli" => SkillClient::Gemini,
         _ => return None,
     })
 }
@@ -495,11 +499,8 @@ fn resolve_shared_skill_client(config: &LintConfig) -> SkillClient {
             .filter(|client| AGENTS_SKILLS_READERS.contains(client))
             .collect();
         readers.dedup();
-        let gemini = tools
-            .iter()
-            .any(|t| t.eq_ignore_ascii_case("gemini-cli") || t.eq_ignore_ascii_case("gemini"));
         return match readers.as_slice() {
-            [only] if !gemini && readers.iter().all(|c| c == only) => *only,
+            [only] => *only,
             _ => SkillClient::Shared,
         };
     }
@@ -534,7 +535,10 @@ fn rule_id_for_client(client: SkillClient) -> Option<&'static str> {
         SkillClient::Windsurf => Some("WS-SK-001"),
         SkillClient::Kiro => Some("KR-SK-001"),
         SkillClient::Amp => Some("AMP-SK-001"),
-        SkillClient::ClaudeCode | SkillClient::Shared | SkillClient::Unknown => None,
+        SkillClient::ClaudeCode
+        | SkillClient::Gemini
+        | SkillClient::Shared
+        | SkillClient::Unknown => None,
     }
 }
 
@@ -550,6 +554,7 @@ fn client_display_name(client: SkillClient) -> &'static str {
         SkillClient::Windsurf => "Windsurf",
         SkillClient::Kiro => "Kiro",
         SkillClient::Amp => "Amp",
+        SkillClient::Gemini => "Gemini CLI",
         SkillClient::Shared => "several clients",
         SkillClient::Unknown => "Unknown",
     }
@@ -901,12 +906,15 @@ impl Validator for PerClientSkillValidator {
     ) -> Vec<Diagnostic> {
         let mut diagnostics = Vec::new();
 
-        let parts = split_frontmatter(content);
+        let client = resolve_skill_client(path, config);
+        let parts = if client == SkillClient::Gemini {
+            crate::parsers::frontmatter::split_gemini_frontmatter(content)
+        } else {
+            split_frontmatter(content)
+        };
         if !parts.has_frontmatter || !parts.has_closing {
             return diagnostics;
         }
-
-        let client = resolve_skill_client(path, config);
 
         let per_client_rule = rule_id_for_client(client);
         let has_per_client = per_client_rule

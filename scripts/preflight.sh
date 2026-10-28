@@ -58,6 +58,8 @@ if [[ "$mode" == --quick ]]; then
 fi
 
 run 'Preflight regression tests' node --test scripts/preflight.test.js
+run 'Tool release watcher helpers' bash scripts/check-tool-releases.test.sh
+run 'Tool release source regressions' python3 scripts/check-tool-release-sources.test.py
 run 'Clippy' cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 run 'Workspace tests' cargo test --locked --workspace
 run 'Rule efficacy eval' cargo run --locked -p agnix-cli --bin agnix -- eval tests/eval.yaml

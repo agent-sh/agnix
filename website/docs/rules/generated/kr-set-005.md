@@ -13,7 +13,7 @@ keywords: ["KR-SET-005", "unknown kiro cli setting", "kiro settings", "validatio
 - **Category**: `Kiro Settings`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-10-29`
 
 ## Applicability
 

@@ -13,7 +13,7 @@ keywords: ["KR-SET-008", "kiro cli setting has wrong value type", "kiro settings
 - **Category**: `Kiro Settings`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-10-29`
 
 ## Applicability
 

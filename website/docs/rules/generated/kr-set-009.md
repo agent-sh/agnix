@@ -13,7 +13,7 @@ keywords: ["KR-SET-009", "unrecognized kiro cli setting value", "kiro settings",
 - **Category**: `Kiro Settings`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-10-29`
 
 ## Applicability
 
