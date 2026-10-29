@@ -10,6 +10,7 @@ use crate::{
     },
     schemas::kiro_json::JsonNode,
 };
+use rust_i18n::t;
 use serde_json::Value;
 use std::{collections::HashSet, path::Path, sync::LazyLock};
 
@@ -75,8 +76,8 @@ impl Validator for PiValidator {
                     DiagnosticLevel::Error,
                     "PI-CFG-001",
                     (offset, offset + 2),
-                    "Pi models.json does not accept block comments.",
-                    "Use // line comments or ordinary JSON.",
+                    t!("rules.pi_cfg_001.pi_models_json_does_not_accept_block").as_ref(),
+                    t!("rules.pi_cfg_001.use_line_comments_or_ordinary_json").as_ref(),
                 );
             }
             return cx.diagnostics;
@@ -102,8 +103,8 @@ impl Validator for PiValidator {
                                 "PI-CFG-003",
                                 &format!("/{key}"),
                                 DiagnosticLevel::Warning,
-                                "Pi ignores this setting in project configuration.",
-                                "Move this setting to the agent-directory settings.json.",
+                                t!("rules.pi_cfg_003.pi_ignores_this_setting_in_project_configuration").as_ref(),
+                                t!("rules.pi_cfg_003.move_this_setting_to_the_agent_directory").as_ref(),
                             );
                         }
                     }
@@ -117,8 +118,8 @@ impl Validator for PiValidator {
                         "PI-CFG-003",
                         "",
                         DiagnosticLevel::Warning,
-                        "Pi loads models.json from its agent directory, not the project .pi directory.",
-                        "Put provider and model definitions in <agent-dir>/models.json.",
+                        t!("rules.pi_cfg_003.pi_loads_models_json_from_its_agent").as_ref(),
+                        t!("rules.pi_cfg_003.put_provider_and_model_definitions_in_agent").as_ref(),
                     );
                 }
                 check_schema(&mut cx, &root, &value, Schema::PiModels, "PI-MDL-001");
@@ -132,8 +133,9 @@ impl Validator for PiValidator {
                         "PI-CFG-003",
                         "",
                         DiagnosticLevel::Warning,
-                        "Pi loads keybindings.json from its agent directory.",
-                        "Put keybindings in <agent-dir>/keybindings.json and run /reload.",
+                        t!("rules.pi_cfg_003.pi_loads_keybindings_json_from_its_agent").as_ref(),
+                        t!("rules.pi_cfg_003.put_keybindings_in_agent_dir_keybindings_json")
+                            .as_ref(),
                     );
                 }
                 check_schema(&mut cx, &root, &value, Schema::PiKeybindings, "PI-KB-001");
@@ -209,8 +211,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
             "PI-MCP-001",
             "/autoEnableCodemode",
             DiagnosticLevel::Error,
-            "autoEnableCodemode must be a boolean.",
-            "Use true or false.",
+            t!("rules.pi_mcp_001.autoenablecodemode_must_be_a_boolean").as_ref(),
+            t!("rules.pi_mcp_001.use_true_or_false").as_ref(),
         );
     }
     let Some(servers) = value.get("mcpServers") else {
@@ -223,8 +225,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
             "PI-MCP-001",
             "/mcpServers",
             DiagnosticLevel::Error,
-            "mcpServers must be an object mapping server names to configurations.",
-            "Use the documented mcpServers map.",
+            t!("rules.pi_mcp_001.mcpservers_must_be_an_object_mapping_server").as_ref(),
+            t!("rules.pi_mcp_001.use_the_documented_mcpservers_map").as_ref(),
         );
         return;
     };
@@ -242,8 +244,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                 "PI-MCP-002",
                 &base,
                 DiagnosticLevel::Error,
-                "Invalid Pi MCP server name.",
-                "Use ASCII letters, digits, underscores and hyphens.",
+                t!("rules.pi_mcp_002.invalid_pi_mcp_server_name").as_ref(),
+                t!("rules.pi_mcp_002.use_ascii_letters_digits_underscores_and_hyphens").as_ref(),
             );
         }
         if !namespaces.insert(name.replace('-', "_")) {
@@ -253,8 +255,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                 "PI-MCP-004",
                 &base,
                 DiagnosticLevel::Error,
-                "Pi MCP server names collide after hyphens become underscores.",
-                "Give the servers distinct normalized names.",
+                t!("rules.pi_mcp_004.pi_mcp_server_names_collide_after_hyphens").as_ref(),
+                t!("rules.pi_mcp_004.give_the_servers_distinct_normalized_names").as_ref(),
             );
         }
         let Some(object) = server.as_object() else {
@@ -264,8 +266,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                 "PI-MCP-002",
                 &base,
                 DiagnosticLevel::Error,
-                "An MCP server configuration must be an object.",
-                "Define a stdio server, HTTP server or project override.",
+                t!("rules.pi_mcp_002.an_mcp_server_configuration_must_be_an").as_ref(),
+                t!("rules.pi_mcp_002.define_a_stdio_server_http_server_or").as_ref(),
             );
             continue;
         };
@@ -284,8 +286,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                 "PI-MCP-002",
                 &base,
                 DiagnosticLevel::Error,
-                "A project MCP override can only set enabled, exposure and toolExposure.",
-                "Define a complete server, or keep only the inherited server's override fields.",
+                t!("rules.pi_mcp_002.a_project_mcp_override_can_only_set").as_ref(),
+                t!("rules.pi_mcp_002.define_a_complete_server_or_keep_only").as_ref(),
             );
         }
         for (key, entry) in object {
@@ -306,8 +308,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                     "PI-MCP-002",
                     &format!("{base}/{}", escaped(key)),
                     DiagnosticLevel::Error,
-                    "Invalid Pi MCP server option.",
-                    "Use the documented boolean, string, exposure or positive timeout value.",
+                    t!("rules.pi_mcp_002.invalid_pi_mcp_server_option").as_ref(),
+                    t!("rules.pi_mcp_002.use_the_documented_boolean_string_exposure_or").as_ref(),
                 );
             }
         }
@@ -321,8 +323,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                 "PI-MCP-002",
                 &format!("{base}/type"),
                 DiagnosticLevel::Error,
-                "Pi MCP transport type must be a string when present.",
-                "Omit type for inference, or use a documented transport name.",
+                t!("rules.pi_mcp_002.pi_mcp_transport_type_must_be_a").as_ref(),
+                t!("rules.pi_mcp_002.omit_type_for_inference_or_use_a").as_ref(),
             );
             continue;
         }
@@ -344,8 +346,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                     "PI-MCP-002",
                     &format!("{base}/url"),
                     DiagnosticLevel::Error,
-                    "MCP URL must use HTTP or HTTPS.",
-                    "Use a Streamable HTTP MCP endpoint.",
+                    t!("rules.pi_mcp_002.mcp_url_must_use_http_or_https").as_ref(),
+                    t!("rules.pi_mcp_002.use_a_streamable_http_mcp_endpoint").as_ref(),
                 );
             }
             if object
@@ -358,8 +360,9 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                     "PI-MCP-002",
                     &format!("{base}/headers"),
                     DiagnosticLevel::Error,
-                    "MCP headers must map names to strings.",
-                    "Use string header values, environment references or command references.",
+                    t!("rules.pi_mcp_002.mcp_headers_must_map_names_to_strings").as_ref(),
+                    t!("rules.pi_mcp_002.use_string_header_values_environment_references_or")
+                        .as_ref(),
                 );
             }
             if let Some(auth) = object.get("auth") {
@@ -370,8 +373,9 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                         "PI-MCP-003",
                         &format!("{base}/auth"),
                         DiagnosticLevel::Error,
-                        "Project MCP configuration cannot select global login credentials.",
-                        "Configure auth.provider only in the global agent-directory mcp.json.",
+                        t!("rules.pi_mcp_003.project_mcp_configuration_cannot_select_global_login")
+                            .as_ref(),
+                        t!("rules.pi_mcp_003.configure_auth_provider_only_in_the_global").as_ref(),
                     );
                 }
                 if !auth
@@ -387,8 +391,9 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                         "PI-MCP-003",
                         &format!("{base}/auth"),
                         DiagnosticLevel::Error,
-                        "MCP provider authentication needs a provider name and HTTPS or a loopback URL.",
-                        "Use auth.provider with an HTTPS or local-loopback endpoint in global configuration.",
+                        t!("rules.pi_mcp_003.mcp_provider_authentication_needs_a_provider_name")
+                            .as_ref(),
+                        t!("rules.pi_mcp_003.use_auth_provider_with_an_https_or").as_ref(),
                     );
                 }
             }
@@ -410,8 +415,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                             "PI-MCP-002",
                             &format!("{base}/{key}"),
                             DiagnosticLevel::Error,
-                            "Invalid stdio MCP option.",
-                            "Use a string array for args, a string map for env, and a string for cwd.",
+                            t!("rules.pi_mcp_002.invalid_stdio_mcp_option").as_ref(),
+                            t!("rules.pi_mcp_002.use_a_string_array_for_args_a").as_ref(),
                         );
                     }
                 }
@@ -423,8 +428,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value, project: bool) {
                 "PI-MCP-002",
                 &base,
                 DiagnosticLevel::Error,
-                "Pi MCP server needs command (stdio) or url (Streamable HTTP).",
-                "Legacy SSE is unsupported; select the matching type and transport fields.",
+                t!("rules.pi_mcp_002.pi_mcp_server_needs_command_stdio_or").as_ref(),
+                t!("rules.pi_mcp_002.legacy_sse_is_unsupported_select_the_matching").as_ref(),
             );
         }
     }
@@ -438,8 +443,8 @@ fn oauth_config(cx: &mut JsonCx<'_>, root: &JsonNode, base: &str, value: &Value)
             "PI-MCP-005",
             base,
             DiagnosticLevel::Error,
-            "MCP OAuth settings must be an object.",
-            "Use the documented OAuth client fields.",
+            t!("rules.pi_mcp_005.mcp_oauth_settings_must_be_an_object").as_ref(),
+            t!("rules.pi_mcp_005.use_the_documented_oauth_client_fields").as_ref(),
         );
         return;
     };
@@ -514,8 +519,8 @@ fn oauth_config(cx: &mut JsonCx<'_>, root: &JsonNode, base: &str, value: &Value)
             "PI-MCP-005",
             base,
             DiagnosticLevel::Error,
-            "Invalid Pi MCP OAuth callback or client registration settings.",
-            "Use HTTP loopback callbacks, matching callback ports, and the documented dcr/cimd client options.",
+            t!("rules.pi_mcp_005.invalid_pi_mcp_oauth_callback_or_client").as_ref(),
+            t!("rules.pi_mcp_005.use_http_loopback_callbacks_matching_callback_ports").as_ref(),
         );
     }
 }
@@ -533,8 +538,8 @@ fn package(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                     "PI-PKG-001",
                     "/pi",
                     DiagnosticLevel::Error,
-                    "A Pi package manifest must be an object.",
-                    "Declare resource paths under the package.json pi object.",
+                    t!("rules.pi_pkg_001.a_pi_package_manifest_must_be_an").as_ref(),
+                    t!("rules.pi_pkg_001.declare_resource_paths_under_the_package_json").as_ref(),
                 );
                 return;
             }
@@ -548,8 +553,8 @@ fn package(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "PI-PKG-001",
                 &format!("/pi/{key}"),
                 DiagnosticLevel::Error,
-                "Pi package resources must be arrays of path strings.",
-                "Use paths or glob/exclusion patterns relative to the package root.",
+                t!("rules.pi_pkg_001.pi_package_resources_must_be_arrays_of").as_ref(),
+                t!("rules.pi_pkg_001.use_paths_or_glob_exclusion_patterns_relative").as_ref(),
             );
         }
     }
@@ -561,8 +566,8 @@ fn package(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "PI-PKG-001",
                 &format!("/pi/{key}"),
                 DiagnosticLevel::Error,
-                "Pi gallery media must be a path string.",
-                "Set a relative image/video path, or omit this optional field.",
+                t!("rules.pi_pkg_001.pi_gallery_media_must_be_a_path").as_ref(),
+                t!("rules.pi_pkg_001.set_a_relative_image_video_path_or").as_ref(),
             );
         }
     }
@@ -584,8 +589,8 @@ fn package(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "PI-PKG-002",
                 &format!("/dependencies/{}", escaped(host)),
                 DiagnosticLevel::Warning,
-                "A host-provided Pi package is installed as a runtime dependency.",
-                "Move the host package to peerDependencies with a * range so extensions share Pi's runtime modules.",
+                t!("rules.pi_pkg_002.a_host_provided_pi_package_is_installed").as_ref(),
+                t!("rules.pi_pkg_002.move_the_host_package_to_peerdependencies_with").as_ref(),
             );
         }
     }
@@ -603,8 +608,8 @@ fn theme(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
             "PI-TH-002",
             "/name",
             DiagnosticLevel::Error,
-            "Pi theme names cannot be system or contain a slash.",
-            "Choose a unique theme name and use it as the filename.",
+            t!("rules.pi_th_002.pi_theme_names_cannot_be_system_or").as_ref(),
+            t!("rules.pi_th_002.choose_a_unique_theme_name_and_use").as_ref(),
         );
     }
     let empty = serde_json::Map::new();
@@ -633,8 +638,8 @@ fn theme(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                             "PI-TH-002",
                             &format!("/{group}/{}", escaped(name)),
                             DiagnosticLevel::Error,
-                            "Invalid Pi theme color literal.",
-                            "Use #rgb/#rrggbb or a supported OKLCH/OKHSL value with finite channels and valid ranges.",
+                            t!("rules.pi_th_002.invalid_pi_theme_color_literal").as_ref(),
+                            t!("rules.pi_th_002.use_rgb_rrggbb_or_a_supported_oklch").as_ref(),
                         );
                     }
                     break;
@@ -646,8 +651,8 @@ fn theme(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                         "PI-TH-002",
                         &format!("/{group}/{}", escaped(name)),
                         DiagnosticLevel::Error,
-                        "Pi theme references a missing or cyclic color variable.",
-                        "Define the variable without a cycle, or use a documented literal color.",
+                        t!("rules.pi_th_002.pi_theme_references_a_missing_or_cyclic").as_ref(),
+                        t!("rules.pi_th_002.define_the_variable_without_a_cycle_or").as_ref(),
                     );
                     break;
                 }
@@ -734,10 +739,10 @@ fn prompt(path: &Path, content: &str, config: &PerFileLintConfig<'_>) -> Vec<Dia
                 1,
                 1,
                 "PI-PR-001",
-                "Invalid Pi prompt frontmatter.",
+                t!("rules.pi_pr_001.invalid_pi_prompt_frontmatter").as_ref(),
             )
             .with_suggestion(
-                "Use valid YAML with optional string description and argument-hint fields.",
+                t!("rules.pi_pr_001.use_valid_yaml_with_optional_string_description").as_ref(),
             ),
         ];
     }
@@ -753,11 +758,9 @@ fn prompt(path: &Path, content: &str, config: &PerFileLintConfig<'_>) -> Vec<Dia
                     1,
                     1,
                     "PI-PR-002",
-                    "Pi ignores non-string prompt description and argument-hint fields.",
+                    t!("rules.pi_pr_002.pi_ignores_non_string_prompt_description_and").as_ref(),
                 )
-                .with_suggestion(
-                    "Use strings, or omit the fields to use the body's description fallback.",
-                ),
+                .with_suggestion(t!("rules.pi_pr_002.use_strings_or_omit_the_fields_to").as_ref()),
             ];
         }
     }
@@ -794,8 +797,9 @@ fn model_runtime(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "PI-MDL-002",
                 &base,
                 DiagnosticLevel::Error,
-                "Pi OAuth provider configuration requires an explicit baseUrl.",
-                "Set the provider's baseUrl when oauth is configured.",
+                t!("rules.pi_mdl_002.pi_oauth_provider_configuration_requires_an_explicit")
+                    .as_ref(),
+                t!("rules.pi_mdl_002.set_the_provider_s_baseurl_when_oauth").as_ref(),
             );
         }
         if !has_models
@@ -813,8 +817,9 @@ fn model_runtime(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "PI-MDL-002",
                 &base,
                 DiagnosticLevel::Error,
-                "Pi rejects an empty provider configuration with no model or connection override.",
-                "Define models, baseUrl, headers, compat, modelOverrides or authentication overrides, or remove the provider entry.",
+                t!("rules.pi_mdl_002.pi_rejects_an_empty_provider_configuration_with").as_ref(),
+                t!("rules.pi_mdl_002.define_models_baseurl_headers_compat_modeloverrides_or")
+                    .as_ref(),
             );
         }
     }

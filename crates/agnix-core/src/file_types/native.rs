@@ -11,6 +11,23 @@ pub(crate) enum Tool {
     Grok,
 }
 
+fn foreign_plugin_namespace(path: &Path) -> bool {
+    components(path).iter().any(|part| {
+        matches!(
+            part.as_str(),
+            ".claude"
+                | ".claude-plugin"
+                | ".codex"
+                | ".codex-plugin"
+                | ".cursor"
+                | ".cursor-plugin"
+                | ".copilot"
+                | ".copilot-plugin"
+                | ".github"
+        )
+    })
+}
+
 pub(crate) fn home_dir() -> Option<std::path::PathBuf> {
     #[cfg(feature = "filesystem")]
     {
@@ -159,7 +176,10 @@ pub(crate) fn plugin_owner(
                 {
                     Some(Tool::Antigravity)
                 }
-                _ => scope.filter(|tool| matches!(tool, Tool::Antigravity | Tool::Grok)),
+                _ => scope.filter(|tool| {
+                    !foreign_plugin_namespace(path)
+                        && matches!(tool, Tool::Antigravity | Tool::Grok)
+                }),
             };
             if let Some(tool) = tool {
                 return Some((tool, root.to_path_buf(), value));
@@ -284,7 +304,7 @@ pub(crate) fn refine(
             }
         }
     }
-    if name == "plugin.json" {
+    if name == "plugin.json" && !foreign_plugin_namespace(path) {
         return match scope {
             Some(Tool::Antigravity) => FileType::AntigravityConfig,
             Some(Tool::Grok) => FileType::GrokConfig,

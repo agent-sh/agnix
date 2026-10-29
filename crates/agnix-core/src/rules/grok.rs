@@ -12,6 +12,7 @@ use crate::{
     },
     schemas::kiro_json::JsonNode,
 };
+use rust_i18n::t;
 use serde_json::Value;
 use std::path::Path;
 
@@ -89,8 +90,9 @@ impl Validator for GrokValidator {
                             DiagnosticLevel::Error,
                             "GRK-CFG-001",
                             error.span().map_or((0, 0), |s| (s.start, s.end)),
-                            "Invalid Grok TOML configuration.",
-                            "Correct the TOML syntax before Grok loads this file.",
+                            t!("rules.grk_cfg_001.invalid_grok_toml_configuration").as_ref(),
+                            t!("rules.grk_cfg_001.correct_the_toml_syntax_before_grok_loads")
+                                .as_ref(),
                         );
                     }
                     return cx.diagnostics;
@@ -121,8 +123,11 @@ impl Validator for GrokValidator {
                                 "GRK-SBX-001",
                                 &format!("/profiles/{}", escape(name)),
                                 DiagnosticLevel::Error,
-                                "Grok custom profiles cannot redefine a built-in sandbox profile.",
-                                "Choose a custom name and extend a supported built-in profile.",
+                                t!(
+                                    "rules.grk_sbx_001.grok_custom_profiles_cannot_redefine_a_built"
+                                )
+                                .as_ref(),
+                                t!("rules.grk_sbx_001.choose_a_custom_name_and_extend_a").as_ref(),
                             );
                         }
                     }
@@ -279,6 +284,9 @@ fn schema(
     rule: &str,
     level: DiagnosticLevel,
 ) {
+    let key = rule.to_ascii_lowercase().replace('-', "_");
+    let message_key = format!("rules.{key}.schema_message");
+    let suggestion_key = format!("rules.{key}.schema_suggestion");
     for issue in contract.issues(value) {
         // The native MCP validator owns these fields, including transport
         // semantics and u64 timeouts. Avoid a second generic schema report.
@@ -291,11 +299,8 @@ fn schema(
             rule,
             &issue.pointer,
             level,
-            &format!(
-                "Grok field violates the documented {} constraint.",
-                issue.keyword
-            ),
-            "Use the native Grok configuration field types and values.",
+            t!(&message_key, keyword = issue.keyword.as_str()).as_ref(),
+            t!(&suggestion_key).as_ref(),
         );
     }
 }
@@ -338,8 +343,10 @@ fn configuration(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, path: 
                                 "GRK-CFG-002",
                                 &format!("/mcp/{}", escape(option)),
                                 DiagnosticLevel::Warning,
-                                "Grok ignores this MCP option in project config.toml.",
-                                "Only mcp.max_output_bytes is loaded from project configuration.",
+                                t!("rules.grk_cfg_002.grok_ignores_this_mcp_option_in_project")
+                                    .as_ref(),
+                                t!("rules.grk_cfg_002.only_mcp_max_output_bytes_is_loaded")
+                                    .as_ref(),
                             );
                         }
                     }
@@ -352,8 +359,9 @@ fn configuration(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, path: 
                         "GRK-CFG-002",
                         &format!("/{}", escape(key)),
                         DiagnosticLevel::Warning,
-                        "Grok ignores this setting in project config.toml.",
-                        "Put user settings in $GROK_HOME/config.toml; project files contribute mcp_servers, plugins, permission and mcp.max_output_bytes.",
+                        t!("rules.grk_cfg_002.grok_ignores_this_setting_in_project_config")
+                            .as_ref(),
+                        t!("rules.grk_cfg_002.put_user_settings_in_grok_home_config").as_ref(),
                     );
                 }
             }
@@ -363,17 +371,17 @@ fn configuration(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, path: 
         (
             "/ui/simple_mode",
             "1.0.69",
-            "Grok 1.0.69 retired ui.simple_mode; it no longer changes the editor.",
+            t!("rules.grk_cfg_004.grok_1_0_69_retired_ui_simple").as_ref(),
         ),
         (
             "/ui/vim_mode",
             "1.0.68",
-            "Grok 1.0.68 replaced ui.vim_mode with keys.vim; the old key is a legacy alias.",
+            t!("rules.grk_cfg_004.grok_1_0_68_replaced_ui_vim").as_ref(),
         ),
         (
             "/memory_v2/compact_index_enabled",
             "1.0.63",
-            "Grok 1.0.63 retired memory_v2.compact_index_enabled.",
+            t!("rules.grk_cfg_004.grok_1_0_63_retired_memory_v2").as_ref(),
         ),
     ] {
         let qualified = cx
@@ -393,7 +401,7 @@ fn configuration(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, path: 
                 pointer,
                 DiagnosticLevel::Warning,
                 message,
-                "Remove retired settings; use keys.vim = off or nav for current vim navigation.",
+                t!("rules.grk_cfg_004.remove_retired_settings_use_keys_vim_off").as_ref(),
             );
         }
     }
@@ -408,8 +416,8 @@ fn configuration(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, path: 
             "GRK-CFG-005",
             "/ui/disable_bypass_permissions_mode",
             DiagnosticLevel::Warning,
-            "Grok honors the bypass-permissions lock only from root-owned system policy.",
-            "Set the lock in /etc/grok/requirements.toml through your system administrator.",
+            t!("rules.grk_cfg_005.grok_honors_the_bypass_permissions_lock_only").as_ref(),
+            t!("rules.grk_cfg_005.set_the_lock_in_etc_grok_requirements").as_ref(),
         );
     }
     version_overrides(cx, source, value);
@@ -437,8 +445,8 @@ fn version_overrides(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value) {
                         "GRK-CFG-006",
                         &format!("/version_overrides/{index}/{key}"),
                         DiagnosticLevel::Error,
-                        "Grok version override bound must be a semantic version.",
-                        "Use a complete major.minor.patch version string.",
+                        t!("rules.grk_cfg_006.grok_version_override_bound_must_be_a").as_ref(),
+                        t!("rules.grk_cfg_006.use_a_complete_major_minor_patch_version").as_ref(),
                     );
                 }
                 bounds.push(bound);
@@ -458,8 +466,8 @@ fn version_overrides(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value) {
                 "GRK-CFG-006",
                 &format!("/version_overrides/{index}"),
                 DiagnosticLevel::Warning,
-                "This Grok version range can never apply.",
-                "Put minimum_version at or below maximum_version.",
+                t!("rules.grk_cfg_006.this_grok_version_range_can_never_apply").as_ref(),
+                t!("rules.grk_cfg_006.put_minimum_version_at_or_below_maximum").as_ref(),
             );
         }
     }
@@ -476,8 +484,8 @@ fn mcp(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, pointer: &str) {
             "GRK-MCP-001",
             pointer,
             DiagnosticLevel::Error,
-            "Grok MCP server declarations must be a map.",
-            "Map server names to stdio command or remote URL configurations.",
+            t!("rules.grk_mcp_001.grok_mcp_server_declarations_must_be_a").as_ref(),
+            t!("rules.grk_mcp_001.map_server_names_to_stdio_command_or").as_ref(),
         );
         return;
     };
@@ -495,8 +503,8 @@ fn mcp_server(cx: &mut JsonCx<'_>, source: &Source<'_>, server: &Value, path: &s
             "GRK-MCP-001",
             path,
             DiagnosticLevel::Error,
-            "Grok MCP server must be an object.",
-            "Configure command/args/env or url/headers.",
+            t!("rules.grk_mcp_001.grok_mcp_server_must_be_an_object").as_ref(),
+            t!("rules.grk_mcp_001.configure_command_args_env_or_url_headers").as_ref(),
         );
         return;
     };
@@ -515,8 +523,8 @@ fn mcp_server(cx: &mut JsonCx<'_>, source: &Source<'_>, server: &Value, path: &s
             "GRK-MCP-001",
             path,
             DiagnosticLevel::Error,
-            "Grok MCP server needs a non-empty command or url.",
-            "Use command for stdio, or url for a remote server.",
+            t!("rules.grk_mcp_001.grok_mcp_server_needs_a_non_empty").as_ref(),
+            t!("rules.grk_mcp_001.use_command_for_stdio_or_url_for").as_ref(),
         );
     }
     for (key, entry) in object {
@@ -540,8 +548,8 @@ fn mcp_server(cx: &mut JsonCx<'_>, source: &Source<'_>, server: &Value, path: &s
                 "GRK-MCP-001",
                 &format!("{path}/{}", escape(key)),
                 DiagnosticLevel::Error,
-                "Invalid Grok MCP server option type.",
-                "Use the types documented in the Grok MCP configuration reference.",
+                t!("rules.grk_mcp_001.invalid_grok_mcp_server_option_type").as_ref(),
+                t!("rules.grk_mcp_001.use_the_types_documented_in_the_grok").as_ref(),
             );
         }
     }
@@ -611,8 +619,8 @@ fn hooks(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value) {
             "GRK-HK-001",
             "",
             DiagnosticLevel::Error,
-            "Grok hook files need a hooks object.",
-            "Put lifecycle events inside the hooks map.",
+            t!("rules.grk_hk_001.grok_hook_files_need_a_hooks_object").as_ref(),
+            t!("rules.grk_hk_001.put_lifecycle_events_inside_the_hooks_map").as_ref(),
         );
         return;
     };
@@ -626,8 +634,8 @@ fn hooks_map(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, base: &str
             "GRK-HK-001",
             base,
             DiagnosticLevel::Error,
-            "Grok hooks must map event names to matcher groups.",
-            "Use the documented hooks object.",
+            t!("rules.grk_hk_001.grok_hooks_must_map_event_names_to").as_ref(),
+            t!("rules.grk_hk_001.use_the_documented_hooks_object").as_ref(),
         );
         return;
     };
@@ -640,8 +648,8 @@ fn hooks_map(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, base: &str
                 "GRK-HK-002",
                 &path,
                 DiagnosticLevel::Warning,
-                "Grok skips this unknown hook event.",
-                "Use a documented lifecycle event or supported compatibility alias.",
+                t!("rules.grk_hk_002.grok_skips_this_unknown_hook_event").as_ref(),
+                t!("rules.grk_hk_002.use_a_documented_lifecycle_event_or_supported").as_ref(),
             );
             continue;
         }
@@ -652,8 +660,8 @@ fn hooks_map(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, base: &str
                 "GRK-HK-001",
                 &path,
                 DiagnosticLevel::Error,
-                "Hook event must contain a matcher-group array.",
-                "Put handlers in each group's hooks array.",
+                t!("rules.grk_hk_001.hook_event_must_contain_a_matcher_group").as_ref(),
+                t!("rules.grk_hk_001.put_handlers_in_each_group_s_hooks").as_ref(),
             );
             continue;
         };
@@ -667,8 +675,8 @@ fn hooks_map(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, base: &str
                         "GRK-HK-001",
                         &path,
                         DiagnosticLevel::Error,
-                        "Hook matcher must be a string or null.",
-                        "Use a tool matcher expression, or omit it.",
+                        t!("rules.grk_hk_001.hook_matcher_must_be_a_string_or").as_ref(),
+                        t!("rules.grk_hk_001.use_a_tool_matcher_expression_or_omit").as_ref(),
                     );
                 }
                 if let Some(pattern) = matcher.as_str() {
@@ -689,8 +697,9 @@ fn hooks_map(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, base: &str
                             "GRK-HK-003",
                             &format!("{path}/matcher"),
                             DiagnosticLevel::Warning,
-                            "Invalid Grok hook matcher regular expression.",
-                            "Use a valid expression in Grok's regex dialect, or * to match all tools.",
+                            t!("rules.grk_hk_003.invalid_grok_hook_matcher_regular_expression")
+                                .as_ref(),
+                            t!("rules.grk_hk_003.use_a_valid_expression_in_grok_s").as_ref(),
                         );
                     }
                 }
@@ -702,8 +711,8 @@ fn hooks_map(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, base: &str
                     "GRK-HK-001",
                     &path,
                     DiagnosticLevel::Error,
-                    "Hook matcher group needs a hooks array.",
-                    "Add command or HTTP hook handlers.",
+                    t!("rules.grk_hk_001.hook_matcher_group_needs_a_hooks_array").as_ref(),
+                    t!("rules.grk_hk_001.add_command_or_http_hook_handlers").as_ref(),
                 );
                 continue;
             };
@@ -740,8 +749,8 @@ fn hooks_map(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, base: &str
                         "GRK-HK-001",
                         &path,
                         DiagnosticLevel::Error,
-                        "Invalid Grok hook handler.",
-                        "Use type command with command, or type http with url; timeout is unsigned seconds and args is a string list.",
+                        t!("rules.grk_hk_001.invalid_grok_hook_handler").as_ref(),
+                        t!("rules.grk_hk_001.use_type_command_with_command_or_type").as_ref(),
                     );
                 }
             }
@@ -821,8 +830,9 @@ fn plugin(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value) {
                     "GRK-PL-002",
                     &format!("/{field}"),
                     DiagnosticLevel::Warning,
-                    "Grok skips plugin component paths outside the plugin root.",
-                    "Keep component paths within the plugin directory.",
+                    t!("rules.grk_pl_002.grok_skips_plugin_component_paths_outside_the").as_ref(),
+                    t!("rules.grk_pl_002.keep_component_paths_within_the_plugin_directory")
+                        .as_ref(),
                 );
             }
         }
@@ -845,8 +855,8 @@ fn plugin(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value) {
                 "GRK-PL-001",
                 &format!("/lspServers{}", issue.pointer),
                 DiagnosticLevel::Error,
-                "Invalid Grok plugin LSP server configuration.",
-                "Use the native LSP command, argument, transport and timeout types.",
+                t!("rules.grk_pl_001.invalid_grok_plugin_lsp_server_configuration").as_ref(),
+                t!("rules.grk_pl_001.use_the_native_lsp_command_argument_transport").as_ref(),
             );
         }
     }
@@ -871,8 +881,8 @@ fn agent(path: &Path, content: &str, config: &PerFileLintConfig<'_>) -> Vec<Diag
                 DiagnosticLevel::Error,
                 "GRK-AG-001",
                 (1, 1),
-                "Grok agent needs valid YAML frontmatter.",
-                "Add a complete agent metadata object with name and description.",
+                t!("rules.grk_ag_001.grok_agent_needs_valid_yaml_frontmatter").as_ref(),
+                t!("rules.grk_ag_001.add_a_complete_agent_metadata_object_with").as_ref(),
             );
         }
         return cx.diagnostics;
@@ -925,8 +935,8 @@ fn agent(path: &Path, content: &str, config: &PerFileLintConfig<'_>) -> Vec<Diag
                     "GRK-AG-002",
                     &format!("/mcpServers/{index}"),
                     DiagnosticLevel::Error,
-                    "Invalid Grok inline MCP server reference.",
-                    "Use a server name, a single name-to-config map, or a server object with name.",
+                    t!("rules.grk_ag_002.invalid_grok_inline_mcp_server_reference").as_ref(),
+                    t!("rules.grk_ag_002.use_a_server_name_a_single_name").as_ref(),
                 );
             }
         }
@@ -950,8 +960,8 @@ fn agent(path: &Path, content: &str, config: &PerFileLintConfig<'_>) -> Vec<Diag
                     "GRK-AG-004",
                     &format!("/{field}"),
                     DiagnosticLevel::Warning,
-                    "Grok plugin agents cannot use this privileged frontmatter setting.",
-                    "Configure trusted plugin/session MCP and hooks outside the agent; plugin agents cannot bypass permissions.",
+                    t!("rules.grk_ag_004.grok_plugin_agents_cannot_use_this_privileged").as_ref(),
+                    t!("rules.grk_ag_004.configure_trusted_plugin_session_mcp_and_hooks").as_ref(),
                 );
             }
         }
@@ -985,8 +995,8 @@ fn skill(path: &Path, content: &str, config: &PerFileLintConfig<'_>) -> Vec<Diag
             "GRK-SK-001",
             "/allowed-tools",
             DiagnosticLevel::Info,
-            "Grok skill allowed-tools does not grant or restrict tools.",
-            "Use Grok permission rules or an agent tool policy for tool restrictions.",
+            t!("rules.grk_sk_001.grok_skill_allowed_tools_does_not_grant").as_ref(),
+            t!("rules.grk_sk_001.use_grok_permission_rules_or_an_agent").as_ref(),
         );
     }
     for key in ["user-invocable", "disable-model-invocation"] {
@@ -997,8 +1007,8 @@ fn skill(path: &Path, content: &str, config: &PerFileLintConfig<'_>) -> Vec<Diag
                 "GRK-SK-002",
                 &format!("/{key}"),
                 DiagnosticLevel::Warning,
-                "Grok treats only literal true as enabled for this skill field.",
-                "Use true or false, not yes/no or quoted boolean strings.",
+                t!("rules.grk_sk_002.grok_treats_only_literal_true_as_enabled").as_ref(),
+                t!("rules.grk_sk_002.use_true_or_false_not_yes_no").as_ref(),
             );
         }
     }

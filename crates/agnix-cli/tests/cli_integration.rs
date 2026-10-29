@@ -2784,6 +2784,118 @@ fn test_locale_flag_switches_output_to_spanish() {
 }
 
 #[test]
+fn native_diagnostics_follow_the_selected_locale_including_shared_helpers() {
+    let temp = tempfile::tempdir().unwrap();
+    let cases = [
+        (
+            ".pi/settings.json",
+            r#"{"defaultThinkingLevel":"invalid"}"#,
+            "pi",
+            "PI-CFG-002",
+            [
+                "Configuration field",
+                "El campo de configuración",
+                "配置字段",
+            ],
+        ),
+        (
+            ".pi/models.json",
+            "{",
+            "pi",
+            "PI-CFG-001",
+            [
+                "Invalid configuration JSON",
+                "JSON de configuración no válido",
+                "配置 JSON 无效",
+            ],
+        ),
+        (
+            ".agents/hooks.json",
+            r#"{"review":{"UnknownEvent":[]}}"#,
+            "antigravity",
+            "AGY-HK-002",
+            [
+                "Unrecognized Antigravity",
+                "Evento de ciclo de vida de Antigravity",
+                "无法识别 Antigravity",
+            ],
+        ),
+        (
+            ".agents/agents/review.md",
+            "Missing frontmatter.",
+            "antigravity",
+            "AGY-AG-001",
+            [
+                "Antigravity customization",
+                "La personalización de Antigravity",
+                "Antigravity 自定义配置",
+            ],
+        ),
+        (
+            ".agents/rules/review.md",
+            "Missing frontmatter.",
+            "antigravity",
+            "AGY-RL-001",
+            [
+                "Antigravity customization",
+                "La personalización de Antigravity",
+                "Antigravity 自定义配置",
+            ],
+        ),
+        (
+            ".gemini/antigravity-cli/settings.json",
+            r#"{"agentMode":"invalid"}"#,
+            "antigravity",
+            "AGY-CFG-002",
+            [
+                "Antigravity setting violates",
+                "La opción de Antigravity",
+                "Antigravity 设置不符合",
+            ],
+        ),
+        (
+            ".grok/config.toml",
+            "[mcp_servers.bad]\ncommand=''\n",
+            "grok-code",
+            "GRK-MCP-001",
+            [
+                "Grok MCP server needs",
+                "El servidor MCP de Grok requiere",
+                "Grok MCP 服务器需要",
+            ],
+        ),
+        (
+            ".grok/plugins/review/plugin.json",
+            r#"{"name":42}"#,
+            "grok-code",
+            "GRK-PL-001",
+            ["Grok field violates", "El campo de Grok", "Grok 字段不符合"],
+        ),
+    ];
+    for (name, content, tool, rule, messages) in cases {
+        let path = temp.path().join(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, content).unwrap();
+        for (locale, expected) in ["en", "es", "zh-CN"].into_iter().zip(messages) {
+            let output = agnix()
+                .arg(&path)
+                .args(["--target", tool, "--locale", locale, "--format", "text"])
+                .output()
+                .unwrap();
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            assert!(
+                stdout.contains(expected),
+                "{tool} {locale} {rule} {name}: {stdout}"
+            );
+            assert!(
+                !stdout.contains("%{") && !stdout.contains("rules."),
+                "{stdout}"
+            );
+        }
+    }
+}
+
+#[test]
 fn test_locale_flag_switches_output_to_chinese() {
     use std::fs;
 

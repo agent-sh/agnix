@@ -10,6 +10,7 @@ use crate::{
     rules::config_json::JsonCx,
     schemas::kiro_json::{JsonNode, JsonValue, parse_json_document},
 };
+use rust_i18n::t;
 use serde_json::Value;
 use std::sync::LazyLock;
 
@@ -139,12 +140,15 @@ pub(crate) fn json_document(
         Ok(document) => document,
         Err(error) => {
             if cx.enabled(rule) {
+                let key = rule.to_ascii_lowercase().replace('-', "_");
+                let message_key = format!("rules.{key}.parse_error");
+                let suggestion_key = format!("rules.{key}.parse_suggestion");
                 cx.push_at(
                     DiagnosticLevel::Error,
                     rule,
                     (error.line, error.column),
-                    "Invalid configuration JSON.",
-                    "Correct the JSON syntax; this configuration cannot be loaded.",
+                    t!(&message_key).as_ref(),
+                    t!(&suggestion_key).as_ref(),
                 );
             }
             return None;
@@ -153,12 +157,15 @@ pub(crate) fn json_document(
     let value = node_value(&document.root);
     if !value.is_object() {
         if cx.enabled(rule) {
+            let key = rule.to_ascii_lowercase().replace('-', "_");
+            let message_key = format!("rules.{key}.root_object");
+            let suggestion_key = format!("rules.{key}.root_object_suggestion");
             cx.push(
                 DiagnosticLevel::Error,
                 rule,
                 (document.root.start, document.root.end),
-                "Configuration must contain a JSON object.",
-                "Use an object with the fields documented for this configuration file.",
+                t!(&message_key).as_ref(),
+                t!(&suggestion_key).as_ref(),
             );
         }
         return None;
@@ -215,6 +222,9 @@ pub(crate) fn check_schema(
     if !cx.enabled(rule) {
         return;
     }
+    let key = rule.to_ascii_lowercase().replace('-', "_");
+    let message_key = format!("rules.{key}.schema_message");
+    let suggestion_key = format!("rules.{key}.schema_suggestion");
     for issue in schema.issues(value) {
         let field = if issue.pointer.is_empty() {
             "/"
@@ -225,11 +235,12 @@ pub(crate) fn check_schema(
             DiagnosticLevel::Error,
             rule,
             pointer_span(root, &issue.pointer),
-            format!(
-                "Configuration field {field} violates the documented {} constraint.",
-                issue.keyword
+            t!(
+                &message_key,
+                field = field,
+                keyword = issue.keyword.as_str()
             ),
-            "Use the value types and choices in the tool's configuration reference.",
+            t!(&suggestion_key).as_ref(),
         );
     }
 }

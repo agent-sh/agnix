@@ -11,6 +11,7 @@ use crate::{
     },
     schemas::kiro_json::JsonNode,
 };
+use rust_i18n::t;
 use serde_json::Value;
 use std::{collections::HashSet, path::Path};
 
@@ -79,9 +80,15 @@ impl Validator for AntigravityValidator {
                             1,
                             1,
                             "AGY-RL-003",
-                            "Antigravity truncates rule files after 24,000 expanded bytes.",
+                            t!("rules.agy_rl_003.antigravity_truncates_rule_files_after_24_000")
+                                .as_ref(),
                         )
-                        .with_suggestion("Split the instructions into smaller modular rules."),
+                        .with_suggestion(
+                            t!(
+                                "rules.agy_rl_003.split_the_instructions_into_smaller_modular_rules"
+                            )
+                            .as_ref(),
+                        ),
                     ];
                 }
                 return Vec::new();
@@ -113,8 +120,10 @@ impl Validator for AntigravityValidator {
                         "AGY-CFG-002",
                         "/cliRemoteControlHostname",
                         DiagnosticLevel::Error,
-                        "Antigravity CLI remote-control hostname must be a string.",
-                        "Use the daemon hostname setting documented in Remote Control.",
+                        t!("rules.agy_cfg_002.antigravity_cli_remote_control_hostname_must_be")
+                            .as_ref(),
+                        t!("rules.agy_cfg_002.use_the_daemon_hostname_setting_documented_in")
+                            .as_ref(),
                     );
                 }
             }
@@ -128,8 +137,11 @@ impl Validator for AntigravityValidator {
                             "AGY-CFG-003",
                             &format!("/{key}"),
                             DiagnosticLevel::Warning,
-                            "Antigravity CLI does not load this customization from settings.json.",
-                            "Move hooks to .agents/hooks.json or ~/.gemini/config/hooks.json; put servers in mcp_config.json.",
+                            t!(
+                                "rules.agy_cfg_003.antigravity_cli_does_not_load_this_customization"
+                            )
+                            .as_ref(),
+                            t!("rules.agy_cfg_003.move_hooks_to_agents_hooks_json_or").as_ref(),
                         );
                     }
                 }
@@ -147,8 +159,8 @@ impl Validator for AntigravityValidator {
                                         "AGY-CFG-004",
                                         &format!("/permissions/{list}/{index}"),
                                         DiagnosticLevel::Warning,
-                                        "Antigravity ignores this malformed permission resource.",
-                                        "Use action(target), without a space before (, and a documented CLI action.",
+                                        t!("rules.agy_cfg_004.antigravity_ignores_this_malformed_permission_resource").as_ref(),
+                                        t!("rules.agy_cfg_004.use_action_target_without_a_space_before").as_ref(),
                                     );
                                 }
                             }
@@ -165,6 +177,11 @@ impl Validator for AntigravityValidator {
                         matches!(error.keyword.as_str(), "additionalProperties" | "required")
                             || (error.pointer == "/logo"
                                 && value.get("logo").is_some_and(Value::is_string));
+                    let message = if advisory {
+                        t!("rules.agy_pl_002.plugin_metadata_is_ignored_or_incomplete_for")
+                    } else {
+                        t!("rules.agy_pl_001.invalid_antigravity_plugin_manifest_field")
+                    };
                     issue(
                         &mut cx,
                         &root,
@@ -175,12 +192,8 @@ impl Validator for AntigravityValidator {
                         } else {
                             DiagnosticLevel::Error
                         },
-                        if advisory {
-                            "Plugin metadata is ignored or incomplete for CLI installation."
-                        } else {
-                            "Invalid Antigravity plugin manifest field."
-                        },
-                        "Use the native plugin schema; name is required for CLI installation and version can be any string.",
+                        message.as_ref(),
+                        t!("rules.agy_pl_001.use_the_native_plugin_schema_name_is").as_ref(),
                     );
                 }
             }
@@ -265,8 +278,9 @@ fn settings_schema(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) -> HashS
                 "AGY-CFG-004",
                 &error.pointer,
                 DiagnosticLevel::Warning,
-                "Antigravity ignores this malformed permission resource.",
-                "Use a documented action(target) string without a space before (.",
+                t!("rules.agy_cfg_004.antigravity_ignores_this_malformed_permission_resource")
+                    .as_ref(),
+                t!("rules.agy_cfg_004.use_a_documented_action_target_string_without").as_ref(),
             );
         } else if formatter_fallback {
             issue(
@@ -275,8 +289,8 @@ fn settings_schema(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) -> HashS
                 "AGY-CFG-005",
                 &error.pointer,
                 DiagnosticLevel::Warning,
-                "Antigravity uses the XML tool formatter for this unrecognized formatter value.",
-                "Use a documented formatter value, or omit the field to use the default.",
+                t!("rules.agy_cfg_005.antigravity_uses_the_xml_tool_formatter_for").as_ref(),
+                t!("rules.agy_cfg_005.use_a_documented_formatter_value_or_omit").as_ref(),
             );
         } else {
             issue(
@@ -285,11 +299,12 @@ fn settings_schema(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) -> HashS
                 "AGY-CFG-002",
                 &error.pointer,
                 DiagnosticLevel::Error,
-                &format!(
-                    "Antigravity setting violates the documented {} constraint.",
-                    error.keyword
-                ),
-                "Use the types and values in the Antigravity CLI settings reference.",
+                t!(
+                    "rules.agy_cfg_002.antigravity_setting_violates_the_documented_constraint",
+                    keyword = error.keyword.as_str()
+                )
+                .as_ref(),
+                t!("rules.agy_cfg_002.use_the_types_and_values_in_the").as_ref(),
             );
         }
     }
@@ -305,8 +320,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "AGY-MCP-001",
                 "/mcpServers",
                 DiagnosticLevel::Error,
-                "mcpServers must be an object.",
-                "Map server names to stdio or Streamable HTTP server definitions.",
+                t!("rules.agy_mcp_001.mcpservers_must_be_an_object").as_ref(),
+                t!("rules.agy_mcp_001.map_server_names_to_stdio_or_streamable").as_ref(),
             );
         }
         return;
@@ -320,8 +335,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "AGY-MCP-001",
                 &base,
                 DiagnosticLevel::Error,
-                "An Antigravity MCP server must be an object.",
-                "Use command for stdio or serverUrl/url for Streamable HTTP.",
+                t!("rules.agy_mcp_001.an_antigravity_mcp_server_must_be_an").as_ref(),
+                t!("rules.agy_mcp_001.use_command_for_stdio_or_serverurl_url").as_ref(),
             );
             continue;
         };
@@ -339,8 +354,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "AGY-MCP-002",
                 &base,
                 DiagnosticLevel::Error,
-                "Antigravity CLI does not support httpUrl or legacy HTTP+SSE MCP transport.",
-                "Use a Streamable HTTP endpoint under serverUrl or url.",
+                t!("rules.agy_mcp_002.antigravity_cli_does_not_support_httpurl_or").as_ref(),
+                t!("rules.agy_mcp_002.use_a_streamable_http_endpoint_under_serverurl").as_ref(),
             );
         }
         if command.is_none() == remote.is_none() {
@@ -350,8 +365,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "AGY-MCP-001",
                 &base,
                 DiagnosticLevel::Error,
-                "An MCP server needs one stdio command or Streamable HTTP URL.",
-                "Set command for a local process, or serverUrl/url for a remote endpoint.",
+                t!("rules.agy_mcp_001.an_mcp_server_needs_one_stdio_command").as_ref(),
+                t!("rules.agy_mcp_001.set_command_for_a_local_process_or").as_ref(),
             );
         }
         for (key, entry) in object {
@@ -374,8 +389,9 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                     "AGY-MCP-001",
                     &format!("{base}/{}", escaped(key)),
                     DiagnosticLevel::Error,
-                    "Invalid Antigravity MCP server option.",
-                    "Use the documented types; timeoutSeconds accepts zero and negative integers.",
+                    t!("rules.agy_mcp_001.invalid_antigravity_mcp_server_option").as_ref(),
+                    t!("rules.agy_mcp_001.use_the_documented_types_timeoutseconds_accepts_zero")
+                        .as_ref(),
                 );
             }
         }
@@ -390,8 +406,8 @@ fn mcp(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                     "AGY-MCP-001",
                     &base,
                     DiagnosticLevel::Error,
-                    "MCP remote endpoint must be an HTTP or HTTPS URL.",
-                    "Use a Streamable HTTP server URL or supported environment expansion.",
+                    t!("rules.agy_mcp_001.mcp_remote_endpoint_must_be_an_http").as_ref(),
+                    t!("rules.agy_mcp_001.use_a_streamable_http_server_url_or").as_ref(),
                 );
             }
         }
@@ -420,8 +436,8 @@ fn hooks(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "AGY-HK-001",
                 &base,
                 DiagnosticLevel::Error,
-                "An Antigravity named hook must map events to handlers.",
-                "Use a named hook object with native Antigravity event keys.",
+                t!("rules.agy_hk_001.an_antigravity_named_hook_must_map_events").as_ref(),
+                t!("rules.agy_hk_001.use_a_named_hook_object_with_native").as_ref(),
             );
             continue;
         };
@@ -435,8 +451,8 @@ fn hooks(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                         "AGY-HK-001",
                         &pointer,
                         DiagnosticLevel::Error,
-                        "Hook enabled must be a boolean.",
-                        "Use true or false.",
+                        t!("rules.agy_hk_001.hook_enabled_must_be_a_boolean").as_ref(),
+                        t!("rules.agy_hk_001.use_true_or_false").as_ref(),
                     );
                 }
                 continue;
@@ -448,8 +464,8 @@ fn hooks(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                     "AGY-HK-002",
                     &pointer,
                     DiagnosticLevel::Warning,
-                    "Unrecognized Antigravity lifecycle event.",
-                    "Use SessionStart, PreToolUse, PostToolUse, PreInvocation, PostInvocation or Stop.",
+                    t!("rules.agy_hk_002.unrecognized_antigravity_lifecycle_event").as_ref(),
+                    t!("rules.agy_hk_002.use_sessionstart_pretooluse_posttooluse_preinvocation_postinvocation_or").as_ref(),
                 );
                 continue;
             }
@@ -460,8 +476,8 @@ fn hooks(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                     "AGY-HK-001",
                     &pointer,
                     DiagnosticLevel::Error,
-                    "Hook event handlers must be an array.",
-                    "Use matcher groups for tool events and direct handlers for other events.",
+                    t!("rules.agy_hk_001.hook_event_handlers_must_be_an_array").as_ref(),
+                    t!("rules.agy_hk_001.use_matcher_groups_for_tool_events_and").as_ref(),
                 );
                 continue;
             };
@@ -478,8 +494,8 @@ fn hooks(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                             "AGY-HK-001",
                             &location,
                             DiagnosticLevel::Error,
-                            "A hook matcher must be a string.",
-                            "Use a tool-name expression, *, or omit matcher.",
+                            t!("rules.agy_hk_001.a_hook_matcher_must_be_a_string").as_ref(),
+                            t!("rules.agy_hk_001.use_a_tool_name_expression_or_omit").as_ref(),
                         );
                     }
                     match item.get("hooks").and_then(Value::as_array) {
@@ -494,8 +510,9 @@ fn hooks(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                             "AGY-HK-001",
                             &location,
                             DiagnosticLevel::Error,
-                            "Tool hook matcher group needs a hooks array.",
-                            "Put command handlers inside the matcher's hooks array.",
+                            t!("rules.agy_hk_001.tool_hook_matcher_group_needs_a_hooks").as_ref(),
+                            t!("rules.agy_hk_001.put_command_handlers_inside_the_matcher_s")
+                                .as_ref(),
                         ),
                     }
                 } else {
@@ -524,8 +541,8 @@ fn handler_config(cx: &mut JsonCx<'_>, root: &JsonNode, pointer: &str, value: &V
             "AGY-HK-001",
             pointer,
             DiagnosticLevel::Error,
-            "Invalid Antigravity command hook handler.",
-            "Set a non-empty command, optional type command, and an integer timeout in seconds.",
+            t!("rules.agy_hk_001.invalid_antigravity_command_hook_handler").as_ref(),
+            t!("rules.agy_hk_001.set_a_non_empty_command_optional_type").as_ref(),
         );
     }
 }
@@ -547,8 +564,9 @@ fn keybindings(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "AGY-KB-001",
                 &format!("/{}", escaped(action)),
                 DiagnosticLevel::Warning,
-                "Invalid or protected Antigravity keybinding override.",
-                "Map actions to arrays of hotkey strings; cli.exit and cli.enter cannot be disabled.",
+                t!("rules.agy_kb_001.invalid_or_protected_antigravity_keybinding_override")
+                    .as_ref(),
+                t!("rules.agy_kb_001.map_actions_to_arrays_of_hotkey_strings").as_ref(),
             );
         }
     }
@@ -579,8 +597,8 @@ fn rule_registry(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
                 "AGY-RL-004",
                 &format!("/{key}"),
                 DiagnosticLevel::Error,
-                "Invalid Antigravity rule registry entry.",
-                "Use arrays of objects with path and optional include_only/exclude string lists.",
+                t!("rules.agy_rl_004.invalid_antigravity_rule_registry_entry").as_ref(),
+                t!("rules.agy_rl_004.use_arrays_of_objects_with_path_and").as_ref(),
             );
         }
     }
@@ -687,17 +705,12 @@ fn markdown(
     };
     let Some(value) = value else {
         if config.is_rule_enabled(syntax) {
+            let key = syntax.to_ascii_lowercase().replace('-', "_");
+            let message_key = format!("rules.{key}.frontmatter_error");
+            let suggestion_key = format!("rules.{key}.frontmatter_suggestion");
             diagnostics.push(
-                Diagnostic::error(
-                    path.to_path_buf(),
-                    1,
-                    1,
-                    syntax,
-                    "Antigravity customization needs valid YAML frontmatter.",
-                )
-                .with_suggestion(
-                    "Add a complete frontmatter object with the required native fields.",
-                ),
+                Diagnostic::error(path.to_path_buf(), 1, 1, syntax, t!(&message_key).as_ref())
+                    .with_suggestion(t!(&suggestion_key).as_ref()),
             );
         }
         return diagnostics;
@@ -727,8 +740,8 @@ fn markdown(
                 emit(
                     fields,
                     key,
-                    "Antigravity agents need a non-empty name and description.",
-                    "Set both fields in the agent frontmatter.",
+                    t!("rules.agy_ag_002.antigravity_agents_need_a_non_empty_name").as_ref(),
+                    t!("rules.agy_ag_002.set_both_fields_in_the_agent_frontmatter").as_ref(),
                 );
             }
         }
@@ -752,8 +765,8 @@ fn markdown(
                 emit(
                     fields,
                     key,
-                    "Invalid Antigravity agent frontmatter field.",
-                    "Use documented field types; model can be an alias or a full model identifier.",
+                    t!("rules.agy_ag_002.invalid_antigravity_agent_frontmatter_field").as_ref(),
+                    t!("rules.agy_ag_002.use_documented_field_types_model_can_be").as_ref(),
                 );
             }
         }
@@ -764,8 +777,8 @@ fn markdown(
             emit(
                 syntax,
                 "trigger",
-                "Antigravity ignores a rule without a recognized trigger.",
-                "Use always_on, model_decision, glob or manual.",
+                t!("rules.agy_rl_001.antigravity_ignores_a_rule_without_a_recognized").as_ref(),
+                t!("rules.agy_rl_001.use_always_on_model_decision_glob_or").as_ref(),
             );
         }
         if trigger == Some("model_decision")
@@ -777,8 +790,8 @@ fn markdown(
             emit(
                 fields,
                 "description",
-                "A model_decision rule needs a description.",
-                "Describe when the agent should load the rule.",
+                t!("rules.agy_rl_002.a_model_decision_rule_needs_a_description").as_ref(),
+                t!("rules.agy_rl_002.describe_when_the_agent_should_load_the").as_ref(),
             );
         }
         if trigger == Some("glob")
@@ -791,8 +804,8 @@ fn markdown(
             emit(
                 fields,
                 "globs",
-                "A glob rule needs globs or glob as a non-empty string.",
-                "Use a quoted comma-separated string of file patterns.",
+                t!("rules.agy_rl_002.a_glob_rule_needs_globs_or_glob").as_ref(),
+                t!("rules.agy_rl_002.use_a_quoted_comma_separated_string_of").as_ref(),
             );
         }
         for key in ["description", "globs", "glob"] {
@@ -800,8 +813,9 @@ fn markdown(
                 emit(
                     fields,
                     key,
-                    "Rule descriptions and glob expressions must be strings.",
-                    "Use the native Antigravity rule frontmatter types.",
+                    t!("rules.agy_rl_002.rule_descriptions_and_glob_expressions_must_be").as_ref(),
+                    t!("rules.agy_rl_002.use_the_native_antigravity_rule_frontmatter_types")
+                        .as_ref(),
                 );
             }
         }
@@ -809,8 +823,8 @@ fn markdown(
             emit(
                 "AGY-RL-003",
                 "trigger",
-                "Antigravity truncates rule files after 24,000 bytes.",
-                "Split the rule into smaller files or use model_decision disclosure.",
+                t!("rules.agy_rl_003.antigravity_truncates_rule_files_after_24_000").as_ref(),
+                t!("rules.agy_rl_003.split_the_rule_into_smaller_files_or").as_ref(),
             );
         }
     }

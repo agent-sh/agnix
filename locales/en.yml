@@ -2,6 +2,283 @@
 # Rules - Validator diagnostic messages, suggestions, assumptions, fixes
 # ===========================================================================
 rules:
+  agy_ag_001:
+    frontmatter_error: "Antigravity customization needs valid YAML frontmatter."
+    frontmatter_suggestion: "Add a complete frontmatter object with the required native fields."
+  agy_ag_002:
+    antigravity_agents_need_a_non_empty_name: "Antigravity agents need a non-empty name and description."
+    set_both_fields_in_the_agent_frontmatter: "Set both fields in the agent frontmatter."
+    invalid_antigravity_agent_frontmatter_field: "Invalid Antigravity agent frontmatter field."
+    use_documented_field_types_model_can_be: "Use documented field types; model can be an alias or a full model identifier."
+  agy_cfg_001:
+    parse_error: "Invalid configuration JSON."
+    parse_suggestion: "Correct the JSON syntax; this configuration cannot be loaded."
+    root_object: "Configuration must contain a JSON object."
+    root_object_suggestion: "Use an object with the fields documented for this configuration file."
+  agy_cfg_002:
+    antigravity_cli_remote_control_hostname_must_be: "Antigravity CLI remote-control hostname must be a string."
+    use_the_daemon_hostname_setting_documented_in: "Use the daemon hostname setting documented in Remote Control."
+    antigravity_setting_violates_the_documented_constraint: "Antigravity setting violates the documented %{keyword} constraint."
+    use_the_types_and_values_in_the: "Use the types and values in the Antigravity CLI settings reference."
+  agy_cfg_003:
+    antigravity_cli_does_not_load_this_customization: "Antigravity CLI does not load this customization from settings.json."
+    move_hooks_to_agents_hooks_json_or: "Move hooks to .agents/hooks.json or ~/.gemini/config/hooks.json; put servers in mcp_config.json."
+  agy_cfg_004:
+    antigravity_ignores_this_malformed_permission_resource: "Antigravity ignores this malformed permission resource."
+    use_action_target_without_a_space_before: "Use action(target), without a space before (, and a documented CLI action."
+    use_a_documented_action_target_string_without: "Use a documented action(target) string without a space before (."
+  agy_cfg_005:
+    antigravity_uses_the_xml_tool_formatter_for: "Antigravity uses the XML tool formatter for this unrecognized formatter value."
+    use_a_documented_formatter_value_or_omit: "Use a documented formatter value, or omit the field to use the default."
+  agy_hk_001:
+    an_antigravity_named_hook_must_map_events: "An Antigravity named hook must map events to handlers."
+    use_a_named_hook_object_with_native: "Use a named hook object with native Antigravity event keys."
+    hook_enabled_must_be_a_boolean: "Hook enabled must be a boolean."
+    use_true_or_false: "Use true or false."
+    hook_event_handlers_must_be_an_array: "Hook event handlers must be an array."
+    use_matcher_groups_for_tool_events_and: "Use matcher groups for tool events and direct handlers for other events."
+    a_hook_matcher_must_be_a_string: "A hook matcher must be a string."
+    use_a_tool_name_expression_or_omit: "Use a tool-name expression, *, or omit matcher."
+    tool_hook_matcher_group_needs_a_hooks: "Tool hook matcher group needs a hooks array."
+    put_command_handlers_inside_the_matcher_s: "Put command handlers inside the matcher's hooks array."
+    invalid_antigravity_command_hook_handler: "Invalid Antigravity command hook handler."
+    set_a_non_empty_command_optional_type: "Set a non-empty command, optional type command, and an integer timeout in seconds."
+  agy_hk_002:
+    unrecognized_antigravity_lifecycle_event: "Unrecognized Antigravity lifecycle event."
+    use_sessionstart_pretooluse_posttooluse_preinvocation_postinvocation_or: "Use SessionStart, PreToolUse, PostToolUse, PreInvocation, PostInvocation or Stop."
+  agy_kb_001:
+    invalid_or_protected_antigravity_keybinding_override: "Invalid or protected Antigravity keybinding override."
+    map_actions_to_arrays_of_hotkey_strings: "Map actions to arrays of hotkey strings; cli.exit and cli.enter cannot be disabled."
+  agy_mcp_001:
+    mcpservers_must_be_an_object: "mcpServers must be an object."
+    map_server_names_to_stdio_or_streamable: "Map server names to stdio or Streamable HTTP server definitions."
+    an_antigravity_mcp_server_must_be_an: "An Antigravity MCP server must be an object."
+    use_command_for_stdio_or_serverurl_url: "Use command for stdio or serverUrl/url for Streamable HTTP."
+    an_mcp_server_needs_one_stdio_command: "An MCP server needs one stdio command or Streamable HTTP URL."
+    set_command_for_a_local_process_or: "Set command for a local process, or serverUrl/url for a remote endpoint."
+    invalid_antigravity_mcp_server_option: "Invalid Antigravity MCP server option."
+    use_the_documented_types_timeoutseconds_accepts_zero: "Use the documented types; timeoutSeconds accepts zero and negative integers."
+    mcp_remote_endpoint_must_be_an_http: "MCP remote endpoint must be an HTTP or HTTPS URL."
+    use_a_streamable_http_server_url_or: "Use a Streamable HTTP server URL or supported environment expansion."
+  agy_mcp_002:
+    antigravity_cli_does_not_support_httpurl_or: "Antigravity CLI does not support httpUrl or legacy HTTP+SSE MCP transport."
+    use_a_streamable_http_endpoint_under_serverurl: "Use a Streamable HTTP endpoint under serverUrl or url."
+  agy_pl_001:
+    invalid_antigravity_plugin_manifest_field: "Invalid Antigravity plugin manifest field."
+    use_the_native_plugin_schema_name_is: "Use the native plugin schema; name is required for CLI installation and version can be any string."
+  agy_pl_002:
+    plugin_metadata_is_ignored_or_incomplete_for: "Plugin metadata is ignored or incomplete for CLI installation."
+  agy_rl_001:
+    antigravity_ignores_a_rule_without_a_recognized: "Antigravity ignores a rule without a recognized trigger."
+    use_always_on_model_decision_glob_or: "Use always_on, model_decision, glob or manual."
+    frontmatter_error: "Antigravity customization needs valid YAML frontmatter."
+    frontmatter_suggestion: "Add a complete frontmatter object with the required native fields."
+  agy_rl_002:
+    antigravity_customization_needs_valid_yaml_frontmatter: "Antigravity customization needs valid YAML frontmatter."
+    add_a_complete_frontmatter_object_with_the: "Add a complete frontmatter object with the required native fields."
+    a_model_decision_rule_needs_a_description: "A model_decision rule needs a description."
+    describe_when_the_agent_should_load_the: "Describe when the agent should load the rule."
+    a_glob_rule_needs_globs_or_glob: "A glob rule needs globs or glob as a non-empty string."
+    use_a_quoted_comma_separated_string_of: "Use a quoted comma-separated string of file patterns."
+    rule_descriptions_and_glob_expressions_must_be: "Rule descriptions and glob expressions must be strings."
+    use_the_native_antigravity_rule_frontmatter_types: "Use the native Antigravity rule frontmatter types."
+  agy_rl_003:
+    antigravity_truncates_rule_files_after_24_000: "Antigravity truncates rule files after 24,000 expanded bytes."
+    split_the_instructions_into_smaller_modular_rules: "Split the instructions into smaller modular rules."
+    split_the_rule_into_smaller_files_or: "Split the rule into smaller files or use model_decision disclosure."
+  agy_rl_004:
+    invalid_antigravity_rule_registry_entry: "Invalid Antigravity rule registry entry."
+    use_arrays_of_objects_with_path_and: "Use arrays of objects with path and optional include_only/exclude string lists."
+  grk_ag_001:
+    grok_agent_needs_valid_yaml_frontmatter: "Grok agent needs valid YAML frontmatter."
+    add_a_complete_agent_metadata_object_with: "Add a complete agent metadata object with name and description."
+  grk_ag_002:
+    invalid_grok_inline_mcp_server_reference: "Invalid Grok inline MCP server reference."
+    use_a_server_name_a_single_name: "Use a server name, a single name-to-config map, or a server object with name."
+    schema_message: "Grok field violates the documented %{keyword} constraint."
+    schema_suggestion: "Use the native Grok configuration field types and values."
+  grk_ag_003:
+    schema_message: "Grok field violates the documented %{keyword} constraint."
+    schema_suggestion: "Use the native Grok configuration field types and values."
+  grk_ag_004:
+    grok_plugin_agents_cannot_use_this_privileged: "Grok plugin agents cannot use this privileged frontmatter setting."
+    configure_trusted_plugin_session_mcp_and_hooks: "Configure trusted plugin/session MCP and hooks outside the agent; plugin agents cannot bypass permissions."
+  grk_cfg_001:
+    invalid_grok_toml_configuration: "Invalid Grok TOML configuration."
+    correct_the_toml_syntax_before_grok_loads: "Correct the TOML syntax before Grok loads this file."
+    parse_error: "Invalid configuration JSON."
+    parse_suggestion: "Correct the JSON syntax; this configuration cannot be loaded."
+    root_object: "Configuration must contain a JSON object."
+    root_object_suggestion: "Use an object with the fields documented for this configuration file."
+  grk_cfg_002:
+    grok_ignores_this_mcp_option_in_project: "Grok ignores this MCP option in project config.toml."
+    only_mcp_max_output_bytes_is_loaded: "Only mcp.max_output_bytes is loaded from project configuration."
+    grok_ignores_this_setting_in_project_config: "Grok ignores this setting in project config.toml."
+    put_user_settings_in_grok_home_config: "Put user settings in $GROK_HOME/config.toml; project files contribute mcp_servers, plugins, permission and mcp.max_output_bytes."
+  grk_cfg_003:
+    grok_field_violates_the_documented_constraint: "Grok field violates the documented %{keyword} constraint."
+    use_the_native_grok_configuration_field_types: "Use the native Grok configuration field types and values."
+    schema_message: "Grok field violates the documented %{keyword} constraint."
+    schema_suggestion: "Use the native Grok configuration field types and values."
+  grk_cfg_004:
+    grok_1_0_69_retired_ui_simple: "Grok 1.0.69 retired ui.simple_mode; it no longer changes the editor."
+    grok_1_0_68_replaced_ui_vim: "Grok 1.0.68 replaced ui.vim_mode with keys.vim; the old key is a legacy alias."
+    grok_1_0_63_retired_memory_v2: "Grok 1.0.63 retired memory_v2.compact_index_enabled."
+    remove_retired_settings_use_keys_vim_off: "Remove retired settings; use keys.vim = off or nav for current vim navigation."
+  grk_cfg_005:
+    grok_honors_the_bypass_permissions_lock_only: "Grok honors the bypass-permissions lock only from root-owned system policy."
+    set_the_lock_in_etc_grok_requirements: "Set the lock in /etc/grok/requirements.toml through your system administrator."
+  grk_cfg_006:
+    grok_version_override_bound_must_be_a: "Grok version override bound must be a semantic version."
+    use_a_complete_major_minor_patch_version: "Use a complete major.minor.patch version string."
+    this_grok_version_range_can_never_apply: "This Grok version range can never apply."
+    put_minimum_version_at_or_below_maximum: "Put minimum_version at or below maximum_version."
+  grk_hk_001:
+    grok_hook_files_need_a_hooks_object: "Grok hook files need a hooks object."
+    put_lifecycle_events_inside_the_hooks_map: "Put lifecycle events inside the hooks map."
+    grok_hooks_must_map_event_names_to: "Grok hooks must map event names to matcher groups."
+    use_the_documented_hooks_object: "Use the documented hooks object."
+    hook_event_must_contain_a_matcher_group: "Hook event must contain a matcher-group array."
+    put_handlers_in_each_group_s_hooks: "Put handlers in each group's hooks array."
+    hook_matcher_must_be_a_string_or: "Hook matcher must be a string or null."
+    use_a_tool_matcher_expression_or_omit: "Use a tool matcher expression, or omit it."
+    hook_matcher_group_needs_a_hooks_array: "Hook matcher group needs a hooks array."
+    add_command_or_http_hook_handlers: "Add command or HTTP hook handlers."
+    invalid_grok_hook_handler: "Invalid Grok hook handler."
+    use_type_command_with_command_or_type: "Use type command with command, or type http with url; timeout is unsigned seconds and args is a string list."
+  grk_hk_002:
+    grok_skips_this_unknown_hook_event: "Grok skips this unknown hook event."
+    use_a_documented_lifecycle_event_or_supported: "Use a documented lifecycle event or supported compatibility alias."
+  grk_hk_003:
+    invalid_grok_hook_matcher_regular_expression: "Invalid Grok hook matcher regular expression."
+    use_a_valid_expression_in_grok_s: "Use a valid expression in Grok's regex dialect, or * to match all tools."
+  grk_mcp_001:
+    grok_mcp_server_declarations_must_be_a: "Grok MCP server declarations must be a map."
+    map_server_names_to_stdio_command_or: "Map server names to stdio command or remote URL configurations."
+    grok_mcp_server_must_be_an_object: "Grok MCP server must be an object."
+    configure_command_args_env_or_url_headers: "Configure command/args/env or url/headers."
+    grok_mcp_server_needs_a_non_empty: "Grok MCP server needs a non-empty command or url."
+    use_command_for_stdio_or_url_for: "Use command for stdio, or url for a remote server."
+    invalid_grok_mcp_server_option_type: "Invalid Grok MCP server option type."
+    use_the_types_documented_in_the_grok: "Use the types documented in the Grok MCP configuration reference."
+  grk_pl_001:
+    invalid_grok_plugin_lsp_server_configuration: "Invalid Grok plugin LSP server configuration."
+    use_the_native_lsp_command_argument_transport: "Use the native LSP command, argument, transport and timeout types."
+    schema_message: "Grok field violates the documented %{keyword} constraint."
+    schema_suggestion: "Use the native Grok configuration field types and values."
+  grk_pl_002:
+    grok_skips_plugin_component_paths_outside_the: "Grok skips plugin component paths outside the plugin root."
+    keep_component_paths_within_the_plugin_directory: "Keep component paths within the plugin directory."
+  grk_sbx_001:
+    grok_custom_profiles_cannot_redefine_a_built: "Grok custom profiles cannot redefine a built-in sandbox profile."
+    choose_a_custom_name_and_extend_a: "Choose a custom name and extend a supported built-in profile."
+  grk_sbx_002:
+    schema_message: "Grok field violates the documented %{keyword} constraint."
+    schema_suggestion: "Use the native Grok configuration field types and values."
+  grk_sk_001:
+    grok_skill_allowed_tools_does_not_grant: "Grok skill allowed-tools does not grant or restrict tools."
+    use_grok_permission_rules_or_an_agent: "Use Grok permission rules or an agent tool policy for tool restrictions."
+  grk_sk_002:
+    grok_treats_only_literal_true_as_enabled: "Grok treats only literal true as enabled for this skill field."
+    use_true_or_false_not_yes_no: "Use true or false, not yes/no or quoted boolean strings."
+  native_contract:
+    invalid_configuration_json: "Invalid configuration JSON."
+    correct_the_json_syntax_this_configuration_cannot: "Correct the JSON syntax; this configuration cannot be loaded."
+    configuration_must_contain_a_json_object: "Configuration must contain a JSON object."
+    use_an_object_with_the_fields_documented: "Use an object with the fields documented for this configuration file."
+    configuration_field_field_violates_the_documented_constraint: "Configuration field %{field} violates the documented %{keyword} constraint."
+    use_the_value_types_and_choices_in: "Use the value types and choices in the tool's configuration reference."
+  pi_cfg_001:
+    pi_models_json_does_not_accept_block: "Pi models.json does not accept block comments."
+    use_line_comments_or_ordinary_json: "Use // line comments or ordinary JSON."
+    parse_error: "Invalid configuration JSON."
+    parse_suggestion: "Correct the JSON syntax; this configuration cannot be loaded."
+    root_object: "Configuration must contain a JSON object."
+    root_object_suggestion: "Use an object with the fields documented for this configuration file."
+  pi_cfg_002:
+    schema_message: "Configuration field %{field} violates the documented %{keyword} constraint."
+    schema_suggestion: "Use the value types and choices in the tool's configuration reference."
+  pi_cfg_003:
+    pi_ignores_this_setting_in_project_configuration: "Pi ignores this setting in project configuration."
+    move_this_setting_to_the_agent_directory: "Move this setting to the agent-directory settings.json."
+    pi_loads_models_json_from_its_agent: "Pi loads models.json from its agent directory, not the project .pi directory."
+    put_provider_and_model_definitions_in_agent: "Put provider and model definitions in <agent-dir>/models.json."
+    pi_loads_keybindings_json_from_its_agent: "Pi loads keybindings.json from its agent directory."
+    put_keybindings_in_agent_dir_keybindings_json: "Put keybindings in <agent-dir>/keybindings.json and run /reload."
+  pi_kb_001:
+    schema_message: "Configuration field %{field} violates the documented %{keyword} constraint."
+    schema_suggestion: "Use the value types and choices in the tool's configuration reference."
+  pi_mcp_001:
+    autoenablecodemode_must_be_a_boolean: "autoEnableCodemode must be a boolean."
+    use_true_or_false: "Use true or false."
+    mcpservers_must_be_an_object_mapping_server: "mcpServers must be an object mapping server names to configurations."
+    use_the_documented_mcpservers_map: "Use the documented mcpServers map."
+  pi_mcp_002:
+    invalid_pi_mcp_server_name: "Invalid Pi MCP server name."
+    use_ascii_letters_digits_underscores_and_hyphens: "Use ASCII letters, digits, underscores and hyphens."
+    an_mcp_server_configuration_must_be_an: "An MCP server configuration must be an object."
+    define_a_stdio_server_http_server_or: "Define a stdio server, HTTP server or project override."
+    a_project_mcp_override_can_only_set: "A project MCP override can only set enabled, exposure and toolExposure."
+    define_a_complete_server_or_keep_only: "Define a complete server, or keep only the inherited server's override fields."
+    invalid_pi_mcp_server_option: "Invalid Pi MCP server option."
+    use_the_documented_boolean_string_exposure_or: "Use the documented boolean, string, exposure or positive timeout value."
+    pi_mcp_transport_type_must_be_a: "Pi MCP transport type must be a string when present."
+    omit_type_for_inference_or_use_a: "Omit type for inference, or use a documented transport name."
+    mcp_url_must_use_http_or_https: "MCP URL must use HTTP or HTTPS."
+    use_a_streamable_http_mcp_endpoint: "Use a Streamable HTTP MCP endpoint."
+    mcp_headers_must_map_names_to_strings: "MCP headers must map names to strings."
+    use_string_header_values_environment_references_or: "Use string header values, environment references or command references."
+    invalid_stdio_mcp_option: "Invalid stdio MCP option."
+    use_a_string_array_for_args_a: "Use a string array for args, a string map for env, and a string for cwd."
+    pi_mcp_server_needs_command_stdio_or: "Pi MCP server needs command (stdio) or url (Streamable HTTP)."
+    legacy_sse_is_unsupported_select_the_matching: "Legacy SSE is unsupported; select the matching type and transport fields."
+  pi_mcp_003:
+    project_mcp_configuration_cannot_select_global_login: "Project MCP configuration cannot select global login credentials."
+    configure_auth_provider_only_in_the_global: "Configure auth.provider only in the global agent-directory mcp.json."
+    mcp_provider_authentication_needs_a_provider_name: "MCP provider authentication needs a provider name and HTTPS or a loopback URL."
+    use_auth_provider_with_an_https_or: "Use auth.provider with an HTTPS or local-loopback endpoint in global configuration."
+  pi_mcp_004:
+    pi_mcp_server_names_collide_after_hyphens: "Pi MCP server names collide after hyphens become underscores."
+    give_the_servers_distinct_normalized_names: "Give the servers distinct normalized names."
+  pi_mcp_005:
+    mcp_oauth_settings_must_be_an_object: "MCP OAuth settings must be an object."
+    use_the_documented_oauth_client_fields: "Use the documented OAuth client fields."
+    invalid_pi_mcp_oauth_callback_or_client: "Invalid Pi MCP OAuth callback or client registration settings."
+    use_http_loopback_callbacks_matching_callback_ports: "Use HTTP loopback callbacks, matching callback ports, and the documented dcr/cimd client options."
+  pi_mdl_001:
+    schema_message: "Configuration field %{field} violates the documented %{keyword} constraint."
+    schema_suggestion: "Use the value types and choices in the tool's configuration reference."
+  pi_mdl_002:
+    pi_oauth_provider_configuration_requires_an_explicit: "Pi OAuth provider configuration requires an explicit baseUrl."
+    set_the_provider_s_baseurl_when_oauth: "Set the provider's baseUrl when oauth is configured."
+    pi_rejects_an_empty_provider_configuration_with: "Pi rejects an empty provider configuration with no model or connection override."
+    define_models_baseurl_headers_compat_modeloverrides_or: "Define models, baseUrl, headers, compat, modelOverrides or authentication overrides, or remove the provider entry."
+  pi_pkg_001:
+    a_pi_package_manifest_must_be_an: "A Pi package manifest must be an object."
+    declare_resource_paths_under_the_package_json: "Declare resource paths under the package.json pi object."
+    pi_package_resources_must_be_arrays_of: "Pi package resources must be arrays of path strings."
+    use_paths_or_glob_exclusion_patterns_relative: "Use paths or glob/exclusion patterns relative to the package root."
+    pi_gallery_media_must_be_a_path: "Pi gallery media must be a path string."
+    set_a_relative_image_video_path_or: "Set a relative image/video path, or omit this optional field."
+  pi_pkg_002:
+    a_host_provided_pi_package_is_installed: "A host-provided Pi package is installed as a runtime dependency."
+    move_the_host_package_to_peerdependencies_with: "Move the host package to peerDependencies with a * range so extensions share Pi's runtime modules."
+  pi_pr_001:
+    invalid_pi_prompt_frontmatter: "Invalid Pi prompt frontmatter."
+    use_valid_yaml_with_optional_string_description: "Use valid YAML with optional string description and argument-hint fields."
+  pi_pr_002:
+    pi_ignores_non_string_prompt_description_and: "Pi ignores non-string prompt description and argument-hint fields."
+    use_strings_or_omit_the_fields_to: "Use strings, or omit the fields to use the body's description fallback."
+  pi_th_001:
+    schema_message: "Configuration field %{field} violates the documented %{keyword} constraint."
+    schema_suggestion: "Use the value types and choices in the tool's configuration reference."
+  pi_th_002:
+    pi_theme_names_cannot_be_system_or: "Pi theme names cannot be system or contain a slash."
+    choose_a_unique_theme_name_and_use: "Choose a unique theme name and use it as the filename."
+    invalid_pi_theme_color_literal: "Invalid Pi theme color literal."
+    use_rgb_rrggbb_or_a_supported_oklch: "Use #rgb/#rrggbb or a supported OKLCH/OKHSL value with finite channels and valid ranges."
+    pi_theme_references_a_missing_or_cyclic: "Pi theme references a missing or cyclic color variable."
+    define_the_variable_without_a_cycle_or: "Define the variable without a cycle, or use a documented literal color."
   kr_hk_014:
     alias: "Hook trigger alias %{trigger} is accepted; the canonical name is %{canonical}"
     alias_suggestion: "Use the canonical PascalCase trigger when editing V3 hooks. Kiro maps the alias to it, so both behave the same."

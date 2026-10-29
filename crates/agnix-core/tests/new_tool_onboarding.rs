@@ -643,6 +643,106 @@ fn grok_plugin_helper_files_and_component_directories_are_not_config_documents()
 }
 
 #[test]
+fn selecting_a_native_tool_does_not_reclassify_foreign_plugin_namespaces() {
+    for tool in ["antigravity", "grok-code"] {
+        let mut config = LintConfig::default();
+        config.set_tools(vec![tool.into()]);
+        for namespace in [
+            ".claude-plugin",
+            ".codex-plugin",
+            ".cursor-plugin",
+            ".claude/plugins/example",
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let root = temp.path().join(namespace);
+            std::fs::create_dir_all(&root).unwrap();
+            let manifest = root.join("plugin.json");
+            let content = r#"{"name":"foreign","version":42}"#;
+            std::fs::write(&manifest, content).unwrap();
+            let found = validate_content(
+                &manifest,
+                content,
+                &config,
+                &ValidatorRegistry::with_defaults(),
+            );
+            assert!(
+                !found
+                    .iter()
+                    .any(|d| d.rule.starts_with("AGY-") || d.rule.starts_with("GRK-")),
+                "{tool} {namespace}: {found:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn every_native_rule_has_localized_diagnostics_and_suggestions() {
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--ignored",
+            "--exact",
+            "native_locale_fixture_child",
+            "--test-threads=1",
+            "--nocapture",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+#[ignore = "run by the isolated locale integration test"]
+fn native_locale_fixture_child() {
+    let cases: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/native-tool-contracts/cases.json"
+    ))
+    .unwrap();
+    let registry = ValidatorRegistry::with_defaults();
+    for case in cases {
+        let rule = case["rule"].as_str().unwrap();
+        let path = Path::new(case["path"].as_str().unwrap());
+        let content = case["content"].as_str().unwrap();
+        rust_i18n::set_locale("en");
+        let english = validate_content(path, content, &LintConfig::default(), &registry)
+            .into_iter()
+            .find(|diagnostic| diagnostic.rule == rule)
+            .unwrap();
+        for locale in ["es", "zh-CN"] {
+            rust_i18n::set_locale(locale);
+            let translated = validate_content(path, content, &LintConfig::default(), &registry)
+                .into_iter()
+                .find(|diagnostic| diagnostic.rule == rule)
+                .unwrap();
+            assert_ne!(
+                translated.message, english.message,
+                "{rule} {locale}: untranslated message"
+            );
+            assert!(
+                !translated.message.starts_with("rules.") && !translated.message.contains("%{"),
+                "{rule} {locale}: {}",
+                translated.message
+            );
+            if let (Some(translated), Some(english)) = (translated.suggestion, &english.suggestion)
+            {
+                assert_ne!(
+                    &translated, english,
+                    "{rule} {locale}: untranslated suggestion"
+                );
+                assert!(
+                    !translated.starts_with("rules.") && !translated.contains("%{"),
+                    "{rule} {locale}: {translated}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn pi_project_mcp_partial_override_is_not_missing_a_transport() {
     let found = rules(
         ".pi/mcp.json",
