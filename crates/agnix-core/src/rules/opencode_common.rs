@@ -1585,6 +1585,7 @@ pub(crate) const V2_TOP_LEVEL_KEYS: &[&str] = &[
     "websearch",
     "worktree",
     "warming",
+    "timezone",
 ];
 
 /// Whether a parsed opencode.json uses native OpenCode 2 fields.
