@@ -47,7 +47,7 @@ editors/
 ├── vscode/         # VS Code extension
 ├── jetbrains/      # JetBrains IDE plugin
 └── zed/            # Zed extension
-knowledge-base/     # 702 rules, 75+ sources, rules.json
+knowledge-base/     # 757 rules, 75+ sources, rules.json
 
 tests/fixtures/     # Test cases by category
 ```
@@ -101,7 +101,7 @@ CI runs lint and the workspace merge contracts on owner PRs and pushes to main; 
 
 ## Rules reference
 
-702 rules defined in `knowledge-base/rules.json` (source of truth), 702 validation rules across 63 validators. Human-readable docs: `knowledge-base/VALIDATION-RULES.md`. IDs are `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001).
+757 rules defined in `knowledge-base/rules.json` (source of truth), 757 validation rules across 66 validators. Human-readable docs: `knowledge-base/VALIDATION-RULES.md`. IDs are `[CATEGORY]-[NUMBER]` (AS-004, CC-HK-001).
 
 ### Adding a rule
 
@@ -110,11 +110,11 @@ CI runs lint and the workspace merge contracts on owner PRs and pushes to main; 
 
 ## Tool support tiers
 
-Tiers set maintenance priority. Coverage is tracked separately: eight tools on the active roster have validators; five entries below are planned. See knowledge-base/RESEARCH-TRACKING.md and .github/tool-release-baselines.json for coverage and monitoring.
+Tiers set maintenance priority. Coverage is tracked separately: eleven tools on the active roster have validators; two entries below are planned. See knowledge-base/RESEARCH-TRACKING.md and .github/tool-release-baselines.json for coverage and monitoring.
 
 - **S** (test always): Claude Code, Codex CLI
-- **A** (test on major changes): Kiro CLI, OpenCode, Pi (validator pending)
-- **B** (test on significant changes): Antigravity CLI, Grok Code (validators pending)
+- **A** (test on major changes): Kiro CLI, OpenCode, Pi
+- **B** (test on significant changes): Antigravity CLI, Grok Code
 - **C** (community-reported maintenance): Muse Code, Kimi Code (validators pending)
 - **D** (nice-to-have maintenance): GitHub Copilot, Cline, Cursor, legacy Gemini CLI
 
@@ -122,7 +122,7 @@ Tiers set maintenance priority. Coverage is tracked separately: eight tools on t
 
 **Removed**: Roo Code (discontinued 2026-05-15; validators removed in 0.59.0).
 
-The roster is owner-selected. A tier assignment does not establish validation coverage. Pi and Kimi Code releases are monitored; Antigravity, Grok Code and Muse Code sources are reviewed manually until release extractors are verified. Agent Skills and MCP standards remain monitored independently.
+The roster is owner-selected. A tier assignment does not establish validation coverage. Pi, Antigravity CLI, Grok Code and Kimi Code releases are monitored automatically. Muse Code remains manually monitored. Agent Skills and MCP standards remain monitored independently.
 
 ## Validation scope
 

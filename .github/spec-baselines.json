@@ -262,6 +262,46 @@
           "XP-005",
           "XP-006"
         ]
+      },
+      "pi-settings": {
+        "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/settings.schema.json",
+        "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/settings.schema.json",
+        "hash": "a82fcfb6b3350f7d725a01005a59d05e3b2fc4c6294dc3e78e2c3c9112cb37e4",
+        "rules": [
+          "PI-CFG-001",
+          "PI-CFG-002",
+          "PI-CFG-003"
+        ],
+        "last_checked": "2026-10-29"
+      },
+      "pi-models": {
+        "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
+        "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
+        "hash": "c9370888741c89c6c997d500e4f3da0e8337a84bcacdd0bf231c3edde3a4970e",
+        "rules": [
+          "PI-MDL-001",
+          "PI-MDL-002"
+        ],
+        "last_checked": "2026-10-29"
+      },
+      "pi-keybindings": {
+        "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/keybindings.schema.json",
+        "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/keybindings.schema.json",
+        "hash": "6883ff53b0d50f5d549d34ddd14a9f1403a731cd6491c786a5f5dc61976999b0",
+        "rules": [
+          "PI-KB-001"
+        ],
+        "last_checked": "2026-10-29"
+      },
+      "pi-theme": {
+        "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/theme.schema.json",
+        "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/theme.schema.json",
+        "hash": "67042ef7d557ff7ec34e42da620b2e47c3643ca885a40e021e6b3c9b8c391dd6",
+        "rules": [
+          "PI-TH-001",
+          "PI-TH-002"
+        ],
+        "last_checked": "2026-10-29"
       }
     },
     "d-tier": {
@@ -398,6 +438,72 @@
           "CLN-011",
           "CLN-015"
         ]
+      }
+    },
+    "b-tier": {
+      "antigravity-settings": {
+        "url": "https://antigravity.google/schemas/v1/settings.json",
+        "content_url": "https://antigravity.google/schemas/v1/settings.json",
+        "hash": "24e5e7d5d715ddf318a63c5f37adbe395da13e779916aadaf5839cfd8996f0f2",
+        "rules": [
+          "AGY-CFG-001",
+          "AGY-CFG-002",
+          "AGY-CFG-003",
+          "AGY-CFG-004",
+          "AGY-CFG-005",
+          "AGY-KB-001"
+        ],
+        "last_checked": "2026-10-29"
+      },
+      "antigravity-plugin": {
+        "url": "https://antigravity.google/schemas/v1/plugin.json",
+        "content_url": "https://antigravity.google/schemas/v1/plugin.json",
+        "hash": "c54359a306b651bec8536ddeda580997f9da93c53e686952ad287f2be6fabb63",
+        "rules": [
+          "AGY-PL-001",
+          "AGY-PL-002"
+        ],
+        "last_checked": "2026-10-29"
+      },
+      "antigravity-rules": {
+        "url": "https://antigravity.google/docs/rules",
+        "content_url": "https://antigravity.google/docs/rules",
+        "hash": "827fcd52b0e9aec3dcfc1014cf5a4a581dcb119f576d10ed62a84b5c4650036f",
+        "rules": [
+          "AGY-RL-001",
+          "AGY-RL-002",
+          "AGY-RL-003",
+          "AGY-RL-004"
+        ],
+        "last_checked": "2026-10-29"
+      },
+      "grok-build-reference": {
+        "url": "https://docs.x.ai/build/cli/reference",
+        "content_url": "https://docs.x.ai/build/cli/reference",
+        "hash": "61840b3c48f56d24e29b07d28e43832af1008819f324f6b66b739b5ead12b2da",
+        "rules": [
+          "GRK-CFG-001",
+          "GRK-CFG-002",
+          "GRK-CFG-003",
+          "GRK-CFG-004",
+          "GRK-CFG-005",
+          "GRK-CFG-006",
+          "GRK-SBX-001",
+          "GRK-SBX-002",
+          "GRK-MCP-001",
+          "GRK-HK-001",
+          "GRK-HK-002",
+          "GRK-HK-003",
+          "GRK-PL-001",
+          "GRK-PL-002",
+          "GRK-AG-001",
+          "GRK-AG-002",
+          "GRK-AG-003",
+          "GRK-AG-004",
+          "GRK-SK-001",
+          "GRK-SK-002"
+        ],
+        "last_checked": "2026-10-29"
       }
     }
   }

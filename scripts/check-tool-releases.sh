@@ -171,7 +171,7 @@ for raw_id in "${TOOL_IDS[@]}"; do
   elif [[ -n "$html_url" && ( -n "$version_regex" || -n "$version_extractor" ) ]]; then
     # HTML scrape path - fetch page and extract first regex match
     echo "[check] $tool_id (tier=$tier) html=$html_url baseline=$baseline_version"
-    if ! page_content=$(curl -fsSL --max-time 30 "$content_url"); then
+    if ! page_content=$(curl -fsSL --max-time 30 -A agnix-release-watch/1.0 -H 'Accept: text/markdown, text/html, application/json;q=0.9, */*;q=0.8' "$content_url"); then
       echo "  ERROR: failed to fetch $content_url"
       ERROR_COUNT=$((ERROR_COUNT+1))
       continue

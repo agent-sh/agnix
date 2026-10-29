@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 702,
-  "last_updated": "2026-10-17",
+  "total_rules": 757,
+  "last_updated": "2026-10-29",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -20364,6 +20364,1525 @@
       },
       "good_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"init\",\"trigger\":\"SessionStart\",\"action\":{\"type\":\"command\",\"command\":\"git status\"}}]}",
       "bad_example": "{\"version\":\"v1\",\"hooks\":[{\"name\":\"init\",\"trigger\":\"agentSpawn\",\"action\":{\"type\":\"command\",\"command\":\"git status\"}}]}"
+    },
+    {
+      "id": "PI-CFG-001",
+      "name": "Invalid Pi Configuration JSON",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/settings.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/settings-manager.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-CFG-002",
+      "name": "Invalid Pi Settings Value",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/settings.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/settings-manager.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-CFG-003",
+      "name": "Ignored Pi Project Configuration",
+      "severity": "MEDIUM",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/settings.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/settings-manager.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-MDL-001",
+      "name": "Invalid Pi Model Definition",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/models.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/models.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/model-config.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-MDL-002",
+      "name": "Unusable Pi Provider Configuration",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/models.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/models.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/model-config.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-KB-001",
+      "name": "Invalid Pi Keybinding",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/keybindings.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/keybindings.schema.json"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-MCP-001",
+      "name": "Invalid Pi MCP Configuration",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/mcp.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/mcp-servers.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-MCP-002",
+      "name": "Invalid Pi MCP Server",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/mcp.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/mcp-servers.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-MCP-003",
+      "name": "Invalid Pi Provider Authentication Scope",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/mcp.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/mcp-servers.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-MCP-004",
+      "name": "Colliding Pi MCP Namespaces",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/mcp.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/mcp-servers.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-MCP-005",
+      "name": "Invalid Pi MCP OAuth Configuration",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/mcp.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/mcp-servers.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-PKG-001",
+      "name": "Invalid Pi Package Resources",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/packages.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/package-manager.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-PKG-002",
+      "name": "Bundled Pi Host Dependency",
+      "severity": "MEDIUM",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/packages.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/package-manager.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-TH-001",
+      "name": "Invalid Pi Theme Structure",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/themes.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/theme.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/modes/interactive/theme/theme.ts",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/tui/src/colors.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-TH-002",
+      "name": "Invalid Pi Theme Resolution",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/themes.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/theme.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/modes/interactive/theme/theme.ts",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/tui/src/colors.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-PR-001",
+      "name": "Invalid Pi Prompt YAML",
+      "severity": "HIGH",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/prompt-templates.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/prompt-templates.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "PI-PR-002",
+      "name": "Ignored Pi Prompt Metadata",
+      "severity": "MEDIUM",
+      "category": "pi",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/prompt-templates.md",
+          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/prompt-templates.ts"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "pi",
+          "version_range": ">=1.4.0"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-CFG-001",
+      "name": "Invalid Antigravity Configuration JSON",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/settings?tab=cli",
+          "https://antigravity.google/schemas/v1/settings.json",
+          "https://antigravity.google/docs/remote-control"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-CFG-002",
+      "name": "Invalid Antigravity Setting",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/settings?tab=cli",
+          "https://antigravity.google/schemas/v1/settings.json",
+          "https://antigravity.google/docs/remote-control"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-CFG-003",
+      "name": "Misplaced Antigravity Customization",
+      "severity": "MEDIUM",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/settings?tab=cli",
+          "https://antigravity.google/schemas/v1/settings.json",
+          "https://antigravity.google/docs/remote-control"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-CFG-004",
+      "name": "Ignored Antigravity Permission Resource",
+      "severity": "MEDIUM",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/settings?tab=cli",
+          "https://antigravity.google/schemas/v1/settings.json",
+          "https://antigravity.google/docs/remote-control"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-CFG-005",
+      "name": "Antigravity Formatter Fallback",
+      "severity": "MEDIUM",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/settings?tab=cli",
+          "https://antigravity.google/schemas/v1/settings.json",
+          "https://antigravity.google/docs/remote-control"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-KB-001",
+      "name": "Invalid Antigravity Keybinding",
+      "severity": "MEDIUM",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/settings?tab=cli"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-MCP-001",
+      "name": "Invalid Antigravity MCP Server",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/mcp"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-MCP-002",
+      "name": "Unsupported Antigravity MCP Transport",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/mcp"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-PL-001",
+      "name": "Invalid Antigravity Plugin Field",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/plugins",
+          "https://antigravity.google/schemas/v1/plugin.json"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-PL-002",
+      "name": "Ignored Antigravity Plugin Metadata",
+      "severity": "MEDIUM",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/plugins",
+          "https://antigravity.google/schemas/v1/plugin.json"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-HK-001",
+      "name": "Invalid Antigravity Hook Structure",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/hooks"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-HK-002",
+      "name": "Unknown Antigravity Hook Event",
+      "severity": "MEDIUM",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/hooks"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-RL-001",
+      "name": "Invalid Antigravity Rule Trigger",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/rules"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-RL-002",
+      "name": "Invalid Antigravity Rule Metadata",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/rules"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-RL-003",
+      "name": "Truncated Antigravity Rule",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/rules"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-RL-004",
+      "name": "Invalid Antigravity Rule Registry",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/rules"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-AG-001",
+      "name": "Invalid Antigravity Agent YAML",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/subagents",
+          "https://antigravity.google/blog/introducing-custom-agents",
+          "https://antigravity.google/blog/custom-agents-in-google-plugins"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "AGY-AG-002",
+      "name": "Invalid Antigravity Agent Metadata",
+      "severity": "HIGH",
+      "category": "antigravity",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://antigravity.google/docs/subagents",
+          "https://antigravity.google/blog/introducing-custom-agents",
+          "https://antigravity.google/blog/custom-agents-in-google-plugins"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "antigravity",
+          "version_range": ">=1.4.9"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-CFG-001",
+      "name": "Invalid Grok Configuration Syntax",
+      "severity": "HIGH",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://docs.x.ai/build/settings/reference",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/config.rs",
+          "https://x.ai/changelog/build",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/lsp/config.rs",
+          "https://docs.x.ai/build/settings/zdr-video-storage",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/grok_build/video_gen/mod.rs"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-CFG-002",
+      "name": "Ignored Grok Project Setting",
+      "severity": "MEDIUM",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://docs.x.ai/build/settings/reference",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/config.rs",
+          "https://x.ai/changelog/build",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/lsp/config.rs",
+          "https://docs.x.ai/build/settings/zdr-video-storage",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/grok_build/video_gen/mod.rs"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-CFG-003",
+      "name": "Invalid Grok Setting Value",
+      "severity": "MEDIUM",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://docs.x.ai/build/settings/reference",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/config.rs",
+          "https://x.ai/changelog/build",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/lsp/config.rs",
+          "https://docs.x.ai/build/settings/zdr-video-storage",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/grok_build/video_gen/mod.rs"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-CFG-004",
+      "name": "Retired or Legacy Grok Setting",
+      "severity": "MEDIUM",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://docs.x.ai/build/settings/reference",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/config.rs",
+          "https://x.ai/changelog/build",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/lsp/config.rs",
+          "https://docs.x.ai/build/settings/zdr-video-storage",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/grok_build/video_gen/mod.rs"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-CFG-005",
+      "name": "Ignored Grok Policy Lock",
+      "severity": "MEDIUM",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://docs.x.ai/build/settings/reference",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/config.rs",
+          "https://x.ai/changelog/build",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/lsp/config.rs",
+          "https://docs.x.ai/build/settings/zdr-video-storage",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/grok_build/video_gen/mod.rs"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-CFG-006",
+      "name": "Invalid Grok Version Override",
+      "severity": "HIGH",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://docs.x.ai/build/settings/reference",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/config.rs",
+          "https://x.ai/changelog/build",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/lsp/config.rs",
+          "https://docs.x.ai/build/settings/zdr-video-storage",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/grok_build/video_gen/mod.rs"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-SBX-001",
+      "name": "Redefined Grok Sandbox Builtin",
+      "severity": "HIGH",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://docs.x.ai/build/features/sandbox",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-config/src/sandbox_mode.rs"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-SBX-002",
+      "name": "Invalid Grok Sandbox Profile",
+      "severity": "HIGH",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://docs.x.ai/build/features/sandbox",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-config/src/sandbox_mode.rs"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-MCP-001",
+      "name": "Invalid Grok MCP Server",
+      "severity": "HIGH",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-config/src/mcp_server_config.rs",
+          "https://docs.x.ai/build/features/mcp-servers"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-HK-001",
+      "name": "Invalid Grok Hook Handler",
+      "severity": "HIGH",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-hooks/src/config.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-hooks/src/event.rs",
+          "https://x.ai/changelog/build"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-HK-002",
+      "name": "Unknown Grok Hook Event",
+      "severity": "MEDIUM",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-hooks/src/config.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-hooks/src/event.rs",
+          "https://x.ai/changelog/build"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-HK-003",
+      "name": "Invalid Grok Hook Matcher",
+      "severity": "MEDIUM",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-hooks/src/config.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-hooks/src/event.rs",
+          "https://x.ai/changelog/build"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-PL-001",
+      "name": "Invalid Grok Plugin Manifest",
+      "severity": "HIGH",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/plugins/manifest.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-plugin-marketplace/src/index.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-pager/docs/user-guide/09-plugins.md"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-PL-002",
+      "name": "Escaping Grok Plugin Component",
+      "severity": "MEDIUM",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/plugins/manifest.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-plugin-marketplace/src/index.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-pager/docs/user-guide/09-plugins.md"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-AG-001",
+      "name": "Invalid Grok Agent YAML",
+      "severity": "HIGH",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/config.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-pager/docs/user-guide/16-subagents.md"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-AG-002",
+      "name": "Invalid Grok Agent Metadata",
+      "severity": "HIGH",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/config.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-pager/docs/user-guide/16-subagents.md"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-AG-003",
+      "name": "Invalid Grok Role or Persona",
+      "severity": "HIGH",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/config.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-pager/docs/user-guide/16-subagents.md"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "MUST",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-AG-004",
+      "name": "Restricted Grok Plugin Agent Field",
+      "severity": "MEDIUM",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-agent/src/config.rs",
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-pager/docs/user-guide/16-subagents.md"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-SK-001",
+      "name": "Grok Skill Tool Policy Advisory",
+      "severity": "LOW",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-pager/docs/user-guide/08-skills.md"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
+    },
+    {
+      "id": "GRK-SK-002",
+      "name": "Ignored Grok Skill Boolean",
+      "severity": "MEDIUM",
+      "category": "grok",
+      "evidence": {
+        "source_type": "vendor_code",
+        "source_urls": [
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-pager/docs/user-guide/08-skills.md"
+        ],
+        "verified_on": "2026-10-29",
+        "applies_to": {
+          "tool": "grok-code",
+          "version_range": ">=1.0.70"
+        },
+        "normative_level": "SHOULD",
+        "tests": {
+          "unit": false,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      }
     }
   ],
   "categories": {
@@ -20581,6 +22100,21 @@
       "prefix": "GM-AG",
       "count": 6,
       "description": "Gemini CLI local agent (.gemini/agents/*.md) rules"
+    },
+    "pi": {
+      "prefix": "PI",
+      "count": 17,
+      "description": "Pi native configuration validation"
+    },
+    "antigravity": {
+      "prefix": "AGY",
+      "count": 18,
+      "description": "Antigravity CLI native configuration validation"
+    },
+    "grok": {
+      "prefix": "GRK",
+      "count": 20,
+      "description": "Grok Build native configuration validation"
     }
   },
   "authoring": {

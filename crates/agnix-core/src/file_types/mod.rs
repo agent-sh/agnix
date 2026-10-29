@@ -17,6 +17,7 @@
 
 mod detection;
 mod detector;
+pub(crate) mod native;
 mod types;
 
 // Primary re-exports (backward-compatible with the old single-file module)

@@ -152,6 +152,32 @@ export const AGNIX_FILE_PATTERNS: readonly string[] = [
   '**/{power,powers/*,powers/installed/*}/steering/*.md',
   '**/dev.kiro/steering/*.md',
   '**/dev.kiro/INSTRUCTIONS.md',
+
+  // Pi user/project configuration, resource packages and prompt/theme files.
+  '**/.pi/{settings.json,models.json,keybindings.json}',
+  '**/.pi/agent/{settings.json,models.json,keybindings.json}',
+  '**/.pi/prompts/**/*.md',
+  '**/.pi/agent/prompts/**/*.md',
+  '**/.pi/themes/**/*.json',
+  '**/.pi/agent/themes/**/*.json',
+  '**/.pi/{SYSTEM.md,APPEND_SYSTEM.md}',
+  '**/.pi/agent/{SYSTEM.md,APPEND_SYSTEM.md}',
+
+  // Antigravity CLI uses a separate layout from legacy Gemini CLI.
+  '**/{.agents,.agent}/{mcp_config.json,hooks.json,rules.json}',
+  '**/{.agents,.agent}/rules/**/*.md',
+  '**/.gemini/config/{config.json,mcp_config.json,hooks.json,rules.json}',
+  '**/.gemini/antigravity-cli/{settings.json,keybindings.json,mcp_config.json,hooks.json,rules.json}',
+  '**/.gemini/{config,antigravity-cli}/rules/**/*.md',
+  '**/.gemini/{config,antigravity-cli}/plugins/**/*.json',
+
+  // Grok Build CLI.
+  '**/{.grok,etc/grok}/{config.toml,managed_config.toml,requirements.toml,sandbox.toml,lsp.json}',
+  '**/.grok-plugin/marketplace.json',
+  '**/.grok/{personas,roles}/**/*.toml',
+  '**/.grok/hooks/**/*.json',
+  '**/.grok/rules/**/*.md',
+  '**/.grok/plugins/**/*.json',
 ];
 
 /**
@@ -164,6 +190,8 @@ export const AGNIX_FILE_PATTERNS: readonly string[] = [
 export const AGNIX_SIBLING_DETECTED_PATTERNS: readonly string[] = [
   '**/commands/**/*.toml',
   '**/policies/*.toml',
+  // Known schema IDs and package metadata establish native ownership.
+  '**/package.json',
 ];
 
 /** Patterns for file system watchers and workspace validation. */

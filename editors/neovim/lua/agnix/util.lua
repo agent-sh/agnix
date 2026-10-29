@@ -92,6 +92,14 @@ function M.is_agnix_file(path)
   local name = basename(p)
   local parent = parent_dir_name(p)
   local grandparent = grandparent_dir_name(p)
+  local rooted = '/' .. p
+  if rooted:find('/%.pi/') or rooted:find('/%.grok/')
+    or rooted:find('/%.gemini/config/') or rooted:find('/%.gemini/antigravity%-cli/')
+    or rooted:find('/%.agents/') or rooted:find('/%.agent/') then
+    if name:match('%.md$') or name:match('%.json$') or name:match('%.toml$') then
+      return true
+    end
+  end
 
   -- SKILL.md
   if name == 'SKILL.md' then

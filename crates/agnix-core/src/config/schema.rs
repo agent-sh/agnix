@@ -8,6 +8,9 @@ use std::sync::LazyLock;
 /// A rule ID is considered known if it starts with any of these prefixes.
 /// Note: `imports::` is a legacy prefix used in some internal diagnostics.
 pub(in crate::config) const KNOWN_RULE_PREFIXES: &[&str] = &[
+    "PI-",
+    "AGY-",
+    "GRK-",
     "AS-",
     "CC-SK-",
     "CC-HK-",
@@ -99,6 +102,12 @@ impl LintConfig {
 
         // Validate tools array contains known tools
         let known_tools = [
+            "pi",
+            "pi-coding-agent",
+            "antigravity",
+            "agy",
+            "grok-code",
+            "grok",
             "claude-code",
             "cursor",
             "codex",

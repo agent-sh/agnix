@@ -7,12 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.0] - 2026-10-29
+
+### Added
+- Add 55 native configuration rules for Pi, Antigravity CLI and Grok Code. Validate settings, MCP, hooks, plugins, agents, rules and tool-specific resources from pinned primary contracts. The catalog now contains 757 rules across 66 validators.
+- Discover Pi packages and declared prompts/themes/skills, custom user directories, Antigravity rule registries and bundled schema IDs. Editor buffers use their current metadata. Add CLI targets, config schema fields, editor settings and playground selectors.
+- Track Antigravity installer manifests and Grok Build release feeds. Monitor Pi schemas and Antigravity/Grok specifications under their assigned A/B tiers.
+
 ### Fixed
+- Translate every new Pi, Antigravity and Grok diagnostic and suggestion into Spanish and Chinese. Keep explicit foreign plugin ownership when filtering validation to Antigravity or Grok.
 - Accept Codex 0.165 feature flags, Kiro's documented `chat.workflowLaunch` setting, and Gemini CLI 0.66 skill delimiter whitespace. Resolve Gemini-owned skills without applying Claude-only checks.
 - Detect Kiro patch releases and Devin Desktop stable versions from their canonical changelog structures. Release-watch source failures now fail the poll and prevent partial baseline suggestions.
 - **Skill validation** ignores gitignored payloads and nested dependency directories when checking the upload size (AS-015), explains exact version pins (AS-024), names nested legacy commands correctly during migration (CC-SK-027), and limits injected-command control-character findings to the commands themselves (CC-SK-028). Thanks to @izkreny for the reproductions in #1738.
 
 ### Changed
+- Rust API migration: exhaustive `FileType` matches must handle eight new native variants, and `TargetTool` matches must handle Pi, Antigravity and GrokCode. Struct literals for `RuleConfig` and `ToolVersions` need the new optional tool fields or `..Default::default()`. Serialized configuration remains backward compatible.
 - Set the support roster to S: Claude Code and Codex CLI; A: Kiro, OpenCode and Pi; B: Antigravity and Grok Code; C: Muse Code and Kimi Code; D maintenance: Copilot, Cline, Cursor and legacy Gemini CLI. Drop Continue, Aider, Amazon Q, Tabnine, Codeium, Devin/Windsurf and Amp from active support. Start Pi and current Kimi Code release tracking; label new tool validators as pending. Preserve shipped Amp/Windsurf checks as legacy compatibility and move D-tier specification monitoring to monthly maintenance.
 - Review all twelve release markers: Claude Code 2.1.312, Codex 0.165.0, OpenCode 1.19.5 and 2.2.0, Kiro 2.34.2, Copilot 0.43.0, Cline 4.1.26, Cursor 3.27.22, Amp personal self-hosted orbs, Gemini CLI 0.66.0, Devin Desktop 3.11.228 and the unchanged Agent Skills spec commit. Baseline-only advances add no new validation constraints for Claude Code, OpenCode 1, Cline, Amp and Devin Desktop. Roo Code remains retired.
 - Review Claude Code v2.1.310-v2.1.311, OpenCode 2 v2.2.0, Cursor 3.27.22 and the 18 changed specification sources from #1733. Refresh reviewed baselines; existing validators accept the new OpenCode model types, prompt-cache TTL settings and experimental media storage.
@@ -20,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The OpenCode reference in `knowledge-base/agent-docs/` no longer lists the retired agentsys `/ship` command.
 
 ### Security
+- Reject excessively nested strict JSON and JSONC before recursive span construction. Keep native schema validation offline and leave command references unevaluated.
 - Remove the docs site's unused SVGR/deepmerge dependency chain (GHSA-gcqx-w48m-w2h4). Register the existing docs, pages, sitemap, debug and classic theme plugins directly instead of installing the full preset.
 - Patch the VS Code publishing/test dependency graph with MSAL Node 7.1.1 and serialize-javascript 7.1.4. Scope the MSAL override to Azure Identity and require serializer 7.1.3 or newer in both npm projects. The extension runtime bundle is unchanged.
 - Audit both website and VS Code lockfiles in CI, including development dependencies and low-severity advisories.

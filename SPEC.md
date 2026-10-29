@@ -1,12 +1,15 @@
 # agnix Technical Reference
 
-> Linter for agent configs. 702 rules across 43 categories.
+> Linter for agent configs. 757 rules across 46 categories.
 
 
 ## What agnix Validates
 
 | Type | Files | Rules |
 |------|-------|-------|
+| Pi | .pi/settings.json, models.json, mcp.json, keybindings.json, themes, prompts and Pi package resources | 17 |
+| Antigravity CLI | Native settings, .agents/rules, agents, hooks.json, mcp_config.json and plugin manifests | 18 |
+| Grok Code | .grok/config.toml, sandbox profiles, agents, personas, roles, hooks and plugins | 20 |
 | Skills | SKILL.md | 50 |
 | Hooks | settings.json | 32 |
 | Memory (Claude Code) | CLAUDE.md, CLAUDE.local.md, .claude/rules/*.md | 15 |
@@ -298,6 +301,9 @@ When `target` is set to a specific tool, only relevant rules run:
 
 | Category | Config Key | Rules | Description |
 |----------|------------|-------|-------------|
+| Pi | `pi` | PI-* | Pi native configuration validation |
+| Antigravity CLI | `antigravity` | AGY-* | Antigravity CLI native configuration validation |
+| Grok Code | `grok_code` | GRK-* | Grok Build native configuration validation |
 | Skills | `skills` | AS-*, CC-SK-* | Agent skill validation |
 | Hooks | `hooks` | CC-HK-* | Hook configuration validation |
 | Agents | `agents` | CC-AG-* | Subagent validation |

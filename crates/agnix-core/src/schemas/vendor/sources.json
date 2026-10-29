@@ -1,0 +1,44 @@
+[
+  {
+    "file": "antigravity-plugin.json",
+    "source_url": "https://antigravity.google/schemas/v1/plugin.json",
+    "source_sha256": "0eea5e483af6f03fa099f32b065d2924a323f1a616ed0323cfa0b7a74ff9543c",
+    "constraint_sha256": "1497addd7543ea960eb8e43c0d119f7bfb8cd29f03ef16536bd924f10e1008c0",
+    "verified_on": "2026-10-29"
+  },
+  {
+    "file": "antigravity-settings.json",
+    "source_url": "https://antigravity.google/schemas/v1/settings.json",
+    "source_sha256": "6d4ab641fff729c0ec416afc8c96ccb414d9f438fe3f28fec294086a8f824877",
+    "constraint_sha256": "1aab6bf9e0464f437abdcc2674eb4449f51058112144d28012fba68b66cdcb2b",
+    "verified_on": "2026-10-29"
+  },
+  {
+    "file": "pi-keybindings.json",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.4.0/packages/coding-agent/schemas/keybindings.schema.json",
+    "source_sha256": "46d494b2493cd9fcf957d352aac653fe6f04121254f34033a5664e7c8f9928aa",
+    "constraint_sha256": "454120eeed85d2c4905878457d0e9bfbfdff58be84d3a57a657b1f23ea3bf055",
+    "verified_on": "2026-10-29"
+  },
+  {
+    "file": "pi-models.json",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.4.0/packages/coding-agent/schemas/models.schema.json",
+    "source_sha256": "86ade9716724902bdfe91347a728980ad7242a76d0773dbc7217ce4584d696ea",
+    "constraint_sha256": "cadc3385c1f55a67098afe00bfbf0d5d1735ca462fb92298d83bdde316b9561d",
+    "verified_on": "2026-10-29"
+  },
+  {
+    "file": "pi-settings.json",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.4.0/packages/coding-agent/schemas/settings.schema.json",
+    "source_sha256": "d4b19b0e492cb887a23c50034f00213c476048956fa92c5cce2f1536ef50b9b0",
+    "constraint_sha256": "29ef55fce8b8f7a0a364aff3cfa602c42c7283da9e09d83d3146c368846f7482",
+    "verified_on": "2026-10-29"
+  },
+  {
+    "file": "pi-theme.json",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.4.0/packages/coding-agent/schemas/theme.schema.json",
+    "source_sha256": "f526a690b63c6303296f683c9df6077ddc290ee9acb1bc27eedef169c0caad59",
+    "constraint_sha256": "22a314dc5b46af77bb7bdd41b44e0f22aa8a8ebde8d46ebbba22f0ef275ccd20",
+    "verified_on": "2026-10-29"
+  }
+]

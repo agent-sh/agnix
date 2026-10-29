@@ -13,12 +13,46 @@ use std::sync::OnceLock;
 
 use super::{PathMatch, SkillFrontmatter, reference_path_regex};
 
-pub(super) fn parse_frontmatter_fields(frontmatter: &str) -> Result<SkillFrontmatter, String> {
+pub(super) fn parse_frontmatter_fields(
+    frontmatter: &str,
+    client: crate::rules::per_client_skill::SkillClient,
+    path: &Path,
+) -> Result<SkillFrontmatter, String> {
     if frontmatter.trim().is_empty() {
         return Ok(SkillFrontmatter::default());
     }
     check_yaml_depth(frontmatter).map_err(|e| e.to_string())?;
     check_yaml_duplicate_top_level_keys(frontmatter).map_err(|e| e.to_string())?;
+    if client == crate::rules::per_client_skill::SkillClient::Pi {
+        // Pi reads only these three keys. YAML scalars are not coerced to
+        // strings: a non-string/empty name falls back to the directory, and
+        // a description must be an actual string. Other clients' metadata is
+        // ignored by Pi, even when it has a different shape.
+        let value: serde_yaml::Value =
+            serde_yaml::from_str(frontmatter).map_err(|e| e.to_string())?;
+        let string = |key: &str| {
+            value
+                .get(key)
+                .and_then(serde_yaml::Value::as_str)
+                .map(str::to_owned)
+        };
+        return Ok(SkillFrontmatter {
+            name: string("name").filter(|name| !name.is_empty()).or_else(|| {
+                path.parent()
+                    .and_then(Path::file_name)
+                    .and_then(|name| name.to_str())
+                    .map(str::to_owned)
+            }),
+            description: string("description"),
+            disable_model_invocation: Some(
+                value
+                    .get("disable-model-invocation")
+                    .and_then(serde_yaml::Value::as_bool)
+                    == Some(true),
+            ),
+            ..SkillFrontmatter::default()
+        });
+    }
     serde_yaml::from_str(frontmatter).map_err(|e| e.to_string())
 }
 

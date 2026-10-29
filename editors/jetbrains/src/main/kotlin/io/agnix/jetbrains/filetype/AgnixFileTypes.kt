@@ -55,6 +55,11 @@ object AgnixFileTypes {
     fun isAgnixFilePath(path: String): Boolean {
         val normalizedPath = path.replace('\\', '/')
         val fileName = normalizedPath.substringAfterLast('/')
+        val rooted = "/$normalizedPath"
+        if (listOf("/.pi/", "/.grok/", "/.agents/", "/.agent/", "/.gemini/config/", "/.gemini/antigravity-cli/").any { rooted.contains(it) }
+            && listOf(".md", ".json", ".toml").any { fileName.endsWith(it) }) {
+            return true
+        }
 
         // Check exact file names at any level
         if (fileName in GLOBAL_FILE_NAMES) {

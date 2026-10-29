@@ -413,11 +413,8 @@ impl Validator for McpValidator {
         // agents) get only the server-level checks. The sibling refinement
         // matters here: a Gemini extension's `agents/*.md` is a Gemini agent
         // only next to its `gemini-extension.json`.
-        let file_type = crate::file_types::refine_file_type(
-            path,
-            crate::file_types::detect_file_type(path),
-            config.fs().as_ref(),
-        );
+        let file_type = crate::pipeline::resolve_file_type(path, config);
+        let file_type = crate::file_types::native::refine_content(path, content, file_type);
         if crate::rules::mcp_servers::is_client_config_with_mcp(file_type) {
             return crate::rules::mcp_servers::validate_client_config(
                 file_type, path, content, config,

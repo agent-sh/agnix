@@ -2,6 +2,283 @@
 # Rules - Validator diagnostic messages, suggestions, assumptions, fixes
 # ===========================================================================
 rules:
+  agy_ag_001:
+    frontmatter_error: "La personalización de Antigravity requiere frontmatter YAML válido."
+    frontmatter_suggestion: "Agrega un objeto frontmatter completo con los campos nativos obligatorios."
+  agy_ag_002:
+    antigravity_agents_need_a_non_empty_name: "Los agentes de Antigravity requieren name y description no vacíos."
+    set_both_fields_in_the_agent_frontmatter: "Establece ambos campos en el frontmatter del agente."
+    invalid_antigravity_agent_frontmatter_field: "Campo de frontmatter de agente Antigravity no válido."
+    use_documented_field_types_model_can_be: "Usa los tipos de campo documentados; model puede ser un alias o un identificador de modelo completo."
+  agy_cfg_001:
+    parse_error: "JSON de configuración no válido."
+    parse_suggestion: "Corrige la sintaxis JSON; esta configuración no se puede cargar."
+    root_object: "La configuración debe contener un objeto JSON."
+    root_object_suggestion: "Usa un objeto con los campos documentados para este archivo de configuración."
+  agy_cfg_002:
+    antigravity_cli_remote_control_hostname_must_be: "El nombre de host de control remoto de Antigravity CLI debe ser una cadena."
+    use_the_daemon_hostname_setting_documented_in: "Usa la opción de nombre de host del daemon documentada en Remote Control."
+    antigravity_setting_violates_the_documented_constraint: "La opción de Antigravity incumple la restricción %{keyword} documentada."
+    use_the_types_and_values_in_the: "Usa los tipos y valores de la referencia de configuración de Antigravity CLI."
+  agy_cfg_003:
+    antigravity_cli_does_not_load_this_customization: "Antigravity CLI no carga esta personalización desde settings.json."
+    move_hooks_to_agents_hooks_json_or: "Mueve los hooks a .agents/hooks.json o ~/.gemini/config/hooks.json; coloca los servidores en mcp_config.json."
+  agy_cfg_004:
+    antigravity_ignores_this_malformed_permission_resource: "Antigravity ignora este recurso de permiso mal formado."
+    use_action_target_without_a_space_before: "Usa action(target), sin espacio antes de (, y una acción CLI documentada."
+    use_a_documented_action_target_string_without: "Usa una cadena action(target) documentada sin espacio antes de (."
+  agy_cfg_005:
+    antigravity_uses_the_xml_tool_formatter_for: "Antigravity usa el formateador XML de herramientas para este valor de formateador desconocido."
+    use_a_documented_formatter_value_or_omit: "Usa un valor de formateador documentado u omite el campo para usar el predeterminado."
+  agy_hk_001:
+    an_antigravity_named_hook_must_map_events: "Un hook con nombre de Antigravity debe asignar eventos a manejadores."
+    use_a_named_hook_object_with_native: "Usa un objeto de hook con nombre y claves de eventos nativas de Antigravity."
+    hook_enabled_must_be_a_boolean: "enabled del hook debe ser un booleano."
+    use_true_or_false: "Usa true o false."
+    hook_event_handlers_must_be_an_array: "Los manejadores de eventos de hooks deben ser una lista."
+    use_matcher_groups_for_tool_events_and: "Usa grupos de coincidencia para eventos de herramientas y manejadores directos para los demás eventos."
+    a_hook_matcher_must_be_a_string: "El matcher de un hook debe ser una cadena."
+    use_a_tool_name_expression_or_omit: "Usa una expresión de nombre de herramienta, * u omite matcher."
+    tool_hook_matcher_group_needs_a_hooks: "El grupo de coincidencia del hook de herramienta requiere una lista hooks."
+    put_command_handlers_inside_the_matcher_s: "Coloca los manejadores de comandos en la lista hooks del matcher."
+    invalid_antigravity_command_hook_handler: "Manejador de hook de comando de Antigravity no válido."
+    set_a_non_empty_command_optional_type: "Establece un command no vacío, el type command opcional y un timeout entero en segundos."
+  agy_hk_002:
+    unrecognized_antigravity_lifecycle_event: "Evento de ciclo de vida de Antigravity no reconocido."
+    use_sessionstart_pretooluse_posttooluse_preinvocation_postinvocation_or: "Usa SessionStart, PreToolUse, PostToolUse, PreInvocation, PostInvocation o Stop."
+  agy_kb_001:
+    invalid_or_protected_antigravity_keybinding_override: "Modificación de atajo de Antigravity no válida o protegida."
+    map_actions_to_arrays_of_hotkey_strings: "Asigna acciones a listas de cadenas de atajos; cli.exit y cli.enter no pueden desactivarse."
+  agy_mcp_001:
+    mcpservers_must_be_an_object: "mcpServers debe ser un objeto."
+    map_server_names_to_stdio_or_streamable: "Asigna los nombres de servidores a definiciones stdio o Streamable HTTP."
+    an_antigravity_mcp_server_must_be_an: "Un servidor MCP de Antigravity debe ser un objeto."
+    use_command_for_stdio_or_serverurl_url: "Usa command para stdio o serverUrl/url para Streamable HTTP."
+    an_mcp_server_needs_one_stdio_command: "Un servidor MCP requiere un comando stdio o una URL Streamable HTTP."
+    set_command_for_a_local_process_or: "Establece command para un proceso local o serverUrl/url para un endpoint remoto."
+    invalid_antigravity_mcp_server_option: "Opción de servidor MCP de Antigravity no válida."
+    use_the_documented_types_timeoutseconds_accepts_zero: "Usa los tipos documentados; timeoutSeconds admite cero y enteros negativos."
+    mcp_remote_endpoint_must_be_an_http: "El endpoint remoto MCP debe ser una URL HTTP o HTTPS."
+    use_a_streamable_http_server_url_or: "Usa una URL de servidor Streamable HTTP o una expansión de entorno compatible."
+  agy_mcp_002:
+    antigravity_cli_does_not_support_httpurl_or: "Antigravity CLI no admite httpUrl ni el transporte MCP HTTP+SSE heredado."
+    use_a_streamable_http_endpoint_under_serverurl: "Usa un endpoint Streamable HTTP en serverUrl o url."
+  agy_pl_001:
+    invalid_antigravity_plugin_manifest_field: "Campo de manifiesto de plugin Antigravity no válido."
+    use_the_native_plugin_schema_name_is: "Usa el esquema nativo de plugins; name es obligatorio para instalar por CLI y version puede ser cualquier cadena."
+  agy_pl_002:
+    plugin_metadata_is_ignored_or_incomplete_for: "Los metadatos del plugin se ignoran o están incompletos para la instalación por CLI."
+  agy_rl_001:
+    antigravity_ignores_a_rule_without_a_recognized: "Antigravity ignora las reglas sin un trigger reconocido."
+    use_always_on_model_decision_glob_or: "Usa always_on, model_decision, glob o manual."
+    frontmatter_error: "La personalización de Antigravity requiere frontmatter YAML válido."
+    frontmatter_suggestion: "Agrega un objeto frontmatter completo con los campos nativos obligatorios."
+  agy_rl_002:
+    antigravity_customization_needs_valid_yaml_frontmatter: "La personalización de Antigravity requiere frontmatter YAML válido."
+    add_a_complete_frontmatter_object_with_the: "Agrega un objeto frontmatter completo con los campos nativos obligatorios."
+    a_model_decision_rule_needs_a_description: "Una regla model_decision requiere description."
+    describe_when_the_agent_should_load_the: "Describe cuándo debe cargar la regla el agente."
+    a_glob_rule_needs_globs_or_glob: "Una regla glob requiere globs o glob como cadena no vacía."
+    use_a_quoted_comma_separated_string_of: "Usa una cadena entre comillas con patrones de archivo separados por comas."
+    rule_descriptions_and_glob_expressions_must_be: "Las descripciones de reglas y las expresiones glob deben ser cadenas."
+    use_the_native_antigravity_rule_frontmatter_types: "Usa los tipos de frontmatter nativos de las reglas de Antigravity."
+  agy_rl_003:
+    antigravity_truncates_rule_files_after_24_000: "Antigravity trunca los archivos de reglas después de 24.000 bytes expandidos."
+    split_the_instructions_into_smaller_modular_rules: "Divide las instrucciones en reglas modulares más pequeñas."
+    split_the_rule_into_smaller_files_or: "Divide la regla en archivos más pequeños o usa la divulgación model_decision."
+  agy_rl_004:
+    invalid_antigravity_rule_registry_entry: "Entrada de registro de reglas de Antigravity no válida."
+    use_arrays_of_objects_with_path_and: "Usa listas de objetos con path y las listas opcionales de cadenas include_only/exclude."
+  grk_ag_001:
+    grok_agent_needs_valid_yaml_frontmatter: "El agente Grok requiere frontmatter YAML válido."
+    add_a_complete_agent_metadata_object_with: "Agrega un objeto completo de metadatos del agente con name y description."
+  grk_ag_002:
+    invalid_grok_inline_mcp_server_reference: "Referencia de servidor MCP en línea de Grok no válida."
+    use_a_server_name_a_single_name: "Usa un nombre de servidor, un mapa de un solo nombre a configuración o un objeto de servidor con name."
+    schema_message: "El campo de Grok incumple la restricción %{keyword} documentada."
+    schema_suggestion: "Usa los tipos y valores de campos de configuración nativos de Grok."
+  grk_ag_003:
+    schema_message: "El campo de Grok incumple la restricción %{keyword} documentada."
+    schema_suggestion: "Usa los tipos y valores de campos de configuración nativos de Grok."
+  grk_ag_004:
+    grok_plugin_agents_cannot_use_this_privileged: "Los agentes de plugins Grok no pueden usar esta opción privilegiada de frontmatter."
+    configure_trusted_plugin_session_mcp_and_hooks: "Configura MCP y hooks de plugins o sesiones de confianza fuera del agente; los agentes de plugins no pueden omitir permisos."
+  grk_cfg_001:
+    invalid_grok_toml_configuration: "Configuración TOML de Grok no válida."
+    correct_the_toml_syntax_before_grok_loads: "Corrige la sintaxis TOML antes de que Grok cargue este archivo."
+    parse_error: "JSON de configuración no válido."
+    parse_suggestion: "Corrige la sintaxis JSON; esta configuración no se puede cargar."
+    root_object: "La configuración debe contener un objeto JSON."
+    root_object_suggestion: "Usa un objeto con los campos documentados para este archivo de configuración."
+  grk_cfg_002:
+    grok_ignores_this_mcp_option_in_project: "Grok ignora esta opción MCP en config.toml del proyecto."
+    only_mcp_max_output_bytes_is_loaded: "De la configuración del proyecto solo se carga mcp.max_output_bytes."
+    grok_ignores_this_setting_in_project_config: "Grok ignora esta opción en config.toml del proyecto."
+    put_user_settings_in_grok_home_config: "Coloca las opciones de usuario en $GROK_HOME/config.toml; los archivos del proyecto aportan mcp_servers, plugins, permission y mcp.max_output_bytes."
+  grk_cfg_003:
+    grok_field_violates_the_documented_constraint: "El campo de Grok incumple la restricción %{keyword} documentada."
+    use_the_native_grok_configuration_field_types: "Usa los tipos y valores de campos de configuración nativos de Grok."
+    schema_message: "El campo de Grok incumple la restricción %{keyword} documentada."
+    schema_suggestion: "Usa los tipos y valores de campos de configuración nativos de Grok."
+  grk_cfg_004:
+    grok_1_0_69_retired_ui_simple: "Grok 1.0.69 retiró ui.simple_mode; ya no modifica el editor."
+    grok_1_0_68_replaced_ui_vim: "Grok 1.0.68 sustituyó ui.vim_mode por keys.vim; la clave antigua es un alias heredado."
+    grok_1_0_63_retired_memory_v2: "Grok 1.0.63 retiró memory_v2.compact_index_enabled."
+    remove_retired_settings_use_keys_vim_off: "Elimina las opciones retiradas; usa keys.vim = off o nav para la navegación vim actual."
+  grk_cfg_005:
+    grok_honors_the_bypass_permissions_lock_only: "Grok solo respeta el bloqueo de omisión de permisos en una política del sistema propiedad de root."
+    set_the_lock_in_etc_grok_requirements: "Solicita al administrador del sistema que establezca el bloqueo en /etc/grok/requirements.toml."
+  grk_cfg_006:
+    grok_version_override_bound_must_be_a: "El límite de modificación de versión de Grok debe ser una versión semántica."
+    use_a_complete_major_minor_patch_version: "Usa una cadena de versión completa major.minor.patch."
+    this_grok_version_range_can_never_apply: "Este rango de versiones de Grok nunca puede aplicarse."
+    put_minimum_version_at_or_below_maximum: "Establece minimum_version menor o igual que maximum_version."
+  grk_hk_001:
+    grok_hook_files_need_a_hooks_object: "Los archivos de hooks de Grok requieren un objeto hooks."
+    put_lifecycle_events_inside_the_hooks_map: "Coloca los eventos de ciclo de vida en el mapa hooks."
+    grok_hooks_must_map_event_names_to: "Los hooks de Grok deben asignar nombres de eventos a grupos de coincidencia."
+    use_the_documented_hooks_object: "Usa el objeto hooks documentado."
+    hook_event_must_contain_a_matcher_group: "El evento de hook debe contener una lista de grupos de coincidencia."
+    put_handlers_in_each_group_s_hooks: "Coloca los manejadores en la lista hooks de cada grupo."
+    hook_matcher_must_be_a_string_or: "El matcher del hook debe ser una cadena o null."
+    use_a_tool_matcher_expression_or_omit: "Usa una expresión de coincidencia de herramientas u omítela."
+    hook_matcher_group_needs_a_hooks_array: "El grupo de coincidencia del hook requiere una lista hooks."
+    add_command_or_http_hook_handlers: "Agrega manejadores de hooks de comando o HTTP."
+    invalid_grok_hook_handler: "Manejador de hook de Grok no válido."
+    use_type_command_with_command_or_type: "Usa type command con command, o type http con url; timeout se expresa en segundos sin signo y args es una lista de cadenas."
+  grk_hk_002:
+    grok_skips_this_unknown_hook_event: "Grok omite este evento de hook desconocido."
+    use_a_documented_lifecycle_event_or_supported: "Usa un evento de ciclo de vida documentado o un alias de compatibilidad admitido."
+  grk_hk_003:
+    invalid_grok_hook_matcher_regular_expression: "Expresión regular de matcher de hook de Grok no válida."
+    use_a_valid_expression_in_grok_s: "Usa una expresión válida en el dialecto regex de Grok, o * para coincidir con todas las herramientas."
+  grk_mcp_001:
+    grok_mcp_server_declarations_must_be_a: "Las declaraciones de servidores MCP de Grok deben ser un mapa."
+    map_server_names_to_stdio_command_or: "Asigna nombres de servidores a configuraciones de comandos stdio o URL remotas."
+    grok_mcp_server_must_be_an_object: "El servidor MCP de Grok debe ser un objeto."
+    configure_command_args_env_or_url_headers: "Configura command/args/env o url/headers."
+    grok_mcp_server_needs_a_non_empty: "El servidor MCP de Grok requiere command o url no vacíos."
+    use_command_for_stdio_or_url_for: "Usa command para stdio o url para un servidor remoto."
+    invalid_grok_mcp_server_option_type: "Tipo de opción de servidor MCP de Grok no válido."
+    use_the_types_documented_in_the_grok: "Usa los tipos documentados en la referencia de configuración MCP de Grok."
+  grk_pl_001:
+    invalid_grok_plugin_lsp_server_configuration: "Configuración de servidor LSP de plugin Grok no válida."
+    use_the_native_lsp_command_argument_transport: "Usa los tipos nativos de comandos, argumentos, transporte y tiempos de espera LSP."
+    schema_message: "El campo de Grok incumple la restricción %{keyword} documentada."
+    schema_suggestion: "Usa los tipos y valores de campos de configuración nativos de Grok."
+  grk_pl_002:
+    grok_skips_plugin_component_paths_outside_the: "Grok omite las rutas de componentes de plugins fuera de la raíz del plugin."
+    keep_component_paths_within_the_plugin_directory: "Mantén las rutas de componentes dentro del directorio del plugin."
+  grk_sbx_001:
+    grok_custom_profiles_cannot_redefine_a_built: "Los perfiles personalizados de Grok no pueden redefinir un perfil de sandbox integrado."
+    choose_a_custom_name_and_extend_a: "Elige un nombre personalizado y extiende un perfil integrado compatible."
+  grk_sbx_002:
+    schema_message: "El campo de Grok incumple la restricción %{keyword} documentada."
+    schema_suggestion: "Usa los tipos y valores de campos de configuración nativos de Grok."
+  grk_sk_001:
+    grok_skill_allowed_tools_does_not_grant: "allowed-tools de los skills de Grok no concede ni restringe herramientas."
+    use_grok_permission_rules_or_an_agent: "Usa reglas de permisos de Grok o una política de herramientas del agente para restringir herramientas."
+  grk_sk_002:
+    grok_treats_only_literal_true_as_enabled: "Grok solo considera habilitado este campo de skill si su valor es el literal true."
+    use_true_or_false_not_yes_no: "Usa true o false, no yes/no ni cadenas booleanas entre comillas."
+  native_contract:
+    invalid_configuration_json: "JSON de configuración no válido."
+    correct_the_json_syntax_this_configuration_cannot: "Corrige la sintaxis JSON; esta configuración no se puede cargar."
+    configuration_must_contain_a_json_object: "La configuración debe contener un objeto JSON."
+    use_an_object_with_the_fields_documented: "Usa un objeto con los campos documentados para este archivo de configuración."
+    configuration_field_field_violates_the_documented_constraint: "El campo de configuración %{field} incumple la restricción %{keyword} documentada."
+    use_the_value_types_and_choices_in: "Usa los tipos de valores y las opciones de la referencia de configuración de la herramienta."
+  pi_cfg_001:
+    pi_models_json_does_not_accept_block: "models.json de Pi no admite comentarios de bloque."
+    use_line_comments_or_ordinary_json: "Usa comentarios de línea // o JSON estándar."
+    parse_error: "JSON de configuración no válido."
+    parse_suggestion: "Corrige la sintaxis JSON; esta configuración no se puede cargar."
+    root_object: "La configuración debe contener un objeto JSON."
+    root_object_suggestion: "Usa un objeto con los campos documentados para este archivo de configuración."
+  pi_cfg_002:
+    schema_message: "El campo de configuración %{field} incumple la restricción %{keyword} documentada."
+    schema_suggestion: "Usa los tipos de valores y las opciones de la referencia de configuración de la herramienta."
+  pi_cfg_003:
+    pi_ignores_this_setting_in_project_configuration: "Pi ignora esta opción en la configuración del proyecto."
+    move_this_setting_to_the_agent_directory: "Mueve esta opción a settings.json del directorio del agente."
+    pi_loads_models_json_from_its_agent: "Pi carga models.json desde el directorio del agente, no desde .pi del proyecto."
+    put_provider_and_model_definitions_in_agent: "Coloca las definiciones de proveedores y modelos en <agent-dir>/models.json."
+    pi_loads_keybindings_json_from_its_agent: "Pi carga keybindings.json desde el directorio del agente."
+    put_keybindings_in_agent_dir_keybindings_json: "Coloca los atajos en <agent-dir>/keybindings.json y ejecuta /reload."
+  pi_kb_001:
+    schema_message: "El campo de configuración %{field} incumple la restricción %{keyword} documentada."
+    schema_suggestion: "Usa los tipos de valores y las opciones de la referencia de configuración de la herramienta."
+  pi_mcp_001:
+    autoenablecodemode_must_be_a_boolean: "autoEnableCodemode debe ser un booleano."
+    use_true_or_false: "Usa true o false."
+    mcpservers_must_be_an_object_mapping_server: "mcpServers debe ser un objeto que asigne nombres de servidores a sus configuraciones."
+    use_the_documented_mcpservers_map: "Usa el mapa mcpServers documentado."
+  pi_mcp_002:
+    invalid_pi_mcp_server_name: "Nombre de servidor MCP de Pi no válido."
+    use_ascii_letters_digits_underscores_and_hyphens: "Usa letras ASCII, dígitos, guiones bajos y guiones."
+    an_mcp_server_configuration_must_be_an: "La configuración de un servidor MCP debe ser un objeto."
+    define_a_stdio_server_http_server_or: "Define un servidor stdio, un servidor HTTP o una modificación del proyecto."
+    a_project_mcp_override_can_only_set: "Una modificación MCP del proyecto solo puede establecer enabled, exposure y toolExposure."
+    define_a_complete_server_or_keep_only: "Define un servidor completo o conserva solo los campos de modificación del servidor heredado."
+    invalid_pi_mcp_server_option: "Opción de servidor MCP de Pi no válida."
+    use_the_documented_boolean_string_exposure_or: "Usa el booleano, cadena, exposición o tiempo de espera positivo documentado."
+    pi_mcp_transport_type_must_be_a: "El tipo de transporte MCP de Pi debe ser una cadena cuando se especifica."
+    omit_type_for_inference_or_use_a: "Omite type para inferirlo o usa un nombre de transporte documentado."
+    mcp_url_must_use_http_or_https: "La URL MCP debe usar HTTP o HTTPS."
+    use_a_streamable_http_mcp_endpoint: "Usa un endpoint MCP Streamable HTTP."
+    mcp_headers_must_map_names_to_strings: "Los encabezados MCP deben asignar nombres a cadenas."
+    use_string_header_values_environment_references_or: "Usa cadenas, referencias a variables de entorno o referencias a comandos como valores de encabezados."
+    invalid_stdio_mcp_option: "Opción MCP stdio no válida."
+    use_a_string_array_for_args_a: "Usa una lista de cadenas para args, un mapa de cadenas para env y una cadena para cwd."
+    pi_mcp_server_needs_command_stdio_or: "El servidor MCP de Pi requiere command (stdio) o url (Streamable HTTP)."
+    legacy_sse_is_unsupported_select_the_matching: "SSE heredado no es compatible; selecciona los campos de tipo y transporte correspondientes."
+  pi_mcp_003:
+    project_mcp_configuration_cannot_select_global_login: "La configuración MCP del proyecto no puede seleccionar credenciales de inicio de sesión globales."
+    configure_auth_provider_only_in_the_global: "Configura auth.provider solo en el mcp.json global del directorio del agente."
+    mcp_provider_authentication_needs_a_provider_name: "La autenticación MCP con proveedor requiere un nombre de proveedor y HTTPS o una URL de loopback."
+    use_auth_provider_with_an_https_or: "Usa auth.provider con un endpoint HTTPS o de loopback local en la configuración global."
+  pi_mcp_004:
+    pi_mcp_server_names_collide_after_hyphens: "Los nombres de servidores MCP de Pi coinciden al convertir guiones en guiones bajos."
+    give_the_servers_distinct_normalized_names: "Asigna nombres normalizados distintos a los servidores."
+  pi_mcp_005:
+    mcp_oauth_settings_must_be_an_object: "Las opciones OAuth de MCP deben ser un objeto."
+    use_the_documented_oauth_client_fields: "Usa los campos de cliente OAuth documentados."
+    invalid_pi_mcp_oauth_callback_or_client: "Opciones de callback OAuth o registro de cliente MCP de Pi no válidas."
+    use_http_loopback_callbacks_matching_callback_ports: "Usa callbacks HTTP de loopback, puertos de callback coincidentes y las opciones de cliente dcr/cimd documentadas."
+  pi_mdl_001:
+    schema_message: "El campo de configuración %{field} incumple la restricción %{keyword} documentada."
+    schema_suggestion: "Usa los tipos de valores y las opciones de la referencia de configuración de la herramienta."
+  pi_mdl_002:
+    pi_oauth_provider_configuration_requires_an_explicit: "La configuración de un proveedor OAuth de Pi requiere baseUrl explícito."
+    set_the_provider_s_baseurl_when_oauth: "Establece baseUrl del proveedor al configurar oauth."
+    pi_rejects_an_empty_provider_configuration_with: "Pi rechaza una configuración de proveedor vacía sin modificaciones de modelos ni conexión."
+    define_models_baseurl_headers_compat_modeloverrides_or: "Define models, baseUrl, headers, compat, modelOverrides o modificaciones de autenticación, o elimina la entrada del proveedor."
+  pi_pkg_001:
+    a_pi_package_manifest_must_be_an: "El manifiesto de un paquete Pi debe ser un objeto."
+    declare_resource_paths_under_the_package_json: "Declara las rutas de recursos en el objeto pi de package.json."
+    pi_package_resources_must_be_arrays_of: "Los recursos de paquetes Pi deben ser listas de cadenas de rutas."
+    use_paths_or_glob_exclusion_patterns_relative: "Usa rutas o patrones glob y de exclusión relativos a la raíz del paquete."
+    pi_gallery_media_must_be_a_path: "Los medios de la galería de Pi deben ser una cadena de ruta."
+    set_a_relative_image_video_path_or: "Establece una ruta relativa de imagen o vídeo, u omite este campo opcional."
+  pi_pkg_002:
+    a_host_provided_pi_package_is_installed: "Un paquete proporcionado por Pi está instalado como dependencia de ejecución."
+    move_the_host_package_to_peerdependencies_with: "Mueve el paquete del entorno anfitrión a peerDependencies con el rango * para que las extensiones compartan los módulos de ejecución de Pi."
+  pi_pr_001:
+    invalid_pi_prompt_frontmatter: "Frontmatter de plantilla de prompt de Pi no válido."
+    use_valid_yaml_with_optional_string_description: "Usa YAML válido con los campos opcionales description y argument-hint de tipo cadena."
+  pi_pr_002:
+    pi_ignores_non_string_prompt_description_and: "Pi ignora los campos description y argument-hint del prompt si no son cadenas."
+    use_strings_or_omit_the_fields_to: "Usa cadenas u omite los campos para usar la descripción del cuerpo como alternativa."
+  pi_th_001:
+    schema_message: "El campo de configuración %{field} incumple la restricción %{keyword} documentada."
+    schema_suggestion: "Usa los tipos de valores y las opciones de la referencia de configuración de la herramienta."
+  pi_th_002:
+    pi_theme_names_cannot_be_system_or: "Los nombres de temas Pi no pueden ser system ni contener una barra."
+    choose_a_unique_theme_name_and_use: "Elige un nombre de tema único y úsalo como nombre de archivo."
+    invalid_pi_theme_color_literal: "Color literal de tema Pi no válido."
+    use_rgb_rrggbb_or_a_supported_oklch: "Usa #rgb/#rrggbb o un valor OKLCH/OKHSL compatible con canales finitos y rangos válidos."
+    pi_theme_references_a_missing_or_cyclic: "El tema Pi referencia una variable de color inexistente o cíclica."
+    define_the_variable_without_a_cycle_or: "Define la variable sin ciclos o usa un color literal documentado."
   kr_hk_014:
     alias: "El alias de trigger %{trigger} es compatible; se recomienda el nombre canónico %{canonical}"
     alias_suggestion: "Usa el trigger canónico en PascalCase al editar hooks V3. Los alias de compatibilidad siguen siendo válidos."

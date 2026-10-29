@@ -1272,6 +1272,9 @@ pub(crate) fn gemini_policy_extension_root<'p>(
 /// [`FileType`] determines which validators the pipeline dispatches for
 /// the file.
 pub fn detect_file_type(path: &Path) -> FileType {
+    if let Some(file_type) = super::native::detect(path) {
+        return file_type;
+    }
     let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
     let parent = path
         .parent()

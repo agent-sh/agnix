@@ -489,31 +489,128 @@
     "pi": {
       "tier": "a",
       "display_name": "Pi",
-      "validators": [],
-      "validation_status": "pending",
+      "validators": [
+        "pi",
+        "per_client_skill",
+        "skill",
+        "mcp"
+      ],
+      "validation_status": "implemented",
       "github_repo": "earendil-works/pi",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
       "last_known_version": "v1.4.0",
       "tracked": true,
-      "notes": "Release tracking starts at v1.4.0. Existing Pi subagent recognition prevents Claude false positives; settings, models, packages, MCP and other Pi-specific validation remain pending. https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/configuration.md"
+      "notes": "Native static configuration validation. Research and qualified versions: knowledge-base/NATIVE-TOOL-CONTRACTS.md. No extension or command execution.",
+      "changes_of_interest": {
+        "config_surfaces": [
+          "settings.json",
+          "models.json",
+          "keybindings.json",
+          "mcp.json",
+          "package.json pi resources",
+          "themes/*.json",
+          "prompts/*.md",
+          "skills/*/SKILL.md"
+        ],
+        "relevant": [
+          "Changed field types, defaults or scope",
+          "Resource discovery and frontmatter parsing",
+          "New hook events and handlers",
+          "MCP transport, authentication and timeout contracts",
+          "Package and plugin component declarations"
+        ],
+        "irrelevant": [
+          "Model marketing without configuration changes",
+          "Terminal rendering or performance changes without file-contract changes"
+        ]
+      }
     },
     "antigravity": {
       "tier": "b",
       "display_name": "Antigravity CLI",
-      "validators": [],
-      "validation_status": "pending",
-      "last_known_version": null,
-      "tracked": false,
-      "untracked_reason": "Manual review of https://antigravity.google/docs/getting-started?tab=cli and https://antigravity.google/cli/install.sh until a stable machine-readable release source is verified. agy settings and MCP configuration differ from legacy Gemini CLI; tool-specific validation is pending."
+      "validators": [
+        "antigravity",
+        "per_client_skill",
+        "skill",
+        "mcp"
+      ],
+      "validation_status": "implemented",
+      "last_known_version": "1.4.9",
+      "tracked": true,
+      "notes": "Native static configuration validation. Research and qualified versions: knowledge-base/NATIVE-TOOL-CONTRACTS.md. No extension or command execution.",
+      "html_url": "https://antigravity.google/docs/release-notes",
+      "content_url": "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json",
+      "version_extractor": "antigravity-manifest",
+      "notes_extractor": "stub",
+      "changes_of_interest": {
+        "config_surfaces": [
+          "~/.gemini/antigravity-cli/settings.json",
+          "keybindings.json",
+          ".agents/mcp_config.json",
+          "~/.gemini/config/mcp_config.json",
+          "hooks.json",
+          "plugin.json",
+          ".agents/rules.json",
+          ".agents/rules/**/*.md",
+          "agents/*.md",
+          "skills/*/SKILL.md"
+        ],
+        "relevant": [
+          "Changed field types, defaults or scope",
+          "Resource discovery and frontmatter parsing",
+          "New hook events and handlers",
+          "MCP transport, authentication and timeout contracts",
+          "Package and plugin component declarations"
+        ],
+        "irrelevant": [
+          "Model marketing without configuration changes",
+          "Terminal rendering or performance changes without file-contract changes"
+        ]
+      }
     },
     "grok-code": {
       "tier": "b",
       "display_name": "Grok Code",
-      "validators": [],
-      "validation_status": "pending",
-      "last_known_version": null,
-      "tracked": false,
-      "untracked_reason": "Manual review of the official Grok Build CLI documentation at https://docs.x.ai/build/cli/reference and its linked changelog until a release source is verified. No tool-specific validator exists yet."
+      "validators": [
+        "grok",
+        "per_client_skill",
+        "skill",
+        "mcp"
+      ],
+      "validation_status": "implemented",
+      "last_known_version": "1.0.70",
+      "tracked": true,
+      "notes": "Native static configuration validation. Research and qualified versions: knowledge-base/NATIVE-TOOL-CONTRACTS.md. No extension or command execution.",
+      "html_url": "https://x.ai/changelog/build",
+      "content_url": "https://x.ai/changelog/build/rss.xml",
+      "version_extractor": "grok-build-rss",
+      "notes_extractor": "stub",
+      "changes_of_interest": {
+        "config_surfaces": [
+          ".grok/config.toml",
+          "$GROK_HOME/config.toml",
+          "/etc/grok/requirements.toml",
+          "sandbox.toml",
+          "personas/*.toml",
+          "roles/*.toml",
+          "hooks/*.json",
+          "plugin.json",
+          ".mcp.json",
+          "agents/*.md",
+          "skills/*/SKILL.md"
+        ],
+        "relevant": [
+          "Changed field types, defaults or scope",
+          "Resource discovery and frontmatter parsing",
+          "New hook events and handlers",
+          "MCP transport, authentication and timeout contracts",
+          "Package and plugin component declarations"
+        ],
+        "irrelevant": [
+          "Model marketing without configuration changes",
+          "Terminal rendering or performance changes without file-contract changes"
+        ]
+      }
     },
     "muse-code": {
       "tier": "c",

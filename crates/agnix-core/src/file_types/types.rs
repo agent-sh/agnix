@@ -13,6 +13,22 @@ use std::fmt;
 /// registries without allocation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum FileType {
+    /// Pi settings, models, keybindings, MCP, themes and package manifests.
+    PiConfig,
+    /// Pi system instructions and reusable prompt templates.
+    PiPrompt,
+    /// Antigravity CLI settings, MCP, hooks, plugins and rule registries.
+    AntigravityConfig,
+    /// Antigravity modular rules with activation frontmatter.
+    AntigravityRule,
+    /// Antigravity Markdown custom agents.
+    AntigravityAgent,
+    /// Grok TOML configuration and native JSON hooks/plugin metadata.
+    GrokConfig,
+    /// Grok project Markdown rules.
+    GrokRule,
+    /// Grok custom Markdown agent definitions.
+    GrokAgent,
     /// SKILL.md files
     Skill,
     /// CLAUDE.md, AGENTS.md files
@@ -221,6 +237,14 @@ impl FileType {
 impl fmt::Display for FileType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
+            FileType::PiConfig => "PiConfig",
+            FileType::PiPrompt => "PiPrompt",
+            FileType::AntigravityConfig => "AntigravityConfig",
+            FileType::AntigravityRule => "AntigravityRule",
+            FileType::AntigravityAgent => "AntigravityAgent",
+            FileType::GrokConfig => "GrokConfig",
+            FileType::GrokRule => "GrokRule",
+            FileType::GrokAgent => "GrokAgent",
             FileType::Skill => "Skill",
             FileType::ClaudeMd => "ClaudeMd",
             FileType::Agent => "Agent",

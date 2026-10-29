@@ -2,7 +2,7 @@
   "name": "agnix",
   "displayName": "agnix - Agent Config Linter",
   "description": "Real-time validation for AI agent configuration files. Validates SKILL.md, CLAUDE.md, AGENTS.md, MCP configs, hooks, and more.",
-  "version": "0.59.3",
+  "version": "0.60.0",
   "publisher": "avifenesh",
   "repository": {
     "type": "git",
@@ -146,7 +146,27 @@
     "workspaceContains:**/POWER.md",
     "workspaceContains:**/{power,powers/*,powers/installed/*}/steering/*.md",
     "workspaceContains:**/dev.kiro/steering/*.md",
-    "workspaceContains:**/dev.kiro/INSTRUCTIONS.md"
+    "workspaceContains:**/dev.kiro/INSTRUCTIONS.md",
+    "workspaceContains:**/.pi/{settings.json,models.json,keybindings.json}",
+    "workspaceContains:**/.pi/agent/{settings.json,models.json,keybindings.json}",
+    "workspaceContains:**/.pi/prompts/**/*.md",
+    "workspaceContains:**/.pi/agent/prompts/**/*.md",
+    "workspaceContains:**/.pi/themes/**/*.json",
+    "workspaceContains:**/.pi/agent/themes/**/*.json",
+    "workspaceContains:**/.pi/{SYSTEM.md,APPEND_SYSTEM.md}",
+    "workspaceContains:**/.pi/agent/{SYSTEM.md,APPEND_SYSTEM.md}",
+    "workspaceContains:**/{.agents,.agent}/{mcp_config.json,hooks.json,rules.json}",
+    "workspaceContains:**/{.agents,.agent}/rules/**/*.md",
+    "workspaceContains:**/.gemini/config/{config.json,mcp_config.json,hooks.json,rules.json}",
+    "workspaceContains:**/.gemini/antigravity-cli/{settings.json,keybindings.json,mcp_config.json,hooks.json,rules.json}",
+    "workspaceContains:**/.gemini/{config,antigravity-cli}/rules/**/*.md",
+    "workspaceContains:**/.gemini/{config,antigravity-cli}/plugins/**/*.json",
+    "workspaceContains:**/{.grok,etc/grok}/{config.toml,managed_config.toml,requirements.toml,sandbox.toml,lsp.json}",
+    "workspaceContains:**/.grok-plugin/marketplace.json",
+    "workspaceContains:**/.grok/{personas,roles}/**/*.toml",
+    "workspaceContains:**/.grok/hooks/**/*.json",
+    "workspaceContains:**/.grok/rules/**/*.md",
+    "workspaceContains:**/.grok/plugins/**/*.json"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -188,7 +208,7 @@
         },
         "agnix.target": {
           "type": "string",
-          "enum": ["Generic", "ClaudeCode", "Cursor", "Codex"],
+          "enum": ["Generic", "ClaudeCode", "Cursor", "Codex", "Kiro", "Pi", "Antigravity", "GrokCode"],
           "default": "Generic",
           "description": "Target tool for validation (deprecated: use agnix.tools instead)",
           "scope": "resource"
@@ -202,6 +222,9 @@
               "cursor",
               "codex",
               "kiro",
+              "pi",
+              "antigravity",
+              "grok-code",
               "copilot",
               "github-copilot",
               "cline",
@@ -301,6 +324,24 @@
           "description": "Enable prompt engineering validation (PE-* rules)",
           "scope": "resource"
         },
+        "agnix.rules.pi": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Pi configuration validation (PI-* rules)",
+          "scope": "resource"
+        },
+        "agnix.rules.antigravity": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Antigravity CLI configuration validation (AGY-* rules)",
+          "scope": "resource"
+        },
+        "agnix.rules.grokCode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Grok Code configuration validation (GRK-* rules)",
+          "scope": "resource"
+        },
         "agnix.rules.disabledRules": {
           "type": "array",
           "items": {
@@ -314,6 +355,24 @@
           "type": ["string", "null"],
           "default": null,
           "description": "Claude Code version pin (e.g., \"1.0.0\")",
+          "scope": "resource"
+        },
+        "agnix.versions.pi": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Pi version pin (qualified at 1.4.0)",
+          "scope": "resource"
+        },
+        "agnix.versions.antigravity": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Antigravity CLI version pin (qualified at 1.4.9)",
+          "scope": "resource"
+        },
+        "agnix.versions.grokCode": {
+          "type": ["string", "null"],
+          "default": null,
+          "description": "Grok Build CLI version pin (qualified through 1.0.70)",
           "scope": "resource"
         },
         "agnix.versions.codex": {

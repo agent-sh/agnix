@@ -29,6 +29,15 @@ pub use schema::{ConfigWarning, generate_schema};
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ToolVersions {
+    /// Pi version qualified for the native configuration contracts.
+    #[serde(default)]
+    pub pi: Option<String>,
+    /// Antigravity CLI version qualified for its native configuration contracts.
+    #[serde(default)]
+    pub antigravity: Option<String>,
+    /// Grok Build CLI version for release-specific configuration advice.
+    #[serde(default)]
+    pub grok_code: Option<String>,
     /// Claude Code version (e.g., "1.0.0")
     #[serde(default)]
     #[schemars(description = "Claude Code version for version-aware validation (e.g., \"1.0.0\")")]
@@ -810,6 +819,16 @@ pub struct RuleConfig {
     #[schemars(description = "Enable Codex CLI validation rules (CDX-*)")]
     pub codex: bool,
 
+    /// Enable Pi native configuration rules (PI-*).
+    #[serde(default = "default_true")]
+    pub pi: bool,
+    /// Enable Antigravity CLI native configuration rules (AGY-*).
+    #[serde(default = "default_true")]
+    pub antigravity: bool,
+    /// Enable Grok Build native configuration rules (GRK-*).
+    #[serde(default = "default_true")]
+    pub grok_code: bool,
+
     /// Deprecated no-op retained so older configs still parse: Roo Code
     /// support was removed (discontinued 2026-05-15).
     #[serde(default = "default_true")]
@@ -924,6 +943,9 @@ impl Default for RuleConfig {
             opencode: true,
             gemini_md: true,
             codex: true,
+            pi: true,
+            antigravity: true,
+            grok_code: true,
             roo_code: true,
             windsurf: true,
             kiro_steering: true,
@@ -948,6 +970,12 @@ impl Default for RuleConfig {
     description = "Target tool for validation (deprecated: use 'tools' array for multi-tool support)"
 )]
 pub enum TargetTool {
+    /// Pi coding agent.
+    Pi,
+    /// Antigravity CLI.
+    Antigravity,
+    /// Grok Build coding agent.
+    GrokCode,
     /// Generic Agent Skills standard
     Generic,
     /// Claude Code specific
@@ -965,6 +993,9 @@ impl TargetTool {
     /// `None` for `Generic`, which selects every rule.
     pub fn tool_name(self) -> Option<&'static str> {
         match self {
+            TargetTool::Pi => Some("pi"),
+            TargetTool::Antigravity => Some("antigravity"),
+            TargetTool::GrokCode => Some("grok-code"),
             TargetTool::Generic => None,
             TargetTool::ClaudeCode => Some("claude-code"),
             TargetTool::Cursor => Some("cursor"),

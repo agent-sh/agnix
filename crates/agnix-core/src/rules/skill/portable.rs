@@ -14,6 +14,7 @@
 use super::helpers::{compute_line_starts, extract_reference_paths, line_col_at};
 use super::{SkillFrontmatter, ValidationContext};
 use crate::diagnostics::Diagnostic;
+#[cfg(feature = "filesystem")]
 use crate::parsers::frontmatter::split_frontmatter;
 use crate::rules::per_client_skill::SkillClient;
 use regex::Regex;
@@ -1025,6 +1026,7 @@ impl ValidationContext<'_> {
 }
 
 /// Name of a skill: frontmatter `name`, else its directory name (AS-025).
+#[cfg(feature = "filesystem")]
 pub(crate) fn skill_name(skill_md: &Path, content: &str) -> Option<String> {
     let parts = split_frontmatter(content);
     let declared = (parts.has_frontmatter && parts.has_closing)

@@ -998,6 +998,85 @@ fn client_servers(file_type: FileType, path: &Path, content: &str) -> Vec<(Strin
             .unwrap_or_default()
     };
     match file_type {
+        FileType::PiConfig => {
+            if path.file_name().and_then(|p| p.to_str()) != Some("mcp.json")
+                || crate::file_types::native::pi_resource(path, "themes")
+            {
+                return Vec::new();
+            }
+            let Some(root) = parse_jsonc(content.trim_start_matches('\u{feff}')) else {
+                return Vec::new();
+            };
+            let mut entries = map_entries(root.get("mcpServers"));
+            // Pi evaluates !command references only at runtime. Treat them as
+            // references for secret checks, without invoking or expanding them.
+            for (_, server) in &mut entries {
+                for group in ["env", "headers"] {
+                    if let Some(map) = server.get_mut(group).and_then(Value::as_object_mut) {
+                        for value in map.values_mut() {
+                            if value.as_str().is_some_and(|s| s.starts_with('!')) {
+                                *value = Value::String("${PI_COMMAND_REFERENCE}".into());
+                            }
+                        }
+                    }
+                }
+                if let Some(value) = server
+                    .get_mut("oauth")
+                    .and_then(|o| o.get_mut("clientSecret"))
+                {
+                    if value.as_str().is_some_and(|s| s.starts_with('!')) {
+                        *value = Value::String("${PI_COMMAND_REFERENCE}".into());
+                    }
+                }
+            }
+            entries
+        }
+        FileType::AntigravityConfig => {
+            if path.file_name().and_then(|p| p.to_str()) != Some("mcp_config.json") {
+                return Vec::new();
+            }
+            map_entries(
+                parse_jsonc(content.trim_start_matches('\u{feff}'))
+                    .as_ref()
+                    .and_then(|r| r.get("mcpServers")),
+            )
+        }
+        FileType::GrokConfig => {
+            if path.extension().and_then(|e| e.to_str()) == Some("toml") {
+                let Some(root) = toml::from_str::<toml::Value>(content)
+                    .ok()
+                    .and_then(|v| serde_json::to_value(v).ok())
+                else {
+                    return Vec::new();
+                };
+                map_entries(root.get("mcp_servers"))
+            } else {
+                let Some(root) = parse_jsonc(content) else {
+                    return Vec::new();
+                };
+                let servers = root.get("mcpServers");
+                map_entries(servers.and_then(|v| v.get("mcpServers")).or(servers))
+            }
+        }
+        FileType::AntigravityAgent | FileType::GrokAgent => {
+            let Some(root) = frontmatter_json(content) else {
+                return Vec::new();
+            };
+            match root.get("mcpServers") {
+                Some(Value::Object(_)) => map_entries(root.get("mcpServers")),
+                Some(Value::Array(items)) => items
+                    .iter()
+                    .flat_map(|item| {
+                        if let Some(name) = item.get("name").and_then(Value::as_str) {
+                            vec![(name.to_string(), item.clone())]
+                        } else {
+                            map_entries(Some(item))
+                        }
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            }
+        }
         FileType::OpenCodeConfig => {
             let Some(root) = parse_jsonc(content) else {
                 return Vec::new();
@@ -1055,6 +1134,14 @@ fn client_servers(file_type: FileType, path: &Path, content: &str) -> Vec<(Strin
         }
         // Amp skill servers in SKILL.md frontmatter (`mcpServers`).
         FileType::Skill => {
+            if matches!(
+                crate::rules::per_client_skill::detect_client(path),
+                crate::rules::per_client_skill::SkillClient::Pi
+                    | crate::rules::per_client_skill::SkillClient::Antigravity
+                    | crate::rules::per_client_skill::SkillClient::Grok
+            ) {
+                return Vec::new();
+            }
             let Some(json) = frontmatter_json(content) else {
                 return Vec::new();
             };
@@ -1081,6 +1168,9 @@ fn frontmatter_json(content: &str) -> Option<Value> {
     if !parts.has_frontmatter || !parts.has_closing {
         return None;
     }
+    if crate::parsers::frontmatter::check_yaml_depth(&parts.frontmatter).is_err() {
+        return None;
+    }
     let yaml = serde_yaml::from_str::<serde_yaml::Value>(&parts.frontmatter).ok()?;
     serde_json::to_value(yaml).ok()
 }
@@ -1097,6 +1187,9 @@ pub(crate) fn reported_secret_values(
     config: &PerFileLintConfig<'_>,
 ) -> Vec<String> {
     let mut values = Vec::new();
+    if native_theme(file_type, path, config) {
+        return values;
+    }
     if !is_client_config_with_mcp(file_type) {
         return values;
     }
@@ -1106,7 +1199,7 @@ pub(crate) fn reported_secret_values(
         return values;
     }
     let codex_plugin_secrets = crate::rules::codex_plugin::reports_client_secrets(path, config);
-    for (name, server) in client_servers(file_type, path, content) {
+    for (name, server) in servers_for_config(file_type, path, content, config) {
         let view = ServerView::from_json(&name, &server, None);
         if env_rule && view.stdio {
             values.extend(
@@ -1149,6 +1242,11 @@ pub(crate) fn is_client_config_with_mcp(file_type: FileType) -> bool {
     matches!(
         file_type,
         FileType::OpenCodeConfig
+            | FileType::PiConfig
+            | FileType::AntigravityConfig
+            | FileType::GrokConfig
+            | FileType::AntigravityAgent
+            | FileType::GrokAgent
             | FileType::GeminiSettings
             | FileType::GeminiExtension
             | FileType::AmpSettings
@@ -1171,7 +1269,10 @@ pub(crate) fn validate_client_config(
     config: &PerFileLintConfig<'_>,
 ) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
-    let servers = client_servers(file_type, path, content);
+    if native_theme(file_type, path, config) {
+        return diagnostics;
+    }
+    let servers = servers_for_config(file_type, path, content, config);
     if servers.is_empty() {
         return diagnostics;
     }
@@ -1181,6 +1282,50 @@ pub(crate) fn validate_client_config(
         check_server(&view, path, &locator, config, &mut diagnostics);
     }
     diagnostics
+}
+
+fn native_theme(file_type: FileType, path: &Path, config: &PerFileLintConfig<'_>) -> bool {
+    file_type == FileType::PiConfig
+        && crate::file_types::native::resource_owner(
+            path,
+            config.fs().as_ref(),
+            crate::file_types::native::selected(config),
+            config.root_dir().map(|root| root.as_path()),
+        ) == Some(crate::file_types::native::Resource::PiTheme)
+}
+
+fn servers_for_config(
+    file_type: FileType,
+    path: &Path,
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Vec<(String, Value)> {
+    use crate::file_types::native::{self, Resource};
+    if file_type == FileType::Skill
+        && matches!(
+            crate::rules::per_client_skill::resolve_skill_client(path, config),
+            crate::rules::per_client_skill::SkillClient::Pi
+                | crate::rules::per_client_skill::SkillClient::Antigravity
+                | crate::rules::per_client_skill::SkillClient::Grok
+        )
+    {
+        return Vec::new();
+    }
+    if file_type == FileType::GrokConfig {
+        match native::resource_owner(
+            path,
+            config.fs().as_ref(),
+            native::selected(config),
+            config.root_dir().map(|root| root.as_path()),
+        ) {
+            Some(Resource::GrokMcp) => {
+                return client_servers(file_type, &path.with_file_name(".mcp.json"), content);
+            }
+            Some(Resource::GrokHooks | Resource::GrokLsp) => return Vec::new(),
+            _ => {}
+        }
+    }
+    client_servers(file_type, path, content)
 }
 
 #[cfg(test)]

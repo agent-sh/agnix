@@ -101,6 +101,9 @@ impl<'a> DefaultRuleFilter<'a> {
         // Backward compatibility: accept short names as aliases
         match canonical_tool {
             "github-copilot" => user_tool.eq_ignore_ascii_case("copilot"),
+            "pi" => user_tool.eq_ignore_ascii_case("pi-coding-agent"),
+            "antigravity" => user_tool.eq_ignore_ascii_case("agy"),
+            "grok-code" => user_tool.eq_ignore_ascii_case("grok"),
             _ => false,
         }
     }
@@ -108,15 +111,21 @@ impl<'a> DefaultRuleFilter<'a> {
     /// Check if a rule's category is enabled
     fn is_category_enabled(&self, rule_id: &str) -> bool {
         match rule_id {
+            s if s.starts_with("PI-SK-") => self.rules.skills && self.rules.pi,
+            s if s.starts_with("AGY-SK-") => self.rules.skills && self.rules.antigravity,
+            s if s.starts_with("GRK-SK-") => self.rules.skills && self.rules.grok_code,
             s if [
                 "AS-", "CC-SK-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-", "WS-SK-",
-                "KR-SK-", "AMP-SK-",
+                "KR-SK-", "AMP-SK-", "PI-SK-", "AGY-SK-", "GRK-SK-",
             ]
             .iter()
             .any(|p| s.starts_with(p)) =>
             {
                 self.rules.skills
             }
+            s if s.starts_with("PI-") => self.rules.pi,
+            s if s.starts_with("AGY-") => self.rules.antigravity,
+            s if s.starts_with("GRK-") => self.rules.grok_code,
             s if s.starts_with("AMP-") => self.rules.amp_checks,
             s if s.starts_with("CC-HK-") => self.rules.hooks,
             s if s.starts_with("CC-AG-") => self.rules.agents,

@@ -1,0 +1,2131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "agnix-derived static constraints: docs.x.ai/build/settings/reference and xai-org/grok-build source revision 2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8, reconciled with CLI changelog through 1.0.70. Unknown settings remain open.",
+  "$ref": "#/$defs/config",
+  "$defs": {
+    "config": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "string"
+            },
+            "web_search": {
+              "type": "string"
+            },
+            "default_reasoning_effort": {
+              "type": "string"
+            },
+            "session_summary": {
+              "type": "string"
+            },
+            "image_description": {
+              "type": "string"
+            },
+            "temperature": {
+              "type": "number"
+            },
+            "top_p": {
+              "type": "number"
+            },
+            "max_completion_tokens": {
+              "type": "number"
+            },
+            "max_retries": {
+              "type": "number"
+            },
+            "stream_tool_calls": {
+              "type": "boolean"
+            },
+            "extra_headers": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "allowed_models": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "hidden_models": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "disabled_models": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "model": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "model": {
+                "type": "string"
+              },
+              "base_url": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "api_key": {
+                "type": "string"
+              },
+              "env_key": {
+                "type": "string"
+              },
+              "api_backend": {
+                "type": "string"
+              },
+              "reasoning_effort": {
+                "type": "string"
+              },
+              "temperature": {
+                "type": "number"
+              },
+              "top_p": {
+                "type": "number"
+              },
+              "max_completion_tokens": {
+                "type": "number"
+              },
+              "context_window": {
+                "type": "number"
+              },
+              "max_retries": {
+                "type": "number"
+              },
+              "inference_idle_timeout_secs": {
+                "type": "number"
+              },
+              "supports_backend_search": {
+                "type": "boolean"
+              },
+              "supports_reasoning_effort": {
+                "type": "boolean"
+              },
+              "stream_tool_calls": {
+                "type": "boolean"
+              },
+              "extra_headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "mcp_servers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "cwd": {
+                "type": "string"
+              },
+              "bearer_token_env_var": {
+                "type": "string"
+              },
+              "bearer_token_file": {
+                "type": "string"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "startup_timeout_sec": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 18446744073709551615
+              },
+              "tool_timeout_sec": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 18446744073709551615
+              },
+              "tool_timeouts": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 18446744073709551615
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "permission": {
+          "type": "object",
+          "properties": {
+            "allow": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "deny": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "ask": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "enum": [
+                      "allow",
+                      "deny",
+                      "ask"
+                    ]
+                  },
+                  "tool": {
+                    "type": "string"
+                  },
+                  "pattern": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true,
+                "required": [
+                  "action",
+                  "tool"
+                ]
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "ui": {
+          "type": "object",
+          "properties": {
+            "compact_mode": {
+              "type": "boolean"
+            },
+            "show_timeline": {
+              "type": "boolean"
+            },
+            "page_flip_on_send": {
+              "type": "boolean"
+            },
+            "combine_queued_prompts": {
+              "type": "boolean"
+            },
+            "simple_mode": {
+              "type": "boolean"
+            },
+            "vim_mode": {
+              "type": "boolean"
+            },
+            "prompt_suggestions": {
+              "type": "boolean"
+            },
+            "mouse_reporting_toggle": {
+              "type": "boolean"
+            },
+            "show_thinking_blocks": {
+              "type": "boolean"
+            },
+            "invert_scroll": {
+              "type": "boolean"
+            },
+            "remember_tool_approvals": {
+              "type": "boolean"
+            },
+            "voice_keybind_enabled": {
+              "type": "boolean"
+            },
+            "disable_bypass_permissions_mode": {
+              "type": "boolean"
+            },
+            "show_timestamps": {
+              "type": "boolean"
+            },
+            "theme": {
+              "type": "string"
+            },
+            "auto_dark_theme": {
+              "type": "string"
+            },
+            "auto_light_theme": {
+              "type": "string"
+            },
+            "fork_secondary_model": {
+              "type": "string"
+            },
+            "voice_stt_language": {
+              "type": "string"
+            },
+            "screen_mode": {
+              "enum": [
+                "fullscreen",
+                "minimal"
+              ]
+            },
+            "timestamps": {
+              "enum": [
+                "off",
+                "minimal",
+                "on"
+              ]
+            },
+            "keep_text_selection": {
+              "enum": [
+                "flash",
+                "hold",
+                "word_select"
+              ]
+            },
+            "cursor_blink": {
+              "type": "boolean"
+            },
+            "tool_call_density": {
+              "enum": [
+                "detailed",
+                "compact-shells",
+                "compact-ungrouped",
+                "compact-grouped",
+                "compact-all-grouped"
+              ]
+            },
+            "render_mermaid": {
+              "enum": [
+                "auto",
+                "on",
+                "off"
+              ]
+            },
+            "scroll_mode": {
+              "enum": [
+                "auto",
+                "wheel",
+                "trackpad"
+              ]
+            },
+            "permission_mode": {
+              "type": "string"
+            },
+            "default_selected_permission": {
+              "enum": [
+                "always_allow_all_sessions",
+                "allow_command_always",
+                "allow_once",
+                "reject"
+              ]
+            },
+            "cancel_subagents_on_turn_cancel": {
+              "enum": [
+                "ask",
+                "always_stop",
+                "always_continue"
+              ]
+            },
+            "hunk_tracker_mode": {
+              "enum": [
+                "agent_only",
+                "all_dirty",
+                "off"
+              ]
+            },
+            "voice_capture_mode": {
+              "enum": [
+                "hold",
+                "toggle"
+              ]
+            },
+            "scroll_speed": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "scroll_lines": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "max_thoughts_width": {
+              "type": "integer",
+              "minimum": 40,
+              "maximum": 500
+            },
+            "status_line": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "enum": [
+                    "builtin",
+                    "command",
+                    "disabled"
+                  ]
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "command": {
+                  "type": "string"
+                },
+                "padding": {
+                  "type": "integer"
+                },
+                "refresh_interval": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": true
+            },
+            "display_refresh": {
+              "type": "object",
+              "properties": {
+                "auto_cadence_enabled": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
+            },
+            "contextual_hints": {
+              "type": "object",
+              "properties": {
+                "undo": {
+                  "type": "boolean"
+                },
+                "plan_mode": {
+                  "type": "boolean"
+                },
+                "image_input": {
+                  "type": "boolean"
+                },
+                "send_now": {
+                  "type": "boolean"
+                },
+                "small_screen": {
+                  "type": "boolean"
+                },
+                "word_select": {
+                  "type": "boolean"
+                },
+                "ssh_wrap": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "keys": {
+          "type": "object",
+          "properties": {
+            "vim": {
+              "enum": [
+                "off",
+                "nav"
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "tools": {
+          "type": "object",
+          "properties": {
+            "respect_gitignore": {
+              "type": "boolean"
+            },
+            "disable_zdr_incompatible_tools": {
+              "type": "boolean"
+            },
+            "zdr_video_output_s3": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "endpoint": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "region": {
+                      "type": "string",
+                      "pattern": "\\S"
+                    },
+                    "key_prefix": {
+                      "type": "string"
+                    },
+                    "expires_secs": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 18446744073709551615
+                    },
+                    "read_write": {
+                      "type": "object",
+                      "properties": {
+                        "access_key_id": {
+                          "type": "string",
+                          "pattern": "\\S"
+                        },
+                        "secret_access_key": {
+                          "type": "string",
+                          "pattern": "\\S"
+                        }
+                      },
+                      "required": [
+                        "access_key_id",
+                        "secret_access_key"
+                      ],
+                      "additionalProperties": true
+                    },
+                    "read_only": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "access_key_id": {
+                              "type": "string",
+                              "pattern": "\\S"
+                            },
+                            "secret_access_key": {
+                              "type": "string",
+                              "pattern": "\\S"
+                            }
+                          },
+                          "required": [
+                            "access_key_id",
+                            "secret_access_key"
+                          ],
+                          "additionalProperties": true
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "bucket",
+                    "endpoint",
+                    "region",
+                    "read_write"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "toolset": {
+          "type": "object",
+          "properties": {
+            "file_toolset": {
+              "enum": [
+                "standard",
+                "hashline"
+              ]
+            },
+            "bash": {
+              "type": "object",
+              "properties": {
+                "timeout_secs": {
+                  "type": "number"
+                },
+                "output_byte_limit": {
+                  "type": "number"
+                },
+                "max_timeout_secs": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": true
+            },
+            "web_fetch": {
+              "type": "object",
+              "properties": {
+                "proxy_endpoint": {
+                  "type": "string"
+                },
+                "allowed_domains": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "sandbox": {
+          "type": "object",
+          "properties": {
+            "profile": {
+              "type": "string"
+            },
+            "auto_allow_bash": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "session": {
+          "type": "object",
+          "properties": {
+            "auto_compact_threshold_percent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "load_envrc": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "cli": {
+          "type": "object",
+          "properties": {
+            "auto_update": {
+              "type": "boolean"
+            },
+            "channel": {
+              "enum": [
+                "",
+                "stable",
+                "alpha",
+                "enterprise"
+              ]
+            },
+            "show_tips": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "hints": {
+          "type": "object",
+          "properties": {
+            "new_session_worktree_mode": {
+              "enum": [
+                "ask",
+                "always",
+                "never"
+              ]
+            },
+            "fork_worktree_mode": {
+              "enum": [
+                "ask",
+                "always",
+                "never"
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "features": {
+          "type": "object",
+          "properties": {
+            "web_fetch": {
+              "type": "boolean"
+            },
+            "lsp_tools": {
+              "type": "boolean"
+            },
+            "write_file": {
+              "type": "boolean"
+            },
+            "active_agent_messages": {
+              "type": "boolean"
+            },
+            "subagent_model_inheritance": {
+              "type": "boolean"
+            },
+            "worktree_inherits_main_approvals": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "subagents": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "toggle": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "boolean"
+              }
+            },
+            "models": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "max_depth": {
+              "type": "integer"
+            },
+            "personas": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "instructions": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "instructions_file": {
+                    "type": "string"
+                  },
+                  "default_isolation": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "reasoning_effort": {
+                    "type": "string"
+                  },
+                  "inputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "io_type": {
+                          "type": "string"
+                        },
+                        "required": {
+                          "type": "boolean"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "name",
+                        "description"
+                      ]
+                    }
+                  },
+                  "outputs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "io_type": {
+                          "type": "string"
+                        },
+                        "required": {
+                          "type": "boolean"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "required": [
+                        "name",
+                        "description"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "roles": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string"
+                  },
+                  "model": {
+                    "type": "string"
+                  },
+                  "reasoning_effort": {
+                    "type": "string"
+                  },
+                  "prompt_file": {
+                    "type": "string"
+                  },
+                  "default_capability_mode": {
+                    "type": "string"
+                  },
+                  "default_isolation": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "memory": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "goal": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "skills": {
+          "type": "object",
+          "properties": {
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "disabled": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "plugins": {
+          "type": "object",
+          "properties": {
+            "paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "disabled": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "enabled": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "compat": {
+          "type": "object",
+          "properties": {
+            "cursor": {
+              "type": "object",
+              "properties": {
+                "skills": {
+                  "type": "boolean"
+                },
+                "rules": {
+                  "type": "boolean"
+                },
+                "agents": {
+                  "type": "boolean"
+                },
+                "mcps": {
+                  "type": "boolean"
+                },
+                "hooks": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
+            },
+            "claude": {
+              "type": "object",
+              "properties": {
+                "skills": {
+                  "type": "boolean"
+                },
+                "rules": {
+                  "type": "boolean"
+                },
+                "agents": {
+                  "type": "boolean"
+                },
+                "mcps": {
+                  "type": "boolean"
+                },
+                "hooks": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "auth_provider_command": {
+              "type": "string"
+            },
+            "oidc": {
+              "type": "object",
+              "properties": {
+                "issuer": {
+                  "type": "string"
+                },
+                "client_id": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "grok_com_config": {
+          "type": "object",
+          "properties": {
+            "disable_api_key_auth": {
+              "type": "boolean"
+            },
+            "force_login_team_uuid": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "version_overrides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "minimum_version": {
+                "type": "string"
+              },
+              "maximum_version": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "mcp": {
+          "type": "object",
+          "properties": {
+            "max_output_bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615
+            }
+          },
+          "required": [],
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "agent": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "promptMode": {
+          "enum": [
+            "extend",
+            "full"
+          ]
+        },
+        "discoverSkills": {
+          "type": "boolean"
+        },
+        "inheritSkills": {
+          "type": "boolean"
+        },
+        "agentsMd": {
+          "type": "boolean"
+        },
+        "injectDefaultTools": {
+          "type": "boolean"
+        },
+        "tools": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disallowedTools": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "permissionMode": {
+          "enum": [
+            "default",
+            "acceptEdits",
+            "auto",
+            "dontAsk",
+            "bypassPermissions",
+            "plan"
+          ]
+        },
+        "capabilityMode": {
+          "anyOf": [
+            {
+              "enum": [
+                "read-only",
+                "read-write",
+                "execute",
+                "all"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "effort": {
+          "anyOf": [
+            {
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "maxTurns": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "isolation": {
+          "anyOf": [
+            {
+              "enum": [
+                "none",
+                "worktree"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "background": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "initialPrompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mcpServers": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "mcpInheritance": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^(?i:all|none)$"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "named": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "named"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "except": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": [
+                "except"
+              ]
+            }
+          ]
+        },
+        "hooks": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "memory": {
+          "anyOf": [
+            {
+              "enum": [
+                "user",
+                "project",
+                "local"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "completionRequirement": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "tool": {
+                  "type": "string"
+                },
+                "reminder": {
+                  "type": "string"
+                },
+                "recovery": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "maxRetries": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 4294967295
+                        },
+                        "baseDelayMs": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 18446744073709551615
+                        },
+                        "maxDelayMs": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 18446744073709551615
+                        }
+                      },
+                      "required": [
+                        "maxRetries",
+                        "baseDelayMs",
+                        "maxDelayMs"
+                      ],
+                      "additionalProperties": true
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": true,
+              "required": [
+                "tool",
+                "reminder"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "name",
+        "description"
+      ]
+    },
+    "plugin": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "homepage": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "repository": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "license": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "author": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "email": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "url": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "skills": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "commands": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "agents": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "hooks": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mcpServers": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lspServers": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": true,
+      "required": [
+        "name"
+      ]
+    },
+    "persona": {
+      "type": "object",
+      "properties": {
+        "instructions": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "instructions_file": {
+          "type": "string"
+        },
+        "default_isolation": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "reasoning_effort": {
+          "type": "string"
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "io_type": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "description"
+            ]
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "io_type": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "description"
+            ]
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "role": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "reasoning_effort": {
+          "type": "string"
+        },
+        "prompt_file": {
+          "type": "string"
+        },
+        "default_capability_mode": {
+          "type": "string"
+        },
+        "default_isolation": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "sandbox": {
+      "type": "object",
+      "properties": {
+        "profiles": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "extends": {
+                "enum": [
+                  "workspace",
+                  "devbox",
+                  "read-only",
+                  "strict"
+                ]
+              },
+              "restrict_network": {
+                "type": "boolean"
+              },
+              "read_only": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "read_write": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "deny": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "marketplace": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "plugins": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "description": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "category": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "homepage": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "author": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "additionalProperties": true
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "source": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "path": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "url": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "ref": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "sha": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [],
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "keywords": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "domains": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "lsp": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "transport": {
+            "enum": [
+              "stdio",
+              "socket"
+            ]
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "extensions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "extensionToLanguage": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "extensionToLanguageId": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "settings": {},
+          "initialization_options": {},
+          "initializationOptions": {},
+          "workspace_folder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "workspaceFolder": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "workspace_open": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "solution": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "projects": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [],
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "workspaceOpen": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "solution": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "projects": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [],
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startup_timeout": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 18446744073709551615
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "startupTimeout": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 18446744073709551615
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shutdown_timeout": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 18446744073709551615
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "shutdownTimeout": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 18446744073709551615
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "restart_on_crash": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "restartOnCrash": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_restarts": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4294967295
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "maxRestarts": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4294967295
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}

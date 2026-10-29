@@ -2,6 +2,9 @@
 local util = require('agnix.util')
 
 local function test_is_agnix_file()
+  for _, path in ipairs({ '.pi/settings.json', '/home/me/.pi/agent/models.json', '.pi/prompts/review.md', '.gemini/antigravity-cli/settings.json', '.agents/mcp_config.json', '.grok/config.toml', '.grok/agents/review.md' }) do
+    assert(util.is_agnix_file(path), path .. ' should attach to native validation')
+  end
   -- SKILL.md
   assert(util.is_agnix_file('SKILL.md'), 'SKILL.md should match')
   assert(util.is_agnix_file('/home/user/project/SKILL.md'), 'absolute SKILL.md should match')

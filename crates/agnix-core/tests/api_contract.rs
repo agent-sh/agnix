@@ -260,6 +260,14 @@ fn file_type_enum_covers_all_variants() {
     // This match must cover ALL variants. If a variant is added or removed,
     // this test will fail to compile.
     let variants = [
+        agnix_core::FileType::PiConfig,
+        agnix_core::FileType::PiPrompt,
+        agnix_core::FileType::AntigravityConfig,
+        agnix_core::FileType::AntigravityRule,
+        agnix_core::FileType::AntigravityAgent,
+        agnix_core::FileType::GrokConfig,
+        agnix_core::FileType::GrokRule,
+        agnix_core::FileType::GrokAgent,
         agnix_core::FileType::Skill,
         agnix_core::FileType::ClaudeMd,
         agnix_core::FileType::Agent,
@@ -339,12 +347,20 @@ fn file_type_enum_covers_all_variants() {
 
     assert_eq!(
         variants.len(),
-        75,
+        83,
         "A new FileType variant may have been added or removed. Please update this test's variant list and the match statement below."
     );
 
     for variant in &variants {
         match variant {
+            agnix_core::FileType::PiConfig => {}
+            agnix_core::FileType::PiPrompt => {}
+            agnix_core::FileType::AntigravityConfig => {}
+            agnix_core::FileType::AntigravityRule => {}
+            agnix_core::FileType::AntigravityAgent => {}
+            agnix_core::FileType::GrokConfig => {}
+            agnix_core::FileType::GrokRule => {}
+            agnix_core::FileType::GrokAgent => {}
             agnix_core::FileType::Skill => {}
             agnix_core::FileType::ClaudeMd => {}
             agnix_core::FileType::Agent => {}
@@ -605,6 +621,9 @@ fn diagnostic_level_covers_all_variants() {
 #[test]
 fn target_tool_covers_all_variants() {
     let tools = [
+        agnix_core::config::TargetTool::Pi,
+        agnix_core::config::TargetTool::Antigravity,
+        agnix_core::config::TargetTool::GrokCode,
         agnix_core::config::TargetTool::Generic,
         agnix_core::config::TargetTool::ClaudeCode,
         agnix_core::config::TargetTool::Cursor,
@@ -614,6 +633,9 @@ fn target_tool_covers_all_variants() {
 
     for tool in &tools {
         match tool {
+            agnix_core::config::TargetTool::Pi => {}
+            agnix_core::config::TargetTool::Antigravity => {}
+            agnix_core::config::TargetTool::GrokCode => {}
             agnix_core::config::TargetTool::Generic => {}
             agnix_core::config::TargetTool::ClaudeCode => {}
             agnix_core::config::TargetTool::Cursor => {}

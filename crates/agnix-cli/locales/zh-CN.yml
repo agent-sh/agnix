@@ -2,6 +2,283 @@
 # Rules - Validator diagnostic messages, suggestions, assumptions, fixes
 # ===========================================================================
 rules:
+  agy_ag_001:
+    frontmatter_error: "Antigravity 自定义配置需要有效的 YAML frontmatter。"
+    frontmatter_suggestion: "请添加完整的 frontmatter 对象，并包含必需的原生字段。"
+  agy_ag_002:
+    antigravity_agents_need_a_non_empty_name: "Antigravity 代理需要非空的 name 和 description。"
+    set_both_fields_in_the_agent_frontmatter: "请在代理 frontmatter 中设置这两个字段。"
+    invalid_antigravity_agent_frontmatter_field: "Antigravity 代理 frontmatter 字段无效。"
+    use_documented_field_types_model_can_be: "请使用文档规定的字段类型；model 可以是别名或完整的模型标识符。"
+  agy_cfg_001:
+    parse_error: "配置 JSON 无效。"
+    parse_suggestion: "请修正 JSON 语法；此配置无法加载。"
+    root_object: "配置必须包含 JSON 对象。"
+    root_object_suggestion: "请使用包含此配置文件所需文档字段的对象。"
+  agy_cfg_002:
+    antigravity_cli_remote_control_hostname_must_be: "Antigravity CLI 远程控制主机名必须是字符串。"
+    use_the_daemon_hostname_setting_documented_in: "请使用 Remote Control 文档规定的守护进程主机名设置。"
+    antigravity_setting_violates_the_documented_constraint: "Antigravity 设置不符合文档规定的 %{keyword} 约束。"
+    use_the_types_and_values_in_the: "请使用 Antigravity CLI 配置参考中规定的类型和值。"
+  agy_cfg_003:
+    antigravity_cli_does_not_load_this_customization: "Antigravity CLI 不会从 settings.json 加载此自定义配置。"
+    move_hooks_to_agents_hooks_json_or: "请将 hook 移至 .agents/hooks.json 或 ~/.gemini/config/hooks.json；服务器配置应放在 mcp_config.json 中。"
+  agy_cfg_004:
+    antigravity_ignores_this_malformed_permission_resource: "Antigravity 会忽略此格式错误的权限资源。"
+    use_action_target_without_a_space_before: "请使用 action(target)，在 ( 前不要加空格，并使用文档规定的 CLI 操作。"
+    use_a_documented_action_target_string_without: "请使用文档规定的 action(target) 字符串，且 ( 前不要加空格。"
+  agy_cfg_005:
+    antigravity_uses_the_xml_tool_formatter_for: "遇到此未识别的格式化器值时，Antigravity 会使用 XML 工具格式化器。"
+    use_a_documented_formatter_value_or_omit: "请使用文档规定的格式化器值，或省略该字段以使用默认值。"
+  agy_hk_001:
+    an_antigravity_named_hook_must_map_events: "Antigravity 命名 hook 必须将事件映射到处理程序。"
+    use_a_named_hook_object_with_native: "请使用带名称的 hook 对象，并使用 Antigravity 原生事件键。"
+    hook_enabled_must_be_a_boolean: "hook 的 enabled 必须是布尔值。"
+    use_true_or_false: "请使用 true 或 false。"
+    hook_event_handlers_must_be_an_array: "hook 事件处理程序必须是数组。"
+    use_matcher_groups_for_tool_events_and: "工具事件应使用匹配组，其他事件应使用直接处理程序。"
+    a_hook_matcher_must_be_a_string: "hook 匹配器必须是字符串。"
+    use_a_tool_name_expression_or_omit: "请使用工具名称表达式、*，或省略 matcher。"
+    tool_hook_matcher_group_needs_a_hooks: "工具 hook 匹配组需要 hooks 数组。"
+    put_command_handlers_inside_the_matcher_s: "请将命令处理程序放入匹配器的 hooks 数组中。"
+    invalid_antigravity_command_hook_handler: "Antigravity 命令 hook 处理程序无效。"
+    set_a_non_empty_command_optional_type: "请设置非空的 command、可选的 type command，以及以秒为单位的整数 timeout。"
+  agy_hk_002:
+    unrecognized_antigravity_lifecycle_event: "无法识别 Antigravity 生命周期事件。"
+    use_sessionstart_pretooluse_posttooluse_preinvocation_postinvocation_or: "请使用 SessionStart、PreToolUse、PostToolUse、PreInvocation、PostInvocation 或 Stop。"
+  agy_kb_001:
+    invalid_or_protected_antigravity_keybinding_override: "Antigravity 快捷键覆盖项无效或受到保护。"
+    map_actions_to_arrays_of_hotkey_strings: "请将操作映射到快捷键字符串数组；不能禁用 cli.exit 和 cli.enter。"
+  agy_mcp_001:
+    mcpservers_must_be_an_object: "mcpServers 必须是对象。"
+    map_server_names_to_stdio_or_streamable: "请将服务器名称映射到 stdio 或 Streamable HTTP 服务器定义。"
+    an_antigravity_mcp_server_must_be_an: "Antigravity MCP 服务器必须是对象。"
+    use_command_for_stdio_or_serverurl_url: "stdio 应使用 command，Streamable HTTP 应使用 serverUrl/url。"
+    an_mcp_server_needs_one_stdio_command: "MCP 服务器需要一个 stdio 命令或 Streamable HTTP URL。"
+    set_command_for_a_local_process_or: "本地进程应设置 command，远程端点应设置 serverUrl/url。"
+    invalid_antigravity_mcp_server_option: "Antigravity MCP 服务器选项无效。"
+    use_the_documented_types_timeoutseconds_accepts_zero: "请使用文档规定的类型；timeoutSeconds 接受零和负整数。"
+    mcp_remote_endpoint_must_be_an_http: "MCP 远程端点必须是 HTTP 或 HTTPS URL。"
+    use_a_streamable_http_server_url_or: "请使用 Streamable HTTP 服务器 URL，或受支持的环境变量展开形式。"
+  agy_mcp_002:
+    antigravity_cli_does_not_support_httpurl_or: "Antigravity CLI 不支持 httpUrl 或旧版 HTTP+SSE MCP 传输。"
+    use_a_streamable_http_endpoint_under_serverurl: "请在 serverUrl 或 url 中使用 Streamable HTTP 端点。"
+  agy_pl_001:
+    invalid_antigravity_plugin_manifest_field: "Antigravity 插件清单字段无效。"
+    use_the_native_plugin_schema_name_is: "请使用原生插件架构；通过 CLI 安装时必须指定 name，version 可以是任意字符串。"
+  agy_pl_002:
+    plugin_metadata_is_ignored_or_incomplete_for: "插件元数据会被忽略，或不满足 CLI 安装所需的完整性要求。"
+  agy_rl_001:
+    antigravity_ignores_a_rule_without_a_recognized: "Antigravity 会忽略没有已识别 trigger 的规则。"
+    use_always_on_model_decision_glob_or: "请使用 always_on、model_decision、glob 或 manual。"
+    frontmatter_error: "Antigravity 自定义配置需要有效的 YAML frontmatter。"
+    frontmatter_suggestion: "请添加完整的 frontmatter 对象，并包含必需的原生字段。"
+  agy_rl_002:
+    antigravity_customization_needs_valid_yaml_frontmatter: "Antigravity 自定义配置需要有效的 YAML frontmatter。"
+    add_a_complete_frontmatter_object_with_the: "请添加完整的 frontmatter 对象，并包含必需的原生字段。"
+    a_model_decision_rule_needs_a_description: "model_decision 规则需要 description。"
+    describe_when_the_agent_should_load_the: "请说明代理应在何时加载该规则。"
+    a_glob_rule_needs_globs_or_glob: "glob 规则需要非空字符串形式的 globs 或 glob。"
+    use_a_quoted_comma_separated_string_of: "请使用带引号的字符串，以逗号分隔文件模式。"
+    rule_descriptions_and_glob_expressions_must_be: "规则描述和 glob 表达式必须是字符串。"
+    use_the_native_antigravity_rule_frontmatter_types: "请使用 Antigravity 原生规则 frontmatter 类型。"
+  agy_rl_003:
+    antigravity_truncates_rule_files_after_24_000: "Antigravity 会截断展开后超过 24,000 字节的规则文件。"
+    split_the_instructions_into_smaller_modular_rules: "请将指令拆分为更小的模块化规则。"
+    split_the_rule_into_smaller_files_or: "请将规则拆分为更小的文件，或使用 model_decision 按需加载。"
+  agy_rl_004:
+    invalid_antigravity_rule_registry_entry: "Antigravity 规则注册表条目无效。"
+    use_arrays_of_objects_with_path_and: "请使用包含 path 的对象数组；可选的 include_only/exclude 应为字符串数组。"
+  grk_ag_001:
+    grok_agent_needs_valid_yaml_frontmatter: "Grok 代理需要有效的 YAML frontmatter。"
+    add_a_complete_agent_metadata_object_with: "请添加完整的代理元数据对象，并包含 name 和 description。"
+  grk_ag_002:
+    invalid_grok_inline_mcp_server_reference: "Grok 内联 MCP 服务器引用无效。"
+    use_a_server_name_a_single_name: "请使用服务器名称、仅含一个名称到配置映射的对象，或包含 name 的服务器对象。"
+    schema_message: "Grok 字段不符合文档规定的 %{keyword} 约束。"
+    schema_suggestion: "请使用 Grok 原生配置字段的类型和值。"
+  grk_ag_003:
+    schema_message: "Grok 字段不符合文档规定的 %{keyword} 约束。"
+    schema_suggestion: "请使用 Grok 原生配置字段的类型和值。"
+  grk_ag_004:
+    grok_plugin_agents_cannot_use_this_privileged: "Grok 插件代理不能使用此特权 frontmatter 设置。"
+    configure_trusted_plugin_session_mcp_and_hooks: "请在代理之外配置受信任插件或会话的 MCP 和 hook；插件代理不能绕过权限。"
+  grk_cfg_001:
+    invalid_grok_toml_configuration: "Grok TOML 配置无效。"
+    correct_the_toml_syntax_before_grok_loads: "请修正 TOML 语法，以便 Grok 加载此文件。"
+    parse_error: "配置 JSON 无效。"
+    parse_suggestion: "请修正 JSON 语法；此配置无法加载。"
+    root_object: "配置必须包含 JSON 对象。"
+    root_object_suggestion: "请使用包含此配置文件所需文档字段的对象。"
+  grk_cfg_002:
+    grok_ignores_this_mcp_option_in_project: "Grok 会忽略项目 config.toml 中的此 MCP 选项。"
+    only_mcp_max_output_bytes_is_loaded: "项目配置中只会加载 mcp.max_output_bytes。"
+    grok_ignores_this_setting_in_project_config: "Grok 会忽略项目 config.toml 中的此设置。"
+    put_user_settings_in_grok_home_config: "请将用户设置放入 $GROK_HOME/config.toml；项目文件提供 mcp_servers、plugins、permission 和 mcp.max_output_bytes。"
+  grk_cfg_003:
+    grok_field_violates_the_documented_constraint: "Grok 字段不符合文档规定的 %{keyword} 约束。"
+    use_the_native_grok_configuration_field_types: "请使用 Grok 原生配置字段的类型和值。"
+    schema_message: "Grok 字段不符合文档规定的 %{keyword} 约束。"
+    schema_suggestion: "请使用 Grok 原生配置字段的类型和值。"
+  grk_cfg_004:
+    grok_1_0_69_retired_ui_simple: "Grok 1.0.69 已移除 ui.simple_mode；它不再影响编辑器。"
+    grok_1_0_68_replaced_ui_vim: "Grok 1.0.68 已将 ui.vim_mode 替换为 keys.vim；旧键仅作为兼容别名。"
+    grok_1_0_63_retired_memory_v2: "Grok 1.0.63 已移除 memory_v2.compact_index_enabled。"
+    remove_retired_settings_use_keys_vim_off: "请删除已移除的设置；当前 vim 导航应使用 keys.vim = off 或 nav。"
+  grk_cfg_005:
+    grok_honors_the_bypass_permissions_lock_only: "Grok 仅在 root 拥有的系统策略中执行绕过权限模式的锁定设置。"
+    set_the_lock_in_etc_grok_requirements: "请让系统管理员在 /etc/grok/requirements.toml 中设置此锁定。"
+  grk_cfg_006:
+    grok_version_override_bound_must_be_a: "Grok 版本覆盖边界必须是语义版本号。"
+    use_a_complete_major_minor_patch_version: "请使用完整的 major.minor.patch 版本字符串。"
+    this_grok_version_range_can_never_apply: "此 Grok 版本范围不可能生效。"
+    put_minimum_version_at_or_below_maximum: "请将 minimum_version 设置为小于或等于 maximum_version。"
+  grk_hk_001:
+    grok_hook_files_need_a_hooks_object: "Grok hook 文件需要 hooks 对象。"
+    put_lifecycle_events_inside_the_hooks_map: "请将生命周期事件放入 hooks 映射中。"
+    grok_hooks_must_map_event_names_to: "Grok hook 必须将事件名称映射到匹配组。"
+    use_the_documented_hooks_object: "请使用文档规定的 hooks 对象。"
+    hook_event_must_contain_a_matcher_group: "hook 事件必须包含匹配组数组。"
+    put_handlers_in_each_group_s_hooks: "请将处理程序放入每个组的 hooks 数组中。"
+    hook_matcher_must_be_a_string_or: "hook 匹配器必须是字符串或 null。"
+    use_a_tool_matcher_expression_or_omit: "请使用工具匹配表达式，或省略此字段。"
+    hook_matcher_group_needs_a_hooks_array: "hook 匹配组需要 hooks 数组。"
+    add_command_or_http_hook_handlers: "请添加命令或 HTTP hook 处理程序。"
+    invalid_grok_hook_handler: "Grok hook 处理程序无效。"
+    use_type_command_with_command_or_type: "请使用 type command 搭配 command，或 type http 搭配 url；timeout 是无符号秒数，args 是字符串列表。"
+  grk_hk_002:
+    grok_skips_this_unknown_hook_event: "Grok 会跳过此未知 hook 事件。"
+    use_a_documented_lifecycle_event_or_supported: "请使用文档规定的生命周期事件或受支持的兼容别名。"
+  grk_hk_003:
+    invalid_grok_hook_matcher_regular_expression: "Grok hook 匹配器的正则表达式无效。"
+    use_a_valid_expression_in_grok_s: "请使用 Grok 正则表达式语法支持的有效表达式，或使用 * 匹配所有工具。"
+  grk_mcp_001:
+    grok_mcp_server_declarations_must_be_a: "Grok MCP 服务器声明必须是映射。"
+    map_server_names_to_stdio_command_or: "请将服务器名称映射到 stdio 命令或远程 URL 配置。"
+    grok_mcp_server_must_be_an_object: "Grok MCP 服务器必须是对象。"
+    configure_command_args_env_or_url_headers: "请配置 command/args/env 或 url/headers。"
+    grok_mcp_server_needs_a_non_empty: "Grok MCP 服务器需要非空的 command 或 url。"
+    use_command_for_stdio_or_url_for: "stdio 应使用 command，远程服务器应使用 url。"
+    invalid_grok_mcp_server_option_type: "Grok MCP 服务器选项类型无效。"
+    use_the_types_documented_in_the_grok: "请使用 Grok MCP 配置参考中规定的类型。"
+  grk_pl_001:
+    invalid_grok_plugin_lsp_server_configuration: "Grok 插件 LSP 服务器配置无效。"
+    use_the_native_lsp_command_argument_transport: "请使用原生 LSP 命令、参数、传输和超时类型。"
+    schema_message: "Grok 字段不符合文档规定的 %{keyword} 约束。"
+    schema_suggestion: "请使用 Grok 原生配置字段的类型和值。"
+  grk_pl_002:
+    grok_skips_plugin_component_paths_outside_the: "Grok 会跳过插件根目录之外的组件路径。"
+    keep_component_paths_within_the_plugin_directory: "请将组件路径保持在插件目录内。"
+  grk_sbx_001:
+    grok_custom_profiles_cannot_redefine_a_built: "Grok 自定义配置不能重新定义内置沙箱配置。"
+    choose_a_custom_name_and_extend_a: "请选择自定义名称，并扩展受支持的内置配置。"
+  grk_sbx_002:
+    schema_message: "Grok 字段不符合文档规定的 %{keyword} 约束。"
+    schema_suggestion: "请使用 Grok 原生配置字段的类型和值。"
+  grk_sk_001:
+    grok_skill_allowed_tools_does_not_grant: "Grok skill 的 allowed-tools 不会授予或限制工具权限。"
+    use_grok_permission_rules_or_an_agent: "请使用 Grok 权限规则或代理工具策略来限制工具。"
+  grk_sk_002:
+    grok_treats_only_literal_true_as_enabled: "Grok 仅在此 skill 字段的值为字面量 true 时才视其为启用。"
+    use_true_or_false_not_yes_no: "请使用 true 或 false，不要使用 yes/no 或带引号的布尔字符串。"
+  native_contract:
+    invalid_configuration_json: "配置 JSON 无效。"
+    correct_the_json_syntax_this_configuration_cannot: "请修正 JSON 语法；此配置无法加载。"
+    configuration_must_contain_a_json_object: "配置必须包含 JSON 对象。"
+    use_an_object_with_the_fields_documented: "请使用包含此配置文件所需文档字段的对象。"
+    configuration_field_field_violates_the_documented_constraint: "配置字段 %{field} 不符合文档规定的 %{keyword} 约束。"
+    use_the_value_types_and_choices_in: "请使用工具配置参考中规定的值类型和选项。"
+  pi_cfg_001:
+    pi_models_json_does_not_accept_block: "Pi 的 models.json 不支持块注释。"
+    use_line_comments_or_ordinary_json: "请使用 // 行注释或标准 JSON。"
+    parse_error: "配置 JSON 无效。"
+    parse_suggestion: "请修正 JSON 语法；此配置无法加载。"
+    root_object: "配置必须包含 JSON 对象。"
+    root_object_suggestion: "请使用包含此配置文件所需文档字段的对象。"
+  pi_cfg_002:
+    schema_message: "配置字段 %{field} 不符合文档规定的 %{keyword} 约束。"
+    schema_suggestion: "请使用工具配置参考中规定的值类型和选项。"
+  pi_cfg_003:
+    pi_ignores_this_setting_in_project_configuration: "Pi 会忽略项目配置中的此设置。"
+    move_this_setting_to_the_agent_directory: "请将此设置移至代理目录中的 settings.json。"
+    pi_loads_models_json_from_its_agent: "Pi 从代理目录加载 models.json，而不是从项目的 .pi 目录加载。"
+    put_provider_and_model_definitions_in_agent: "请将提供商和模型定义放入 <agent-dir>/models.json。"
+    pi_loads_keybindings_json_from_its_agent: "Pi 从代理目录加载 keybindings.json。"
+    put_keybindings_in_agent_dir_keybindings_json: "请将快捷键放入 <agent-dir>/keybindings.json，然后运行 /reload。"
+  pi_kb_001:
+    schema_message: "配置字段 %{field} 不符合文档规定的 %{keyword} 约束。"
+    schema_suggestion: "请使用工具配置参考中规定的值类型和选项。"
+  pi_mcp_001:
+    autoenablecodemode_must_be_a_boolean: "autoEnableCodemode 必须是布尔值。"
+    use_true_or_false: "请使用 true 或 false。"
+    mcpservers_must_be_an_object_mapping_server: "mcpServers 必须是将服务器名称映射到配置的对象。"
+    use_the_documented_mcpservers_map: "请使用文档规定的 mcpServers 映射。"
+  pi_mcp_002:
+    invalid_pi_mcp_server_name: "Pi MCP 服务器名称无效。"
+    use_ascii_letters_digits_underscores_and_hyphens: "请使用 ASCII 字母、数字、下划线和连字符。"
+    an_mcp_server_configuration_must_be_an: "MCP 服务器配置必须是对象。"
+    define_a_stdio_server_http_server_or: "请定义 stdio 服务器、HTTP 服务器或项目覆盖配置。"
+    a_project_mcp_override_can_only_set: "项目 MCP 覆盖配置只能设置 enabled、exposure 和 toolExposure。"
+    define_a_complete_server_or_keep_only: "请定义完整的服务器，或仅保留继承服务器的覆盖字段。"
+    invalid_pi_mcp_server_option: "Pi MCP 服务器选项无效。"
+    use_the_documented_boolean_string_exposure_or: "请使用文档规定的布尔值、字符串、暴露模式或正超时值。"
+    pi_mcp_transport_type_must_be_a: "如果指定了 Pi MCP 传输类型，其值必须是字符串。"
+    omit_type_for_inference_or_use_a: "请省略 type 以自动推断，或使用文档规定的传输名称。"
+    mcp_url_must_use_http_or_https: "MCP URL 必须使用 HTTP 或 HTTPS。"
+    use_a_streamable_http_mcp_endpoint: "请使用 Streamable HTTP MCP 端点。"
+    mcp_headers_must_map_names_to_strings: "MCP 请求头必须将名称映射到字符串。"
+    use_string_header_values_environment_references_or: "请求头值应使用字符串、环境变量引用或命令引用。"
+    invalid_stdio_mcp_option: "stdio MCP 选项无效。"
+    use_a_string_array_for_args_a: "args 应为字符串数组，env 应为字符串映射，cwd 应为字符串。"
+    pi_mcp_server_needs_command_stdio_or: "Pi MCP 服务器需要 command（stdio）或 url（Streamable HTTP）。"
+    legacy_sse_is_unsupported_select_the_matching: "不支持旧版 SSE；请选择相匹配的类型和传输字段。"
+  pi_mcp_003:
+    project_mcp_configuration_cannot_select_global_login: "项目 MCP 配置不能选择全局登录凭据。"
+    configure_auth_provider_only_in_the_global: "只能在代理目录的全局 mcp.json 中配置 auth.provider。"
+    mcp_provider_authentication_needs_a_provider_name: "MCP 提供商认证需要提供商名称，以及 HTTPS 或回环 URL。"
+    use_auth_provider_with_an_https_or: "请在全局配置中将 auth.provider 与 HTTPS 或本地回环端点配合使用。"
+  pi_mcp_004:
+    pi_mcp_server_names_collide_after_hyphens: "将连字符转换为下划线后，Pi MCP 服务器名称发生冲突。"
+    give_the_servers_distinct_normalized_names: "请为服务器设置规范化后仍不相同的名称。"
+  pi_mcp_005:
+    mcp_oauth_settings_must_be_an_object: "MCP OAuth 设置必须是对象。"
+    use_the_documented_oauth_client_fields: "请使用文档规定的 OAuth 客户端字段。"
+    invalid_pi_mcp_oauth_callback_or_client: "Pi MCP OAuth 回调或客户端注册设置无效。"
+    use_http_loopback_callbacks_matching_callback_ports: "请使用 HTTP 回环回调、匹配的回调端口，以及文档规定的 dcr/cimd 客户端选项。"
+  pi_mdl_001:
+    schema_message: "配置字段 %{field} 不符合文档规定的 %{keyword} 约束。"
+    schema_suggestion: "请使用工具配置参考中规定的值类型和选项。"
+  pi_mdl_002:
+    pi_oauth_provider_configuration_requires_an_explicit: "Pi OAuth 提供商配置需要显式指定 baseUrl。"
+    set_the_provider_s_baseurl_when_oauth: "配置 oauth 时，请设置提供商的 baseUrl。"
+    pi_rejects_an_empty_provider_configuration_with: "Pi 会拒绝未指定模型或连接覆盖项的空提供商配置。"
+    define_models_baseurl_headers_compat_modeloverrides_or: "请定义 models、baseUrl、headers、compat、modelOverrides 或认证覆盖项，或删除该提供商条目。"
+  pi_pkg_001:
+    a_pi_package_manifest_must_be_an: "Pi 包清单必须是对象。"
+    declare_resource_paths_under_the_package_json: "请在 package.json 的 pi 对象中声明资源路径。"
+    pi_package_resources_must_be_arrays_of: "Pi 包资源必须是路径字符串数组。"
+    use_paths_or_glob_exclusion_patterns_relative: "请使用相对于包根目录的路径、glob 模式或排除模式。"
+    pi_gallery_media_must_be_a_path: "Pi 图库媒体必须是路径字符串。"
+    set_a_relative_image_video_path_or: "请设置相对的图片或视频路径，或省略此可选字段。"
+  pi_pkg_002:
+    a_host_provided_pi_package_is_installed: "由 Pi 宿主提供的包被安装为运行时依赖。"
+    move_the_host_package_to_peerdependencies_with: "请将宿主包移至 peerDependencies，并使用 * 版本范围，以便扩展共享 Pi 的运行时模块。"
+  pi_pr_001:
+    invalid_pi_prompt_frontmatter: "Pi prompt 模板的 frontmatter 无效。"
+    use_valid_yaml_with_optional_string_description: "请使用有效的 YAML；可选的 description 和 argument-hint 字段应为字符串。"
+  pi_pr_002:
+    pi_ignores_non_string_prompt_description_and: "Pi 会忽略 prompt 中非字符串类型的 description 和 argument-hint 字段。"
+    use_strings_or_omit_the_fields_to: "请使用字符串，或省略这些字段以使用正文中的备用描述。"
+  pi_th_001:
+    schema_message: "配置字段 %{field} 不符合文档规定的 %{keyword} 约束。"
+    schema_suggestion: "请使用工具配置参考中规定的值类型和选项。"
+  pi_th_002:
+    pi_theme_names_cannot_be_system_or: "Pi 主题名称不能是 system，也不能包含斜杠。"
+    choose_a_unique_theme_name_and_use: "请选择唯一的主题名称，并将其用作文件名。"
+    invalid_pi_theme_color_literal: "Pi 主题颜色字面量无效。"
+    use_rgb_rrggbb_or_a_supported_oklch: "请使用 #rgb/#rrggbb，或具有有限通道值且范围有效的受支持 OKLCH/OKHSL 值。"
+    pi_theme_references_a_missing_or_cyclic: "Pi 主题引用了缺失或循环引用的颜色变量。"
+    define_the_variable_without_a_cycle_or: "请定义无循环引用的变量，或使用文档规定的颜色字面量。"
   kr_hk_014:
     alias: "钩子触发器别名 %{trigger} 受支持；建议使用规范名称 %{canonical}"
     alias_suggestion: "编辑 V3 钩子时请使用规范的 PascalCase 触发器。兼容别名仍然有效。"

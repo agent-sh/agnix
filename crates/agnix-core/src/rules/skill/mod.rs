@@ -25,6 +25,7 @@ mod helpers;
 pub(crate) use claude_ext::{is_claude_command_path, unbraced_plugin_var};
 use helpers::*;
 mod portable;
+#[cfg(feature = "filesystem")]
 pub(crate) use portable::skill_name;
 
 /// Deserialize `allowed-tools` from either a space-separated string or a YAML
@@ -645,8 +646,8 @@ impl<'a> ValidationContext<'a> {
         }
 
         if self.parts.has_frontmatter && self.parts.has_closing {
-            let parsed =
-                parse_frontmatter_fields(&self.parts.frontmatter).and_then(|frontmatter| {
+            let parsed = parse_frontmatter_fields(&self.parts.frontmatter, self.client, self.path)
+                .and_then(|frontmatter| {
                     if let Some(metadata) = &frontmatter.metadata {
                         let serde_yaml::Value::Mapping(entries) = metadata else {
                             return Err("metadata must be a YAML map".to_string());
@@ -694,7 +695,7 @@ impl<'a> ValidationContext<'a> {
         // defaults from the skill location, and `description` falls back to
         // the first paragraph. AS-002/003 encode the stricter Agent Skills
         // baseline and remain applicable to generic and other-client skills.
-        if self.client == SkillClient::ClaudeCode {
+        if matches!(self.client, SkillClient::ClaudeCode | SkillClient::Grok) {
             return;
         }
 
@@ -702,7 +703,10 @@ impl<'a> ValidationContext<'a> {
         let (description_line, description_col) = self.frontmatter_key_line_col("description");
 
         // AS-002: Missing name field
-        if self.config.is_rule_enabled("AS-002") && frontmatter.name.is_none() {
+        if self.config.is_rule_enabled("AS-002")
+            && frontmatter.name.is_none()
+            && !matches!(self.client, SkillClient::Pi | SkillClient::Antigravity)
+        {
             let mut diagnostic = Diagnostic::error(
                 self.path.to_path_buf(),
                 name_line,
@@ -765,6 +769,13 @@ impl<'a> ValidationContext<'a> {
 
     /// AS-004, AS-005, AS-006: Validate name format and rules
     fn validate_name_rules(&mut self, name: &str) {
+        let normalized;
+        let name = if self.client == SkillClient::Grok {
+            normalized = name.replace([' ', '_'], "-");
+            normalized.as_str()
+        } else {
+            name
+        };
         let (name_line, name_col) = self.frontmatter_key_line_col("name");
         let name_trimmed = name.trim();
 
@@ -955,7 +966,13 @@ impl<'a> ValidationContext<'a> {
         // The agentskills.io baseline still requires the match ("Must match the
         // parent directory name"), so the rule is scoped by owning client the
         // same way AS-008's length cap is.
-        if self.client == SkillClient::ClaudeCode {
+        if matches!(
+            self.client,
+            SkillClient::ClaudeCode
+                | SkillClient::Pi
+                | SkillClient::Antigravity
+                | SkillClient::Grok
+        ) {
             return;
         }
 

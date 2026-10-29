@@ -79,6 +79,7 @@
         "agents": true,
         "agents_md": true,
         "amp_checks": true,
+        "antigravity": true,
         "cline": true,
         "codex": true,
         "copilot": true,
@@ -89,6 +90,7 @@
         "frontmatter_validation": true,
         "gemini_md": true,
         "generic_instructions": true,
+        "grok_code": true,
         "hooks": true,
         "import_references": true,
         "imports": true,
@@ -98,6 +100,7 @@
         "memory": true,
         "opencode": true,
         "output_styles": true,
+        "pi": true,
         "plugins": true,
         "prompt_engineering": true,
         "required_fields": true,
@@ -133,12 +136,15 @@
       "description": "Pin specific tool versions for version-aware validation",
       "$ref": "#/$defs/ToolVersions",
       "default": {
+        "antigravity": null,
         "claude_code": null,
         "codex": null,
         "copilot": null,
         "cursor": null,
+        "grok_code": null,
         "kiro": null,
-        "opencode": null
+        "opencode": null,
+        "pi": null
       }
     },
     "tools": {
@@ -225,6 +231,11 @@
           "type": "boolean",
           "default": true
         },
+        "antigravity": {
+          "description": "Enable Antigravity CLI native configuration rules (AGY-*).",
+          "type": "boolean",
+          "default": true
+        },
         "cline": {
           "description": "Enable Cline rules validation (CLN-*)",
           "type": "boolean",
@@ -281,6 +292,11 @@
           "type": "boolean",
           "default": true
         },
+        "grok_code": {
+          "description": "Enable Grok Build native configuration rules (GRK-*).",
+          "type": "boolean",
+          "default": true
+        },
         "hooks": {
           "description": "Enable Claude Code hooks validation rules (CC-HK-*)",
           "type": "boolean",
@@ -323,6 +339,11 @@
         },
         "output_styles": {
           "description": "Enable Claude Code output-style validation rules (CC-OS-*)",
+          "type": "boolean",
+          "default": true
+        },
+        "pi": {
+          "description": "Enable Pi native configuration rules (PI-*).",
           "type": "boolean",
           "default": true
         },
@@ -437,6 +458,21 @@
       "description": "Target tool for validation (deprecated: use 'tools' array for multi-tool support)",
       "oneOf": [
         {
+          "description": "Pi coding agent.",
+          "type": "string",
+          "const": "Pi"
+        },
+        {
+          "description": "Antigravity CLI.",
+          "type": "string",
+          "const": "Antigravity"
+        },
+        {
+          "description": "Grok Build coding agent.",
+          "type": "string",
+          "const": "GrokCode"
+        },
+        {
           "description": "Generic Agent Skills standard",
           "type": "string",
           "const": "Generic"
@@ -467,6 +503,14 @@
       "description": "Tool version pinning for version-aware validation\n\nWhen tool versions are pinned, validators can apply version-specific\nbehavior instead of using default assumptions. When not pinned,\nvalidators will use sensible defaults and add assumption notes.",
       "type": "object",
       "properties": {
+        "antigravity": {
+          "description": "Antigravity CLI version qualified for its native configuration contracts.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
         "claude_code": {
           "description": "Claude Code version for version-aware validation (e.g., \"1.0.0\")",
           "type": [
@@ -499,6 +543,14 @@
           ],
           "default": null
         },
+        "grok_code": {
+          "description": "Grok Build CLI version for release-specific configuration advice.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
         "kiro": {
           "description": "Kiro CLI version for version-aware validation (e.g., \"2.32.1\"). 2.x selects the V2 agent engine and 3.x or later the V3 engine; unpinned, each Kiro file is checked against the engines its own fields target",
           "type": [
@@ -509,6 +561,14 @@
         },
         "opencode": {
           "description": "OpenCode version for version-aware validation (e.g., \"2.0.32\"). 1.x selects OpenCode 1 behavior and 2.x or later OpenCode 2; unpinned, each OpenCode file is checked against the line its own fields target",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "pi": {
+          "description": "Pi version qualified for the native configuration contracts.",
           "type": [
             "string",
             "null"

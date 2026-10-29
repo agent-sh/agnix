@@ -225,6 +225,13 @@ pub fn is_valid_tool(tool: &str) -> bool {
 /// assert_eq!(normalize_tool_name("unknown"), None);
 /// ```
 pub fn normalize_tool_name(tool: &str) -> Option<&'static str> {
+    let lower = tool.to_ascii_lowercase();
+    let tool = match lower.as_str() {
+        "pi-coding-agent" => "pi",
+        "agy" => "antigravity",
+        "grok" => "grok-code",
+        _ => tool,
+    };
     VALID_TOOLS
         .iter()
         .find(|t| t.eq_ignore_ascii_case(tool))

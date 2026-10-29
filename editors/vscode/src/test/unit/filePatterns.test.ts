@@ -275,6 +275,14 @@ const DETECTED_PATHS: Record<string, string[]> = {
   ],
   KiroWorkflow: ['.kiro/workflows/plan.workflow.json', '.kiro/workflows/plan.workflow.yaml', '/home/me/.kiro/workflows/ship.workflow.yml'],
   KiroIgnore: ['.kiroignore', 'packages/api/.kiroignore', '/home/me/.kiro/settings/kiroignore'],
+  PiConfig: ['.pi/settings.json', '/home/me/.pi/agent/models.json', '.pi/agent/keybindings.json', '.pi/agent/themes/dark.json'],
+  PiPrompt: ['.pi/prompts/review.md', '.pi/agent/SYSTEM.md', '.pi/APPEND_SYSTEM.md'],
+  AntigravityConfig: ['.agents/mcp_config.json', '.agent/rules.json', '/home/me/.gemini/antigravity-cli/settings.json', '/home/me/.gemini/config/hooks.json'],
+  AntigravityRule: ['.agents/rules/review.md', '/home/me/.gemini/config/rules/review.md'],
+  AntigravityAgent: ['.agents/agents/review.md'],
+  GrokConfig: ['.grok/config.toml', '/etc/grok/requirements.toml', '.grok/sandbox.toml', '.grok/roles/review.toml', '.grok/hooks/start.json', '.grok/lsp.json', '.grok-plugin/marketplace.json'],
+  GrokRule: ['.grok/rules/review.md'],
+  GrokAgent: ['.grok/agents/review.md'],
   KiroNotLoaded: [
     '.kiro/agents/reviewer.jsonc',
     '.kiro/hooks/lint.yaml',
@@ -297,13 +305,13 @@ const SIBLING_DETECTED_PATHS: Record<string, string[]> = {
   GeminiPolicy: ['policies/ext.toml', 'my-ext/policies/ext.toml'],
   GeminiHooks: ['my-ext/hooks/hooks.json'],
   GeminiAgent: ['my-ext/agents/helper.md'],
+  PiPackage: ['package.json', '.opencode/package.json'],
 };
 
 /** Paths agnix does not lint as agent files. */
 const NOT_DETECTED_PATHS = [
   'README.md',
   'docs/guide.md',
-  'package.json',
   'tsconfig.json',
   'config.json',
   '.vscode/settings.json',
@@ -313,7 +321,6 @@ const NOT_DETECTED_PATHS = [
   'src/index.ts',
   'rules/test.mdc',
   'skill.md',
-  '.opencode/package.json',
   '.opencode/node_modules/lib/index.js',
   '.kiro/specs/feature/requirements.md',
   '.devin/config.json',
