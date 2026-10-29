@@ -95,6 +95,7 @@ impl ValidatorProvider for BuiltinProvider {
 
     fn named_validators(&self) -> Vec<(FileType, Option<&'static str>, ValidatorFactory)> {
         let providers: &[&dyn ValidatorProvider] = &[
+            &NativeToolProvider,
             &SkillProvider,
             &ClaudeProvider,
             &CopilotProvider,
@@ -397,7 +398,55 @@ impl ValidatorRegistryBuilder {
 ///
 /// Used by `BuiltinProvider` (via `debug_assert_eq!`) and tests to catch
 /// accidental additions or removals without updating all providers.
-const EXPECTED_BUILTIN_COUNT: usize = 147;
+const EXPECTED_BUILTIN_COUNT: usize = 163;
+
+/// Tool onboarding validators, kept separate from legacy-client providers.
+struct NativeToolProvider;
+
+impl ValidatorProvider for NativeToolProvider {
+    fn validators(&self) -> Vec<(FileType, ValidatorFactory)> {
+        self.named_validators()
+            .into_iter()
+            .map(|(file_type, _, factory)| (file_type, factory))
+            .collect()
+    }
+
+    fn named_validators(&self) -> Vec<(FileType, Option<&'static str>, ValidatorFactory)> {
+        vec![
+            (
+                FileType::ClaudeMd,
+                Some("AntigravityValidator"),
+                antigravity_validator,
+            ),
+            (
+                FileType::GeminiMd,
+                Some("AntigravityValidator"),
+                antigravity_validator,
+            ),
+            (FileType::PiConfig, Some("PiValidator"), pi_validator),
+            (FileType::GrokConfig, Some("GrokValidator"), grok_validator),
+            (FileType::GrokAgent, Some("GrokValidator"), grok_validator),
+            (FileType::GrokRule, Some("GrokValidator"), grok_validator),
+            (FileType::Skill, Some("GrokValidator"), grok_validator),
+            (FileType::PiPrompt, Some("PiValidator"), pi_validator),
+            (
+                FileType::AntigravityConfig,
+                Some("AntigravityValidator"),
+                antigravity_validator,
+            ),
+            (
+                FileType::AntigravityRule,
+                Some("AntigravityValidator"),
+                antigravity_validator,
+            ),
+            (
+                FileType::AntigravityAgent,
+                Some("AntigravityValidator"),
+                antigravity_validator,
+            ),
+        ]
+    }
+}
 
 // -- Category providers -----------------------------------------------------
 //
@@ -857,6 +906,19 @@ impl ValidatorProvider for MiscProvider {
                 claude_marketplace_validator,
             ),
             (FileType::Mcp, Some("McpValidator"), mcp_validator),
+            (FileType::PiConfig, Some("McpValidator"), mcp_validator),
+            (
+                FileType::AntigravityConfig,
+                Some("McpValidator"),
+                mcp_validator,
+            ),
+            (FileType::GrokConfig, Some("McpValidator"), mcp_validator),
+            (
+                FileType::AntigravityAgent,
+                Some("McpValidator"),
+                mcp_validator,
+            ),
+            (FileType::GrokAgent, Some("McpValidator"), mcp_validator),
             // MCP servers embedded in other clients' config files get the
             // server-level MCP checks (MCP-018/019/027/028/029); McpValidator
             // dispatches on the file type, and the clients' own validators
@@ -1192,6 +1254,18 @@ impl ValidatorProvider for MiscProvider {
 
 fn skill_validator() -> Box<dyn Validator> {
     Box::new(crate::rules::skill::SkillValidator)
+}
+
+fn pi_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::pi::PiValidator)
+}
+
+fn grok_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::grok::GrokValidator)
+}
+
+fn antigravity_validator() -> Box<dyn Validator> {
+    Box::new(crate::rules::antigravity::AntigravityValidator)
 }
 
 fn per_client_skill_validator() -> Box<dyn Validator> {
@@ -1685,7 +1759,12 @@ mod tests {
         // the Codex (CX-SK-004/007) and OpenCode skill validators,
         // AmpSkillValidator (AMP-005, AMP-SK-002/003), and McpValidator for
         // servers in the skill's `mcpServers` frontmatter (MCP-018/028).
-        assert_eq!(skill_validators.len(), 11);
+        assert!(
+            skill_validators
+                .iter()
+                .any(|validator| validator.name() == "GrokValidator")
+        );
+        assert_eq!(skill_validators.len(), 12);
     }
 
     #[test]
@@ -1763,6 +1842,7 @@ mod tests {
             .without_validator("AmpSkillValidator")
             // MCP-018/028 on the skill's `mcpServers` frontmatter.
             .without_validator("McpValidator")
+            .without_validator("GrokValidator")
             .build();
 
         assert!(
@@ -1879,6 +1959,14 @@ mod tests {
     #[test]
     fn every_validatable_file_type_has_at_least_one_validator() {
         let validatable_types = [
+            FileType::PiConfig,
+            FileType::PiPrompt,
+            FileType::AntigravityConfig,
+            FileType::AntigravityRule,
+            FileType::AntigravityAgent,
+            FileType::GrokConfig,
+            FileType::GrokRule,
+            FileType::GrokAgent,
             FileType::Skill,
             FileType::ClaudeMd,
             FileType::Agent,
@@ -2030,7 +2118,15 @@ mod tests {
                 | FileType::KiroIgnore
                 | FileType::KiroNotLoaded
                 | FileType::GeminiAgent
-                | FileType::GenericMarkdown => (),
+                | FileType::GenericMarkdown
+                | FileType::PiConfig
+                | FileType::PiPrompt
+                | FileType::AntigravityConfig
+                | FileType::AntigravityRule
+                | FileType::AntigravityAgent
+                | FileType::GrokConfig
+                | FileType::GrokRule
+                | FileType::GrokAgent => (),
                 FileType::Unknown => {
                     panic!("Unknown must not appear in validatable_types")
                 }
@@ -2623,12 +2719,13 @@ mod tests {
         // `mcpServers`) added 4; AmpSkillValidator on Skill and AmpSkillMcp
         // added 2; McpValidator on Gemini agents, skills and Amp skill
         // `mcp.json` (MCP-018/028 coverage) added 3.
-        assert_eq!(MiscProvider.named_validators().len(), 79);
+        assert_eq!(MiscProvider.named_validators().len(), 84);
     }
 
     #[test]
     fn all_category_providers_sum_to_expected_count() {
-        let total = SkillProvider.named_validators().len()
+        let total = NativeToolProvider.named_validators().len()
+            + SkillProvider.named_validators().len()
             + ClaudeProvider.named_validators().len()
             + CopilotProvider.named_validators().len()
             + CursorProvider.named_validators().len()
@@ -2644,6 +2741,7 @@ mod tests {
     #[test]
     fn all_category_provider_entries_have_names() {
         let providers: &[&dyn ValidatorProvider] = &[
+            &NativeToolProvider,
             &SkillProvider,
             &ClaudeProvider,
             &CopilotProvider,
@@ -2666,6 +2764,7 @@ mod tests {
     #[test]
     fn category_provider_validators_count_matches_named() {
         let providers: &[&dyn ValidatorProvider] = &[
+            &NativeToolProvider,
             &SkillProvider,
             &ClaudeProvider,
             &CopilotProvider,
@@ -2775,8 +2874,9 @@ mod tests {
     #[test]
     fn builtin_provider_output_matches_sub_provider_concatenation() {
         // BuiltinProvider::named_validators() must be a pure flat_map of all
-        // 7 sub-providers in declaration order with no reordering or deduplication.
+        // All sub-providers in declaration order with no reordering or deduplication.
         let expected: Vec<_> = [
+            NativeToolProvider.named_validators(),
             SkillProvider.named_validators(),
             ClaudeProvider.named_validators(),
             CopilotProvider.named_validators(),

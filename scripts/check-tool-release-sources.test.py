@@ -5,8 +5,33 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+import runpy
 
 ROOT = Path(__file__).resolve().parents[1]
+EXTRACT = runpy.run_path(str(ROOT / 'scripts/extract-tool-release.py'))['extract']
+
+
+class NativeReleaseSources(unittest.TestCase):
+    def test_antigravity_installer_manifest_requires_stable_version(self):
+        self.assertEqual(EXTRACT('antigravity-manifest', '{"version":"1.4.9","url":"https://example.com/99.0.0"}'), '1.4.9')
+        for content in ['{}', '{"version":149}', '{"version":"1.4.9-preview"}', '[]']:
+            with self.subTest(content=content), self.assertRaises(ValueError):
+                EXTRACT('antigravity-manifest', content)
+
+    def test_grok_rss_uses_only_canonical_stable_build_release_items(self):
+        def item(title, link):
+            return f'<item><title>{title}</title><link>{link}</link></item>'
+        content = '<rss><channel><title>Grok Build Changelog</title>' + ''.join([
+            item('Grok Build 1.0.9', 'https://x.ai/changelog/build#v1.0.9-2026-01-01'),
+            item('Grok Build 1.0.70', 'https://x.ai/changelog/build#v1.0.70-2026-10-23'),
+            item('Grok Build 99.0.0', 'https://example.com/changelog/build#v99.0.0-2026-10-23'),
+            item('Grok Build 2.0.0-preview', 'https://x.ai/changelog/build#v2.0.0-preview'),
+            item('Grok Build 3.0.0', 'https://x.ai/changelog/api#v3.0.0-2026-10-23'),
+        ]) + '</channel></rss>'
+        self.assertEqual(EXTRACT('grok-build-rss', content), '1.0.70')
+        with self.assertRaises(ValueError):
+            EXTRACT('grok-build-rss', content.replace('Grok Build Changelog', 'Grok API Changelog'))
+
 
 
 class ReleaseSources(unittest.TestCase):

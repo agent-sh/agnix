@@ -5417,6 +5417,9 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 | Category | Total Rules | HIGH | MEDIUM | LOW | Auto-Fixable |
 |----------|-------------|------|--------|-----|--------------|
+| Pi | 17 | 14 | 3 | 0 | 0 |
+| Antigravity CLI | 18 | 12 | 6 | 0 | 0 |
+| Grok Code | 20 | 10 | 9 | 1 | 0 |
 | Agent Skills | 22 | 11 | 6 | 5 | 7 |
 | AGENTS.md | 6 | 0 | 1 | 5 | 1 |
 | Amp Checks | 9 | 4 | 4 | 1 | 3 |
@@ -5460,7 +5463,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 16 | 4 | 7 | 5 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **702** | **255** | **313** | **134** | **125** |
+| **TOTAL** | **757** | **291** | **331** | **135** | **125** |
 
 
 ---
@@ -5488,8 +5491,454 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 702 validation rules across 43 categories
+**Total Coverage**: 757 validation rules across 46 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 255 HIGH, 313 MEDIUM, 134 LOW
-**Auto-Fixable**: 125 rules (18%)
+**Certainty**: 291 HIGH, 331 MEDIUM, 135 LOW
+**Auto-Fixable**: 125 rules (17%)
+
+## Pi Native Configuration
+
+### PI-CFG-001 [HIGH] Invalid Pi Configuration JSON
+
+Detection: Use the file's native JSON dialect, with an object at its root. models.json additionally accepts line comments and trailing commas.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-CFG-002 [HIGH] Invalid Pi Settings Value
+
+Detection: Pi settings must satisfy the published field types, enums and numeric constraints. Unknown settings remain permitted.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-CFG-003 [MEDIUM] Ignored Pi Project Configuration
+
+Detection: Global-only settings, models and keybindings belong in the agent directory rather than project .pi configuration.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-MDL-001 [HIGH] Invalid Pi Model Definition
+
+Detection: Provider and model definitions must match the published models schema, including nested compatibility settings.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-MDL-002 [HIGH] Unusable Pi Provider Configuration
+
+Detection: OAuth needs an explicit baseUrl. A provider entry must change models, connection parameters or authentication rather than being a no-op.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-KB-001 [HIGH] Invalid Pi Keybinding
+
+Detection: Keybinding values and chord syntax must match Pi's published keybindings schema.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-MCP-001 [HIGH] Invalid Pi MCP Configuration
+
+Detection: mcpServers must be an object and autoEnableCodemode a boolean when supplied.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-MCP-002 [HIGH] Invalid Pi MCP Server
+
+Detection: Use a supported transport and the native option types. Project-only overrides can contain enabled, exposure and toolExposure without repeating the global transport.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-MCP-003 [HIGH] Invalid Pi Provider Authentication Scope
+
+Detection: auth.provider is global-only and requires HTTPS or a loopback endpoint.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-MCP-004 [HIGH] Colliding Pi MCP Namespaces
+
+Detection: Server names must remain distinct after hyphens are normalized to underscores.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-MCP-005 [HIGH] Invalid Pi MCP OAuth Configuration
+
+Detection: Use supported registration modes and valid loopback callback settings with consistent ports.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-PKG-001 [HIGH] Invalid Pi Package Resources
+
+Detection: Declare Pi resources in an object with string path arrays and string gallery media paths.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-PKG-002 [MEDIUM] Bundled Pi Host Dependency
+
+Detection: Host-provided Pi runtime packages belong in peerDependencies rather than dependencies to avoid duplicate module instances.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-TH-001 [HIGH] Invalid Pi Theme Structure
+
+Detection: Themes must match the published schema, including required color roles and supported value types.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-TH-002 [HIGH] Invalid Pi Theme Resolution
+
+Detection: Theme names cannot be system or contain slashes. Color variables must exist and be acyclic; literal colors must use supported syntax.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-PR-001 [HIGH] Invalid Pi Prompt YAML
+
+Detection: When frontmatter is parsed as YAML, it must be syntactically valid and within the linter's YAML parser bounds.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+### PI-PR-002 [MEDIUM] Ignored Pi Prompt Metadata
+
+Detection: Pi ignores non-string description and argument-hint metadata and uses its normal fallback behavior.
+
+Applies to: `pi`; qualified configuration reference `>=1.4.0`.
+
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+
+## Antigravity CLI Native Configuration
+
+### AGY-CFG-001 [HIGH] Invalid Antigravity Configuration JSON
+
+Detection: Native Antigravity configuration files must contain valid JSON objects.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-CFG-002 [HIGH] Invalid Antigravity Setting
+
+Detection: Settings must satisfy the published types and choices. Unknown settings and editor schema hints remain permitted.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-CFG-003 [MEDIUM] Misplaced Antigravity Customization
+
+Detection: Hooks and MCP servers are loaded from their dedicated files, not inline settings.json blocks.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-CFG-004 [MEDIUM] Ignored Antigravity Permission Resource
+
+Detection: Use documented action(target) resources without a space before the opening parenthesis. Unparseable resources are ignored.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-CFG-005 [MEDIUM] Antigravity Formatter Fallback
+
+Detection: Unrecognized toolFormatterType values fall back to XML; use a documented formatter or omit the field.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-KB-001 [MEDIUM] Invalid Antigravity Keybinding
+
+Detection: Map actions to arrays of hotkeys. Protected cli.exit and cli.enter shortcuts cannot be disabled.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-MCP-001 [HIGH] Invalid Antigravity MCP Server
+
+Detection: Use a stdio command or Streamable HTTP serverUrl/url and the documented option types. Zero and negative integer timeoutSeconds values are valid.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-MCP-002 [HIGH] Unsupported Antigravity MCP Transport
+
+Detection: Antigravity CLI does not support legacy HTTP+SSE or httpUrl; use Streamable HTTP.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-PL-001 [HIGH] Invalid Antigravity Plugin Field
+
+Detection: Recognized manifest fields must match the native plugin schema. Plugin versions are opaque strings.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-PL-002 [MEDIUM] Ignored Antigravity Plugin Metadata
+
+Detection: Unknown metadata and unsupported string logos are ignored. Name is needed for CLI installation even though folder loading can derive one.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-HK-001 [HIGH] Invalid Antigravity Hook Structure
+
+Detection: Use named hook definitions, matcher groups for tool events, and direct command handlers for other events. The command type is optional.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-HK-002 [MEDIUM] Unknown Antigravity Hook Event
+
+Detection: Use one of the lifecycle events supported by the native CLI; unrelated client events are not interchangeable.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-RL-001 [HIGH] Invalid Antigravity Rule Trigger
+
+Detection: Modular rules need YAML frontmatter with always_on, model_decision, glob or manual as the trigger.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-RL-002 [HIGH] Invalid Antigravity Rule Metadata
+
+Detection: model_decision requires a description; glob requires a non-empty globs or glob string. Declared metadata must use its native types.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-RL-003 [HIGH] Truncated Antigravity Rule
+
+Detection: Antigravity truncates individual rules above 24,000 bytes after file includes are expanded.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-RL-004 [HIGH] Invalid Antigravity Rule Registry
+
+Detection: Rule registry inherits and entries arrays contain path objects with optional include_only and exclude string lists.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-AG-001 [HIGH] Invalid Antigravity Agent YAML
+
+Detection: Agent definitions need a complete YAML frontmatter object.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+### AGY-AG-002 [HIGH] Invalid Antigravity Agent Metadata
+
+Detection: Set the required name and description and valid field types. Model identifiers are open strings, not a closed three-alias list.
+
+Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
+
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+
+## Grok Code Native Configuration
+
+### GRK-CFG-001 [HIGH] Invalid Grok Configuration Syntax
+
+Detection: Native Grok TOML and JSON files must use the syntax expected for their file type.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-CFG-002 [MEDIUM] Ignored Grok Project Setting
+
+Detection: Project config.toml contributes mcp_servers, plugins and permission only. Other settings belong in user configuration.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-CFG-003 [MEDIUM] Invalid Grok Setting Value
+
+Detection: Documented static settings must use their native field types and choices; extension and future settings remain open.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-CFG-004 [MEDIUM] Retired or Legacy Grok Setting
+
+Detection: Remove retired settings and migrate legacy vim navigation configuration to keys.vim for current releases.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-CFG-005 [MEDIUM] Ignored Grok Policy Lock
+
+Detection: The bypass-permissions lock is honored only from root-owned system policy, not user-writable configuration.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-CFG-006 [HIGH] Invalid Grok Version Override
+
+Detection: Version override bounds must be semantic versions; reversed bounds cannot select a release.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-SBX-001 [HIGH] Redefined Grok Sandbox Builtin
+
+Detection: Custom sandbox profiles cannot redefine off, workspace, read-only, strict or devbox.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-SBX-002 [HIGH] Invalid Grok Sandbox Profile
+
+Detection: Use a documented extends value and valid network/path-list fields in custom profiles.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-MCP-001 [HIGH] Invalid Grok MCP Server
+
+Detection: Configure native stdio or remote servers with the documented field types and transport settings.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-HK-001 [HIGH] Invalid Grok Hook Handler
+
+Detection: Use native event matcher groups with command or HTTP handlers and valid option types, including current args support.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-HK-002 [MEDIUM] Unknown Grok Hook Event
+
+Detection: Grok skips unknown events. Use supported native or compatibility event aliases.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-HK-003 [MEDIUM] Invalid Grok Hook Matcher
+
+Detection: Hook matcher expressions must be valid in Grok's regex dialect, or use the match-all form.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-PL-001 [HIGH] Invalid Grok Plugin Manifest
+
+Detection: A supplied manifest needs a valid native name and typed component metadata; versions remain opaque strings.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-PL-002 [MEDIUM] Escaping Grok Plugin Component
+
+Detection: Component paths must resolve inside the plugin root. Absolute paths inside that root are valid.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-AG-001 [HIGH] Invalid Grok Agent YAML
+
+Detection: Native agents need complete YAML frontmatter with the fields required by the native deserializer.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-AG-002 [HIGH] Invalid Grok Agent Metadata
+
+Detection: Agent metadata must match native types, including YAML string coercion, MCP inheritance and complete recovery policies.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-AG-003 [HIGH] Invalid Grok Role or Persona
+
+Detection: Use native role/persona types and complete declared input/output fields.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-AG-004 [MEDIUM] Restricted Grok Plugin Agent Field
+
+Detection: Plugin agents cannot supply privileged hooks, inline MCP declarations or bypassPermissions.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-SK-001 [LOW] Grok Skill Tool Policy Advisory
+
+Detection: allowed-tools in a Grok skill neither grants nor restricts tools; configure permissions or an agent policy for restrictions.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).
+
+### GRK-SK-002 [MEDIUM] Ignored Grok Skill Boolean
+
+Detection: Only literal true enables user-invocable and disable-model-invocation; use native booleans rather than yes/no or strings.
+
+Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
+
+Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2](https://docs.x.ai/build/features/hooks), [reference 3](https://docs.x.ai/build/features/skills-plugins-marketplaces), [reference 4](https://x.ai/changelog/build), [reference 5](https://github.com/xai-org/grok-build/tree/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8).

@@ -50,6 +50,11 @@ pub enum OutputFormat {
 /// Separate from TargetTool (which uses PascalCase for config file serialization).
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
 pub enum TargetArg {
+    Pi,
+    #[value(alias = "agy")]
+    Antigravity,
+    #[value(alias = "grok")]
+    GrokCode,
     #[default]
     Generic,
     #[value(name = "claude-code")]
@@ -72,6 +77,9 @@ fn apply_cli_target(config: &mut LintConfig, target: TargetArg) {
 impl From<TargetArg> for TargetTool {
     fn from(arg: TargetArg) -> Self {
         match arg {
+            TargetArg::Pi => TargetTool::Pi,
+            TargetArg::Antigravity => TargetTool::Antigravity,
+            TargetArg::GrokCode => TargetTool::GrokCode,
             TargetArg::Generic => TargetTool::Generic,
             TargetArg::ClaudeCode => TargetTool::ClaudeCode,
             TargetArg::Cursor => TargetTool::Cursor,

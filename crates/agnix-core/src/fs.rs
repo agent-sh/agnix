@@ -161,6 +161,73 @@ pub trait FileSystem: Send + Sync + std::fmt::Debug {
     fn read_dir(&self, path: &Path) -> io::Result<Vec<DirEntry>>;
 }
 
+/// A validation document overrides its saved copy without changing the disk.
+/// Sibling discovery and validators must see the same editor buffer.
+pub(crate) struct DocumentFileSystem {
+    pub base: std::sync::Arc<dyn FileSystem>,
+    pub path: PathBuf,
+    pub content: String,
+}
+
+impl std::fmt::Debug for DocumentFileSystem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DocumentFileSystem")
+            .field("path", &self.path)
+            .finish_non_exhaustive()
+    }
+}
+
+impl FileSystem for DocumentFileSystem {
+    fn exists(&self, path: &Path) -> bool {
+        path == self.path || self.base.exists(path)
+    }
+    fn is_file(&self, path: &Path) -> bool {
+        path == self.path || self.base.is_file(path)
+    }
+    fn is_dir(&self, path: &Path) -> bool {
+        path != self.path && self.base.is_dir(path)
+    }
+    fn is_symlink(&self, path: &Path) -> bool {
+        path != self.path && self.base.is_symlink(path)
+    }
+    fn metadata(&self, path: &Path) -> io::Result<FileMetadata> {
+        if path == self.path {
+            Ok(FileMetadata::file(self.content.len() as u64))
+        } else {
+            self.base.metadata(path)
+        }
+    }
+    fn symlink_metadata(&self, path: &Path) -> io::Result<FileMetadata> {
+        if path == self.path {
+            self.metadata(path)
+        } else {
+            self.base.symlink_metadata(path)
+        }
+    }
+    fn read_to_string(&self, path: &Path) -> LintResult<String> {
+        if path == self.path {
+            Ok(self.content.clone())
+        } else {
+            self.base.read_to_string(path)
+        }
+    }
+    fn write(&self, path: &Path, content: &str) -> LintResult<()> {
+        self.base.write(path, content)
+    }
+    fn canonicalize(&self, path: &Path) -> io::Result<PathBuf> {
+        self.base.canonicalize(path).or_else(|error| {
+            if path == self.path && path.is_absolute() {
+                Ok(path.to_path_buf())
+            } else {
+                Err(error)
+            }
+        })
+    }
+    fn read_dir(&self, path: &Path) -> io::Result<Vec<DirEntry>> {
+        self.base.read_dir(path)
+    }
+}
+
 /// Real file system implementation that delegates to `std::fs` and `file_utils`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct RealFileSystem;

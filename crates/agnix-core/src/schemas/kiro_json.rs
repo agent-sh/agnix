@@ -14,8 +14,28 @@
 //! which keeps every byte offset and line number of the original text.
 
 use serde::Deserialize;
-use serde::de::IgnoredAny;
 use serde_json::Number;
+
+#[cfg(test)]
+mod onboarding_depth_regression {
+    use super::*;
+
+    #[test]
+    fn deeply_nested_json_is_rejected_before_recursive_tree_build() {
+        let content = format!("{{\"nested\":{}0{}}}", "[".repeat(256), "]".repeat(256));
+        assert!(parse_json_document(&content, false).is_err());
+    }
+
+    #[test]
+    fn deeply_nested_jsonc_is_rejected_after_comment_normalization() {
+        let content = format!(
+            "{{// comment\n\"nested\":{}0{}}}",
+            "[".repeat(256),
+            "]".repeat(256)
+        );
+        assert!(parse_json_document(&content, true).is_err());
+    }
+}
 
 /// A JSON value with the byte span of its source text.
 #[derive(Debug, Clone, PartialEq)]
@@ -158,7 +178,10 @@ pub(crate) fn parse_json_document(
     content: &str,
     allow_jsonc: bool,
 ) -> Result<JsonDocument, JsonSyntaxError> {
-    let strict_error = match serde_json::from_str::<IgnoredAny>(content) {
+    // IgnoredAny skips serde_json's nesting guard. Validating through Value
+    // first preserves that existing parser bound before our recursive span
+    // tree, conversion and destructor can encounter attacker-controlled depth.
+    let strict_error = match serde_json::from_str::<serde_json::Value>(content) {
         Ok(_) => {
             let root = build_tree(content).ok_or_else(internal_error)?;
             return Ok(JsonDocument {
@@ -176,7 +199,7 @@ pub(crate) fn parse_json_document(
     let Some(offset) = first_offset else {
         return Err(strict_error);
     };
-    match serde_json::from_str::<IgnoredAny>(&blanked) {
+    match serde_json::from_str::<serde_json::Value>(&blanked) {
         Ok(_) => {
             let root = build_tree(&blanked).ok_or_else(internal_error)?;
             Ok(JsonDocument {

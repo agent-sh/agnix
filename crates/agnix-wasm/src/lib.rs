@@ -159,6 +159,12 @@ pub fn get_supported_file_types() -> JsValue {
         (".opencode/instructions.md", "OpenCode"),
         ("mcp.json", "Mcp"),
         (".claude/settings.json", "Hooks"),
+        (".pi/settings.json", "PiConfig"),
+        (".pi/prompts/review.md", "PiPrompt"),
+        (".agents/rules/review.md", "AntigravityRule"),
+        (".gemini/antigravity-cli/settings.json", "AntigravityConfig"),
+        (".grok/config.toml", "GrokConfig"),
+        (".grok/agents/review.md", "GrokAgent"),
     ];
 
     serde_wasm_bindgen::to_value(&types).unwrap_or(JsValue::NULL)
@@ -176,6 +182,9 @@ pub fn get_supported_tools() -> JsValue {
         ("opencode", "OpenCode"),
         ("gemini-cli", "Gemini CLI"),
         ("kiro", "Kiro CLI"),
+        ("pi", "Pi"),
+        ("antigravity", "Antigravity CLI"),
+        ("grok-code", "Grok Code"),
         ("amp", "amp"),
     ];
 

@@ -12,7 +12,7 @@
 
 Tiers describe maintenance priority, separately from implemented validation coverage. The roster and release sources are recorded in [tool-release-baselines.json](../.github/tool-release-baselines.json). Definitions live in [CONTRIBUTING.md](../CONTRIBUTING.md#tool-tier-system).
 
-Eight tools on the active roster have validators. Pi, Antigravity CLI, Grok Code, Muse Code and Kimi Code have assigned priorities but no tool-specific validators yet. Generic Markdown, Agent Skills or MCP rules can apply to recognized shared files; this is not full client support.
+Eleven tools on the active roster have validators. Muse Code and Kimi Code have assigned priorities but no tool-specific validators yet. Pi, Antigravity CLI and Grok Code contracts are documented in [NATIVE-TOOL-CONTRACTS.md](NATIVE-TOOL-CONTRACTS.md). Generic Markdown, Agent Skills or MCP rules can apply to recognized shared files; this is not full client support.
 
 ### S Tier (test always)
 
@@ -27,14 +27,14 @@ Eight tools on the active roster have validators. Pi, Antigravity CLI, Grok Code
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/hooks/*.json` (V3 standalone since 2.8.0; `~/.kiro/hooks` since 2.13.0), `.kiro/settings/mcp.json`, `.kiro/settings/cli.json`, `.kiro/settings/permissions.{yaml,json}`, `~/.kiro/workspace-roots/<hash>/permissions.{yaml,json}`, `POWER.md` and power `plugin.json` / `mcp.json` / `steering/*.md`, `.kiro/skills/*/SKILL.md`, `.amazonq/cli-agents/*.json` (CLI 2.x fallback), `.kiro/workflows/*.workflow.{json,yaml,yml}` (V3), `.kiroignore`, `AGENTS.md` (nested, loaded as steering since 2.18.0) | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via canonical CLI release and patch links) | Weekly | 2026-10-29 | AGM, KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET, KR-PM, KR-WF, KR-IGN |
 | OpenCode | `AGENTS.md`, `CLAUDE.md` (OpenCode 1 fallback), `opencode.json`, `opencode.jsonc`, `.opencode/opencode.json(c)`, `.opencode/agents/**.md`, `.opencode/commands/**.md`, `.opencode/tools/*.ts`, `.opencode/plugins/*.ts`, `.mcp.json`, `.opencode/skills/*/SKILL.md` (OpenCode 1 `opencode-ai` and OpenCode 2 `@opencode/cli`) | https://opencode.ai/docs/ and https://opencode.ai/v2/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-29 | AGM, XP, MCP, OC, OC-AG, OC-AGM, OC-CFG, OC-CMD, OC-DEP, OC-LSP, OC-PM, OC-POL, OC-TOOL, OC-TUI, OC-SK |
-| Pi | Global ~/.pi/agent/ and project .pi/ settings, models, MCP, skills and packages (planned) | https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/configuration.md | Automated releases via earendil-works/pi; validator pending | Per tier | Not yet reviewed for validation | None |
+| Pi | Global `~/.pi/agent/` or `$PI_CODING_AGENT_DIR`, project `.pi/`: settings, models, keybindings, MCP, packages, prompts, themes and skills | https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/configuration.md | Automated releases and schema drift | Weekly | 2026-10-29 (v1.4.0) | PI, AS, MCP |
 
 ### B Tier (test on significant changes)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Antigravity CLI | agy settings.json and mcp_config.json under ~/.gemini/antigravity-cli/; workspace .agents/mcp_config.json (planned) | https://antigravity.google/docs/getting-started?tab=cli | Manual primary-source review; validator pending | Per tier | Not yet reviewed for validation | None |
-| Grok Code | Grok Build CLI configuration, rules, skills, plugins, hooks and MCP (planned) | https://docs.x.ai/build/cli/reference | Manual primary-source review; validator pending | Per tier | Not yet reviewed for validation | None |
+| Antigravity CLI | `~/.gemini/antigravity-cli/settings.json`, keybindings; `.agents/` and `~/.gemini/config/` MCP, hooks, rules and agents; plugin manifests and skills | https://antigravity.google/docs/getting-started?tab=cli | Automated installer manifest and schema/doc drift | Weekly | 2026-10-29 (1.4.9) | AGY, AS, MCP |
+| Grok Code | `.grok/` and `$GROK_HOME`: config, sandbox, requirements, roles, personas, agents, hooks, plugins, skills and MCP | https://docs.x.ai/build/cli/reference | Automated Grok Build changelog RSS and reference drift | Weekly | 2026-10-29 (1.0.70) | GRK, AS, MCP |
 
 ### C Tier (community-reported maintenance)
 
@@ -64,7 +64,7 @@ Roo Code remains dropped: discontinued 2026-05-15; its validators, file types an
 
 ### Pi compatibility recognition
 
-pi is not validated, but its subagent files are recognized so Claude agent rules do not run on them. pi has no marker file; extensions load agents by location: `<agentDir>/agents` where agentDir is `$PI_CODING_AGENT_DIR` or `~/.pi/agent` (`packages/coding-agent/src/config.ts` `getAgentDir`), project `.pi/agents` (`examples/extensions/subagent/README.md`), and paths from a package manifest's `pi` object or `pi-subagents.agents` (`docs/packages.md`, github.com/nicobailon/pi-subagents `docs/agents.md`). agnix treats an `agents/` directory as pi's when its parent is not a Claude root and has a `package.json` with a `pi` or `pi-subagents` object, a `settings.json` with a pi-only key (`defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `modelThinkingLevels`, `enabledModels`, `packages`; `docs/settings.md`), or an extension importing `@earendil-works/pi-coding-agent`. Verified 2026-10-17 against pi-coding-agent's installed docs: 0 matches on 124 real Claude plugin agents and 8245 other agent files on one machine.
+Pi also recognizes extension-provided subagent files to avoid applying Claude-only metadata rules. Extension executable behavior is outside static linting.
 
 ---
 

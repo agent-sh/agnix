@@ -228,6 +228,9 @@ def main(fix: bool = False) -> int:
     expected_autofix = sum(category_autofix.values())
 
     category_labels = {
+        "pi": "Pi",
+        "antigravity": "Antigravity CLI",
+        "grok": "Grok Code",
         "agent-skills": "Agent Skills",
         "claude-skills": "Claude Skills",
         "claude-hooks": "Claude Hooks",
@@ -302,6 +305,9 @@ def main(fix: bool = False) -> int:
     spec_start, spec_end = find_table(spec_lines, "What agnix Validates")
     spec_table = parse_spec_table(spec_lines[spec_start:spec_end])
     spec_map = {
+        "Pi": ["pi"],
+        "Antigravity CLI": ["antigravity"],
+        "Grok Code": ["grok"],
         "Skills": ["agent-skills", "claude-skills"],
         "Hooks": ["claude-hooks"],
         "Memory (Claude Code)": ["claude-memory"],

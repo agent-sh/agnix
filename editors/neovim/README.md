@@ -12,7 +12,7 @@ Provides real-time validation of AI agent configuration files (CLAUDE.md, AGENTS
 - Real-time diagnostics as you type
 - Quick-fix code actions for auto-fixable issues
 - Hover documentation for configuration fields
-- 405 validation rules across 32 categories
+- 757 validation rules across 46 categories, including Pi, Antigravity CLI and Grok Code
 - Commands for server management and rule browsing
 - Optional Telescope integration
 - `:checkhealth` support

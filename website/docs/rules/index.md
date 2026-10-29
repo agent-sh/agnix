@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `702` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `757` validation rules generated from `knowledge-base/rules.json`.
 `125` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -707,3 +707,58 @@ This section contains all `702` validation rules generated from `knowledge-base/
 | [KR-PM-011](./generated/kr-pm-011.md) | Unsupported Pattern Syntax in Kiro Shell, Web or MCP Rule | MEDIUM | Kiro Permissions | No |
 | [KR-PM-012](./generated/kr-pm-012.md) | Shadowed Kiro sandbox_network Deny | MEDIUM | Kiro Permissions | No |
 | [KR-HK-014](./generated/kr-hk-014.md) | Kiro Hook Migration and Canonical Trigger Hint | LOW | Kiro Hooks | Yes (safe) |
+| [PI-CFG-001](./generated/pi-cfg-001.md) | Invalid Pi Configuration JSON | HIGH | pi | No |
+| [PI-CFG-002](./generated/pi-cfg-002.md) | Invalid Pi Settings Value | HIGH | pi | No |
+| [PI-CFG-003](./generated/pi-cfg-003.md) | Ignored Pi Project Configuration | MEDIUM | pi | No |
+| [PI-MDL-001](./generated/pi-mdl-001.md) | Invalid Pi Model Definition | HIGH | pi | No |
+| [PI-MDL-002](./generated/pi-mdl-002.md) | Unusable Pi Provider Configuration | HIGH | pi | No |
+| [PI-KB-001](./generated/pi-kb-001.md) | Invalid Pi Keybinding | HIGH | pi | No |
+| [PI-MCP-001](./generated/pi-mcp-001.md) | Invalid Pi MCP Configuration | HIGH | pi | No |
+| [PI-MCP-002](./generated/pi-mcp-002.md) | Invalid Pi MCP Server | HIGH | pi | No |
+| [PI-MCP-003](./generated/pi-mcp-003.md) | Invalid Pi Provider Authentication Scope | HIGH | pi | No |
+| [PI-MCP-004](./generated/pi-mcp-004.md) | Colliding Pi MCP Namespaces | HIGH | pi | No |
+| [PI-MCP-005](./generated/pi-mcp-005.md) | Invalid Pi MCP OAuth Configuration | HIGH | pi | No |
+| [PI-PKG-001](./generated/pi-pkg-001.md) | Invalid Pi Package Resources | HIGH | pi | No |
+| [PI-PKG-002](./generated/pi-pkg-002.md) | Bundled Pi Host Dependency | MEDIUM | pi | No |
+| [PI-TH-001](./generated/pi-th-001.md) | Invalid Pi Theme Structure | HIGH | pi | No |
+| [PI-TH-002](./generated/pi-th-002.md) | Invalid Pi Theme Resolution | HIGH | pi | No |
+| [PI-PR-001](./generated/pi-pr-001.md) | Invalid Pi Prompt YAML | HIGH | pi | No |
+| [PI-PR-002](./generated/pi-pr-002.md) | Ignored Pi Prompt Metadata | MEDIUM | pi | No |
+| [AGY-CFG-001](./generated/agy-cfg-001.md) | Invalid Antigravity Configuration JSON | HIGH | antigravity | No |
+| [AGY-CFG-002](./generated/agy-cfg-002.md) | Invalid Antigravity Setting | HIGH | antigravity | No |
+| [AGY-CFG-003](./generated/agy-cfg-003.md) | Misplaced Antigravity Customization | MEDIUM | antigravity | No |
+| [AGY-CFG-004](./generated/agy-cfg-004.md) | Ignored Antigravity Permission Resource | MEDIUM | antigravity | No |
+| [AGY-CFG-005](./generated/agy-cfg-005.md) | Antigravity Formatter Fallback | MEDIUM | antigravity | No |
+| [AGY-KB-001](./generated/agy-kb-001.md) | Invalid Antigravity Keybinding | MEDIUM | antigravity | No |
+| [AGY-MCP-001](./generated/agy-mcp-001.md) | Invalid Antigravity MCP Server | HIGH | antigravity | No |
+| [AGY-MCP-002](./generated/agy-mcp-002.md) | Unsupported Antigravity MCP Transport | HIGH | antigravity | No |
+| [AGY-PL-001](./generated/agy-pl-001.md) | Invalid Antigravity Plugin Field | HIGH | antigravity | No |
+| [AGY-PL-002](./generated/agy-pl-002.md) | Ignored Antigravity Plugin Metadata | MEDIUM | antigravity | No |
+| [AGY-HK-001](./generated/agy-hk-001.md) | Invalid Antigravity Hook Structure | HIGH | antigravity | No |
+| [AGY-HK-002](./generated/agy-hk-002.md) | Unknown Antigravity Hook Event | MEDIUM | antigravity | No |
+| [AGY-RL-001](./generated/agy-rl-001.md) | Invalid Antigravity Rule Trigger | HIGH | antigravity | No |
+| [AGY-RL-002](./generated/agy-rl-002.md) | Invalid Antigravity Rule Metadata | HIGH | antigravity | No |
+| [AGY-RL-003](./generated/agy-rl-003.md) | Truncated Antigravity Rule | HIGH | antigravity | No |
+| [AGY-RL-004](./generated/agy-rl-004.md) | Invalid Antigravity Rule Registry | HIGH | antigravity | No |
+| [AGY-AG-001](./generated/agy-ag-001.md) | Invalid Antigravity Agent YAML | HIGH | antigravity | No |
+| [AGY-AG-002](./generated/agy-ag-002.md) | Invalid Antigravity Agent Metadata | HIGH | antigravity | No |
+| [GRK-CFG-001](./generated/grk-cfg-001.md) | Invalid Grok Configuration Syntax | HIGH | grok | No |
+| [GRK-CFG-002](./generated/grk-cfg-002.md) | Ignored Grok Project Setting | MEDIUM | grok | No |
+| [GRK-CFG-003](./generated/grk-cfg-003.md) | Invalid Grok Setting Value | MEDIUM | grok | No |
+| [GRK-CFG-004](./generated/grk-cfg-004.md) | Retired or Legacy Grok Setting | MEDIUM | grok | No |
+| [GRK-CFG-005](./generated/grk-cfg-005.md) | Ignored Grok Policy Lock | MEDIUM | grok | No |
+| [GRK-CFG-006](./generated/grk-cfg-006.md) | Invalid Grok Version Override | HIGH | grok | No |
+| [GRK-SBX-001](./generated/grk-sbx-001.md) | Redefined Grok Sandbox Builtin | HIGH | grok | No |
+| [GRK-SBX-002](./generated/grk-sbx-002.md) | Invalid Grok Sandbox Profile | HIGH | grok | No |
+| [GRK-MCP-001](./generated/grk-mcp-001.md) | Invalid Grok MCP Server | HIGH | grok | No |
+| [GRK-HK-001](./generated/grk-hk-001.md) | Invalid Grok Hook Handler | HIGH | grok | No |
+| [GRK-HK-002](./generated/grk-hk-002.md) | Unknown Grok Hook Event | MEDIUM | grok | No |
+| [GRK-HK-003](./generated/grk-hk-003.md) | Invalid Grok Hook Matcher | MEDIUM | grok | No |
+| [GRK-PL-001](./generated/grk-pl-001.md) | Invalid Grok Plugin Manifest | HIGH | grok | No |
+| [GRK-PL-002](./generated/grk-pl-002.md) | Escaping Grok Plugin Component | MEDIUM | grok | No |
+| [GRK-AG-001](./generated/grk-ag-001.md) | Invalid Grok Agent YAML | HIGH | grok | No |
+| [GRK-AG-002](./generated/grk-ag-002.md) | Invalid Grok Agent Metadata | HIGH | grok | No |
+| [GRK-AG-003](./generated/grk-ag-003.md) | Invalid Grok Role or Persona | HIGH | grok | No |
+| [GRK-AG-004](./generated/grk-ag-004.md) | Restricted Grok Plugin Agent Field | MEDIUM | grok | No |
+| [GRK-SK-001](./generated/grk-sk-001.md) | Grok Skill Tool Policy Advisory | LOW | grok | No |
+| [GRK-SK-002](./generated/grk-sk-002.md) | Ignored Grok Skill Boolean | MEDIUM | grok | No |

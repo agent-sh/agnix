@@ -45,8 +45,16 @@ class ToolSupportPolicy(unittest.TestCase):
             self.assertFalse(tool['tracked'])
             self.assertNotIn('tier', tool)
 
-    def test_new_priorities_do_not_claim_unimplemented_validators(self):
-        for tool_id in ['pi', 'antigravity', 'grok-code', 'muse-code', 'kimi-code']:
+    def test_new_tools_have_native_validation_and_release_tracking(self):
+        for tool_id, validator in [('pi', 'pi'), ('antigravity', 'antigravity'), ('grok-code', 'grok')]:
+            tool = self.baselines['tools'][tool_id]
+            self.assertEqual(tool['validation_status'], 'implemented', tool_id)
+            self.assertIn(validator, tool['validators'], tool_id)
+            self.assertTrue(tool['tracked'], tool_id)
+            self.assertIsNotNone(tool['last_known_version'], tool_id)
+
+    def test_community_priorities_do_not_claim_unimplemented_validators(self):
+        for tool_id in ['muse-code', 'kimi-code']:
             tool = self.baselines['tools'][tool_id]
             self.assertEqual(tool['validation_status'], 'pending', tool_id)
             self.assertEqual(tool['validators'], [], tool_id)
@@ -56,8 +64,9 @@ class ToolSupportPolicy(unittest.TestCase):
 
     def test_spec_sources_follow_current_maintenance_priorities(self):
         sources = json.loads((ROOT / '.github/spec-baselines.json').read_text())['sources']
-        self.assertEqual(set(sources), {'s-tier', 'a-tier', 'd-tier'})
-        self.assertEqual(set(sources['a-tier']), {'opencode-rules'})
+        self.assertEqual(set(sources), {'s-tier', 'a-tier', 'b-tier', 'd-tier'})
+        self.assertTrue({'opencode-rules', 'pi-settings', 'pi-models', 'pi-keybindings', 'pi-theme'}.issubset(sources['a-tier']))
+        self.assertTrue({'antigravity-settings', 'antigravity-plugin', 'antigravity-rules', 'grok-build-reference'}.issubset(sources['b-tier']))
         for source in sources['s-tier']:
             self.assertFalse(source.startswith(('opencode', 'cursor', 'cline', 'github-copilot')))
         self.assertEqual(set(sources['d-tier']), {
@@ -71,13 +80,14 @@ class ToolSupportPolicy(unittest.TestCase):
         script = ROOT / 'scripts/spec-drift-tiers.sh'
         for event, requested, cron, expected in [
             ('schedule', 'all', '0 0 * * 0', 's-tier'),
-            ('schedule', 'all', '0 0 * * 3', 'a-tier'),
+            ('schedule', 'all', '0 0 * * 3', 'a-tier b-tier'),
             ('schedule', 'all', '0 0 1 * *', 'd-tier'),
             ('workflow_dispatch', 's-tier', '', 's-tier'),
             ('workflow_dispatch', 'a-tier', '', 'a-tier'),
+            ('workflow_dispatch', 'b-tier', '', 'b-tier'),
             ('workflow_dispatch', 'd-tier', '', 'd-tier'),
-            ('workflow_dispatch', 'all', '', 's-tier a-tier d-tier'),
-            ('push', 'all', '', 's-tier a-tier d-tier'),
+            ('workflow_dispatch', 'all', '', 's-tier a-tier b-tier d-tier'),
+            ('push', 'all', '', 's-tier a-tier b-tier d-tier'),
         ]:
             with self.subTest(event=event, requested=requested, cron=cron):
                 result = subprocess.run(

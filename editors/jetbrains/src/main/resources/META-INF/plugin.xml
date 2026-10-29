@@ -82,14 +82,19 @@
             .vscode/settings.json are ignored while .claude/settings.json is matched.
         -->
         <fileNamePatternMapping
-            patterns="SKILL.md;CLAUDE.md;CLAUDE.local.md;AGENTS.md;AGENTS.local.md;AGENTS.override.md;copilot-instructions.md;*.instructions.md;*.mdc;.cursorrules"
+            patterns="*.md;*.mdc;.cursorrules"
             serverId="io.agnix.lsp"
             languageId="markdown"
             documentMatcher="io.agnix.jetbrains.lsp.AgnixDocumentMatcher"/>
         <fileNamePatternMapping
-            patterns="*.mcp.json;mcp.json;plugin.json;settings.json;settings.local.json"
+            patterns="*.json"
             serverId="io.agnix.lsp"
             languageId="json"
+            documentMatcher="io.agnix.jetbrains.lsp.AgnixDocumentMatcher"/>
+        <fileNamePatternMapping
+            patterns="*.toml"
+            serverId="io.agnix.lsp"
+            languageId="toml"
             documentMatcher="io.agnix.jetbrains.lsp.AgnixDocumentMatcher"/>
     </extensions>
 

@@ -8,7 +8,7 @@ on:
   schedule:
     # S-tier: Weekly on Sunday at midnight UTC
     - cron: '0 0 * * 0'
-    # A-tier: Weekly on Wednesday at midnight UTC (staggered from S-tier)
+    # A/B tiers: Weekly on Wednesday at midnight UTC (staggered from S-tier)
     - cron: '0 0 * * 3'
     # D-tier: Monthly maintenance on the first day of the month
     - cron: '0 0 1 * *'
@@ -27,6 +27,7 @@ on:
           - all
           - s-tier
           - a-tier
+          - b-tier
           - d-tier
         default: all
       mcp_version:
@@ -69,7 +70,7 @@ jobs:
           BASELINES_FILE=".github/spec-baselines.json"
 
           # Validate JSON structure
-          if ! jq -e '.sources["s-tier"] and .sources["a-tier"] and .sources["d-tier"]' "$BASELINES_FILE" > /dev/null 2>&1; then
+          if ! jq -e '.sources["s-tier"] and .sources["a-tier"] and .sources["b-tier"] and .sources["d-tier"]' "$BASELINES_FILE" > /dev/null 2>&1; then
             echo "ERROR: Invalid spec-baselines.json structure"
             exit 1
           fi
@@ -111,7 +112,7 @@ jobs:
             # Fetch with curl, follow redirects, timeout after 30s
             # Use separate variable for exit code to avoid partial content issues
             local exit_code
-            content=$(curl -fsSL --max-time 30 "$url" 2>/dev/null) && exit_code=0 || exit_code=$?
+            content=$(curl -fsSL --max-time 30 -A agnix-release-watch/1.0 -H 'Accept: text/markdown, text/html, application/json;q=0.9, */*;q=0.8' "$url" 2>/dev/null) && exit_code=0 || exit_code=$?
 
             if [[ $exit_code -ne 0 ]]; then
               echo "FETCH_FAILED"

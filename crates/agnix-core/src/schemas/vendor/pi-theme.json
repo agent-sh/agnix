@@ -1,0 +1,295 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pi.dev/schemas/theme.schema.json",
+  "type": "object",
+  "required": [
+    "name",
+    "colors"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[^/]+$"
+    },
+    "appearance": {
+      "anyOf": [
+        {
+          "type": "string",
+          "const": "dark"
+        },
+        {
+          "type": "string",
+          "const": "light"
+        }
+      ]
+    },
+    "vars": {
+      "type": "object",
+      "patternProperties": {
+        "^.*$": {
+          "$ref": "#/$defs/ColorValue"
+        }
+      }
+    },
+    "colors": {
+      "type": "object",
+      "required": [
+        "accent",
+        "border",
+        "borderAccent",
+        "borderMuted",
+        "success",
+        "error",
+        "warning",
+        "muted",
+        "dim",
+        "text",
+        "thinkingText",
+        "selectedBg",
+        "userMessageBg",
+        "userMessageText",
+        "customMessageBg",
+        "customMessageText",
+        "customMessageLabel",
+        "toolPendingBg",
+        "toolSuccessBg",
+        "toolErrorBg",
+        "toolTitle",
+        "toolOutput",
+        "mdHeading",
+        "mdLink",
+        "mdLinkUrl",
+        "mdCode",
+        "mdCodeBlock",
+        "mdCodeBlockBorder",
+        "mdQuote",
+        "mdQuoteBorder",
+        "mdHr",
+        "mdListBullet",
+        "toolDiffAdded",
+        "toolDiffRemoved",
+        "toolDiffContext",
+        "syntaxComment",
+        "syntaxKeyword",
+        "syntaxFunction",
+        "syntaxVariable",
+        "syntaxString",
+        "syntaxNumber",
+        "syntaxType",
+        "syntaxOperator",
+        "syntaxPunctuation",
+        "thinkingOff",
+        "thinkingMinimal",
+        "thinkingLow",
+        "thinkingMedium",
+        "thinkingHigh",
+        "thinkingXhigh",
+        "bashMode"
+      ],
+      "properties": {
+        "accent": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "border": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "borderAccent": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "borderMuted": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "success": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "error": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "warning": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "muted": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "dim": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "text": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "thinkingText": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "scrollbarTrack": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "scrollbarThumb": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "selectedBg": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "searchMatchBg": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "searchMatchText": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "userMessageBg": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "userMessageText": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "customMessageBg": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "customMessageText": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "customMessageLabel": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "toolPendingBg": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "toolSuccessBg": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "toolErrorBg": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "toolTitle": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "toolOutput": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "mdHeading": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "mdLink": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "mdLinkUrl": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "mdCode": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "mdCodeBlock": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "mdCodeBlockBorder": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "mdQuote": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "mdQuoteBorder": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "mdHr": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "mdListBullet": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "toolDiffAdded": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "toolDiffRemoved": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "toolDiffContext": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "syntaxComment": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "syntaxKeyword": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "syntaxFunction": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "syntaxVariable": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "syntaxString": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "syntaxNumber": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "syntaxType": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "syntaxOperator": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "syntaxPunctuation": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "thinkingOff": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "thinkingMinimal": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "thinkingLow": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "thinkingMedium": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "thinkingHigh": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "thinkingXhigh": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "thinkingMax": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "bashMode": {
+          "$ref": "#/$defs/ColorValue"
+        }
+      },
+      "additionalProperties": false
+    },
+    "export": {
+      "type": "object",
+      "properties": {
+        "pageBg": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "cardBg": {
+          "$ref": "#/$defs/ColorValue"
+        },
+        "infoBg": {
+          "$ref": "#/$defs/ColorValue"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "ColorValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      ]
+    }
+  }
+}

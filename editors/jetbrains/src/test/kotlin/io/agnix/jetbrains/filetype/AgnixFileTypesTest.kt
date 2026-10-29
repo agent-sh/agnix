@@ -10,6 +10,14 @@ import org.junit.jupiter.api.Test
 class AgnixFileTypesTest {
 
     @Test
+    fun `matches native Pi Antigravity and Grok paths`() {
+        listOf("/project/.pi/settings.json", "/home/me/.pi/agent/models.json", "/project/.pi/prompts/review.md", "/home/me/.gemini/antigravity-cli/settings.json", "/project/.agents/mcp_config.json", "/project/.grok/config.toml", "/project/.grok/agents/review.md").forEach {
+            assertTrue(AgnixFileTypes.isAgnixFilePath(it), it)
+        }
+        assertFalse(AgnixFileTypes.isAgnixFilePath("/project/.vscode/settings.json"))
+    }
+
+    @Test
     fun `matches top-level markdown memory files`() {
         assertTrue(AgnixFileTypes.isAgnixFilePath("/project/SKILL.md"))
         assertTrue(AgnixFileTypes.isAgnixFilePath("/project/CLAUDE.md"))

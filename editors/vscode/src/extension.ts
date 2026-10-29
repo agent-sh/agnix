@@ -110,6 +110,9 @@ interface LspConfig {
   tools?: string[];
   locale?: string | null;
   rules?: {
+    pi?: boolean;
+    antigravity?: boolean;
+    grok_code?: boolean;
     skills?: boolean;
     hooks?: boolean;
     agents?: boolean;
@@ -126,6 +129,9 @@ interface LspConfig {
     disabled_rules?: string[];
   };
   versions?: {
+    pi?: string | null;
+    antigravity?: string | null;
+    grok_code?: string | null;
     claude_code?: string | null;
     codex?: string | null;
     cursor?: string | null;
@@ -159,7 +165,7 @@ export function buildLspConfig(): LspConfig {
     const inspected = config.inspect<T>(key);
     if (!inspected) return undefined;
     // Priority: workspaceFolder > workspace > global > undefined (skip defaults)
-    return inspected.workspaceFolderValue ?? inspected.workspaceValue ?? inspected.globalValue;
+    return [inspected.workspaceFolderValue, inspected.workspaceValue, inspected.globalValue].find((value) => value !== undefined);
   };
 
   const result: LspConfig = {};
@@ -208,6 +214,9 @@ export function buildLspConfig(): LspConfig {
   addRule('rules.copilot', 'copilot');
   addRule('rules.cursor', 'cursor');
   addRule('rules.promptEngineering', 'prompt_engineering');
+  addRule('rules.pi', 'pi');
+  addRule('rules.antigravity', 'antigravity');
+  addRule('rules.grokCode', 'grok_code');
 
   const disabledRules = getUserValue<string[]>('rules.disabledRules');
   if (disabledRules !== undefined) {
@@ -233,6 +242,9 @@ export function buildLspConfig(): LspConfig {
   };
 
   addVersion('versions.claudeCode', 'claude_code');
+  addVersion('versions.pi', 'pi');
+  addVersion('versions.antigravity', 'antigravity');
+  addVersion('versions.grokCode', 'grok_code');
   addVersion('versions.codex', 'codex');
   addVersion('versions.cursor', 'cursor');
   addVersion('versions.copilot', 'copilot');

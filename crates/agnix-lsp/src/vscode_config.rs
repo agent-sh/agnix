@@ -69,6 +69,12 @@ pub struct VsCodeConfig {
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct VsCodeRules {
+    /// Enable Pi native configuration validation.
+    pub pi: Option<bool>,
+    /// Enable Antigravity CLI native configuration validation.
+    pub antigravity: Option<bool>,
+    /// Enable Grok Code native configuration validation.
+    pub grok_code: Option<bool>,
     /// Enable skills validation (AS-*, CC-SK-*)
     #[serde(default)]
     pub skills: Option<bool>,
@@ -136,6 +142,27 @@ pub struct VsCodeRules {
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 #[serde(default)]
 pub struct VsCodeVersions {
+    /// Pi version pin.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present_nullable"
+    )]
+    pub pi: Option<Option<String>>,
+    /// Antigravity CLI version pin.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present_nullable"
+    )]
+    pub antigravity: Option<Option<String>>,
+    /// Grok Build CLI version pin.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present_nullable"
+    )]
+    pub grok_code: Option<Option<String>>,
     /// Claude Code version (e.g., "1.0.0")
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub claude_code: Option<Option<String>>,
@@ -282,6 +309,15 @@ impl VsCodeFiles {
 impl VsCodeRules {
     /// Merge VS Code rule settings into RuleConfig.
     fn merge_into_rule_config(&self, config: &mut RuleConfig) {
+        if let Some(value) = self.pi {
+            config.pi = value;
+        }
+        if let Some(value) = self.antigravity {
+            config.antigravity = value;
+        }
+        if let Some(value) = self.grok_code {
+            config.grok_code = value;
+        }
         if let Some(v) = self.skills {
             config.skills = v;
         }
@@ -334,6 +370,15 @@ impl VsCodeVersions {
     /// - Some(None) = in JSON as null (apply None, clear pin)
     /// - Some(Some(v)) = in JSON with value (apply value)
     fn merge_into_tool_versions(&self, config: &mut ToolVersions) {
+        if let Some(ref value) = self.pi {
+            config.pi = value.clone();
+        }
+        if let Some(ref value) = self.antigravity {
+            config.antigravity = value.clone();
+        }
+        if let Some(ref value) = self.grok_code {
+            config.grok_code = value.clone();
+        }
         if let Some(ref value) = self.claude_code {
             config.claude_code = value.clone();
         }
@@ -386,8 +431,17 @@ fn parse_target(s: &str) -> Option<TargetTool> {
         "Cursor" => Some(TargetTool::Cursor),
         "Codex" => Some(TargetTool::Codex),
         "Kiro" => Some(TargetTool::Kiro),
+        "Pi" => Some(TargetTool::Pi),
+        "Antigravity" => Some(TargetTool::Antigravity),
+        "GrokCode" => Some(TargetTool::GrokCode),
         _ => None,
     }
+}
+
+fn present_nullable<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<Option<String>>, D::Error> {
+    Option::<String>::deserialize(deserializer).map(Some)
 }
 
 #[cfg(test)]
@@ -602,7 +656,22 @@ mod tests {
         assert_eq!(parse_target("Cursor"), Some(TargetTool::Cursor));
         assert_eq!(parse_target("Codex"), Some(TargetTool::Codex));
         assert_eq!(parse_target("Kiro"), Some(TargetTool::Kiro));
+        assert_eq!(parse_target("Pi"), Some(TargetTool::Pi));
+        assert_eq!(parse_target("Antigravity"), Some(TargetTool::Antigravity));
+        assert_eq!(parse_target("GrokCode"), Some(TargetTool::GrokCode));
         assert_eq!(parse_target("invalid"), None);
+    }
+
+    #[test]
+    fn native_tool_settings_and_nullable_version_pins_reach_core_config() {
+        let mut config = LintConfig::default();
+        config.tool_versions_mut().pi = Some("1.4.0".into());
+        let settings: VsCodeConfig = serde_json::from_str(r#"{"rules":{"pi":false,"antigravity":false,"grok_code":false},"versions":{"pi":null,"antigravity":"1.4.9","grok_code":"1.0.70"}}"#).unwrap();
+        settings.merge_into_lint_config(&mut config);
+        assert!(!config.rules().pi && !config.rules().antigravity && !config.rules().grok_code);
+        assert!(config.tool_versions().pi.is_none());
+        assert_eq!(config.tool_versions().antigravity.as_deref(), Some("1.4.9"));
+        assert_eq!(config.tool_versions().grok_code.as_deref(), Some("1.0.70"));
     }
 
     #[test]

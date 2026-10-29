@@ -517,8 +517,14 @@ pub(crate) const FILES_MATCH_OPTIONS: glob::MatchOptions = glob::MatchOptions {
 /// the sibling-file refinement of `file_types::refine_file_type` (for
 /// example a Gemini CLI extension's `hooks/hooks.json` next to
 /// `gemini-extension.json`). Not used for `[files]` override results.
-fn detect_with_siblings(path: &Path, fs: &dyn crate::fs::FileSystem) -> FileType {
-    crate::file_types::refine_file_type(path, detect_file_type(path), fs)
+fn detect_with_siblings(
+    path: &Path,
+    fs: &dyn crate::fs::FileSystem,
+    tool: Option<crate::file_types::native::Tool>,
+    project_root: Option<&Path>,
+) -> FileType {
+    let detected = crate::file_types::refine_file_type(path, detect_file_type(path), fs);
+    crate::file_types::native::refine(path, detected, fs, tool, project_root)
 }
 
 fn resolve_with_compiled(
@@ -526,9 +532,10 @@ fn resolve_with_compiled(
     root_dir: Option<&Path>,
     compiled: &CompiledFilesConfig,
     fs: &dyn crate::fs::FileSystem,
+    tool: Option<crate::file_types::native::Tool>,
 ) -> FileType {
     if compiled.is_empty() {
-        return detect_with_siblings(path, fs);
+        return detect_with_siblings(path, fs, tool, root_dir);
     }
 
     let rel_path = if let Some(root) = root_dir {
@@ -558,7 +565,7 @@ fn resolve_with_compiled(
         }
     }
 
-    detect_with_siblings(path, fs)
+    detect_with_siblings(path, fs, tool, root_dir)
 }
 
 /// Resolve file type with config-based overrides.
@@ -581,7 +588,12 @@ pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
         && files.include_as_generic.is_empty()
         && files.exclude.is_empty()
     {
-        return detect_with_siblings(path, config.fs().as_ref());
+        return detect_with_siblings(
+            path,
+            config.fs().as_ref(),
+            crate::file_types::native::selected(config),
+            config.root_dir().map(|root| root.as_path()),
+        );
     }
 
     // Compile patterns on-demand for single-file validation. Invalid patterns
@@ -595,6 +607,7 @@ pub fn resolve_file_type(path: &Path, config: &LintConfig) -> FileType {
         config.root_dir().map(|p| p.as_path()),
         &compiled,
         config.fs().as_ref(),
+        crate::file_types::native::selected(config),
     )
 }
 
@@ -709,7 +722,34 @@ pub fn validate_content(
     config: &LintConfig,
     registry: &ValidatorRegistry,
 ) -> Vec<Diagnostic> {
-    let file_type = resolve_file_type(path, config);
+    let mut document_config = config.clone();
+    document_config.set_fs(std::sync::Arc::new(crate::fs::DocumentFileSystem {
+        base: std::sync::Arc::clone(config.fs()),
+        path: path.to_path_buf(),
+        content: content.to_owned(),
+    }));
+    let config = &document_config;
+    let mut file_type = resolve_file_type(path, config);
+    if matches!(file_type, FileType::Unknown | FileType::Plugin) {
+        let rel = config
+            .root_dir()
+            .map(|root| normalize_rel_path(path, root))
+            .unwrap_or_else(|| {
+                path.file_name()
+                    .and_then(|p| p.to_str())
+                    .unwrap_or("")
+                    .to_string()
+            });
+        let excluded = config
+            .files_config()
+            .exclude
+            .iter()
+            .filter_map(|pattern| glob::Pattern::new(pattern).ok())
+            .any(|pattern| pattern.matches_with(&rel, FILES_MATCH_OPTIONS));
+        if !excluded {
+            file_type = crate::file_types::native::refine_content(path, content, file_type);
+        }
+    }
     if file_type == FileType::Unknown {
         return vec![];
     }
@@ -1140,6 +1180,7 @@ pub fn validate_paths_with_registry(
                     Some(&root_path),
                     &compiled_files,
                     config.fs().as_ref(),
+                    crate::file_types::native::selected(&config),
                 );
                 if file_type != FileType::Unknown {
                     let count = files_checked.fetch_add(1, Ordering::SeqCst) + 1;

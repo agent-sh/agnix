@@ -2001,7 +2001,7 @@ fn test_help_shows_target_possible_values() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     // Help should list exact possible values for --target
     assert!(
-        stdout.contains("[possible values: generic, claude-code, cursor, codex, kiro]"),
+        stdout.contains("[possible values: pi, antigravity, grok-code, generic, claude-code, cursor, codex, kiro]"),
         "Help should show exact possible target values, got: {}",
         stdout
     );

@@ -28,6 +28,9 @@ pub(crate) enum SkillClient {
     Kiro,
     Amp,
     Gemini,
+    Pi,
+    Antigravity,
+    Grok,
     /// A skill directory several clients read (`.agents/skills/`), under a
     /// scope that does not narrow it to one of them. The Agent Skills
     /// baseline applies; no client's field list does, and neither do the
@@ -50,6 +53,8 @@ const AGENTS_SKILLS_READERS: &[SkillClient] = &[
     SkillClient::OpenCode,
     SkillClient::Cursor,
     SkillClient::Gemini,
+    SkillClient::Pi,
+    SkillClient::Antigravity,
 ];
 
 /// Universal frontmatter fields supported by the Agent Skills specification.
@@ -178,6 +183,15 @@ const DEVIN_SKILL_FIELDS: &[&str] = &[
 /// skill at `path`.
 fn client_skill_fields(client: SkillClient, path: &Path) -> &'static [&'static str] {
     match client {
+        SkillClient::Pi => &["disable-model-invocation"],
+        SkillClient::Grok => &[
+            "when-to-use",
+            "when_to_use",
+            "paths",
+            "argument-hint",
+            "user-invocable",
+            "disable-model-invocation",
+        ],
         SkillClient::Cursor => CURSOR_SKILL_FIELDS,
         SkillClient::Cline => CLINE_SKILL_FIELDS,
         SkillClient::Copilot => COPILOT_SKILL_FIELDS,
@@ -284,6 +298,28 @@ pub(crate) fn claude_field_rule_applies(client: SkillClient, config: &LintConfig
 /// Iterates path components looking for the `skills` directory name, then
 /// checks the parent component for a known client directory marker.
 pub(crate) fn detect_client(path: &Path) -> SkillClient {
+    if crate::file_types::native::pi_resource(path, "skills") {
+        return SkillClient::Pi;
+    }
+    let native_parts = crate::file_types::native::components(path);
+    let grok = crate::file_types::native::grok_relative(path);
+    if grok.first().is_some_and(|part| part == "skills")
+        || (grok.first().is_some_and(|part| part == "plugins")
+            && grok.iter().any(|part| part == "skills"))
+    {
+        return SkillClient::Grok;
+    }
+    if crate::file_types::native::sequence(&native_parts, &[".agents", "plugins"])
+        || crate::file_types::native::sequence(&native_parts, &[".gemini", "config", "plugins"])
+        || crate::file_types::native::sequence(
+            &native_parts,
+            &[".gemini", "antigravity-cli", "plugins"],
+        )
+    {
+        if native_parts.iter().any(|part| part == "skills") {
+            return SkillClient::Antigravity;
+        }
+    }
     let components: Vec<&str> = path
         .components()
         .filter_map(|c| c.as_os_str().to_str())
@@ -297,6 +333,13 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
         return SkillClient::Unknown;
     };
     match components[owner_idx] {
+        ".pi" => SkillClient::Pi,
+        "agent" if owner_idx > 0 && components[owner_idx - 1] == ".pi" => SkillClient::Pi,
+        ".grok" => SkillClient::Grok,
+        ".agent" | "antigravity-cli" => SkillClient::Antigravity,
+        "config" if owner_idx > 0 && components[owner_idx - 1] == ".gemini" => {
+            SkillClient::Antigravity
+        }
         ".claude" => SkillClient::ClaudeCode,
         ".cursor" => SkillClient::Cursor,
         ".cline" => SkillClient::Cline,
@@ -431,6 +474,9 @@ fn is_claude_plugin_skill(path: &Path, config: &LintConfig) -> bool {
 /// Matching is case-insensitive to tolerate configs that use different casing.
 fn skill_client_from_tool_str(tool: &str) -> Option<SkillClient> {
     Some(match tool.to_ascii_lowercase().as_str() {
+        "pi" | "pi-coding-agent" => SkillClient::Pi,
+        "antigravity" | "agy" => SkillClient::Antigravity,
+        "grok-code" | "grok" => SkillClient::Grok,
         "claude-code" => SkillClient::ClaudeCode,
         "codex" => SkillClient::Codex,
         "opencode" => SkillClient::OpenCode,
@@ -455,12 +501,38 @@ fn skill_client_from_tool_str(tool: &str) -> Option<SkillClient> {
 /// treated as ambiguous and resolves directly to `Unknown` (the deprecated
 /// single-valued `target` is only consulted when `tools` names no client).
 pub(crate) fn resolve_skill_client(path: &Path, config: &LintConfig) -> SkillClient {
+    if let Some(resource) = crate::file_types::native::resource_owner(
+        path,
+        config.fs().as_ref(),
+        crate::file_types::native::selected(config),
+        config.root_dir().map(|root| root.as_path()),
+    ) {
+        match resource {
+            crate::file_types::native::Resource::PiSkill => return SkillClient::Pi,
+            crate::file_types::native::Resource::GrokSkill => return SkillClient::Grok,
+            crate::file_types::native::Resource::AntigravitySkill => {
+                return SkillClient::Antigravity;
+            }
+            _ => {}
+        }
+    }
     let by_path = detect_client(path);
     if by_path == SkillClient::Shared {
         return resolve_shared_skill_client(config);
     }
     if by_path != SkillClient::Unknown {
         return by_path;
+    }
+    if let Some((tool, _, _)) = crate::file_types::native::plugin_owner(
+        path,
+        config.fs().as_ref(),
+        crate::file_types::native::selected(config),
+    ) {
+        return match tool {
+            crate::file_types::native::Tool::Pi => SkillClient::Pi,
+            crate::file_types::native::Tool::Antigravity => SkillClient::Antigravity,
+            crate::file_types::native::Tool::Grok => SkillClient::Grok,
+        };
     }
     if is_claude_plugin_skill(path, config) {
         return SkillClient::ClaudeCode;
@@ -478,6 +550,9 @@ pub(crate) fn resolve_skill_client(path: &Path, config: &LintConfig) -> SkillCli
     }
 
     match config.target() {
+        TargetTool::Pi => SkillClient::Pi,
+        TargetTool::Antigravity => SkillClient::Antigravity,
+        TargetTool::GrokCode => SkillClient::Grok,
         TargetTool::ClaudeCode => SkillClient::ClaudeCode,
         TargetTool::Codex => SkillClient::Codex,
         TargetTool::Cursor => SkillClient::Cursor,
@@ -505,6 +580,9 @@ fn resolve_shared_skill_client(config: &LintConfig) -> SkillClient {
         };
     }
     match config.target() {
+        TargetTool::Pi => SkillClient::Pi,
+        TargetTool::Antigravity => SkillClient::Antigravity,
+        TargetTool::GrokCode => SkillClient::Shared,
         TargetTool::Codex => SkillClient::Codex,
         TargetTool::Cursor => SkillClient::Cursor,
         _ => SkillClient::Shared,
@@ -536,6 +614,9 @@ fn rule_id_for_client(client: SkillClient) -> Option<&'static str> {
         SkillClient::Kiro => Some("KR-SK-001"),
         SkillClient::Amp => Some("AMP-SK-001"),
         SkillClient::ClaudeCode
+        | SkillClient::Pi
+        | SkillClient::Antigravity
+        | SkillClient::Grok
         | SkillClient::Gemini
         | SkillClient::Shared
         | SkillClient::Unknown => None,
@@ -555,6 +636,9 @@ fn client_display_name(client: SkillClient) -> &'static str {
         SkillClient::Kiro => "Kiro",
         SkillClient::Amp => "Amp",
         SkillClient::Gemini => "Gemini CLI",
+        SkillClient::Pi => "Pi",
+        SkillClient::Antigravity => "Antigravity CLI",
+        SkillClient::Grok => "Grok Code",
         SkillClient::Shared => "several clients",
         SkillClient::Unknown => "Unknown",
     }

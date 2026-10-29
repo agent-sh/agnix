@@ -107,6 +107,9 @@ const TOOLS = [
   {value: 'opencode', label: 'OpenCode'},
   {value: 'gemini-cli', label: 'Gemini CLI'},
   {value: 'kiro', label: 'Kiro CLI'},
+  {value: 'pi', label: 'Pi'},
+  {value: 'antigravity', label: 'Antigravity CLI'},
+  {value: 'grok-code', label: 'Grok Code'},
   {value: 'amp', label: 'amp'},
 ];
 

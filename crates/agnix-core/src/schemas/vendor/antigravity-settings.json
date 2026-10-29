@@ -1,0 +1,392 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://antigravity.google/schemas/v1/settings.json",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "agentMode": {
+      "type": "string",
+      "enum": [
+        "",
+        "accept-edits",
+        "auto",
+        "plan"
+      ]
+    },
+    "allowNonWorkspaceAccess": {
+      "type": "boolean"
+    },
+    "altScreenMode": {
+      "type": "string",
+      "enum": [
+        "default",
+        "always",
+        "never"
+      ]
+    },
+    "artifactReviewPolicy": {
+      "type": "string",
+      "enum": [
+        "asks-for-review",
+        "agent-decides",
+        "always-proceed"
+      ]
+    },
+    "clearScrollbackOnResize": {
+      "type": "boolean"
+    },
+    "colorScheme": {
+      "type": "string",
+      "enum": [
+        "terminal",
+        "light",
+        "solarized light",
+        "colorblind-friendly light",
+        "dark",
+        "solarized dark",
+        "colorblind-friendly dark",
+        "tokyo night"
+      ]
+    },
+    "copyOnSelect": {
+      "type": "boolean"
+    },
+    "customModelsConfig": {
+      "$ref": "#/$defs/customModelsConfig"
+    },
+    "disableSlashCommands": {
+      "type": "boolean"
+    },
+    "editor": {
+      "type": "string"
+    },
+    "editorMode": {
+      "type": "string",
+      "enum": [
+        "default",
+        "vim"
+      ]
+    },
+    "enableTelemetry": {},
+    "enableTerminalSandbox": {
+      "type": "boolean"
+    },
+    "gcp": {
+      "$ref": "#/$defs/gcpConfig"
+    },
+    "hideActiveItems": {
+      "type": "boolean"
+    },
+    "historySize": {
+      "type": "integer",
+      "minimum": -1
+    },
+    "hooks": {},
+    "model": {
+      "type": "string"
+    },
+    "modelProvider": {
+      "type": "string",
+      "enum": [
+        "",
+        "gemini"
+      ]
+    },
+    "notifications": {
+      "type": "boolean"
+    },
+    "permissions": {
+      "$ref": "#/$defs/permissions"
+    },
+    "pickerGrouping": {
+      "type": "string",
+      "enum": [
+        "none",
+        "grouped"
+      ]
+    },
+    "queuedMessages": {
+      "type": "string",
+      "enum": [
+        "queue",
+        "send-immediately"
+      ]
+    },
+    "runningLightSpeed": {
+      "type": "string",
+      "enum": [
+        "fast",
+        "medium",
+        "slow",
+        "off"
+      ]
+    },
+    "sandboxProxy": {
+      "$ref": "#/$defs/sandboxProxy"
+    },
+    "showFeedbackSurvey": {
+      "type": "boolean"
+    },
+    "showTips": {
+      "type": "boolean"
+    },
+    "statusLine": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/statusLine"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "title": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/title"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "toolPermission": {
+      "type": "string",
+      "enum": [
+        "request-review",
+        "proceed-in-sandbox",
+        "always-proceed",
+        "strict"
+      ]
+    },
+    "trustedWorkspaces": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "useG1Credits": {
+      "type": "boolean"
+    },
+    "useTerminalCursor": {
+      "type": "boolean"
+    },
+    "verbosity": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
+    },
+    "vimInsertFirst": {
+      "type": "boolean"
+    }
+  },
+  "$defs": {
+    "permissionRule": {
+      "type": "string",
+      "pattern": "^(command|read_file|write_file|read_url|execute_url|mcp|unsandboxed)\\(.*\\)$"
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/permissionRule"
+          }
+        },
+        "ask": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/permissionRule"
+          }
+        },
+        "deny": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/permissionRule"
+          }
+        }
+      }
+    },
+    "statusLine": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "command"
+          ]
+        },
+        "command": {
+          "type": "string"
+        },
+        "padding": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "stack_with_default": {
+          "type": "boolean"
+        }
+      }
+    },
+    "title": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "command"
+          ]
+        },
+        "command": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "customModelsConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "customModels": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/customModel"
+          }
+        }
+      }
+    },
+    "customModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "modelName"
+      ],
+      "properties": {
+        "modelName": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "maxTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "modelFeatures": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "supportsImages": {
+              "type": "boolean"
+            },
+            "supportsVideo": {
+              "type": "boolean"
+            },
+            "supportsPdf": {
+              "type": "boolean"
+            },
+            "supportsAudio": {
+              "type": "boolean"
+            },
+            "supportsToolCalls": {
+              "type": "boolean"
+            },
+            "supportsThinking": {
+              "type": "boolean"
+            },
+            "zeroShotCapable": {
+              "type": "boolean"
+            }
+          }
+        },
+        "toolFormatterType": {
+          "type": "string",
+          "enum": [
+            "TOOL_FORMATTER_TYPE_XML",
+            "TOOL_FORMATTER_TYPE_NONE",
+            "TOOL_FORMATTER_TYPE_HERMES",
+            "TOOL_FORMATTER_TYPE_LLAMA_3",
+            "TOOL_FORMATTER_TYPE_CHAT_TRANSCRIPT",
+            "TOOL_FORMATTER_TYPE_UNSPECIFIED"
+          ]
+        },
+        "apiProvider": {
+          "type": "string"
+        },
+        "modelId": {
+          "type": "string"
+        }
+      }
+    },
+    "sandboxProxy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "http": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "address": {
+              "type": "string"
+            },
+            "certFile": {
+              "type": "string"
+            },
+            "username": {
+              "type": "string"
+            },
+            "password": {
+              "type": "string"
+            }
+          },
+          "dependentRequired": {
+            "address": [
+              "certFile"
+            ],
+            "certFile": [
+              "address"
+            ],
+            "username": [
+              "password"
+            ],
+            "password": [
+              "username"
+            ]
+          }
+        }
+      }
+    },
+    "gcpConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string",
+          "enum": [
+            "global",
+            "us",
+            "eu"
+          ]
+        }
+      }
+    }
+  }
+}

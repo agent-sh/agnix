@@ -313,7 +313,7 @@ fn test_validators_for_gemini_md() {
     // PromptValidator is not registered for GEMINI.md: PE-005/PE-006 contradict
     // Gemini's "Use negative constraints" guidance. CopilotValidator checks
     // GEMINI.md @references for Copilot runs (COP-030).
-    assert_eq!(validators.len(), 5);
+    assert_eq!(validators.len(), 6);
     assert!(validators.iter().all(|v| v.name() != "PromptValidator"));
 }
 
@@ -370,7 +370,8 @@ fn test_validators_for_skill() {
     // OpenCode skill directory validators run on SKILL.md too,
     // AmpSkillValidator joined for the Amp skill checks, and McpValidator
     // checks the skill's `mcpServers` frontmatter (MCP-018/028), making 11.
-    assert_eq!(validators.len(), 11);
+    // GrokValidator adds native skill metadata checks, making 12.
+    assert_eq!(validators.len(), 12);
     assert!(validators.iter().any(|v| v.name() == "McpValidator"));
 }
 
@@ -382,7 +383,7 @@ fn test_validators_for_claude_md() {
     // Copilot runs (COP-030), the OpenCode instruction-file validator
     // (OC-AGM-*) runs on AGENTS.md and CLAUDE.md, and WindsurfAgentsMdValidator
     // (WS-011, AGENTS.md in Windsurf projects) joined.
-    assert_eq!(validators.len(), 12);
+    assert_eq!(validators.len(), 13);
     assert!(validators.iter().any(|v| v.name() == "AmpValidator"));
     assert!(
         validators

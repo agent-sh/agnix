@@ -1,0 +1,300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pi.dev/schemas/keybindings.schema.json",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "tui.editor.cursorUp": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.cursorDown": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.historyPrevious": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.historyNext": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.cursorLeft": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.cursorRight": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.cursorWordLeft": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.cursorWordRight": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.cursorLineStart": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.cursorLineEnd": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.jumpForward": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.jumpBackward": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.pageUp": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.pageDown": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.deleteCharBackward": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.deleteCharForward": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.deleteWordBackward": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.deleteWordForward": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.deleteToLineStart": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.deleteToLineEnd": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.yank": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.yankPop": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.editor.undo": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.input.newLine": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.input.submit": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.input.tab": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.input.copy": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.select.up": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.select.down": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.select.pageUp": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.select.pageDown": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.select.confirm": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.select.cancel": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.pageUp": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.pageDown": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.halfPageUp": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.halfPageDown": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.lineUp": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.lineDown": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.previousPrompt": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.nextPrompt": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.search": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.searchNext": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.searchPrevious": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.searchClose": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.top": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "tui.altScreen.bottom": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.interrupt": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.clear": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.exit": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.suspend": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.thinking.cycle": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.thinking.save": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.model.cycleForward": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.model.cycleBackward": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.model.select": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tools.expand": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.thinking.toggle": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.session.toggleNamedFilter": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.editor.external": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.message.copy": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.message.followUp": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.message.dequeue": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.clipboard.pasteImage": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.session.new": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.session.tree": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.session.fork": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.session.resume": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.foldOrUp": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.unfoldOrDown": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.editLabel": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.toggleLabelTimestamp": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.session.togglePath": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.session.toggleSort": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.session.rename": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.session.delete": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.session.deleteNoninvasive": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.models.save": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.models.enableAll": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.models.clearAll": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.models.toggleProvider": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.models.reorderUp": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.models.reorderDown": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.filter.default": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.filter.noTools": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.filter.userOnly": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.filter.labeledOnly": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.filter.all": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.filter.cycleForward": {
+      "$ref": "#/$defs/KeybindingValue"
+    },
+    "app.tree.filter.cycleBackward": {
+      "$ref": "#/$defs/KeybindingValue"
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/KeybindingValue"
+  },
+  "$defs": {
+    "KeybindingValue": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(?!.*(?:ctrl\\+.*ctrl\\+|shift\\+.*shift\\+|alt\\+.*alt\\+|super\\+.*super\\+))(?:(?:ctrl|shift|alt|super)\\+){0,4}(?:[a-z0-9]|escape|esc|enter|return|tab|space|backspace|delete|insert|clear|home|end|pageUp|pageDown|up|down|left|right|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|`|-|=|\\[|\\]|\\\\|;|'|,|\\.|/|!|@|#|\\$|%|\\^|&|\\*|\\(|\\)|_|\\+|\\||~|\\{|\\}|:|<|>|\\?)$"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(?!.*(?:ctrl\\+.*ctrl\\+|shift\\+.*shift\\+|alt\\+.*alt\\+|super\\+.*super\\+))(?:(?:ctrl|shift|alt|super)\\+){0,4}(?:[a-z0-9]|escape|esc|enter|return|tab|space|backspace|delete|insert|clear|home|end|pageUp|pageDown|up|down|left|right|f1|f2|f3|f4|f5|f6|f7|f8|f9|f10|f11|f12|`|-|=|\\[|\\]|\\\\|;|'|,|\\.|/|!|@|#|\\$|%|\\^|&|\\*|\\(|\\)|_|\\+|\\||~|\\{|\\}|:|<|>|\\?)$"
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Extract release versions from canonical Kiro and Devin changelog content."""
+"""Extract release versions from canonical release and installer sources."""
 import argparse
 from html.parser import HTMLParser
 import re
+import json
 import sys
+import xml.etree.ElementTree as ET
 from urllib.parse import urlsplit
 
 
@@ -32,7 +34,26 @@ class KiroReleases(HTMLParser):
 
 
 def extract(kind, content):
-    if kind == 'kiro-cli':
+    if kind == 'antigravity-manifest':
+        manifest = json.loads(content)
+        version = manifest.get('version') if isinstance(manifest, dict) else None
+        if not isinstance(version, str) or not re.fullmatch(r'\d+\.\d+\.\d+', version):
+            raise ValueError('No stable Antigravity version in installer manifest')
+        return version
+    elif kind == 'grok-build-rss':
+        channel = ET.fromstring(content).find('channel')
+        if channel is None or channel.findtext('title') != 'Grok Build Changelog':
+            raise ValueError('Not the Grok Build release feed')
+        versions = set()
+        for item in channel.findall('item'):
+            match = re.fullmatch(r'Grok Build (\d+)\.(\d+)\.(\d+)', item.findtext('title', ''))
+            link = urlsplit(item.findtext('link', ''))
+            if match and link.hostname == 'x.ai' and link.path == '/changelog/build':
+                version = tuple(map(int, match.groups()))
+                if link.fragment.startswith('v' + '.'.join(map(str, version)) + '-'):
+                    versions.add(version)
+        prefix = ''
+    elif kind == 'kiro-cli':
         parser = KiroReleases()
         parser.feed(content)
         versions = parser.versions
@@ -51,9 +72,9 @@ def extract(kind, content):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('kind', choices=['kiro-cli', 'devin-desktop'])
+    parser.add_argument('kind', choices=['kiro-cli', 'devin-desktop', 'antigravity-manifest', 'grok-build-rss'])
     args = parser.parse_args()
     try:
         print(extract(args.kind, sys.stdin.read()))
-    except ValueError as error:
+    except (ValueError, ET.ParseError) as error:
         parser.exit(1, str(error) + '\n')

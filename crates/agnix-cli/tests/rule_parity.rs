@@ -239,11 +239,11 @@ fn extract_implemented_rule_ids() -> BTreeSet<String> {
 
     // Known rule ID prefixes to filter out false positives
     let valid_prefixes = [
-        "AS-", "CC-SK-", "CC-HK-", "CC-AG-", "CC-MEM-", "CC-OS-", "CC-PL-", "CC-MP-", "CC-MCP-",
-        "CC-SET-", "AGM-", "MCP-", "COP-", "CUR-", "CLN-", "CDX-", "OC-", "GM-", "GM-AG-", "XML-",
-        "REF-", "PE-", "XP-", "VER-", "WS-", "CR-SK-", "CL-SK-", "CP-SK-", "CX-SK-", "OC-SK-",
-        "WS-SK-", "KR-SK-", "KR-AG-", "KR-PM-", "KR-HK-", "KR-PW-", "KR-MCP-", "KR-SET-", "KR-WF-",
-        "KR-IGN-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-",
+        "PI-", "AGY-", "GRK-", "AS-", "CC-SK-", "CC-HK-", "CC-AG-", "CC-MEM-", "CC-OS-", "CC-PL-",
+        "CC-MP-", "CC-MCP-", "CC-SET-", "AGM-", "MCP-", "COP-", "CUR-", "CLN-", "CDX-", "OC-",
+        "GM-", "GM-AG-", "XML-", "REF-", "PE-", "XP-", "VER-", "WS-", "CR-SK-", "CL-SK-", "CP-SK-",
+        "CX-SK-", "OC-SK-", "WS-SK-", "KR-SK-", "KR-AG-", "KR-PM-", "KR-HK-", "KR-PW-", "KR-MCP-",
+        "KR-SET-", "KR-WF-", "KR-IGN-", "KIRO-", "AMP-SK-", "AMP-", "RC-SK-",
     ];
 
     fn extract_from_file(
@@ -617,6 +617,9 @@ fn test_rules_json_integrity() {
 
     // Check valid category values
     let valid_categories = [
+        "pi",
+        "antigravity",
+        "grok",
         "agent-skills",
         "claude-skills",
         "claude-hooks",
