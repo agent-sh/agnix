@@ -61,6 +61,7 @@ pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "snapshots",
     "subagent_depth",
     "theme",
+    "timezone",
     "tool_output",
     "tools",
     "tui",

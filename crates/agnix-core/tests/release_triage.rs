@@ -2,6 +2,67 @@ use agnix_core::{LintConfig, ValidatorRegistry, validate_content};
 use std::path::Path;
 
 #[test]
+fn opencode_221_accepts_timezone_and_released_experimental_settings() {
+    let registry = ValidatorRegistry::with_defaults();
+    let pinned = LintConfig::builder()
+        .tool_versions(agnix_core::config::ToolVersions {
+            opencode: Some("2.2.1".into()),
+            ..Default::default()
+        })
+        .build()
+        .unwrap();
+    for image_generate in [
+        serde_json::json!(true),
+        serde_json::json!({"model":"openai/gpt-image-2"}),
+    ] {
+        let content = serde_json::json!({
+            "timezone":"Asia/Jerusalem",
+            "experimental":{"image_generate":image_generate,"schedules":true}
+        })
+        .to_string();
+        for config in [&pinned, &LintConfig::default()] {
+            let diagnostics =
+                validate_content(Path::new("opencode.jsonc"), &content, config, &registry);
+            assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        }
+    }
+}
+
+#[test]
+fn opencode_221_timezone_keeps_v1_and_unknown_key_checks() {
+    let registry = ValidatorRegistry::with_defaults();
+    let pinned_v1 = LintConfig::builder()
+        .tool_versions(agnix_core::config::ToolVersions {
+            opencode: Some("1.19.5".into()),
+            ..Default::default()
+        })
+        .build()
+        .unwrap();
+    let diagnostics = validate_content(
+        Path::new("opencode.json"),
+        r#"{"timezone":"UTC"}"#,
+        &pinned_v1,
+        &registry,
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .any(|d| d.rule == "OC-004" && d.message.contains("OpenCode 2")),
+        "{diagnostics:?}"
+    );
+    let diagnostics = validate_content(
+        Path::new("opencode.json"),
+        r#"{"timzone":"UTC"}"#,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "OC-004"),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
 fn kiro_234_accepts_documented_workflow_launch_choices() {
     for launch in ["when-asked", "large-tasks", "delegate-all"] {
         let content = serde_json::json!({"chat.workflowLaunch": launch});
