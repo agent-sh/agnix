@@ -616,6 +616,33 @@ fn grok_declared_json_components_do_not_depend_on_filename_suffixes() {
 }
 
 #[test]
+fn grok_plugin_helper_files_and_component_directories_are_not_config_documents() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    for dir in [".grok-plugin", "agents", "hook-directory"] {
+        std::fs::create_dir_all(root.join(dir)).unwrap();
+    }
+    std::fs::write(
+        root.join(".grok-plugin/plugin.json"),
+        r#"{"name":"review","hooks":"hook-directory"}"#,
+    )
+    .unwrap();
+    std::fs::write(root.join("agents/helper.py"), "print('helper')").unwrap();
+    std::fs::write(
+        root.join("hook-directory/ignored.json"),
+        r#"{"hooks":{"InvalidEvent":[]}}"#,
+    )
+    .unwrap();
+    for name in ["agents/helper.py", "hook-directory/ignored.json"] {
+        let result = agnix_core::validate_file(&root.join(name), &LintConfig::default()).unwrap();
+        assert!(
+            !format!("{result:?}").contains("GRK-"),
+            "{name}: {result:?}"
+        );
+    }
+}
+
+#[test]
 fn pi_project_mcp_partial_override_is_not_missing_a_transport() {
     let found = rules(
         ".pi/mcp.json",

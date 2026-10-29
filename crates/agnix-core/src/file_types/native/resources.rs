@@ -329,7 +329,15 @@ pub(crate) fn resource_owner(
                             );
                     let skill =
                         matches!(resource, Resource::GrokSkill | Resource::AntigravitySkill);
+                    let agent = resource != Resource::GrokAgent
+                        || path.extension().and_then(|extension| extension.to_str()) == Some("md");
+                    let component_file = !matches!(
+                        resource,
+                        Resource::GrokHooks | Resource::GrokMcp | Resource::GrokLsp
+                    ) || normalized(path) == declared;
                     if contained
+                        && agent
+                        && component_file
                         && member(path, &root, value, fs)
                         && (!skill
                             || path.file_name().and_then(|name| name.to_str()) == Some("SKILL.md"))
