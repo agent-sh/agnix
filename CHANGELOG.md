@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.1] - 2026-10-29
+
 ### Fixed
 - Recognize OpenCode 2.2.1's `timezone` setting without weakening unknown-key or OpenCode 1 checks. Review Antigravity CLI 1.4.10 and advance both release baselines; replace Antigravity's unavailable release-notes link with its official CLI changelog documentation.
 
