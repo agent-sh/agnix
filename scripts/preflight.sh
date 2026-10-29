@@ -60,10 +60,11 @@ fi
 run 'Preflight regression tests' node --test scripts/preflight.test.js
 run 'Tool release watcher helpers' bash scripts/check-tool-releases.test.sh
 run 'Tool release source regressions' python3 scripts/check-tool-release-sources.test.py
+run 'Tool support policy' python3 scripts/tool-support-policy.test.py
 run 'Clippy' cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 run 'Workspace tests' cargo test --locked --workspace
 run 'Rule efficacy eval' cargo run --locked -p agnix-cli --bin agnix -- eval tests/eval.yaml
-run 'Kiro S-tier gate' cargo test --locked -p agnix-cli --test kiro_ci_gate -- --include-ignored
+run 'Kiro compatibility gate' cargo test --locked -p agnix-cli --test kiro_ci_gate -- --include-ignored
 run 'glibc floor tests' bash scripts/check-glibc-floor.test.sh
 run 'npm installer tests' node npm/test/install-helpers.test.js
 run 'PyPI wheel tests' python3 -m unittest discover -s pypi/test

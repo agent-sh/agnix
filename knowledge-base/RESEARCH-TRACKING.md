@@ -10,7 +10,9 @@
 
 ## Tool Inventory
 
-Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](../CONTRIBUTING.md#tool-tier-system) for definitions). Each entry tracks the config format, documentation source, monitoring approach, review frequency, and rule coverage.
+Tiers describe maintenance priority, separately from implemented validation coverage. The roster and release sources are recorded in [tool-release-baselines.json](../.github/tool-release-baselines.json). Definitions live in [CONTRIBUTING.md](../CONTRIBUTING.md#tool-tier-system).
+
+Eight tools on the active roster have validators. Pi, Antigravity CLI, Grok Code, Muse Code and Kimi Code have assigned priorities but no tool-specific validators yet. Generic Markdown, Agent Skills or MCP rules can apply to recognized shared files; this is not full client support.
 
 ### S Tier (test always)
 
@@ -18,44 +20,49 @@ Tools are organized by support tier (see [../CONTRIBUTING.md#tool-tier-system](.
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
 | Claude Code | `CLAUDE.md`, `AGENTS.md` (fallback or combined project instructions in 2.1.277+), `.claude/settings.json`, `.claude/settings.local.json`, `.claude/managed-settings.json`, `.claude/agents/*.md`, `.claude/skills/*/SKILL.md`, `.claude/hooks configuration`, `.mcp.json`, `.claude-plugin/plugin.json`, `.claude/rules/**/*.md`, `.claude/output-styles/*.md`, `.claude/commands/**/*.md`, `.claude-plugin/marketplace.json` | https://code.claude.com/docs/en | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-29 | AGM, XP, CC-SK, CC-HK, CC-MEM, CC-AG, CC-PL, CC-MP, CC-SET, CC-OS, CC-MCP, MCP |
 | Codex CLI | `AGENTS.md`, `AGENTS.override.md`, `.codex/config.toml` (also `.codex/config.json`/`.yaml`/`.yml`, including `[mcp_servers.*]` and inline `[hooks]` blocks), `.codex/hooks.json`, `.codex/agents/*.toml`, `.codex/rules/*.rules`, `~/.codex/prompts/*.md`, `.mcp.json`, `codex/requirements.toml` (managed environments), `.codex/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md` and `agents/openai.yaml`, `.codex-plugin/plugin.json`, plugin `hooks/hooks.json`, Agent Plugins root `plugin.json` | https://learn.chatgpt.com/docs | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-29 | AGM, XP, MCP, CDX, CDX-AG, CDX-APP, CDX-CFG, CDX-DEP, CDX-HK, CDX-PL, CDX-REQ, CDX-RL, CDX-SUB, CX-SK |
-| OpenCode | `AGENTS.md`, `CLAUDE.md` (OpenCode 1 fallback), `opencode.json`, `opencode.jsonc`, `.opencode/opencode.json(c)`, `.opencode/agents/**.md`, `.opencode/commands/**.md`, `.opencode/tools/*.ts`, `.opencode/plugins/*.ts`, `.mcp.json`, `.opencode/skills/*/SKILL.md` (OpenCode 1 `opencode-ai` and OpenCode 2 `@opencode/cli`) | https://opencode.ai/docs/ and https://opencode.ai/v2/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-29 | AGM, XP, MCP, OC, OC-AG, OC-AGM, OC-CFG, OC-CMD, OC-DEP, OC-LSP, OC-PM, OC-POL, OC-TOOL, OC-TUI, OC-SK |
-| Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/hooks/*.json` (V3 standalone since 2.8.0; `~/.kiro/hooks` since 2.13.0), `.kiro/settings/mcp.json`, `.kiro/settings/cli.json`, `.kiro/settings/permissions.{yaml,json}`, `~/.kiro/workspace-roots/<hash>/permissions.{yaml,json}`, `POWER.md` and power `plugin.json` / `mcp.json` / `steering/*.md`, `.kiro/skills/*/SKILL.md`, `.amazonq/cli-agents/*.json` (CLI 2.x fallback), `.kiro/workflows/*.workflow.{json,yaml,yml}` (V3), `.kiroignore`, `AGENTS.md` (nested, loaded as steering since 2.18.0) | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via canonical CLI release and patch links) | Quarterly | 2026-10-29 | AGM, KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET, KR-PM, KR-WF, KR-IGN |
 
 ### A Tier (test on major changes)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md`, `.github/hooks/hooks.json`, `.github/workflows/copilot-setup-steps.yml`, `.github/skills/*/SKILL.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Weekly | 2026-10-29 | COP, CP-SK |
-| Cline | `.clinerules` (file or dir), `.cline/rules/**/*.md`, `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/customization/cline-rules | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-29 | CLN, CL-SK |
-| Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md` (Cursor also reads `.claude/agents/**/*.md`, `.codex/agents/**/*.md`, and corresponding user-level agent directories for compatibility), `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Weekly | 2026-10-29 | CUR, MCP, CR-SK |
+| Kiro CLI | `.kiro/steering/*.md`, `.kiro/agents/**/*.{json,md}`, `.kiro/hooks/*.kiro.hook`, `.kiro/hooks/*.json` (V3 standalone since 2.8.0; `~/.kiro/hooks` since 2.13.0), `.kiro/settings/mcp.json`, `.kiro/settings/cli.json`, `.kiro/settings/permissions.{yaml,json}`, `~/.kiro/workspace-roots/<hash>/permissions.{yaml,json}`, `POWER.md` and power `plugin.json` / `mcp.json` / `steering/*.md`, `.kiro/skills/*/SKILL.md`, `.amazonq/cli-agents/*.json` (CLI 2.x fallback), `.kiro/workflows/*.workflow.{json,yaml,yml}` (V3), `.kiroignore`, `AGENTS.md` (nested, loaded as steering since 2.18.0) | https://kiro.dev/changelog/cli/ | Automated (tool-release-watch.yml via canonical CLI release and patch links) | Weekly | 2026-10-29 | AGM, KIRO, KR-AG, KR-HK, KR-MCP, KR-PW, KR-SK, KR-SET, KR-PM, KR-WF, KR-IGN |
+| OpenCode | `AGENTS.md`, `CLAUDE.md` (OpenCode 1 fallback), `opencode.json`, `opencode.jsonc`, `.opencode/opencode.json(c)`, `.opencode/agents/**.md`, `.opencode/commands/**.md`, `.opencode/tools/*.ts`, `.opencode/plugins/*.ts`, `.mcp.json`, `.opencode/skills/*/SKILL.md` (OpenCode 1 `opencode-ai` and OpenCode 2 `@opencode/cli`) | https://opencode.ai/docs/ and https://opencode.ai/v2/docs/ | Automated (spec-drift.yml + tool-release-watch.yml) | Weekly | 2026-10-29 | AGM, XP, MCP, OC, OC-AG, OC-AGM, OC-CFG, OC-CMD, OC-DEP, OC-LSP, OC-PM, OC-POL, OC-TOOL, OC-TUI, OC-SK |
+| Pi | Global ~/.pi/agent/ and project .pi/ settings, models, MCP, skills and packages (planned) | https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/configuration.md | Automated releases via earendil-works/pi; validator pending | Per tier | Not yet reviewed for validation | None |
 
-### B Tier (test on significant changes if time permits)
-
-| Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
-|------|---------------|-------------------|------------|-----------|---------------|-------------|
-| amp | `.amp/settings.json(c)`, `~/.config/amp/settings.json(c)`, `.agents/checks/*.md`, `.agents/skills/*/SKILL.md`, skill `mcp.json`, `AGENTS.md` | https://ampcode.com/news | Automated (tool-release-watch.yml via ampcode.com/news.rss; tracks latest news-post slug as the release marker) | Quarterly | 2026-10-29 | AGM, AMP, AMP-SK |
-
-### C Tier (community reports fixes only)
+### B Tier (test on significant changes)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| gemini cli | `GEMINI.md`, `.gemini/settings.json`, `.geminiignore`, `gemini-extension.json`, `.gemini/agents/*.md`, `.gemini/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md` | https://github.com/google-gemini/gemini-cli | Automated (tool-release-watch.yml) | As reported | 2026-10-29 | GM, GM-AG, AS |
+| Antigravity CLI | agy settings.json and mcp_config.json under ~/.gemini/antigravity-cli/; workspace .agents/mcp_config.json (planned) | https://antigravity.google/docs/getting-started?tab=cli | Manual primary-source review; validator pending | Per tier | Not yet reviewed for validation | None |
+| Grok Code | Grok Build CLI configuration, rules, skills, plugins, hooks and MCP (planned) | https://docs.x.ai/build/cli/reference | Manual primary-source review; validator pending | Per tier | Not yet reviewed for validation | None |
 
-### D Tier (no support, nice to have)
+### C Tier (community-reported maintenance)
 
 | Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
 |------|---------------|-------------------|------------|-----------|---------------|-------------|
-| Windsurf (Devin Desktop) | `.devin/rules/*.md`, `.devin/workflows/*.md`, `.devin/hooks.json` (legacy `.windsurf/` equivalents), `.windsurfrules`, `~/.codeium/windsurf/memories/global_rules.md`, `~/.codeium/windsurf/hooks.json`; docs at https://docs.devin.ai/desktop | https://docs.devin.ai/desktop/changelog | Automated (tool-release-watch.yml via canonical Markdown stable release headings) | Ad hoc | 2026-10-29 | WS, WS-SK |
+| Muse Code | ~/.config/muse/settings.json and project AGENTS.md (planned) | https://dev.meta.ai/docs/muse-code/configuration | Manual changelog review: https://dev.meta.ai/docs/muse-code/changelog; validator pending | Per tier | Not yet reviewed for validation | None |
+| Kimi Code | Current Kimi Code CLI configuration, skills, hooks, subagents and MCP (planned) | https://moonshotai.github.io/kimi-code/ | Automated releases via MoonshotAI/kimi-code; validator pending | Per tier | Not yet reviewed for validation | None |
 
-### E Tier (no support, community only)
+### D Tier (nice-to-have maintenance)
 
-All other AI coding tools - including continue, Antigravity, Tabnine, Codeium, Amazon Q, Aider, SourceGraph Cody, pi, and others. These tools do **not** have validators in `crates/agnix-core/src/rules/` and are not currently supported by agnix. Community contributions welcome via the Tool Support Request issue template.
+Existing validators and release tracking remain. Specification drift is checked monthly or on explicit dispatch; fixes follow reported needs.
 
-### Dropped
+| Tool | Config Format | Documentation URL | Monitoring | Frequency | Last Reviewed | Rule Prefix |
+|------|---------------|-------------------|------------|-----------|---------------|-------------|
+| GitHub Copilot | `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/agents/*.agent.md`, `.github/prompts/*.prompt.md`, `.github/hooks/hooks.json`, `.github/workflows/copilot-setup-steps.yml`, `.github/skills/*/SKILL.md` | https://docs.github.com/en/copilot/customizing-copilot | Automated (monthly spec-drift.yml + tool-release-watch.yml via microsoft/vscode-copilot-chat) | Monthly | 2026-10-29 | COP, CP-SK |
+| Cline | `.clinerules` (file or dir), `.cline/rules/**/*.md`, `.clinerules/workflows/*.md`, `.clinerules/hooks/*`, `.clinerules/skills/*/SKILL.md`, `.cline/skills/*/SKILL.md` | https://docs.cline.bot/customization/cline-rules | Automated (monthly spec-drift.yml + tool-release-watch.yml) | Monthly | 2026-10-29 | CLN, CL-SK |
+| Cursor | `.cursor/rules/**/*.mdc`, `.cursorrules` (legacy), `.cursor/hooks.json`, `.cursor/agents/**/*.md` (Cursor also reads `.claude/agents/**/*.md`, `.codex/agents/**/*.md`, and corresponding user-level agent directories for compatibility), `.cursor/environment.json`, `.cursor/mcp.json`, `.cursor/skills/*/SKILL.md` | https://cursor.com/docs/rules | Automated (monthly spec-drift.yml + tool-release-watch.yml via api2.cursor.sh stable update endpoint) | Monthly | 2026-10-29 | CUR, MCP, CR-SK |
+| Gemini CLI | `GEMINI.md`, `.gemini/settings.json`, `.geminiignore`, `gemini-extension.json`, `.gemini/agents/*.md`, `.gemini/skills/*/SKILL.md`, `.agents/skills/*/SKILL.md` | https://github.com/google-gemini/gemini-cli | Automated (tool-release-watch.yml) | As reported | 2026-10-29 | GM, GM-AG, AS |
 
-| Tool | Reason | Removed in |
-|------|--------|------------|
-| Roo Code | Discontinued 2026-05-15: docs.roocode.com says "The Roo Code Extension was shut down on May 15th."; the RooCodeInc/Roo-Code repository is archived (last release v3.54.0, 2026-05-15). Its rules (ROO-001 through ROO-006), file types and release tracking were removed. | 0.59.0 |
+Gemini CLI is retained as legacy maintenance. Google moved free, Pro and Ultra users to Antigravity CLI on June 18, 2026, while enterprise, Google Cloud and paid API-key access remain supported. See [Google's transition announcement](https://github.com/google-gemini/gemini-cli/discussions/27274). Antigravity configuration must be researched independently.
+
+### Dropped from active support
+
+Continue, Aider, Amazon Q, Tabnine, Codeium, Devin, Windsurf and Amp were removed from the support roster on 2026-10-29 by owner decision. They receive no active release or specification monitoring. Existing Amp and Windsurf/Devin validators remain available as legacy compatibility; their old release records are archived under retired_tools and are never polled. Kiro's legacy .amazonq paths remain part of Kiro compatibility, not standalone Amazon Q support.
+
+Roo Code remains dropped: discontinued 2026-05-15; its validators, file types and release tracking were removed in 0.59.0.
+
+### Pi compatibility recognition
 
 pi is not validated, but its subagent files are recognized so Claude agent rules do not run on them. pi has no marker file; extensions load agents by location: `<agentDir>/agents` where agentDir is `$PI_CODING_AGENT_DIR` or `~/.pi/agent` (`packages/coding-agent/src/config.ts` `getAgentDir`), project `.pi/agents` (`examples/extensions/subagent/README.md`), and paths from a package manifest's `pi` object or `pi-subagents.agents` (`docs/packages.md`, github.com/nicobailon/pi-subagents `docs/agents.md`). agnix treats an `agents/` directory as pi's when its parent is not a Claude root and has a `package.json` with a `pi` or `pi-subagents` object, a `settings.json` with a pi-only key (`defaultProvider`, `defaultModel`, `defaultThinkingLevel`, `modelThinkingLevels`, `enabledModels`, `packages`; `docs/settings.md`), or an extension importing `@earendil-works/pi-coding-agent`. Verified 2026-10-17 against pi-coding-agent's installed docs: 0 matches on 124 real Claude plugin agents and 8245 other agent files on one machine.
 
@@ -84,14 +91,14 @@ Authoritative sources monitored for changes that may affect validation rules.
 | Claude Code - Sub-agents | https://code.claude.com/docs/en/sub-agents | spec-drift.yml (weekly) | CC-AG-001 through CC-AG-020 |
 | Codex CLI - AGENTS.md | https://learn.chatgpt.com/docs/agent-configuration/agents-md | spec-drift.yml (weekly) | AGM-001 through AGM-005, XP-001 through XP-006 |
 | OpenCode - Rules | https://opencode.ai/docs/rules/ | spec-drift.yml (weekly) | XP-001 through XP-006 |
-| Cursor - Rules | https://cursor.com/docs/rules | spec-drift.yml (weekly) | CUR-001 through CUR-009, CUR-020 |
-| Cursor - Hooks | https://cursor.com/docs/hooks | spec-drift.yml (weekly) | CUR-010 through CUR-013, CUR-017 through CUR-019 |
-| Cursor - Subagents | https://cursor.com/docs/subagents | spec-drift.yml (weekly) | CUR-014, CUR-015 |
-| Cursor - Environment | https://cursor.com/docs/cloud-agent/setup | spec-drift.yml (weekly) | CUR-016 |
-| Cursor - Environment Schema | https://cursor.com/schemas/environment.schema.json | spec-drift.yml (weekly) | CUR-016 |
-| Cursor - MCP | https://cursor.com/docs/mcp | spec-drift.yml (weekly) | MCP-009 through MCP-012, MCP-017 through MCP-024 |
-| GitHub Copilot | https://docs.github.com/en/copilot/customizing-copilot | spec-drift.yml (weekly) | COP-001 through COP-027, CP-SK-001 |
-| Cline - Rules | https://docs.cline.bot/features/cline-rules/overview | spec-drift.yml (weekly) | -- |
+| Cursor - Rules | https://cursor.com/docs/rules | spec-drift.yml (monthly) | CUR-001 through CUR-009, CUR-020 |
+| Cursor - Hooks | https://cursor.com/docs/hooks | spec-drift.yml (monthly) | CUR-010 through CUR-013, CUR-017 through CUR-019 |
+| Cursor - Subagents | https://cursor.com/docs/subagents | spec-drift.yml (monthly) | CUR-014, CUR-015 |
+| Cursor - Environment | https://cursor.com/docs/cloud-agent/setup | spec-drift.yml (monthly) | CUR-016 |
+| Cursor - Environment Schema | https://cursor.com/schemas/environment.schema.json | spec-drift.yml (monthly) | CUR-016 |
+| Cursor - MCP | https://cursor.com/docs/mcp | spec-drift.yml (monthly) | MCP-009 through MCP-012, MCP-017 through MCP-024 |
+| GitHub Copilot | https://docs.github.com/en/copilot/customizing-copilot | spec-drift.yml (monthly) | COP-001 through COP-027, CP-SK-001 |
+| Cline - Rules | https://docs.cline.bot/features/cline-rules/overview | spec-drift.yml (monthly) | -- |
 
 ### Community Sources
 

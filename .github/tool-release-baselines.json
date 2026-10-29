@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "last_updated": "2026-10-29",
-  "description": "Tracks the latest release of every tool agnix validates (one entry per tool with a validator in crates/agnix-core/src/rules/, and one entry per release line when agnix supports two lines of the same tool: `opencode` is OpenCode 1 and `opencode-v2` is OpenCode 2). `validators` lists the file stems of the crates/agnix-core/src/rules/*.rs modules that check the tool's files; shared helpers (for example mcp_servers, kiro_engine, opencode_version) and modules that run on every tool's Markdown (xml, imports, prompt, cross_platform, project_level) are not listed. Used by .github/workflows/tool-release-watch.yml to open per-tool issues when a new release is published. Untracked tools include the precise publication URL in untracked_reason so a maintainer can monitor manually.\n\nOptional `changes_of_interest` per tool describes what agnix cares about: `config_surfaces` (files agnix validates), `relevant` (change-types that likely affect a validator), `irrelevant` (safe to skip). When set and GLM_API_KEY is available, the watcher runs scripts/glm-extract.js --mode=agnix-triage to produce a pre-filtered summary at the top of the issue body. Falls back gracefully to the full changelog on any LLM failure.",
+  "description": "Support tiers and release baselines for the owner-selected tool roster. Tier is a maintenance priority, not a claim that a validator exists. Entries with validation_status=pending have no tool-specific validation yet. Shared Agent Skills monitoring and the second OpenCode release line are separate entries. validators lists implemented rule modules only. tracked=false entries include a primary publication URL and a manual-monitoring reason. retired_tools preserves old baselines for shipped compatibility checks but is never polled. excluded_tools receives no active support or release monitoring. Optional changes_of_interest describes validated surfaces and relevant configuration changes for issue triage.",
   "tools": {
     "claude-code": {
       "tier": "s",
@@ -120,7 +120,7 @@
       }
     },
     "opencode": {
-      "tier": "s",
+      "tier": "a",
       "display_name": "OpenCode 1",
       "validators": [
         "opencode",
@@ -166,7 +166,7 @@
       }
     },
     "opencode-v2": {
-      "tier": "s",
+      "tier": "a",
       "display_name": "OpenCode 2",
       "validators": [
         "opencode",
@@ -210,7 +210,7 @@
       }
     },
     "kiro": {
-      "tier": "s",
+      "tier": "a",
       "display_name": "Kiro CLI",
       "validators": [
         "kiro_steering",
@@ -275,7 +275,7 @@
       "version_extractor": "kiro-cli"
     },
     "copilot": {
-      "tier": "a",
+      "tier": "d",
       "display_name": "GitHub Copilot",
       "validators": [
         "copilot",
@@ -315,7 +315,7 @@
       }
     },
     "cline": {
-      "tier": "a",
+      "tier": "d",
       "display_name": "Cline",
       "validators": [
         "cline",
@@ -357,7 +357,7 @@
       }
     },
     "cursor": {
-      "tier": "a",
+      "tier": "d",
       "display_name": "Cursor",
       "validators": [
         "cursor",
@@ -406,52 +406,8 @@
         ]
       }
     },
-    "amp": {
-      "tier": "b",
-      "display_name": "amp (Sourcegraph)",
-      "validators": [
-        "amp",
-        "amp_skill",
-        "agents_md",
-        "amp_settings",
-        "amp_mcp",
-        "mcp"
-      ],
-      "github_repo": null,
-      "html_url": "https://ampcode.com/news.rss",
-      "version_regex": "https://ampcode\\.com/news/[a-zA-Z0-9._-]+",
-      "notes_extractor": "rss_cdata",
-      "last_known_version": "personal-self-hosted-orbs",
-      "tracked": true,
-      "notes": "Tracked via the amp news RSS feed; the 'version' is the slug of the latest /news/ post (e.g., amp-free-is-ad-free). Source is not on GitHub; npm @sourcegraph/amp publishes per-commit (no semver gates) so npm version-bump tracking would be noise. Issue body uses the first <item><description> CDATA from the RSS feed (already structured HTML - no LLM needed).",
-      "changes_of_interest": {
-        "config_surfaces": [
-          ".amp/settings.json",
-          ".amp/settings.jsonc",
-          "~/.config/amp/settings.json",
-          ".agents/checks/*.md",
-          ".agents/skills/*/SKILL.md",
-          ".agents/skills/*/mcp.json",
-          "AGENTS.md",
-          "ampcode/managed-settings.json (system managed settings)"
-        ],
-        "relevant": [
-          "New or renamed keys in .amp/settings.json (cli-settings.schema.json)",
-          "Changes to check frontmatter schema (name, description, severity-default)",
-          "Changes to AGENTS.md @-mentions or globs frontmatter in mentioned files",
-          "Changes to skill roots, discovery depth or precedence, and skill MCP fields (mcp.json, mcpServers, includeTools)",
-          "Changes to amp.mcpPermissions or ${amp:id-token} handling"
-        ],
-        "irrelevant": [
-          "Model additions (e.g. GPT-5.5, Opus 4.x)",
-          "Performance improvements and bug fixes",
-          "TUI/Vim/WSL integration tweaks",
-          "Theme or notification changes"
-        ]
-      }
-    },
     "gemini-cli": {
-      "tier": "c",
+      "tier": "d",
       "display_name": "Gemini CLI",
       "validators": [
         "gemini_md",
@@ -503,8 +459,141 @@
         ]
       }
     },
+    "agentskills-spec": {
+      "tier": "s",
+      "display_name": "Agent Skills Spec",
+      "validators": [
+        "skill"
+      ],
+      "commit_repo": "agentskills/agentskills",
+      "commit_path": "docs/specification.mdx",
+      "last_known_version": "217be548739f",
+      "tracked": true,
+      "notes": "The agentskills.io Skill specification (the generic cross-tool SKILL.md standard) - the source for agnix's AS-* rules. It publishes NO releases or tags, so it is tracked by the latest commit SHA touching docs/specification.mdx in the agentskills/agentskills repo (commit_repo + commit_path source). Any change opens an issue to diff the spec against the AS-* rules. Complements the weekly spec-drift.yml check. last_known_version is the short commit SHA.",
+      "changes_of_interest": {
+        "config_surfaces": [
+          "SKILL.md frontmatter (name, description, license, compatibility, metadata, allowed-tools)"
+        ],
+        "relevant": [
+          "Changed field constraints (description max length, name format, compatibility limit)",
+          "New / renamed / removed frontmatter fields",
+          "allowed-tools value-shape changes (string vs list)",
+          "Body / file-reference rules"
+        ],
+        "irrelevant": [
+          "Prose / example wording edits with no normative change",
+          "Reference-implementation (skills-ref) SDK version bumps"
+        ]
+      }
+    },
+    "pi": {
+      "tier": "a",
+      "display_name": "Pi",
+      "validators": [],
+      "validation_status": "pending",
+      "github_repo": "earendil-works/pi",
+      "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "last_known_version": "v1.4.0",
+      "tracked": true,
+      "notes": "Release tracking starts at v1.4.0. Existing Pi subagent recognition prevents Claude false positives; settings, models, packages, MCP and other Pi-specific validation remain pending. https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/configuration.md"
+    },
+    "antigravity": {
+      "tier": "b",
+      "display_name": "Antigravity CLI",
+      "validators": [],
+      "validation_status": "pending",
+      "last_known_version": null,
+      "tracked": false,
+      "untracked_reason": "Manual review of https://antigravity.google/docs/getting-started?tab=cli and https://antigravity.google/cli/install.sh until a stable machine-readable release source is verified. agy settings and MCP configuration differ from legacy Gemini CLI; tool-specific validation is pending."
+    },
+    "grok-code": {
+      "tier": "b",
+      "display_name": "Grok Code",
+      "validators": [],
+      "validation_status": "pending",
+      "last_known_version": null,
+      "tracked": false,
+      "untracked_reason": "Manual review of the official Grok Build CLI documentation at https://docs.x.ai/build/cli/reference and its linked changelog until a release source is verified. No tool-specific validator exists yet."
+    },
+    "muse-code": {
+      "tier": "c",
+      "display_name": "Muse Code",
+      "validators": [],
+      "validation_status": "pending",
+      "last_known_version": null,
+      "tracked": false,
+      "untracked_reason": "Manual review of https://dev.meta.ai/docs/muse-code/changelog and https://dev.meta.ai/docs/muse-code/configuration. No automated release extractor or tool-specific validator has been verified yet."
+    },
+    "kimi-code": {
+      "tier": "c",
+      "display_name": "Kimi Code",
+      "validators": [],
+      "validation_status": "pending",
+      "github_repo": "MoonshotAI/kimi-code",
+      "release_tag_regex": "^@moonshot-ai/kimi-code@[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "last_known_version": "@moonshot-ai/kimi-code@2.4.0",
+      "tracked": true,
+      "notes": "Tracks the current Kimi Code CLI release line, not the retired Python kimi-cli. Release tracking is implemented; tool-specific validation remains pending. https://moonshotai.github.io/kimi-code/"
+    }
+  },
+  "excluded_tools": [
+    "continue",
+    "aider",
+    "amazon-q",
+    "tabnine",
+    "codeium",
+    "devin",
+    "windsurf",
+    "amp",
+    "roo-code"
+  ],
+  "retired_tools": {
+    "amp": {
+      "display_name": "amp (Sourcegraph)",
+      "validators": [
+        "amp",
+        "amp_skill",
+        "agents_md",
+        "amp_settings",
+        "amp_mcp",
+        "mcp"
+      ],
+      "github_repo": null,
+      "html_url": "https://ampcode.com/news.rss",
+      "version_regex": "https://ampcode\\.com/news/[a-zA-Z0-9._-]+",
+      "notes_extractor": "rss_cdata",
+      "last_known_version": "personal-self-hosted-orbs",
+      "tracked": false,
+      "notes": "Tracked via the amp news RSS feed; the 'version' is the slug of the latest /news/ post (e.g., amp-free-is-ad-free). Source is not on GitHub; npm @sourcegraph/amp publishes per-commit (no semver gates) so npm version-bump tracking would be noise. Issue body uses the first <item><description> CDATA from the RSS feed (already structured HTML - no LLM needed).",
+      "changes_of_interest": {
+        "config_surfaces": [
+          ".amp/settings.json",
+          ".amp/settings.jsonc",
+          "~/.config/amp/settings.json",
+          ".agents/checks/*.md",
+          ".agents/skills/*/SKILL.md",
+          ".agents/skills/*/mcp.json",
+          "AGENTS.md",
+          "ampcode/managed-settings.json (system managed settings)"
+        ],
+        "relevant": [
+          "New or renamed keys in .amp/settings.json (cli-settings.schema.json)",
+          "Changes to check frontmatter schema (name, description, severity-default)",
+          "Changes to AGENTS.md @-mentions or globs frontmatter in mentioned files",
+          "Changes to skill roots, discovery depth or precedence, and skill MCP fields (mcp.json, mcpServers, includeTools)",
+          "Changes to amp.mcpPermissions or ${amp:id-token} handling"
+        ],
+        "irrelevant": [
+          "Model additions (e.g. GPT-5.5, Opus 4.x)",
+          "Performance improvements and bug fixes",
+          "TUI/Vim/WSL integration tweaks",
+          "Theme or notification changes"
+        ]
+      },
+      "retired_on": "2026-10-29",
+      "retirement_reason": "Removed from active support by owner decision. Shipped validators remain for compatibility."
+    },
     "windsurf": {
-      "tier": "d",
       "display_name": "Windsurf (Devin Desktop)",
       "validators": [
         "windsurf",
@@ -515,7 +604,7 @@
       "html_url": "https://docs.devin.ai/desktop/changelog",
       "notes_extractor": "glm",
       "last_known_version": "v3.11.228",
-      "tracked": true,
+      "tracked": false,
       "notes": "Devin Desktop (formerly Windsurf). Track stable vX.Y.Z release headings in the canonical Markdown changelog. The previous Wave marketing marker no longer identifies the latest editor release. Other IDE/preview channels are not tracked.",
       "changes_of_interest": {
         "config_surfaces": [
@@ -548,34 +637,9 @@
         ]
       },
       "version_extractor": "devin-desktop",
-      "content_url": "https://docs.devin.ai/desktop/changelog.md"
-    },
-    "agentskills-spec": {
-      "tier": "s",
-      "display_name": "Agent Skills Spec",
-      "validators": [
-        "skill"
-      ],
-      "commit_repo": "agentskills/agentskills",
-      "commit_path": "docs/specification.mdx",
-      "last_known_version": "217be548739f",
-      "tracked": true,
-      "notes": "The agentskills.io Skill specification (the generic cross-tool SKILL.md standard) - the source for agnix's AS-* rules. It publishes NO releases or tags, so it is tracked by the latest commit SHA touching docs/specification.mdx in the agentskills/agentskills repo (commit_repo + commit_path source). Any change opens an issue to diff the spec against the AS-* rules. Complements the weekly spec-drift.yml check. last_known_version is the short commit SHA.",
-      "changes_of_interest": {
-        "config_surfaces": [
-          "SKILL.md frontmatter (name, description, license, compatibility, metadata, allowed-tools)"
-        ],
-        "relevant": [
-          "Changed field constraints (description max length, name format, compatibility limit)",
-          "New / renamed / removed frontmatter fields",
-          "allowed-tools value-shape changes (string vs list)",
-          "Body / file-reference rules"
-        ],
-        "irrelevant": [
-          "Prose / example wording edits with no normative change",
-          "Reference-implementation (skills-ref) SDK version bumps"
-        ]
-      }
+      "content_url": "https://docs.devin.ai/desktop/changelog.md",
+      "retired_on": "2026-10-29",
+      "retirement_reason": "Removed from active support by owner decision. Shipped validators remain for compatibility."
     }
   }
 }

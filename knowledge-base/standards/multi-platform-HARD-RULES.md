@@ -5,9 +5,9 @@ This document contains FACTUAL, NON-NEGOTIABLE compatibility rules for cross-pla
 
 **Last Updated:** 2026-01-31
 
-## Scope and Support Tiers
+## Historical scope and tiers (2026-01-31)
 
-This document is written in priority order using agnix's support tiers:
+The following tiers describe the original research scope, not today's support policy. See [RESEARCH-TRACKING.md](../RESEARCH-TRACKING.md#tool-inventory) for current priorities and coverage. The dated compatibility observations below have not been re-verified by the tier change.
 
 ### S Tier (test always)
 - Claude Code

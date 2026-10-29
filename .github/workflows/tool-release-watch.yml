@@ -48,7 +48,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # Pin Node so notes_extractor=glm tools (kiro, windsurf) keep working
+      # Pin Node so notes_extractor=glm tools (kiro) keep working
       # even if ubuntu-latest's preinstalled Node version changes. The script
       # uses built-in fetch() and AbortSignal.timeout(), both Node >= 18.
       - name: Setup Node 20
@@ -64,7 +64,7 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           # Optional - when set, scripts/glm-extract.js:
           # 1. Upgrades the stub release-notes body for tools with
-          #    notes_extractor=glm (kiro, windsurf). Other tools are unaffected.
+          #    notes_extractor=glm (kiro). Other tools are unaffected.
           # 2. Runs --mode=agnix-triage on tools that declare
           #    `changes_of_interest` in tool-release-baselines.json to
           #    prepend an agnix-focused summary to the issue body. Falls back

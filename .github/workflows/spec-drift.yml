@@ -10,6 +10,8 @@ on:
     - cron: '0 0 * * 0'
     # A-tier: Weekly on Wednesday at midnight UTC (staggered from S-tier)
     - cron: '0 0 * * 3'
+    # D-tier: Monthly maintenance on the first day of the month
+    - cron: '0 0 1 * *'
   workflow_dispatch:
     inputs:
       update_baselines:
@@ -25,6 +27,7 @@ on:
           - all
           - s-tier
           - a-tier
+          - d-tier
         default: all
       mcp_version:
         description: 'Optional MCP release version to compare against the pinned baseline'
@@ -59,13 +62,14 @@ jobs:
           TIER_FILTER: ${{ inputs.tier || 'all' }}
           MCP_VERSION: ${{ inputs.mcp_version || '' }}
           SCHEDULE_CRON: ${{ github.event.schedule }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
 
           BASELINES_FILE=".github/spec-baselines.json"
 
           # Validate JSON structure
-          if ! jq -e '.sources["s-tier"] and .sources["a-tier"]' "$BASELINES_FILE" > /dev/null 2>&1; then
+          if ! jq -e '.sources["s-tier"] and .sources["a-tier"] and .sources["d-tier"]' "$BASELINES_FILE" > /dev/null 2>&1; then
             echo "ERROR: Invalid spec-baselines.json structure"
             exit 1
           fi
@@ -81,34 +85,9 @@ jobs:
             exit 1
           fi
 
-          # Determine which tiers to check based on trigger
-          check_s_tier=false
-          check_a_tier=false
-
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            case "$TIER_FILTER" in
-              s-tier) check_s_tier=true ;;
-              a-tier) check_a_tier=true ;;
-              all) check_s_tier=true; check_a_tier=true ;;
-            esac
-          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
-            # Each cron schedule triggers a separate workflow run
-            # SCHEDULE_CRON contains the specific cron that triggered THIS run
-            # Weekly schedule (Sunday midnight UTC) = S-tier sources
-            if [[ "$SCHEDULE_CRON" == "0 0 * * 0" ]]; then
-              check_s_tier=true
-            fi
-            # Weekly schedule (Wednesday midnight UTC) = A-tier sources
-            if [[ "$SCHEDULE_CRON" == "0 0 * * 3" ]]; then
-              check_a_tier=true
-            fi
-          else
-            check_s_tier=true
-            check_a_tier=true
-          fi
-
-          echo "Checking S-tier: $check_s_tier"
-          echo "Checking A-tier: $check_a_tier"
+          source scripts/spec-drift-tiers.sh
+          selected_tiers=$(select_spec_tiers "$EVENT_NAME" "$TIER_FILTER" "$SCHEDULE_CRON")
+          echo "Checking spec tiers: $selected_tiers"
 
           # Function to normalize content for consistent hashing
           normalize_content() {
@@ -271,17 +250,11 @@ jobs:
           }
 
           # Check requested tiers
-          if [[ "$check_s_tier" == "true" ]]; then
+          for tier in $selected_tiers; do
             echo ""
-            echo "=== Checking S-tier sources ==="
-            check_tier "s-tier"
-          fi
-
-          if [[ "$check_a_tier" == "true" ]]; then
-            echo ""
-            echo "=== Checking A-tier sources ==="
-            check_tier "a-tier"
-          fi
+            echo "=== Checking $tier sources ==="
+            check_tier "$tier"
+          done
 
           if [[ "$UPDATE_BASELINES" == "true" && "$FETCH_ERRORS" == "true" ]]; then
             echo "ERROR: Refusing to write a partial baseline after source fetch errors"

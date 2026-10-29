@@ -246,7 +246,9 @@
           "XP-005",
           "XP-006"
         ]
-      },
+      }
+    },
+    "a-tier": {
       "opencode-rules": {
         "url": "https://opencode.ai/docs/rules/",
         "content_url": "https://raw.githubusercontent.com/anomalyco/opencode/dev/packages/web/src/content/docs/rules.mdx",
@@ -262,7 +264,7 @@
         ]
       }
     },
-    "a-tier": {
+    "d-tier": {
       "cursor-rules": {
         "url": "https://cursor.com/docs/rules",
         "content_url": "https://cursor.com/docs/rules.md",

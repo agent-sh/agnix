@@ -110,23 +110,19 @@ CI runs lint and the workspace merge contracts on owner PRs and pushes to main; 
 
 ## Tool support tiers
 
-agnix validates 10 tools, those with a per-tool validator in `crates/agnix-core/src/rules/`. A higher tier gets stricter testing and release tracking.
+Tiers set maintenance priority. Coverage is tracked separately: eight tools on the active roster have validators; five entries below are planned. See knowledge-base/RESEARCH-TRACKING.md and .github/tool-release-baselines.json for coverage and monitoring.
 
-**Validated** (have a validator in agnix):
+- **S** (test always): Claude Code, Codex CLI
+- **A** (test on major changes): Kiro CLI, OpenCode, Pi (validator pending)
+- **B** (test on significant changes): Antigravity CLI, Grok Code (validators pending)
+- **C** (community-reported maintenance): Muse Code, Kimi Code (validators pending)
+- **D** (nice-to-have maintenance): GitHub Copilot, Cline, Cursor, legacy Gemini CLI
 
-- **S** (test always): Claude Code, Codex CLI, OpenCode, Kiro CLI
-- **A** (test on major changes): GitHub Copilot, Cline, Cursor
-- **B** (test if time permits): amp
-- **C** (community reports only): Gemini CLI
-- **D** (nice to have): Windsurf
+**Dropped from active support**: Continue, Aider, Amazon Q, Tabnine, Codeium, Devin, Windsurf and Amp. Do not poll their releases or prioritize their validation. Existing Amp and Windsurf/Devin checks remain for compatibility. Kiro's .amazonq fallback is Kiro compatibility only.
 
-Release tracking is automated where the upstream publishes to GitHub: `.github/tool-release-baselines.json` and `.github/workflows/tool-release-watch.yml`.
+**Removed**: Roo Code (discontinued 2026-05-15; validators removed in 0.59.0).
 
-**Dropped**: Roo Code (discontinued 2026-05-15; support removed in 0.59.0).
-
-**Watchlist** (no validator yet; tracked by hand in `knowledge-base/RESEARCH-TRACKING.md`): continue, Antigravity, Tabnine, Codeium, Amazon Q, Aider, SourceGraph Cody, pi.
-
-**E** (no support): everything else. Community contributions are welcome through the Tool Support Request issue template.
+The roster is owner-selected. A tier assignment does not establish validation coverage. Pi and Kimi Code releases are monitored; Antigravity, Grok Code and Muse Code sources are reviewed manually until release extractors are verified. Agent Skills and MCP standards remain monitored independently.
 
 ## Validation scope
 

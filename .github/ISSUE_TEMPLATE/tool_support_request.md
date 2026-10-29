@@ -28,12 +28,13 @@ Describe the config file(s) used by this tool:
 
 Which support tier do you think this tool belongs in?
 
-- [ ] S -- Test always (high adoption, critical for users)
-- [ ] A -- Test on major changes (significant adoption)
-- [ ] B -- Test on significant changes if time permits (moderate adoption)
-- [ ] C -- Community reports fixes only (niche adoption)
-- [ ] D -- No active support, nice to have (low adoption)
-- [ ] E -- No support, community contributions only (minimal adoption)
+- [ ] S - Test always
+- [ ] A - Test on major changes
+- [ ] B - Test on significant changes
+- [ ] C - Community-reported maintenance
+- [ ] D - Nice-to-have maintenance
+
+Tiers are owner-selected maintenance priorities. New entries need verified configuration contracts and validators before claiming validation coverage. See the current roster in `knowledge-base/RESEARCH-TRACKING.md`.
 
 Brief justification for the tier:
 

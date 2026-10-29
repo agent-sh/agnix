@@ -122,6 +122,20 @@ Kiro permission YAML templates at `.kiro/settings/permissions.yaml` are lintable
 
 ## Supported Tools
 
+Maintenance priorities:
+
+| Tier | Tools |
+|------|-------|
+| S | Claude Code, Codex CLI |
+| A | Kiro, OpenCode, Pi |
+| B | Antigravity CLI, Grok Code |
+| C | Muse Code, Kimi Code |
+| D | GitHub Copilot, Cline, Cursor, legacy Gemini CLI |
+
+Pi, Antigravity CLI, Grok Code, Muse Code and Kimi Code have assigned priorities, but their tool-specific validators are pending. Pi and Kimi Code have automated release tracking. See the [coverage and monitoring inventory](knowledge-base/RESEARCH-TRACKING.md) for manual sources and outstanding coverage.
+
+Implemented validators:
+
 | Tool | Rules | Count | Config Files |
 |------|-------|-------|--------------|
 | [Agent Skills](https://agentskills.io) | AS-\*, XP-SK-\* | 26 | SKILL.md |
@@ -135,8 +149,8 @@ Kiro permission YAML templates at `.kiro/settings/permissions.yaml` are lintable
 | [AGENTS.md](https://agents.md) | AGM-\*, XP-\* | 13 | AGENTS.md, AGENTS.local.md, AGENTS.override.md |
 | [Cline](https://docs.cline.bot) | CLN-\*, CL-SK-\* | 16 | .clinerules/, .cline/rules/, .cline/workflows/, .cline/hooks/, .clineignore, cline_mcp_settings.json, .cline/skills/ |
 | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | GM-\* | 35 | GEMINI.md, .gemini/settings.json, gemini-extension.json, extension hooks and agents, .gemini/commands/\*.toml, policies, .gemini/agents/, .geminiignore |
-| [Windsurf / Devin Desktop](https://docs.devin.ai) | WS-\* | 17 | .devin/rules/, .devin/workflows/, .devin/hooks.json (and the legacy .windsurf/ layout), .windsurfrules, global_rules.md, .windsurf/skills/ |
-| [Amp](https://ampcode.com) | AMP-\* | 12 | .agents/checks/\*.md, .amp/settings.json(c), skills and skill mcp.json |
+
+Continue, Aider, Amazon Q, Tabnine, Codeium, Devin/Windsurf and Amp are outside active support and monitoring. Shipped Amp and Windsurf/Devin validators remain available for legacy compatibility. Roo Code support was removed in 0.59.0.
 
 ## Architecture
 

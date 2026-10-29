@@ -5,7 +5,9 @@
 ## Goal
 Establish the minimum set of factual, verifiable constraints required to maintain cross-platform project instructions across the top supported tools.
 
-## Scope (support tiers order)
+## Historical scope (2026-01-31)
+
+The tiers below record the original research scope. Current maintenance priorities and pending coverage are in [RESEARCH-TRACKING.md](../RESEARCH-TRACKING.md#tool-inventory).
 
 ### S Tier (test always)
 - Claude Code

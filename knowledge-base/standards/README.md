@@ -17,17 +17,32 @@
 
 ## Support Tiers (Ordering Rule)
 
-When documenting cross-platform behavior, list and validate tools in this order:
+Current priority order (see [coverage status](../RESEARCH-TRACKING.md#tool-inventory) before claiming validation support):
 
 ### S Tier (test always)
 - Claude Code
 - Codex CLI
-- OpenCode
 
 ### A Tier (test on major changes)
-- GitHub Copilot coding agent
-- Cursor
+- Kiro CLI
+- OpenCode
+- Pi (tool-specific validator pending)
+
+### B Tier (test on significant changes)
+- Antigravity CLI (validator pending)
+- Grok Code (validator pending)
+
+### C Tier (community-reported maintenance)
+- Muse Code (validator pending)
+- Kimi Code (validator pending)
+
+### D Tier (nice-to-have maintenance)
+- GitHub Copilot
 - Cline
+- Cursor
+- Legacy Gemini CLI
+
+Continue, Aider, Amazon Q, Tabnine, Codeium, Devin/Windsurf and Amp are dropped from active support. The dated research documents retain their historical scopes and are not a current coverage claim.
 
 ---
 
@@ -38,7 +53,7 @@ When documenting cross-platform behavior, list and validate tools in this order:
 
 ---
 
-## Quick File Naming Cheat Sheet (S/A)
+## Historical File Naming Cheat Sheet (2026-01-31)
 
 - Claude Code: `CLAUDE.md`, `.claude/rules/*.md`
 - Codex CLI: `AGENTS.md` (+ `AGENTS.local.md`, `AGENTS.override.md`)
