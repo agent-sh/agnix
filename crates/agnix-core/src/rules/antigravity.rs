@@ -650,7 +650,7 @@ fn expanded_rule_size(path: &Path, content: &str, config: &PerFileLintConfig<'_>
                     items.push(Work::Bytes(whole.start() - offset));
                     let target = capture.get(1)?.as_str();
                     let target = if let Some(tail) = target.strip_prefix("~/") {
-                        std::path::PathBuf::from(std::env::var_os("HOME")?).join(tail)
+                        crate::file_types::native::home_dir()?.join(tail)
                     } else {
                         path.parent().unwrap_or_else(|| Path::new(".")).join(target)
                     };

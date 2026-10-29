@@ -11,6 +11,19 @@ pub(crate) enum Tool {
     Grok,
 }
 
+pub(crate) fn home_dir() -> Option<std::path::PathBuf> {
+    #[cfg(feature = "filesystem")]
+    {
+        dirs::home_dir()
+    }
+    #[cfg(not(feature = "filesystem"))]
+    {
+        std::env::var_os("HOME")
+            .or_else(|| std::env::var_os("USERPROFILE"))
+            .map(std::path::PathBuf::from)
+    }
+}
+
 pub(crate) fn selected(config: &crate::config::LintConfig) -> Option<Tool> {
     fn from_name(name: &str) -> Option<Tool> {
         match name.to_ascii_lowercase().as_str() {
@@ -335,6 +348,7 @@ pub(crate) fn pi_resource(path: &Path, resource: &str) -> bool {
         tail
     };
     tail.first().is_some_and(|part| part == resource)
+        && (!matches!(resource, "prompts" | "themes") || tail.len() == 2)
 }
 
 /// Components beneath the actual Grok namespace, not unrelated ancestors.
@@ -391,12 +405,12 @@ pub(crate) fn detect(path: &Path) -> Option<FileType> {
                 filename,
                 "settings.json" | "models.json" | "keybindings.json" | "mcp.json"
             ))
-            || (is_json && tail.first().is_some_and(|part| part == "themes"))
+            || (is_json && tail.len() == 2 && tail.first().is_some_and(|part| part == "themes"))
         {
             return Some(FileType::PiConfig);
         }
         if is_md
-            && (tail.first().is_some_and(|part| part == "prompts")
+            && ((tail.len() == 2 && tail.first().is_some_and(|part| part == "prompts"))
                 || (tail.len() == 1 && matches!(filename, "system.md" | "append_system.md")))
         {
             return Some(FileType::PiPrompt);
@@ -513,25 +527,26 @@ mod tests {
 
     #[test]
     fn home_overrides_require_exact_absolute_directory_membership() {
+        let root = std::env::temp_dir().join("agnix-native-home-test");
         assert_eq!(
             remap_home(
-                Path::new("/custom/pi/skills/review/SKILL.md"),
-                Path::new("/custom/pi"),
+                &root.join("pi/skills/review/SKILL.md"),
+                &root.join("pi"),
                 Path::new(".pi/agent")
             ),
             Some(Path::new(".pi/agent/skills/review/SKILL.md").to_path_buf())
         );
         assert_eq!(
             remap_home(
-                Path::new("/custom/piano/settings.json"),
-                Path::new("/custom/pi"),
+                &root.join("piano/settings.json"),
+                &root.join("pi"),
                 Path::new(".pi/agent")
             ),
             None
         );
         assert_eq!(
             remap_home(
-                Path::new("/custom/pi/settings.json"),
+                &root.join("pi/settings.json"),
                 Path::new("pi"),
                 Path::new(".pi/agent")
             ),

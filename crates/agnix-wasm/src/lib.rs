@@ -119,9 +119,15 @@ pub fn validate(filename: &str, content: &str, tool: Option<String>) -> JsValue 
     // contain path traversal. The only field set above is `tools` (a plain
     // string list), which validate_patterns() does not inspect. Therefore
     // build_lenient() will always succeed at this call site.
-    let config = builder
+    let mut config = builder
         .build_lenient()
         .expect("build_lenient() cannot fail when only tools() is set");
+    // The browser has one document, not a host filesystem. Its metadata must
+    // use the same content-aware discovery as validation ($schema/packages).
+    let fs = std::sync::Arc::new(agnix_core::fs::MockFileSystem::new());
+    fs.add_file(path, content);
+    config.set_fs(fs);
+    let detected_type = agnix_core::resolve_file_type(path, &config);
 
     let diagnostics = validate_content(path, content, &config, &REGISTRY);
 

@@ -71,7 +71,16 @@ impl Validator for GrokValidator {
             _ => path.file_name().and_then(|s| s.to_str()).unwrap_or(""),
         };
         let mut cx = JsonCx::new(path, content, config);
-        if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+        if path.extension().and_then(|s| s.to_str()) == Some("toml")
+            && !matches!(
+                resource,
+                Some(
+                    native::Resource::GrokHooks
+                        | native::Resource::GrokMcp
+                        | native::Resource::GrokLsp
+                )
+            )
+        {
             let value = match toml::from_str::<toml::Value>(content) {
                 Ok(value) => serde_json::to_value(value).unwrap_or(Value::Null),
                 Err(error) => {
@@ -309,9 +318,7 @@ fn configuration(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, path: 
         DiagnosticLevel::Warning,
     );
     let filename = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
-    let default_home = std::env::var_os("HOME")
-        .map(std::path::PathBuf::from)
-        .map(|home| home.join(".grok"));
+    let default_home = native::home_dir().map(|home| home.join(".grok"));
     let override_home = std::env::var_os("GROK_HOME").map(std::path::PathBuf::from);
     let user = path.parent().is_some_and(|parent| {
         Some(parent) == default_home.as_deref() || Some(parent) == override_home.as_deref()

@@ -16,6 +16,9 @@ ignore = [
 # Allow common permissive licenses
 allow = [
     "MIT",
+    # borrow-or-share (via offline JSON Schema validation), MIT without
+    # the attribution condition. Full upstream license reviewed locally.
+    "MIT-0",
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",

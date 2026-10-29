@@ -34,6 +34,7 @@ Authentication/session stores, including Pi's manually editable `auth.json`, rem
 - Environment/header values beginning with `!` are runtime command references. Agnix recognizes the reference without executing it or reporting its literal text as a credential.
 - Package metadata recognizes both a `pi` resource object and the `pi-package` keyword. Package paths resolve from the package root. Manifest globs discover resources; top-level settings globs filter resources found through plain paths. Exclusions and exact overrides preserve native precedence.
 - Declared themes keep their theme subtype even if named `models.json` or `mcp.json`. They do not become model or MCP configurations. Custom prompt and skill paths retain their native metadata rules.
+- Conventional prompt/theme directories load immediate children. Recursive loading requires a declared resource root. A skill directory's first `SKILL.md` ends traversal of that subtree; reference Markdown stays reference material.
 - Pi reads an actual string description. An omitted, empty or non-string skill name falls back to the directory. Claude-only fields ignored by Pi do not make the skill's YAML invalid.
 - Theme checks cover missing variables, cycles, ANSI indexes and the native color literal forms. Prompt empty/null headers follow native body fallback.
 
@@ -56,6 +57,7 @@ Authentication/session stores, including Pi's manually editable `auth.json`, rem
 - MCP timeouts and per-tool timeout maps use unsigned integers. Blank commands/URLs and malformed inline agent MCP configurations receive native diagnostics.
 - Hooks accept documented event aliases, command and HTTP handlers, and released command arguments. Ignored-event matchers do not receive false regex errors.
 - Plugin paths must stay within their plugin root. In-root absolute paths are accepted when the root can be established. Plugin versions are opaque strings rather than an invented SemVer requirement.
+- Declared hook, MCP and LSP component paths establish their JSON format independently of the filename suffix, including extensionless files and names ending in `.toml`.
 - Grok skill names normalize spaces and underscores to hyphens. Omitted names and descriptions use the native fallback behavior. `allowed-tools` is advisory metadata rather than an enforced runtime sandbox.
 - Agent metadata preserves the native YAML scalar coercion for typed strings. Recovery objects require the complete native field set. Plugin agents cannot gain privileged MCP, hooks or bypass permission settings through their own metadata.
 - Marketplace indexes and LSP maps use their own contracts; they are not parsed as hook files. Static LSP checks cover documented command/argument types, transports, extension maps, aliases and timeout fields.

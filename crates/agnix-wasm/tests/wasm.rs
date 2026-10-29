@@ -38,6 +38,24 @@ fn validate_returns_file_type() {
 }
 
 #[wasm_bindgen_test]
+fn native_schema_metadata_matches_the_validated_format() {
+    let content = r#"{"$schema":"https://pi.dev/schemas/settings.schema.json","defaultThinkingLevel":"invalid"}"#;
+    let result = agnix_wasm::validate("custom-settings.json", content, Some("pi".into()));
+    let file_type = js_sys::Reflect::get(&result, &JsValue::from_str("file_type")).unwrap();
+    assert_eq!(file_type.as_string().unwrap(), "PiConfig");
+    let diagnostics = js_sys::Array::from(
+        &js_sys::Reflect::get(&result, &JsValue::from_str("diagnostics")).unwrap(),
+    );
+    assert!(diagnostics.iter().any(|diagnostic| {
+        js_sys::Reflect::get(&diagnostic, &JsValue::from_str("rule"))
+            .unwrap()
+            .as_string()
+            .as_deref()
+            == Some("PI-CFG-002")
+    }));
+}
+
+#[wasm_bindgen_test]
 fn validate_with_tool_filter() {
     let result = agnix_wasm::validate("CLAUDE.md", "# Project", Some("cursor".to_string()));
     assert!(!result.is_null());

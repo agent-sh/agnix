@@ -548,6 +548,74 @@ fn declared_plugin_components_keep_their_native_formats() {
 }
 
 #[test]
+fn pi_auto_discovery_is_flat_but_declared_resource_roots_can_be_recursive() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    std::fs::create_dir_all(root.join(".pi/prompts/nested")).unwrap();
+    std::fs::create_dir_all(root.join(".pi/themes/nested")).unwrap();
+    let prompt = root.join(".pi/prompts/nested/unused.md");
+    let theme = root.join(".pi/themes/nested/unused.json");
+    std::fs::write(&prompt, "---\ndescription: 42\n---\nReview code.").unwrap();
+    std::fs::write(&theme, "{}").unwrap();
+    for path in [&prompt, &theme] {
+        let result = agnix_core::validate_file(path, &LintConfig::default()).unwrap();
+        assert!(!format!("{result:?}").contains("PI-"), "{result:?}");
+    }
+    std::fs::write(
+        root.join(".pi/settings.json"),
+        r#"{"prompts":["prompts/nested"],"themes":["themes/nested"]}"#,
+    )
+    .unwrap();
+    for (path, rule) in [(&prompt, "PI-PR-002"), (&theme, "PI-TH-001")] {
+        let result = agnix_core::validate_file(path, &LintConfig::default()).unwrap();
+        assert!(format!("{result:?}").contains(rule), "{result:?}");
+    }
+}
+
+#[test]
+fn grok_declared_json_components_do_not_depend_on_filename_suffixes() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    std::fs::create_dir_all(root.join(".grok-plugin")).unwrap();
+    for suffix in ["conf", "toml", ""] {
+        let name = |prefix: &str| {
+            if suffix.is_empty() {
+                prefix.to_string()
+            } else {
+                format!("{prefix}.{suffix}")
+            }
+        };
+        let manifest = serde_json::json!({"name":"review","hooks":name("events"),"mcpServers":name("servers"),"lspServers":name("languages")});
+        std::fs::write(root.join(".grok-plugin/plugin.json"), manifest.to_string()).unwrap();
+        for (filename, content, rule) in [
+            (
+                name("events"),
+                r#"{"hooks":{"InvalidEvent":[]}}"#,
+                "GRK-HK-002",
+            ),
+            (
+                name("servers"),
+                r#"{"mcpServers":{"bad":{"command":42}}}"#,
+                "GRK-MCP-001",
+            ),
+            (
+                name("languages"),
+                r#"{"bad":{"command":42}}"#,
+                "GRK-CFG-003",
+            ),
+        ] {
+            std::fs::write(root.join(&filename), content).unwrap();
+            let result =
+                agnix_core::validate_file(&root.join(&filename), &LintConfig::default()).unwrap();
+            assert!(
+                format!("{result:?}").contains(rule),
+                "{filename}: {result:?}"
+            );
+        }
+    }
+}
+
+#[test]
 fn pi_project_mcp_partial_override_is_not_missing_a_transport() {
     let found = rules(
         ".pi/mcp.json",

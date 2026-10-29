@@ -50,8 +50,8 @@ fn normalized(path: &Path) -> PathBuf {
 
 fn target(base: &Path, value: &str) -> PathBuf {
     if let Some(tail) = value.strip_prefix("~/") {
-        if let Some(home) = std::env::var_os("HOME") {
-            return normalized(&PathBuf::from(home).join(tail));
+        if let Some(home) = super::home_dir() {
+            return normalized(&home.join(tail));
         }
     }
     normalized(&base.join(value))
@@ -289,12 +289,6 @@ pub(crate) fn resource_owner(
     scope: Option<Tool>,
     project_root: Option<&Path>,
 ) -> Option<Resource> {
-    if !matches!(
-        path.extension().and_then(|value| value.to_str()),
-        Some("md" | "json")
-    ) {
-        return None;
-    }
     if let Some((tool, root, manifest)) = plugin_owner(path, fs, scope) {
         if tool == Tool::Pi {
             if let Some(resource) = pi_resource(
@@ -346,6 +340,12 @@ pub(crate) fn resource_owner(
             }
         }
     }
+    if !matches!(
+        path.extension().and_then(|value| value.to_str()),
+        Some("md" | "json")
+    ) {
+        return None;
+    }
     let mut roots: Vec<PathBuf> = path
         .parent()
         .into_iter()
@@ -353,8 +353,8 @@ pub(crate) fn resource_owner(
         .map(Path::to_path_buf)
         .collect();
     roots.extend(project_root.map(Path::to_path_buf));
-    if let Some(home) = std::env::var_os("HOME") {
-        roots.push(PathBuf::from(home));
+    if let Some(home) = super::home_dir() {
+        roots.push(home);
     }
     let mut settings = Vec::new();
     let mut registries = Vec::new();
