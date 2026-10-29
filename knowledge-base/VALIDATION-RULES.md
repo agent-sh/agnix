@@ -2834,7 +2834,7 @@ OpenCode 1 (`opencode-ai`) and OpenCode 2 (`@opencode/cli`, released 2026-09-11)
 <a id="oc-004"></a>
 ### OC-004 [MEDIUM] Unknown Config Key
 **Requirement**: Top-level keys SHOULD be keys of https://opencode.ai/config.json (top-level `additionalProperties: false`), which lists the native OpenCode 2 keys and the OpenCode 1 keys it still reads ("supported V1 and native V2 fields may coexist at the top level").
-**Detection**: Warning at each key outside the schema (plus the OpenCode 1 TUI keys `theme`, `keybinds`, `tui`, which OC-DEP-005 reports), with a closest-key hint. When `[tool_versions] opencode` pins 1.x, native OpenCode 2 keys (`agents`, `permissions`, `policies`, `commands`, `providers`, `plugins`, `snapshots`, `update`, `media`, `websearch`, `worktree`, `warming`) are reported as keys OpenCode 1 does not read.
+**Detection**: Warning at each key outside the schema (plus the OpenCode 1 TUI keys `theme`, `keybinds`, `tui`, which OC-DEP-005 reports), with a closest-key hint. When `[tool_versions] opencode` pins 1.x, native OpenCode 2 keys (`agents`, `permissions`, `policies`, `commands`, `providers`, `plugins`, `snapshots`, `update`, `media`, `websearch`, `worktree`, `warming`, `timezone`) are reported as keys OpenCode 1 does not read. An unpinned file using these native keys is checked as OpenCode 2.
 **Fix**: No auto-fix
 **Source**: opencode.ai/config.json, opencode.ai/v2/docs/migrate-v1
 
