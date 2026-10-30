@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.2] - 2026-10-30
+
 ### Fixed
 - Accept eight new Codex 0.166 feature keys and seven earlier keys missing from the allowlist, in root and profile configuration across TOML, JSON and YAML.
 - Accept OpenCode 2.2.3 managed-policy actions and integration/account resources. Preserve older pinned contracts and normalize legacy policy prefixes for shadow checks.

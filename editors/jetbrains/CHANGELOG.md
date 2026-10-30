@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.2] - 2026-10-30
+
+### Changed
+
+- Update the default language-server download to agnix-lsp 0.60.2, with Codex 0.166 and OpenCode 2.2.3 compatibility fixes.
+
 ## [0.59.3] - 2026-10-24
 
 ### Changed
