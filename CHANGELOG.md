@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Update similar to 3.2.1, rmcp to 3.8.0, tokio to 1.54.1, notify to 8.2.1 and ignore to 0.4.34.
+- Refresh CodeQL, Python, Java, Claude Code and installer actions, keeping the workflow pin reference in sync.
+
 ## [0.60.2] - 2026-10-30
 
 ### Fixed
