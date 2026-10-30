@@ -236,6 +236,7 @@ fn as_015_matches_parent_and_global_ignore_scope() {
         .env("HOME", &home)
         .env("USERPROFILE", &home)
         .env("XDG_CONFIG_HOME", &home)
+        .env("GIT_CONFIG_GLOBAL", home.join(".gitconfig"))
         .output()
         .unwrap();
     assert!(
