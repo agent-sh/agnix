@@ -178,6 +178,12 @@ fn as_015_matches_parent_and_global_ignore_scope() {
         // Child negation overrides the ancestor .ignore.
         write(&root, ".ignore", "!skills/demo/keep.bin\n");
         write(&root, ".git/info/exclude", "skills/demo/local.bin\n");
+        let global_ignore = ignore::gitignore::gitconfig_excludes_path()
+            .expect("the fixture config must select a global ignore file");
+        assert!(
+            global_ignore.is_file(),
+            "fixture global ignore path must exist: {global_ignore:?}"
+        );
         let result = validate_project(&root, &LintConfig::default()).unwrap();
         assert!(
             result.diagnostics.iter().any(|d| d.rule == "AS-015"),
@@ -203,10 +209,22 @@ fn as_015_matches_parent_and_global_ignore_scope() {
             result.diagnostics
         );
         fs::remove_file(root.join("skills/demo/keep.bin")).unwrap();
+        fs::remove_file(root.join("skills/demo/global.bin")).unwrap();
         let result = validate_project(&root, &LintConfig::default()).unwrap();
         assert!(
             result.diagnostics.iter().all(|d| d.rule != "AS-015"),
-            "parent/global payloads do not count: {:?}",
+            "ancestor .ignore payload does not count: {:?}",
+            result.diagnostics
+        );
+        fs::remove_file(root.join("skills/demo/parent.bin")).unwrap();
+        fs::File::create(root.join("skills/demo/global.bin"))
+            .unwrap()
+            .set_len(32_000_000)
+            .unwrap();
+        let result = validate_project(&root, &LintConfig::default()).unwrap();
+        assert!(
+            result.diagnostics.iter().all(|d| d.rule != "AS-015"),
+            "global ignore payload does not count: {:?}",
             result.diagnostics
         );
         return;
