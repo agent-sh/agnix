@@ -13,7 +13,7 @@ keywords: ["OC-POL-001", "invalid policy statement", "opencode", "validation", "
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-10-30`
 
 ## Applicability
 
@@ -26,6 +26,7 @@ keywords: ["OC-POL-001", "invalid policy statement", "opencode", "validation", "
 - https://opencode.ai/v2/docs/policies/
 - https://opencode.ai/config.json
 - https://opencode.ai/docs/config/
+- https://github.com/anomalyco/opencode/blob/v2.2.3/packages/schema/src/config/policy.ts
 
 ## Test Coverage Metadata
 

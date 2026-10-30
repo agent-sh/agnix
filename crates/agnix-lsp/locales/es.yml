@@ -2,6 +2,8 @@
 # Rules - Validator diagnostic messages, suggestions, assumptions, fixes
 # ===========================================================================
 rules:
+  oc_pol_001:
+    suggestion: "Usa una acción de política compatible con tu versión de OpenCode, un recurso de texto y effect allow o deny"
   agy_ag_001:
     frontmatter_error: "La personalización de Antigravity requiere frontmatter YAML válido."
     frontmatter_suggestion: "Agrega un objeto frontmatter completo con los campos nativos obligatorios."

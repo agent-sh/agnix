@@ -2,6 +2,157 @@ use agnix_core::{LintConfig, ValidatorRegistry, validate_content};
 use std::path::Path;
 
 #[test]
+fn codex_0166_accepts_tagged_features_in_root_and_profiles() {
+    let features = serde_json::json!({
+        "app_server_websocket_compression": true,
+        "critical_path_timing": true,
+        "executor_capability_discovery_v2": true,
+        "guardian_native_multi_agent_history": false,
+        "mcp_connection_sharing": true,
+        "mcp_tool_list_changed": true,
+        "multi_env_copy_file": true,
+        "omit_skill_descriptions": true,
+        "plugin_discovery_prefetch": false,
+        "runtime_agent_instances": {"enabled": true},
+        "simplified_selection_hints": true,
+        "skill_catalog_deltas": true,
+        "subagent_thread_environments": true,
+        "untrusted_as_tool_output": true,
+        "wake_on_agent_messages": true
+    });
+    let value =
+        serde_json::json!({"features":features,"profiles":{"review":{"features":features}}});
+    for (file, content) in [
+        (".codex/config.json", value.to_string()),
+        (".codex/config.yaml", serde_yaml::to_string(&value).unwrap()),
+        (".codex/config.toml", toml::to_string(&value).unwrap()),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(file),
+            &content,
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        // The schema retains inline profiles for compatibility, while
+        // CDX-APP-003 still advises migrating them to standalone files.
+        assert!(
+            diagnostics.iter().all(|d| d.rule == "CDX-APP-003"),
+            "{file}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn opencode_223_accepts_separate_managed_policy_actions() {
+    for version in [None, Some("2.2.3")] {
+        let config = LintConfig::builder()
+            .tool_versions(agnix_core::config::ToolVersions {
+                opencode: version.map(str::to_string),
+                ..Default::default()
+            })
+            .build()
+            .unwrap();
+        for field in ["policies", "experimental"] {
+            let policies = serde_json::json!([
+                {"action":"integration.connect","resource":"github","effect":"allow"},
+                {"action":"integration.use","resource":"github#work","effect":"deny"},
+                {"action":"mcp.use","resource":"docs","effect":"deny"},
+                {"action":"skill.use","resource":"review","effect":"allow"},
+                {"action":"plugin.use","resource":"npm:plugin","effect":"deny"}
+            ]);
+            let content = if field == "policies" {
+                serde_json::json!({"policies": policies})
+            } else {
+                serde_json::json!({"experimental":{"policies":policies}})
+            };
+            let diagnostics = validate_content(
+                Path::new("opencode.jsonc"),
+                &content.to_string(),
+                &config,
+                &ValidatorRegistry::with_defaults(),
+            );
+            assert!(
+                diagnostics.is_empty(),
+                "{version:?}/{field}: {diagnostics:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn opencode_223_policy_actions_preserve_old_version_and_invalid_action_checks() {
+    for (version, action) in [
+        ("2.2.2", "mcp.use"),
+        ("2.2.3", "mcp.ues"),
+        ("1.19.5", "skill.use"),
+    ] {
+        let config = LintConfig::builder()
+            .tool_versions(agnix_core::config::ToolVersions {
+                opencode: Some(version.into()),
+                ..Default::default()
+            })
+            .build()
+            .unwrap();
+        let content = serde_json::json!({"experimental":{"policies":[{"action":action,"resource":"docs","effect":"deny"}]}});
+        let diagnostics = validate_content(
+            Path::new("opencode.json"),
+            &content.to_string(),
+            &config,
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "OC-POL-001"),
+            "{version}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn claude_21314_accepts_write_boundary_and_monitor_hook_conditions() {
+    let content = r#"{"permissions":{"blockWritesOutsideWorkingDirectories":true},"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo check","if":"Monitor(tail *)"}]}]}}"#;
+    let diagnostics = validate_content(
+        Path::new(".claude/settings.json"),
+        content,
+        &LintConfig::default(),
+        &ValidatorRegistry::with_defaults(),
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+}
+
+#[test]
+fn opencode_223_shadow_checks_normalize_legacy_actions_without_crossing_integrations() {
+    for prefix in ["mcp", "skill", "plugin"] {
+        let content = serde_json::json!({"policies":[
+            {"action":"integration.use","resource":format!("{prefix}:docs"),"effect":"deny"},
+            {"action":format!("{prefix}.use"),"resource":"*","effect":"allow"}
+        ]});
+        let diagnostics = validate_content(
+            Path::new("opencode.json"),
+            &content.to_string(),
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert_eq!(
+            diagnostics.iter().filter(|d| d.rule == "OC-PM-003").count(),
+            1,
+            "{prefix}: {diagnostics:?}"
+        );
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "OC-POL-001"),
+            "{diagnostics:?}"
+        );
+    }
+    let content = r#"{"policies":[{"action":"integration.use","resource":"mcp:docs","effect":"deny"},{"action":"integration.use","resource":"*","effect":"allow"}]}"#;
+    let diagnostics = validate_content(
+        Path::new("opencode.json"),
+        content,
+        &LintConfig::default(),
+        &ValidatorRegistry::with_defaults(),
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+}
+
+#[test]
 fn opencode_221_accepts_timezone_and_released_experimental_settings() {
     let registry = ValidatorRegistry::with_defaults();
     let pinned = LintConfig::builder()

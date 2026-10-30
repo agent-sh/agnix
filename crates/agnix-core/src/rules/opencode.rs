@@ -4235,8 +4235,9 @@ mod tests {
 
     #[test]
     fn policy_statements() {
-        let diagnostics = validate(
+        let diagnostics = validate_with_config(
             r#"{"policies": [{"action": "provider.use", "resource": "openai", "effect": "ask"}, {"action": "integration.use", "resource": "github", "effect": "deny"}, {"action": "tool.use", "resource": "shell:sudo *", "effect": "deny", "note": "x"}]}"#,
+            &pinned("2.2.2"),
         );
         let pol: Vec<_> = diagnostics
             .iter()

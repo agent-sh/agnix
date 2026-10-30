@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Accept eight new Codex 0.166 feature keys and seven earlier keys missing from the allowlist, in root and profile configuration across TOML, JSON and YAML.
+- Accept OpenCode 2.2.3 managed-policy actions and integration/account resources. Preserve older pinned contracts and normalize legacy policy prefixes for shadow checks.
+
+### Changed
+- Review all nine pending tool-release notices and refresh Claude Code, Codex, Antigravity, OpenCode 2 and Kimi Code tracking. Keep already reviewed baselines and retired Amp tracking unchanged.
+
 ## [0.60.1] - 2026-10-29
 
 ### Fixed

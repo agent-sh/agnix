@@ -1597,7 +1597,7 @@ rules:
     type_error: "%{field} must be an array of { action, resource, effect } statements"
     resource_shape: "Statement %{index}: resource '%{resource}' does not have the %{action} form %{expected}, so it matches nothing"
     v1_action: "Statement %{index}: OpenCode 1 policies support only provider.use, not '%{action}'"
-    suggestion: "Use action provider.use, tool.use or integration.use, a string resource, and effect allow or deny"
+    suggestion: "Use a policy action supported by your OpenCode version, a string resource, and effect allow or deny"
   oc_pm_007:
     message: "Shell pattern '%{pattern}' has no wildcard, so it matches only the command without arguments"
     suggestion: "Use '%{pattern} *' to allow the command with arguments"

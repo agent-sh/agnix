@@ -19404,9 +19404,10 @@
         "source_urls": [
           "https://opencode.ai/v2/docs/policies/",
           "https://opencode.ai/config.json",
-          "https://opencode.ai/docs/config/"
+          "https://opencode.ai/docs/config/",
+          "https://github.com/anomalyco/opencode/blob/v2.2.3/packages/schema/src/config/policy.ts"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-10-30",
         "applies_to": {
           "tool": "opencode"
         },

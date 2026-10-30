@@ -2,6 +2,8 @@
 # Rules - Validator diagnostic messages, suggestions, assumptions, fixes
 # ===========================================================================
 rules:
+  oc_pol_001:
+    suggestion: "使用当前 OpenCode 版本支持的策略操作、字符串 resource，以及 allow 或 deny 的 effect"
   agy_ag_001:
     frontmatter_error: "Antigravity 自定义配置需要有效的 YAML frontmatter。"
     frontmatter_suggestion: "请添加完整的 frontmatter 对象，并包含必需的原生字段。"

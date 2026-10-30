@@ -106,7 +106,10 @@ class ToolSupportPolicy(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             baseline = dict(self.baselines)
-            baseline['tools'] = {key: self.baselines['tools'][key] for key in ['pi', 'kimi-code']}
+            baseline['tools'] = {
+                key: dict(self.baselines['tools'][key], last_known_version=version)
+                for key, version in [('pi', 'v1.4.0'), ('kimi-code', '@moonshot-ai/kimi-code@2.4.0')]
+            }
             (root / 'baseline.json').write_text(json.dumps(baseline))
             (root / 'bin').mkdir()
             (root / 'bin/gh').write_text(

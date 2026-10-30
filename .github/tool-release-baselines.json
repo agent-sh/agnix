@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-10-29",
+  "last_updated": "2026-10-30",
   "description": "Support tiers and release baselines for the owner-selected tool roster. Tier is a maintenance priority, not a claim that a validator exists. Entries with validation_status=pending have no tool-specific validation yet. Shared Agent Skills monitoring and the second OpenCode release line are separate entries. validators lists implemented rule modules only. tracked=false entries include a primary publication URL and a manual-monitoring reason. retired_tools preserves old baselines for shipped compatibility checks but is never polled. excluded_tools receives no active support or release monitoring. Optional changes_of_interest describes validated surfaces and relevant configuration changes for issue triage.",
   "tools": {
     "claude-code": {
@@ -21,7 +21,7 @@
         "agents_md"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.312",
+      "last_known_version": "v2.1.314",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -79,7 +79,7 @@
         "mcp"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.165.0",
+      "last_known_version": "rust-v0.166.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -178,9 +178,9 @@
       ],
       "github_repo": "anomalyco/opencode",
       "release_tag_regex": "^v2\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v2.2.1",
+      "last_known_version": "v2.2.3",
       "tracked": true,
-      "notes": "OpenCode 2 line (npm @opencode/cli, docs at https://opencode.ai/v2/docs/). Stable v2.X.Y GitHub releases are filtered separately from OpenCode 1, with matching tags as a fallback. v2.2.1 publishes full GitHub release notes. The tagged v2.2.0/v2.2.1 schema review found the new timezone root key and experimental image_generate/schedules fields; timezone is recognized as V2-only and the experimental additions are already accepted. Shares validators with opencode (OpenCode 1). Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md.",
+      "notes": "OpenCode 2 line (npm @opencode/cli, docs at https://opencode.ai/v2/docs/). Stable v2.X.Y GitHub releases are filtered separately from OpenCode 1, with matching tags as a fallback. v2.2.1 publishes full GitHub release notes. The tagged v2.2.0/v2.2.1 schema review found the new timezone root key and experimental image_generate/schedules fields; timezone is recognized as V2-only and the experimental additions are already accepted. Shares validators with opencode (OpenCode 1). Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. Latest review: knowledge-base/reviews/2026-10-30-release-triage.md.",
       "changes_of_interest": {
         "config_surfaces": [
           "AGENTS.md (nested; CLAUDE.md is not read)",
@@ -535,9 +535,9 @@
         "mcp"
       ],
       "validation_status": "implemented",
-      "last_known_version": "1.4.10",
+      "last_known_version": "1.4.11",
       "tracked": true,
-      "notes": "Native static configuration validation. Read official CLI release notes with agy changelog, documented at https://antigravity.google/docs/cli/commands/changelog; the old /docs/release-notes URL is unavailable. v1.4.10 has six runtime fixes and byte-identical published settings/plugin schemas. Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. No extension or command execution during validation.",
+      "notes": "Native static configuration validation. Read official CLI release notes with agy changelog, documented at https://antigravity.google/docs/cli/commands/changelog; the old /docs/release-notes URL is unavailable. v1.4.10 has six runtime fixes and byte-identical published settings/plugin schemas. Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. No extension or command execution during validation. Latest review: knowledge-base/reviews/2026-10-30-release-triage.md.",
       "html_url": "https://antigravity.google/docs/cli/commands/changelog",
       "content_url": "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json",
       "version_extractor": "antigravity-manifest",
@@ -628,7 +628,7 @@
       "validation_status": "pending",
       "github_repo": "MoonshotAI/kimi-code",
       "release_tag_regex": "^@moonshot-ai/kimi-code@[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "@moonshot-ai/kimi-code@2.4.0",
+      "last_known_version": "@moonshot-ai/kimi-code@2.4.1",
       "tracked": true,
       "notes": "Tracks the current Kimi Code CLI release line, not the retired Python kimi-cli. Release tracking is implemented; tool-specific validation remains pending. https://moonshotai.github.io/kimi-code/"
     }

@@ -1207,7 +1207,29 @@ pub(crate) fn check_policies(
     field: &str,
     lines: OpenCodeLines,
 ) {
-    const ACTIONS: &[&str] = &["provider.use", "tool.use", "integration.use"];
+    const LEGACY_ACTIONS: &[&str] = &["provider.use", "tool.use", "integration.use"];
+    const ACTIONS: &[&str] = &[
+        "provider.use",
+        "tool.use",
+        "integration.connect",
+        "integration.use",
+        "mcp.use",
+        "skill.use",
+        "plugin.use",
+    ];
+    let separate_actions = !lines.v1_only()
+        && out
+            .config
+            .get_opencode_version()
+            .and_then(|version| {
+                semver::Version::parse(version.trim().trim_start_matches(['v', 'V'])).ok()
+            })
+            .is_none_or(|version| version >= semver::Version::new(2, 2, 3));
+    let actions = if separate_actions {
+        ACTIONS
+    } else {
+        LEGACY_ACTIONS
+    };
     let Some(items) = node.arr() else {
         if !node.is_null() {
             out.error(
@@ -1244,9 +1266,10 @@ pub(crate) fn check_policies(
         }
         let text = |name: &str| item.at(name).and_then(Node::str);
         match text("action") {
-            Some(action) if ACTIONS.contains(&action) => {}
+            Some(action) if actions.contains(&action) => {}
             Some(action) => problems.push(format!(
-                "action '{action}' is not provider.use, tool.use or integration.use"
+                "action '{action}' is not one of {}",
+                actions.join(", ")
             )),
             None => problems.push("action is missing or not a string".to_string()),
         }
@@ -1291,7 +1314,7 @@ pub(crate) fn check_policies(
             "tool.use" => {
                 (resource != "*" && !resource.contains(':')).then_some("<action>:<value>")
             }
-            "integration.use" => (resource != "*"
+            "integration.use" if !separate_actions => (resource != "*"
                 && !["mcp:", "skill:", "plugin:"]
                     .iter()
                     .any(|prefix| resource.starts_with(prefix)))
@@ -1312,6 +1335,18 @@ pub(crate) fn check_policies(
                 t!("rules.oc_pol_001.suggestion"),
             );
         }
+        // 2.2.3 decodes legacy prefixed integration rules into the new action
+        // before evaluating policy order. Use that same form for shadow checks.
+        let (action, resource) = if separate_actions && action == "integration.use" {
+            match resource.split_once(':') {
+                Some(("mcp", value)) => ("mcp.use", value),
+                Some(("skill", value)) => ("skill.use", value),
+                Some(("plugin", value)) => ("plugin.use", value),
+                _ => (action, resource),
+            }
+        } else {
+            (action, resource)
+        };
         rules.push(Rule {
             item,
             action,
