@@ -231,17 +231,21 @@ fn as_015_matches_parent_and_global_ignore_scope() {
     }
     // Isolate Git's home/config discovery without mutating the test process
     // environment or the user's global exclusions.
-    let temp = tempfile::tempdir().unwrap();
+    // Exercise the tilde in Windows 8.3 temp roots on every platform.
+    let temp = tempfile::Builder::new()
+        .prefix("agnix-ignore~1-")
+        .tempdir()
+        .unwrap();
     let home = temp.path().join("home");
     fs::create_dir_all(&home).unwrap();
     let excludes = home.join("global-ignore");
     fs::write(&excludes, "global.bin\n").unwrap();
     fs::write(
         home.join(".gitconfig"),
-        format!(
-            "[core]\nexcludesFile = {}\n",
-            excludes.to_string_lossy().replace('\\', "/")
-        ),
+        // Windows temp roots can contain an 8.3 component such as RUNNER~1.
+        // The ignore crate expands every literal '~' in a configured path.
+        // A leading home shorthand expands once without corrupting that name.
+        "[core]\nexcludesFile = ~/global-ignore\n",
     )
     .unwrap();
     let output = std::process::Command::new(std::env::current_exe().unwrap())
