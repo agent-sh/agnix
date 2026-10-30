@@ -30,7 +30,7 @@ cache poisoning from pull requests.
 
 When updating actions, use these SHA commits. Generated from the workflow
 files themselves - if this table and a `uses:` line disagree, the workflow
-is authoritative (last verified: 2026-10-24).
+is authoritative (last verified: 2026-10-31).
 
 ```yaml
 # GitHub Official Actions
@@ -39,9 +39,9 @@ actions/checkout@v7.0.1: 3d3c42e5aac5ba805825da76410c181273ba90b1
 actions/configure-pages@v6.0.0: 45bfe0192ca1faeb007ade9deae92b16b8254a0d
 actions/deploy-pages@v5.0.1: 368f82528645a54fb793d4d04e342629a3f51346
 actions/download-artifact@v8.0.2: 9000827ccba6bdab643e8b6fd33ac0654aef8333
-actions/setup-java@v6.0.1: de7274f081f381c8f8158605e0321c36c376e2e6
+actions/setup-java@v6.1.0: b843ebf9b913146b38da2eaa7aeddf76074ae1ad
 actions/setup-node@v7.1.0: 949feb2413d6458794dcd2491c4babbbce0c15c1
-actions/setup-python@v7.0.0: 5fda3b95a4ea91299a34e894583c3862153e4b97
+actions/setup-python@v7.1.0: 6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
 actions/stale@v11.0.0: 4391f3da665fdf50b6810c1a66712fb9ba21aa93
 actions/upload-artifact@v7.0.2: cf430e030ddbb5b0abf93d22962f4752f3646cd9
 actions/upload-pages-artifact@v5.0.0: fc324d3547104276b827a68afc52ff2a11cc49c9
@@ -50,19 +50,19 @@ rhysd/actionlint@v1.7.12: 914e7df21a07ef503a81201c76d2b11c789d3fca
 # Rust Tooling
 Swatinem/rust-cache@v2.9.3: d1527c8f67ef9af357290475d4af4b0fab8f12e0
 dtolnay/rust-toolchain@stable: 4be9e76fd7c4901c61fb841f559994984270fce7
-taiki-e/install-action@v2.87.29: 8cca0918f8471c33515202b73f56ab27f2bed283
+taiki-e/install-action@v2.87.32: 5488ac5a951645ce95062214902ac4b6bc1a1037
 
 # Security
 EmbarkStudios/cargo-deny-action@v2.1.1: 3c6349835b2b7b196a839186cb8b78e02f7b5f25
-github/codeql-action/analyze@v4.39.0: 6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee
-github/codeql-action/init@v4.39.0: 6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee
-github/codeql-action/upload-sarif@v4.39.0: 6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee
+github/codeql-action/analyze@v4.39.1: 9b3254085494b55a0f7c4c2b3d2d52cc712ce370
+github/codeql-action/init@v4.39.1: 9b3254085494b55a0f7c4c2b3d2d52cc712ce370
+github/codeql-action/upload-sarif@v4.39.1: 9b3254085494b55a0f7c4c2b3d2d52cc712ce370
 
 # Release
 softprops/action-gh-release@v3.0.3: efb35369e0ad2afab669f228072c1b0d510eae64
 
 # Claude Code
-anthropics/claude-code-action@v1.0.255: e4a6faad497d33dbc7144135c75e41f82f0bf6c0
+anthropics/claude-code-action@v1.0.264: d70510b174a1244958df0b03166a54912811f3e6
 ```
 
 ## Updating Action Versions
