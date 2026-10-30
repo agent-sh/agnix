@@ -168,9 +168,9 @@ const SKILLS_MAX_CONTEXT_TOKENS_CAP: u64 = 10_000;
 const VALID_WINDOWS_SANDBOX_VALUES: &[&str] = &["elevated", "unelevated"];
 
 const KNOWN_FEATURE_KEYS: &[&str] = &[
+    "app_server_websocket_compression",
     "apply_patch_freeform",
     "apply_patch_streaming_events",
-    "app_server_websocket_compression",
     "apps",
     "apps_mcp_path_override",
     "auth_elicitation",
