@@ -14,6 +14,9 @@
 
 > Running open models for your company? [**Tiyuvta**](https://tiyuvta.ai/services/) helps with model choice, deployment and optimization, and fine-tuning on your hardware or cloud account.
 
+> Built and maintained with a lot of agent tokens and hours.
+> If it saves you time, [sponsoring](https://github.com/sponsors/avifenesh) helps keep it going.
+
 <p align="center">Catch broken agent configs before your AI tools silently ignore them.<br>757 rules across Claude Code, Codex CLI, OpenCode, Cursor, Copilot, and more -<br>validating CLAUDE.md, SKILL.md, hooks, MCP configs, and other agent files.</p>
 
 <p align="center"><strong>Auto-fix</strong> | <strong><a href="https://github.com/marketplace/actions/agnix-ci">GitHub Action</a></strong> | <strong><a href="https://marketplace.visualstudio.com/items?itemName=avifenesh.agnix">VS Code</a> + <a href="https://plugins.jetbrains.com/plugin/30087-agnix">JetBrains</a> + <a href="https://github.com/agent-sh/agnix.nvim">Neovim</a> + <a href="https://zed.dev/extensions?query=agnix">Zed</a></strong></p>
