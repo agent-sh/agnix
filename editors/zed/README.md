@@ -10,8 +10,7 @@ Provides real-time validation of AI agent configuration files (CLAUDE.md, AGENTS
 - Real-time diagnostics as you type
 - Quick-fix code actions for auto-fixable issues
 - Hover documentation for configuration fields
-- 416 validation rules across 40 categories
-- MDC file type support for Cursor rules
+- 757 validation rules across 46 categories
 
 ## Requirements
 
@@ -33,8 +32,8 @@ agnix reads configuration from `.agnix.toml` in your project root. See the [Conf
 Example `.agnix.toml`:
 
 ```toml
-target = "claude-code"
-severity = "warning"
+tools = ["claude-code"]
+severity = "Warning"
 
 [rules]
 disabled_rules = ["AS-001"]
@@ -74,18 +73,7 @@ The extension downloads the `agnix-lsp` binary from GitHub releases. If the down
 
 **Manual LSP binary**
 
-If automatic download does not work, install `agnix-lsp` manually:
-
-```bash
-# npm (easiest)
-npm install -g agnix
-
-# Cargo
-cargo install agnix-lsp
-
-# Or download from releases
-# https://github.com/agent-sh/agnix/releases
-```
+The extension does not use an `agnix-lsp` on your PATH. It always runs the copy it downloads, so the download has to succeed once.
 
 ## License
 

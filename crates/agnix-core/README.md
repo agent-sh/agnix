@@ -56,10 +56,10 @@ use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = LintConfig::default();
-    let result = validate_project_rules(Path::new("."), &config)?;
+    let diagnostics = validate_project_rules(Path::new("."), &config)?;
 
-    for diag in result.diagnostics {
-        println!("{}:{} {} {} {}", diag.file.display(), diag.line, diag.rule, diag.level, diag.message);
+    for diag in diagnostics {
+        println!("{}:{} {} {:?} {}", diag.file.display(), diag.line, diag.rule, diag.level, diag.message);
     }
 
     Ok(())

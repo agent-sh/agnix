@@ -49,8 +49,10 @@ agnix schema --output schemas/agnix.json
 - `agnix [path]` / `agnix validate [path]` - Validate configs
 - `agnix init` - Generate starter `.agnix.toml`
 - `agnix eval <manifest.yaml>` - Evaluate rule efficacy against labeled fixtures
+- `agnix explain <rule-id>` - Explain a rule and its evidence
 - `agnix telemetry [status|enable|disable]` - Manage opt-in telemetry
 - `agnix schema [--output file]` - Output JSON Schema for `.agnix.toml`
+- `agnix tools check|detect` - Compare `[tool_versions]` pins in `.agnix.toml` with the CLIs on PATH
 
 ## License
 

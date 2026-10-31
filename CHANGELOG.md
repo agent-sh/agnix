@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Correct the package and editor READMEs: the agnix-core `validate_project_rules` example now compiles, the Zed `.agnix.toml` example uses valid keys, npm and Homebrew are no longer listed as `agnix-lsp` installs, the Zed rule count and the npm and CLI command lists match the binary, and the Neovim link points at `editors/neovim`.
+
 ### Changed
+- Show the sponsor note as a centered badge in the README.
 - Update similar to 3.2.1, rmcp to 3.8.0, tokio to 1.54.1, notify to 8.2.1 and ignore to 0.4.34.
 - Refresh CodeQL, Python, Java, Claude Code and installer actions, keeping the workflow pin reference in sync.
 

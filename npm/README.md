@@ -68,23 +68,26 @@ console.log(agnix.version());
 ## Options
 
 ```
-agnix [OPTIONS] [PATH] [COMMAND]
+agnix [OPTIONS] [PATHS]... [COMMAND]
 
 Commands:
   validate   Validate agent configs
   init       Initialize config file
   eval       Evaluate rule efficacy against labeled test cases
+  explain    Explain a validation rule by ID
   telemetry  Manage telemetry settings (opt-in usage analytics)
   schema     Output JSON Schema for configuration files
+  tools      Check or detect tool versions against `.tool_versions` in `.agnix.toml`
 
 Common options:
   -s, --strict
-  -t, --target <generic|claude-code|cursor|codex>
+  -t, --target <pi|antigravity|grok-code|generic|claude-code|cursor|codex|kiro>
   -c, --config <CONFIG>
       --fix
       --dry-run
       --fix-safe
-      --format <text|json|sarif>
+      --fix-unsafe
+      --format <text|json|sarif|github>
   -w, --watch
   -v, --verbose
   -V, --version

@@ -18,7 +18,7 @@ Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/item
 - **Quick-fix preview** - See diff before applying fixes
 - **Safe fixes** - Apply only high-confidence fixes automatically
 - **Ignore rules** - Disable rules directly from the editor
-- **Multi-tool** - Claude Code, Codex CLI, OpenCode, Kiro, GitHub Copilot, Cline, Cursor, Amp, Gemini CLI, Windsurf (Devin Desktop)
+- **Multi-tool** - Claude Code, Codex CLI, OpenCode, Kiro, Pi, Antigravity CLI, Grok Code, GitHub Copilot, Cline, Cursor, Amp, Gemini CLI, Windsurf (Devin Desktop)
 
 ![Validation in action](assets/vscode-validation.png)
 
@@ -49,7 +49,7 @@ Access via Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 | `agnix: Validate Current File` | `Ctrl+Shift+V` | Validate active file |
 | `agnix: Validate Workspace` | - | Validate all agent configs including project-level rules (XP-004/005/006, VER-001) |
 | `agnix: Fix All Issues in File` | `Ctrl+Shift+.` | Apply all available fixes |
-| `agnix: Preview Fixes` | - | Browse fixes with diff preview |
+| `agnix: Preview Fixes` | `Ctrl+Shift+P Ctrl+Shift+F` | Browse fixes with diff preview |
 | `agnix: Fix All Safe Issues` | `Ctrl+Alt+.` | Apply only safe fixes |
 | `agnix: Show All Rules` | - | Browse 757 rules by category |
 
@@ -76,9 +76,11 @@ If you prefer to install manually:
 # From crates.io
 cargo install agnix-lsp
 
-# Or via Homebrew
-brew tap agent-sh/agnix && brew install agnix
+# Or download agnix-lsp from the releases page
+# https://github.com/agent-sh/agnix/releases
 ```
+
+Homebrew, npm and pip install only the `agnix` CLI, not `agnix-lsp`.
 
 ## Settings
 
@@ -115,6 +117,9 @@ Enable or disable validation rule categories. All default to `true`.
 | `agnix.rules.copilot` | COP-* | GitHub Copilot instructions |
 | `agnix.rules.cursor` | CUR-* | Cursor project rules |
 | `agnix.rules.promptEngineering` | PE-* | Prompt engineering |
+| `agnix.rules.pi` | PI-* | Pi configuration |
+| `agnix.rules.antigravity` | AGY-* | Antigravity CLI configuration |
+| `agnix.rules.grokCode` | GRK-* | Grok Code configuration |
 | `agnix.rules.disabledRules` | - | Specific rule IDs to disable |
 
 ### Version Pinning

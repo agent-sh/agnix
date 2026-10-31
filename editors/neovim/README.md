@@ -25,9 +25,6 @@ Provides real-time validation of AI agent configuration files (CLAUDE.md, AGENTS
 Install the LSP server:
 
 ```bash
-# npm (easiest)
-npm install -g agnix
-
 # Cargo
 cargo install agnix-lsp
 
