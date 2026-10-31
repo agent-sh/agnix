@@ -73,7 +73,7 @@ The extension downloads the `agnix-lsp` binary from GitHub releases. If the down
 
 **Manual LSP binary**
 
-The extension does not use an `agnix-lsp` on your PATH. It always runs the copy it downloads, so the download has to succeed once.
+The extension does not use an `agnix-lsp` on your PATH. It runs the copy it downloads and checks GitHub releases each time Zed starts, so Zed needs network access to start the server.
 
 ## License
 

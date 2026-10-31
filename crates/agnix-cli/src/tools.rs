@@ -1,13 +1,13 @@
 //! `agnix tools` subcommand family.
 //!
-//! - `agnix tools check [--strict]` - compare `.tool_versions` in `.agnix.toml`
+//! - `agnix tools check [--strict]` - compare `[tool_versions]` in `.agnix.toml`
 //!   against versions of the corresponding CLIs on PATH. Warn by default,
 //!   fail with `--strict`.
 //! - `agnix tools detect [--write]` - run `<cli> --version` for each supported
 //!   tool found on PATH and print a TOML snippet. With `--write`, merge the
 //!   detected versions into `.agnix.toml`'s `[tool_versions]` section.
 //!
-//! Why this exists: the `.tool_versions` block in `.agnix.toml` is easy to
+//! Why this exists: the `[tool_versions]` block in `.agnix.toml` is easy to
 //! forget to update when an upstream CLI is bumped (via mise, asdf, brew,
 //! npm, cargo, etc.). This command family keeps the pin in sync so future
 //! version-aware validators (tracked separately) have trustworthy inputs.

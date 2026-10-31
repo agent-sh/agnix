@@ -77,7 +77,7 @@ Commands:
   explain    Explain a validation rule by ID
   telemetry  Manage telemetry settings (opt-in usage analytics)
   schema     Output JSON Schema for configuration files
-  tools      Check or detect tool versions against `.tool_versions` in `.agnix.toml`
+  tools      Check or detect tool versions against `[tool_versions]` in `.agnix.toml`
 
 Common options:
   -s, --strict

@@ -277,7 +277,7 @@ enum Commands {
         fix: bool,
     },
 
-    /// Check or detect tool versions against `.tool_versions` in `.agnix.toml`
+    /// Check or detect tool versions against `[tool_versions]` in `.agnix.toml`
     #[command(subcommand)]
     Tools(ToolsCommand),
 }
