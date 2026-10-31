@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update similar to 3.2.1, rmcp to 3.8.0, tokio to 1.54.1, notify to 8.2.1 and ignore to 0.4.34.
 - Refresh CodeQL, Python, Java, Claude Code and installer actions, keeping the workflow pin reference in sync.
 
+### Security
+- Clear new npm advisories in the website and VS Code extension dependencies: follow-redirects 1.16.2 (GHSA-mrwp-f3q8-3g9p), joi 17.13.9 (GHSA-4528-x5fx-h6hg), minimatch 11.0.3 (GHSA-g3hv-75wg-m249) and glob 14.0.3 (GHSA-3g3m-2fjr-6pw4).
+
 ## [0.60.2] - 2026-10-30
 
 ### Fixed
