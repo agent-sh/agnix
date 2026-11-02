@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.3] - 2026-11-02
+
 ### Changed
 
+- Update the default language-server download to agnix-lsp 0.60.3, with Kiro CLI 2.35+/2.36.0 and OpenCode 2 v2.2.5 compatibility fixes.
 - Extend the declared JetBrains IDE compatibility range through build `263.*`.
 
 ## [0.60.2] - 2026-10-30

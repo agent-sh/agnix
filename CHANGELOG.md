@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.3] - 2026-11-02
+
 ### Fixed
 - Accept Kiro CLI 2.35+/2.36.0 additions: the documented `app.warnOnElevatedPrivileges` boolean setting joins the KR-SET-005 known-key list, and the Kiro-written `approve-for-me` policy preset joins KR-PM-006's valid presets.
 - Accept OpenCode 2 v2.2.5's percentage form of `compaction.buffer` (a string such as "20%", from 1% up to but not including 100%) when the file targets OpenCode 2; OpenCode 1 keeps the integer-only contract.
