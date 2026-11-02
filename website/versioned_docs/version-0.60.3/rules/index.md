@@ -1,0 +1,764 @@
+# Rules Reference
+
+This section contains all `757` validation rules generated from `knowledge-base/rules.json`.
+`125` rules have automatic fixes.
+
+| Rule | Name | Severity | Category | Auto-Fix |
+|------|------|----------|----------|----------|
+| [AGM-001](./generated/agm-001.md) | Valid Markdown Structure | MEDIUM | AGENTS.md | Yes (unsafe) |
+| [AGM-002](./generated/agm-002.md) | Missing Section Headers | LOW | AGENTS.md | No |
+| [AGM-004](./generated/agm-004.md) | Missing Project Context | LOW | AGENTS.md | No |
+| [AGM-007](./generated/agm-007.md) | Root AGENTS.md Lists No Build or Test Command | LOW | AGENTS.md | No |
+| [AGM-008](./generated/agm-008.md) | Legacy AGENT.md Without AGENTS.md | LOW | AGENTS.md | No |
+| [AGM-009](./generated/agm-009.md) | Nested AGENTS.md Without a Root AGENTS.md | LOW | AGENTS.md | No |
+| [AMP-001](./generated/amp-001.md) | Invalid Amp Check File | HIGH | Amp Checks | Yes (unsafe) |
+| [AMP-002](./generated/amp-002.md) | Invalid Amp severity-default | MEDIUM | Amp Checks | Yes (unsafe) |
+| [AMP-003](./generated/amp-003.md) | Invalid globs in a File AGENTS.md Mentions | MEDIUM | Amp Checks | No |
+| [AMP-004](./generated/amp-004.md) | Invalid Amp Settings Configuration | HIGH | Amp Checks | Yes (unsafe) |
+| [AMP-005](./generated/amp-005.md) | Amp Skill Defines MCP Servers Twice | MEDIUM | Amp Checks | No |
+| [AMP-006](./generated/amp-006.md) | Amp ID Token Outside HTTPS Headers | HIGH | Amp Checks | No |
+| [AMP-007](./generated/amp-007.md) | Invalid amp.mcpPermissions Rule | MEDIUM | Amp Checks | No |
+| [AMP-008](./generated/amp-008.md) | Amp Skill MCP Server Without includeTools | LOW | Amp Checks | No |
+| [AMP-010](./generated/amp-010.md) | Invalid Amp MCP Server Configuration | HIGH | Amp Checks | No |
+| [AMP-SK-001](./generated/amp-sk-001.md) | Amp Skill Uses Unsupported Field | MEDIUM | Amp Skills | Yes (safe/unsafe) |
+| [AMP-SK-002](./generated/amp-sk-002.md) | Amp Skill Masked by an .agents/skills Copy | LOW | Amp Skills | No |
+| [AMP-SK-003](./generated/amp-sk-003.md) | Amp Skill Too Deep to Be Discovered | MEDIUM | Amp Skills | No |
+| [AS-001](./generated/as-001.md) | Missing Frontmatter | HIGH | Agent Skills | Yes (safe) |
+| [AS-002](./generated/as-002.md) | Missing Required Field: name | HIGH | Agent Skills | Yes (safe) |
+| [AS-003](./generated/as-003.md) | Missing Required Field: description | HIGH | Agent Skills | Yes (safe) |
+| [AS-004](./generated/as-004.md) | Invalid Name Format | HIGH | Agent Skills | Yes (safe/unsafe) |
+| [AS-005](./generated/as-005.md) | Name Starts/Ends with Hyphen | HIGH | Agent Skills | Yes (safe) |
+| [AS-006](./generated/as-006.md) | Consecutive Hyphens in Name | HIGH | Agent Skills | Yes (safe) |
+| [AS-008](./generated/as-008.md) | Description Too Short | HIGH | Agent Skills | No |
+| [AS-009](./generated/as-009.md) | Description Contains Angle Brackets (Codex) | HIGH | Agent Skills | Yes (safe) |
+| [AS-011](./generated/as-011.md) | Invalid Compatibility Length | HIGH | Agent Skills | No |
+| [AS-012](./generated/as-012.md) | Content Exceeds 500 Lines | MEDIUM | Agent Skills | No |
+| [AS-013](./generated/as-013.md) | Reference Chain Too Deep | MEDIUM | Agent Skills | No |
+| [AS-015](./generated/as-015.md) | Claude API Upload Size Exceeds 30MB | MEDIUM | Agent Skills | No |
+| [AS-016](./generated/as-016.md) | Skill Parse Error | HIGH | Agent Skills | No |
+| [AS-017](./generated/as-017.md) | Name Must Match Parent Directory | HIGH | Agent Skills | No |
+| [AS-020](./generated/as-020.md) | Skill Description Lacks a When-to-Use Trigger | LOW | Agent Skills | No |
+| [AS-021](./generated/as-021.md) | SKILL.md Body Exceeds 5,000 Tokens | MEDIUM | Agent Skills | No |
+| [AS-022](./generated/as-022.md) | Bundled Script Prompts for Interactive Input | MEDIUM | Agent Skills | No |
+| [AS-023](./generated/as-023.md) | Bundled File Not Mentioned in the Skill | LOW | Agent Skills | No |
+| [AS-024](./generated/as-024.md) | Unpinned Package-Runner Command in Skill | LOW | Agent Skills | No |
+| [AS-025](./generated/as-025.md) | Duplicate Skill Name Across Skill Roots | LOW | Agent Skills | No |
+| [AS-026](./generated/as-026.md) | Generic Reference Pointer Without Load Condition | LOW | Agent Skills | No |
+| [AS-027](./generated/as-027.md) | Unfinished TODO Scaffold Placeholder in Skill | MEDIUM | Agent Skills | No |
+| [CC-AG-001](./generated/cc-ag-001.md) | Missing Name Field | HIGH | Claude Agents | Yes (unsafe) |
+| [CC-AG-002](./generated/cc-ag-002.md) | Missing Description Field | HIGH | Claude Agents | Yes (safe) |
+| [CC-AG-003](./generated/cc-ag-003.md) | Invalid Model Value | HIGH | Claude Agents | Yes (unsafe) |
+| [CC-AG-004](./generated/cc-ag-004.md) | Invalid Permission Mode | HIGH | Claude Agents | Yes (unsafe) |
+| [CC-AG-005](./generated/cc-ag-005.md) | Preloaded Skill Not Found or Not Preloadable | MEDIUM | Claude Agents | No |
+| [CC-AG-006](./generated/cc-ag-006.md) | Tool/Disallowed Conflict | MEDIUM | Claude Agents | No |
+| [CC-AG-007](./generated/cc-ag-007.md) | Agent Parse Error | HIGH | Claude Agents | No |
+| [CC-AG-008](./generated/cc-ag-008.md) | Invalid Memory Scope | HIGH | Claude Agents | Yes (unsafe) |
+| [CC-AG-009](./generated/cc-ag-009.md) | Invalid Tool Name in Tools List | HIGH | Claude Agents | No |
+| [CC-AG-010](./generated/cc-ag-010.md) | Invalid Tool Name in DisallowedTools | HIGH | Claude Agents | No |
+| [CC-AG-011](./generated/cc-ag-011.md) | Invalid Hooks in Agent Frontmatter | HIGH | Claude Agents | No |
+| [CC-AG-012](./generated/cc-ag-012.md) | Bypass Permissions Warning | MEDIUM | Claude Agents | No |
+| [CC-AG-014](./generated/cc-ag-014.md) | Invalid Effort Value | MEDIUM | Claude Agents | Yes (unsafe) |
+| [CC-AG-015](./generated/cc-ag-015.md) | Invalid Isolation Value | MEDIUM | Claude Agents | Yes (unsafe) |
+| [CC-AG-017](./generated/cc-ag-017.md) | Invalid MaxTurns Value | MEDIUM | Claude Agents | No |
+| [CC-AG-019](./generated/cc-ag-019.md) | Unknown or Ignored Agent Frontmatter Field | MEDIUM | Claude Agents | No |
+| [CC-AG-020](./generated/cc-ag-020.md) | Invalid Local Agent Name | HIGH | Claude Agents | No |
+| [CC-AG-021](./generated/cc-ag-021.md) | Subagent Descriptions Over Startup Budget | MEDIUM | Claude Agents | No |
+| [CC-AG-022](./generated/cc-ag-022.md) | Subagent Inherits All Tools | LOW | Claude Agents | No |
+| [CC-AG-023](./generated/cc-ag-023.md) | Duplicate Subagent Name | MEDIUM | Claude Agents | No |
+| [CC-AG-024](./generated/cc-ag-024.md) | disallowedTools Specifier Removes the Whole Tool | MEDIUM | Claude Agents | No |
+| [CC-HK-001](./generated/cc-hk-001.md) | Invalid Hook Event | HIGH | Claude Hooks | Yes (safe/unsafe) |
+| [CC-HK-002](./generated/cc-hk-002.md) | Prompt or Agent Hook on Wrong Event | HIGH | Claude Hooks | No |
+| [CC-HK-003](./generated/cc-hk-003.md) | Matcher Hint for Tool Events | LOW | Claude Hooks | No |
+| [CC-HK-005](./generated/cc-hk-005.md) | Missing Type Field | HIGH | Claude Hooks | Yes (safe) |
+| [CC-HK-006](./generated/cc-hk-006.md) | Missing Command Field | HIGH | Claude Hooks | No |
+| [CC-HK-007](./generated/cc-hk-007.md) | Missing Prompt Field | HIGH | Claude Hooks | No |
+| [CC-HK-008](./generated/cc-hk-008.md) | Script File Not Found | HIGH | Claude Hooks | No |
+| [CC-HK-009](./generated/cc-hk-009.md) | Dangerous Command Pattern | MEDIUM | Claude Hooks | No |
+| [CC-HK-010](./generated/cc-hk-010.md) | SessionEnd Hook Timeout Above Budget | MEDIUM | Claude Hooks | No |
+| [CC-HK-011](./generated/cc-hk-011.md) | Invalid Timeout Value | HIGH | Claude Hooks | Yes (unsafe) |
+| [CC-HK-012](./generated/cc-hk-012.md) | Hooks Parse Error | HIGH | Claude Hooks | No |
+| [CC-HK-013](./generated/cc-hk-013.md) | Async on Non-Command Hook | HIGH | Claude Hooks | Yes (safe) |
+| [CC-HK-014](./generated/cc-hk-014.md) | Once Outside Skill Frontmatter | MEDIUM | Claude Hooks | No |
+| [CC-HK-015](./generated/cc-hk-015.md) | Model on Command Hook | MEDIUM | Claude Hooks | Yes (safe) |
+| [CC-HK-016](./generated/cc-hk-016.md) | Unknown Hook Type | HIGH | Claude Hooks | Yes (unsafe) |
+| [CC-HK-018](./generated/cc-hk-018.md) | Matcher on Ignored Event | LOW | Claude Hooks | Yes (safe) |
+| [CC-HK-020](./generated/cc-hk-020.md) | HTTP Hook Missing URL | HIGH | Claude Hooks | No |
+| [CC-HK-021](./generated/cc-hk-021.md) | Invalid If Field | HIGH | Claude Hooks | No |
+| [CC-HK-022](./generated/cc-hk-022.md) | Invalid Shell Value | MEDIUM | Claude Hooks | Yes (unsafe) |
+| [CC-HK-023](./generated/cc-hk-023.md) | Once Field Not Boolean | LOW | Claude Hooks | Yes (unsafe) |
+| [CC-HK-024](./generated/cc-hk-024.md) | Headers Missing AllowedEnvVars | MEDIUM | Claude Hooks | Yes (safe) |
+| [CC-HK-025](./generated/cc-hk-025.md) | Invalid Matcher Value | MEDIUM | Claude Hooks | No |
+| [CC-HK-026](./generated/cc-hk-026.md) | MCP Tool Hook Missing Server | HIGH | Claude Hooks | No |
+| [CC-HK-027](./generated/cc-hk-027.md) | MCP Tool Hook Missing Tool | HIGH | Claude Hooks | No |
+| [CC-HK-028](./generated/cc-hk-028.md) | Rejected user_config Interpolation in Shell-Form Command | HIGH | Claude Hooks | No |
+| [CC-HK-029](./generated/cc-hk-029.md) | Invalid or Ineffective onFailure | MEDIUM | Claude Hooks | No |
+| [CC-HK-030](./generated/cc-hk-030.md) | Unquoted Path Placeholder in Shell-Form Hook | MEDIUM | Claude Hooks | No |
+| [CC-HK-031](./generated/cc-hk-031.md) | Exec-Form Command With Embedded Arguments | HIGH | Claude Hooks | No |
+| [CC-HK-032](./generated/cc-hk-032.md) | PowerShell Hook Placeholder Not Expanded | HIGH | Claude Hooks | No |
+| [CC-HK-033](./generated/cc-hk-033.md) | MCP Matcher Without Wildcard | HIGH | Claude Hooks | Yes (unsafe) |
+| [CC-HK-034](./generated/cc-hk-034.md) | Plugin Hook Names Own MCP Server by Bare Key | HIGH | Claude Hooks | No |
+| [CC-HK-035](./generated/cc-hk-035.md) | Broad PermissionRequest Matcher | MEDIUM | Claude Hooks | No |
+| [CC-MEM-001](./generated/cc-mem-001.md) | Invalid Import Path | HIGH | Claude Memory | No |
+| [CC-MEM-002](./generated/cc-mem-002.md) | Circular Import | HIGH | Claude Memory | No |
+| [CC-MEM-003](./generated/cc-mem-003.md) | Import Depth Exceeds 4 | HIGH | Claude Memory | No |
+| [CC-MEM-004](./generated/cc-mem-004.md) | Invalid Command Reference | MEDIUM | Claude Memory | No |
+| [CC-MEM-010](./generated/cc-mem-010.md) | README Duplication | MEDIUM | Claude Memory | No |
+| [CC-MEM-011](./generated/cc-mem-011.md) | Invalid Paths Glob in Rules | HIGH | Claude Memory | No |
+| [CC-MEM-012](./generated/cc-mem-012.md) | Rules File Unknown Frontmatter Key | MEDIUM | Claude Memory | Yes (unsafe) |
+| [CC-OS-001](./generated/cc-os-001.md) | Output Style Missing Description | LOW | claude-output-styles | No |
+| [CC-OS-002](./generated/cc-os-002.md) | Output Style Invalid keep-coding-instructions Type | HIGH | claude-output-styles | Yes (unsafe) |
+| [CC-OS-003](./generated/cc-os-003.md) | Output Style Unknown Frontmatter Key | MEDIUM | claude-output-styles | No |
+| [CC-OS-004](./generated/cc-os-004.md) | Output Style Empty Body | MEDIUM | claude-output-styles | No |
+| [CC-OS-006](./generated/cc-os-006.md) | Invalid Output Style Frontmatter Syntax | HIGH | claude-output-styles | No |
+| [CC-OS-007](./generated/cc-os-007.md) | outputStyle Case Mismatch | MEDIUM | claude-output-styles | Yes (unsafe) |
+| [CC-MEM-014](./generated/cc-mem-014.md) | Instruction File Exceeds 200 Lines | MEDIUM | Claude Memory | No |
+| [CC-MEM-015](./generated/cc-mem-015.md) | Always-Loaded Instructions Exceed Combined Size | LOW | Claude Memory | No |
+| [CC-MEM-016](./generated/cc-mem-016.md) | MEMORY.md Exceeds Load Limit | MEDIUM | Claude Memory | No |
+| [CC-MEM-017](./generated/cc-mem-017.md) | Emphasis Overuse | LOW | Claude Memory | No |
+| [CC-MEM-018](./generated/cc-mem-018.md) | AGENTS.md Not Imported | LOW | Claude Memory | No |
+| [CC-MEM-019](./generated/cc-mem-019.md) | Import Path Quoted or Split by a Space | MEDIUM | Claude Memory | No |
+| [CC-MEM-020](./generated/cc-mem-020.md) | Personal Claude File Not Gitignored | LOW | Claude Memory | No |
+| [CC-MEM-021](./generated/cc-mem-021.md) | Directory Tree or File Listing in CLAUDE.md | LOW | Claude Memory | No |
+| [CC-PL-001](./generated/cc-pl-001.md) | Plugin Manifest Not in .claude-plugin/ | HIGH | Claude Plugins | No |
+| [CC-PL-002](./generated/cc-pl-002.md) | Components in .claude-plugin/ | HIGH | Claude Plugins | No |
+| [CC-PL-003](./generated/cc-pl-003.md) | Invalid Semver | LOW | Claude Plugins | Yes (unsafe) |
+| [CC-PL-004](./generated/cc-pl-004.md) | Missing Required/Recommended Plugin Field | HIGH | Claude Plugins | No |
+| [CC-PL-005](./generated/cc-pl-005.md) | Empty Plugin Name | HIGH | Claude Plugins | Yes (unsafe) |
+| [CC-PL-006](./generated/cc-pl-006.md) | Plugin Parse Error | HIGH | Claude Plugins | No |
+| [CC-PL-007](./generated/cc-pl-007.md) | Invalid Component Path | HIGH | Claude Plugins | Yes (safe) |
+| [CC-PL-008](./generated/cc-pl-008.md) | Component Inside .claude-plugin | HIGH | Claude Plugins | No |
+| [CC-PL-009](./generated/cc-pl-009.md) | Invalid Author Object | MEDIUM | Claude Plugins | No |
+| [CC-PL-010](./generated/cc-pl-010.md) | Invalid Homepage URL | HIGH | Claude Plugins | No |
+| [CC-PL-011](./generated/cc-pl-011.md) | LSP Server Missing Required Fields | HIGH | Claude Plugins | No |
+| [CC-PL-012](./generated/cc-pl-012.md) | Invalid UserConfig Key | MEDIUM | Claude Plugins | No |
+| [CC-PL-013](./generated/cc-pl-013.md) | Channel Missing Server Reference | MEDIUM | Claude Plugins | No |
+| [CC-PL-014](./generated/cc-pl-014.md) | Plugin Agent Field Ignored | MEDIUM | Claude Plugins | No |
+| [CC-PL-015](./generated/cc-pl-015.md) | Default Component Folder Shadowed by Manifest | MEDIUM | Claude Plugins | No |
+| [CC-PL-016](./generated/cc-pl-016.md) | Plugin Name Not Kebab-Case | MEDIUM | Claude Plugins | No |
+| [CC-SK-001](./generated/cc-sk-001.md) | Invalid Model Value | HIGH | Claude Skills | Yes (unsafe) |
+| [CC-SK-002](./generated/cc-sk-002.md) | Invalid Context Value | HIGH | Claude Skills | Yes (unsafe) |
+| [CC-SK-004](./generated/cc-sk-004.md) | Agent Without Context | HIGH | Claude Skills | Yes (unsafe) |
+| [CC-SK-005](./generated/cc-sk-005.md) | Invalid Agent Type | HIGH | Claude Skills | Yes (unsafe) |
+| [CC-SK-006](./generated/cc-sk-006.md) | Side-Effect Skill Without disable-model-invocation | MEDIUM | Claude Skills | Yes (unsafe) |
+| [CC-SK-007](./generated/cc-sk-007.md) | Unrestricted Bash | MEDIUM | Claude Skills | Yes (unsafe) |
+| [CC-SK-008](./generated/cc-sk-008.md) | Unknown Tool Name | HIGH | Claude Skills | No |
+| [CC-SK-010](./generated/cc-sk-010.md) | Invalid Hooks in Skill Frontmatter | HIGH | Claude Skills | No |
+| [CC-SK-013](./generated/cc-sk-013.md) | Fork Context Without Actionable Instructions | MEDIUM | Claude Skills | No |
+| [CC-SK-014](./generated/cc-sk-014.md) | Invalid disable-model-invocation Type | HIGH | Claude Skills | No |
+| [CC-SK-015](./generated/cc-sk-015.md) | Invalid user-invocable Type | HIGH | Claude Skills | No |
+| [CC-SK-016](./generated/cc-sk-016.md) | Indexed $ARGUMENTS Without argument-hint | LOW | Claude Skills | No |
+| [CC-SK-017](./generated/cc-sk-017.md) | Unknown Frontmatter Field | MEDIUM | Claude Skills | No |
+| [CC-SK-018](./generated/cc-sk-018.md) | Invalid Effort Value | MEDIUM | Claude Skills | Yes (unsafe) |
+| [CC-SK-019](./generated/cc-sk-019.md) | Invalid Paths Format | LOW | Claude Skills | No |
+| [CC-SK-020](./generated/cc-sk-020.md) | Invalid Shell Value | MEDIUM | Claude Skills | No |
+| [CC-SK-021](./generated/cc-sk-021.md) | Hardcoded User Directory Path | MEDIUM | Claude Skills | No |
+| [CC-SK-022](./generated/cc-sk-022.md) | Reserved Claude Skill Name | HIGH | Claude Skills | No |
+| [CC-SK-023](./generated/cc-sk-023.md) | Argument Placeholder Inside Code | MEDIUM | Claude Skills | No |
+| [CC-SK-024](./generated/cc-sk-024.md) | Skill Without Description | LOW | Claude Skills | No |
+| [CC-SK-025](./generated/cc-sk-025.md) | Skill Listing Over Budget | LOW | Claude Skills | No |
+| [CC-SK-027](./generated/cc-sk-027.md) | Legacy Custom Command File | LOW | Claude Skills | No |
+| [CC-SK-028](./generated/cc-sk-028.md) | Injected Command Not Run | MEDIUM | Claude Skills | No |
+| [CC-SK-030](./generated/cc-sk-030.md) | Skill Name Uses a Reserved Word | LOW | Claude Skills | No |
+| [CC-SK-031](./generated/cc-sk-031.md) | XML Tag in Skill Name or Description | LOW | Claude Skills | No |
+| [CC-SK-032](./generated/cc-sk-032.md) | Skill Description Not in Third Person | LOW | Claude Skills | No |
+| [CC-SK-033](./generated/cc-sk-033.md) | Vague Skill Name | LOW | Claude Skills | No |
+| [CC-SK-034](./generated/cc-sk-034.md) | Long Reference File Without Table of Contents | LOW | Claude Skills | No |
+| [CC-SET-001](./generated/cc-set-001.md) | Invalid prUrlTemplate Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-002](./generated/cc-set-002.md) | Non-boolean channelsEnabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-003](./generated/cc-set-003.md) | Invalid worktree.baseRef Value | MEDIUM | Claude Settings | No |
+| [CC-SET-004](./generated/cc-set-004.md) | Invalid Sandbox Path Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-005](./generated/cc-set-005.md) | Invalid parentSettingsBehavior Value | MEDIUM | Claude Settings | No |
+| [CC-SET-006](./generated/cc-set-006.md) | Non-boolean disableBundledSkills Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-007](./generated/cc-set-007.md) | Non-boolean enforceAvailableModels Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-008](./generated/cc-set-008.md) | Non-boolean sandbox.allowAppleEvents Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-009](./generated/cc-set-009.md) | Non-boolean attribution.sessionUrl Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-010](./generated/cc-set-010.md) | Invalid teammateMode Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-011](./generated/cc-set-011.md) | Non-boolean respondToBashCommands Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-012](./generated/cc-set-012.md) | Invalid sandbox.credentials Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-013](./generated/cc-set-013.md) | Non-boolean autoMode.classifyAllShell Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-016](./generated/cc-set-016.md) | File Path Rule Never Consulted | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-017](./generated/cc-set-017.md) | Non-boolean sandbox.filesystem.disabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-018](./generated/cc-set-018.md) | Non-boolean emojiCompletionEnabled Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-019](./generated/cc-set-019.md) | Non-boolean sandbox.network.strictAllowlist Setting | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-020](./generated/cc-set-020.md) | Invalid workflowSizeGuideline Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-022](./generated/cc-set-022.md) | Invalid crossSessionInbound Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-023](./generated/cc-set-023.md) | Invalid dialogExpiry Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-025](./generated/cc-set-025.md) | Invalid modelPicker Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-026](./generated/cc-set-026.md) | Invalid promptCacheTtl Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-027](./generated/cc-set-027.md) | Invalid subagentPromptCacheTtl Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-028](./generated/cc-set-028.md) | Invalid feedbackDrafts Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-029](./generated/cc-set-029.md) | Invalid spinnerTipsOverride Shape | MEDIUM | Claude Settings | No |
+| [CC-SET-030](./generated/cc-set-030.md) | Local Command in managedMcpServers | HIGH | Claude Settings | No |
+| [CC-SET-031](./generated/cc-set-031.md) | Invalid maxEffortLevel Setting | MEDIUM | Claude Settings | No |
+| [CC-SET-033](./generated/cc-set-033.md) | Idle Compaction Not Boolean | MEDIUM | Claude Settings | Yes (unsafe) |
+| [CC-SET-034](./generated/cc-set-034.md) | Settings Key Ignored at This Scope | MEDIUM | Claude Settings | No |
+| [CC-SET-035](./generated/cc-set-035.md) | Ineffective Permission Rule Syntax | HIGH | Claude Settings | No |
+| [CC-SET-036](./generated/cc-set-036.md) | Broad Code-Execution Allow Rule | MEDIUM | Claude Settings | No |
+| [CC-SET-037](./generated/cc-set-037.md) | Sandbox Weakened by Repository Settings | MEDIUM | Claude Settings | No |
+| [CC-SET-038](./generated/cc-set-038.md) | .claudeignore Has No Effect | MEDIUM | Claude Settings | No |
+| [CC-SET-039](./generated/cc-set-039.md) | Secret Files Not Denied | LOW | Claude Settings | No |
+| [CC-SET-040](./generated/cc-set-040.md) | Memory Path Setting Cannot Match | MEDIUM | Claude Settings | No |
+| [CDX-000](./generated/cdx-000.md) | TOML Parse Error | HIGH | Codex CLI | No |
+| [CDX-004](./generated/cdx-004.md) | Unknown Config Key | MEDIUM | Codex CLI | Yes (safe) |
+| [CDX-005](./generated/cdx-005.md) | Invalid project_doc_max_bytes | HIGH | Codex CLI | No |
+| [CDX-006](./generated/cdx-006.md) | Invalid project_doc_fallback_filenames | HIGH | Codex CLI | No |
+| [CDX-CFG-001](./generated/cdx-cfg-001.md) | Invalid approval_policy Value | HIGH | Codex CLI | No |
+| [CDX-CFG-002](./generated/cdx-cfg-002.md) | Invalid sandbox_mode Value | HIGH | Codex CLI | No |
+| [CDX-CFG-003](./generated/cdx-cfg-003.md) | Invalid model_reasoning_effort Value | HIGH | Codex CLI | No |
+| [CDX-CFG-004](./generated/cdx-cfg-004.md) | Invalid model_verbosity Value | HIGH | Codex CLI | No |
+| [CDX-CFG-005](./generated/cdx-cfg-005.md) | Invalid personality Value | HIGH | Codex CLI | No |
+| [CDX-CFG-006](./generated/cdx-cfg-006.md) | Unknown Codex Config Field | MEDIUM | Codex CLI | No |
+| [CDX-CFG-007](./generated/cdx-cfg-007.md) | Full Access Sandbox Posture | MEDIUM | Codex CLI | No |
+| [CDX-CFG-008](./generated/cdx-cfg-008.md) | Invalid shell_environment_policy Value | HIGH | Codex CLI | No |
+| [CDX-CFG-009](./generated/cdx-cfg-009.md) | Invalid MCP Server Structure in Codex Config | HIGH | Codex CLI | No |
+| [CDX-CFG-010](./generated/cdx-cfg-010.md) | Hardcoded Secret in Codex Config | HIGH | Codex CLI | No |
+| [CDX-CFG-011](./generated/cdx-cfg-011.md) | Invalid Feature Flag Name or Shape | MEDIUM | Codex CLI | No |
+| [CDX-CFG-012](./generated/cdx-cfg-012.md) | Invalid cli_auth_credentials_store Value | HIGH | Codex CLI | No |
+| [CDX-CFG-014](./generated/cdx-cfg-014.md) | Invalid model Value | MEDIUM | Codex CLI | No |
+| [CDX-CFG-015](./generated/cdx-cfg-015.md) | Invalid model_provider Value | HIGH | Codex CLI | No |
+| [CDX-CFG-016](./generated/cdx-cfg-016.md) | Invalid model_reasoning_summary Value | MEDIUM | Codex CLI | No |
+| [CDX-CFG-017](./generated/cdx-cfg-017.md) | Invalid history Configuration | MEDIUM | Codex CLI | No |
+| [CDX-CFG-018](./generated/cdx-cfg-018.md) | Invalid tui Configuration | MEDIUM | Codex CLI | No |
+| [CDX-CFG-019](./generated/cdx-cfg-019.md) | Invalid file_opener Value | MEDIUM | Codex CLI | No |
+| [CDX-CFG-020](./generated/cdx-cfg-020.md) | Invalid MCP OAuth Config | HIGH | Codex CLI | No |
+| [CDX-CFG-021](./generated/cdx-cfg-021.md) | Invalid model_context_window Value | MEDIUM | Codex CLI | No |
+| [CDX-CFG-022](./generated/cdx-cfg-022.md) | Invalid model_auto_compact_token_limit Value | MEDIUM | Codex CLI | No |
+| [CDX-AG-001](./generated/cdx-ag-001.md) | Empty AGENTS.md for Codex | HIGH | Codex CLI | No |
+| [CDX-AG-002](./generated/cdx-ag-002.md) | Secrets in AGENTS.md for Codex | MEDIUM | Codex CLI | No |
+| [CDX-AG-003](./generated/cdx-ag-003.md) | Generic AGENTS.md Guidance for Codex | LOW | Codex CLI | No |
+| [CDX-AG-005](./generated/cdx-ag-005.md) | AGENTS.md References Missing File | MEDIUM | Codex CLI | No |
+| [CDX-AG-006](./generated/cdx-ag-006.md) | AGENTS.md Missing Project Context | LOW | Codex CLI | No |
+| [CDX-AG-008](./generated/cdx-ag-008.md) | AGENTS.md Shadowed by AGENTS.override.md | LOW | Codex CLI | No |
+| [CDX-AG-009](./generated/cdx-ag-009.md) | AGENTS.md Exceeds Codex project_doc_max_bytes | MEDIUM | Codex CLI | No |
+| [CDX-AG-010](./generated/cdx-ag-010.md) | Codex Instruction Chain Exceeds project_doc_max_bytes | MEDIUM | Codex CLI | No |
+| [CDX-APP-001](./generated/cdx-app-001.md) | Invalid Tool Approval Mode | HIGH | Codex CLI | No |
+| [CDX-APP-002](./generated/cdx-app-002.md) | Invalid skills Configuration | MEDIUM | Codex CLI | No |
+| [CDX-APP-003](./generated/cdx-app-003.md) | Removed Profile Selector or Profiles Table | MEDIUM | Codex CLI | No |
+| [CDX-PL-001](./generated/cdx-pl-001.md) | Codex Plugin Manifest Location or Agent Plugins Schema | HIGH | Codex CLI | No |
+| [CDX-PL-002](./generated/cdx-pl-002.md) | Invalid Plugin Manifest | HIGH | Codex CLI | No |
+| [CDX-PL-003](./generated/cdx-pl-003.md) | Missing or Empty Plugin Name | HIGH | Codex CLI | Yes (unsafe) |
+| [CDX-PL-004](./generated/cdx-pl-004.md) | Invalid Plugin Name Characters | HIGH | Codex CLI | No |
+| [CDX-PL-005](./generated/cdx-pl-005.md) | Component Path Missing ./ Prefix | HIGH | Codex CLI | Yes (safe) |
+| [CDX-PL-006](./generated/cdx-pl-006.md) | Component Path Directory Traversal | HIGH | Codex CLI | No |
+| [CDX-PL-007](./generated/cdx-pl-007.md) | Component Path Empty Relative | HIGH | Codex CLI | No |
+| [CDX-PL-008](./generated/cdx-pl-008.md) | Too Many Default Prompts | MEDIUM | Codex CLI | No |
+| [CDX-PL-009](./generated/cdx-pl-009.md) | Default Prompt Too Long | MEDIUM | Codex CLI | No |
+| [CDX-PL-010](./generated/cdx-pl-010.md) | Empty Default Prompt Entry | MEDIUM | Codex CLI | No |
+| [CDX-PL-011](./generated/cdx-pl-011.md) | Invalid Interface URL | MEDIUM | Codex CLI | No |
+| [CDX-PL-012](./generated/cdx-pl-012.md) | Invalid Asset Path | MEDIUM | Codex CLI | No |
+| [CDX-PL-013](./generated/cdx-pl-013.md) | Invalid Hooks Value | LOW | Codex CLI | No |
+| [CDX-PL-014](./generated/cdx-pl-014.md) | Missing Required Codex-Format Package Field | LOW | Codex CLI | No |
+| [CDX-PL-015](./generated/cdx-pl-015.md) | Invalid Skills Path Type | MEDIUM | Codex CLI | No |
+| [CDX-PL-016](./generated/cdx-pl-016.md) | Invalid Dark-mode Logo Path | MEDIUM | Codex CLI | No |
+| [CDX-PL-017](./generated/cdx-pl-017.md) | Codex Compatibility Manifest Without Portable Root Manifest | LOW | Codex CLI | No |
+| [CDX-PL-018](./generated/cdx-pl-018.md) | Plugin Exceeds Public Submission Limits | LOW | Codex CLI | No |
+| [CDX-PL-019](./generated/cdx-pl-019.md) | Secret in Plugin MCP Configuration | HIGH | Codex CLI | No |
+| [CDX-CFG-023](./generated/cdx-cfg-023.md) | Invalid Approval Policy Sub-field | MEDIUM | Codex CLI | No |
+| [CDX-CFG-024](./generated/cdx-cfg-024.md) | Invalid Approvals Reviewer Value | MEDIUM | Codex CLI | Yes (unsafe) |
+| [CDX-CFG-025](./generated/cdx-cfg-025.md) | Invalid Service Tier Value | MEDIUM | Codex CLI | Yes (unsafe) |
+| [CDX-CFG-026](./generated/cdx-cfg-026.md) | Unknown Permission Profile Network Key | LOW | Codex CLI | Yes (safe) |
+| [CDX-CFG-027](./generated/cdx-cfg-027.md) | Invalid Windows Sandbox Value | LOW | Codex CLI | Yes (unsafe) |
+| [CDX-CFG-028](./generated/cdx-cfg-028.md) | Unsupported Inline MCP bearer_token Field | HIGH | Codex CLI | No |
+| [CDX-CFG-029](./generated/cdx-cfg-029.md) | Invalid Agent Concurrency Limit | HIGH | Codex CLI | No |
+| [CDX-CFG-030](./generated/cdx-cfg-030.md) | Invalid web_search Mode | MEDIUM | Codex CLI | No |
+| [CDX-CFG-031](./generated/cdx-cfg-031.md) | Invalid skills.max_context_tokens | MEDIUM | Codex CLI | No |
+| [CDX-CFG-032](./generated/cdx-cfg-032.md) | Key Ignored in Project Config | MEDIUM | Codex CLI | No |
+| [CDX-CFG-033](./generated/cdx-cfg-033.md) | Permission Profile Shadowed by Legacy Sandbox Settings | MEDIUM | Codex CLI | No |
+| [CDX-CFG-034](./generated/cdx-cfg-034.md) | Profile Domain Rules Without Network Proxy | MEDIUM | Codex CLI | No |
+| [CDX-CFG-035](./generated/cdx-cfg-035.md) | Invalid Permission Profile Inheritance | HIGH | Codex CLI | Yes (unsafe) |
+| [CDX-REQ-000](./generated/cdx-req-000.md) | Codex requirements.toml TOML Parse Error | HIGH | Codex CLI | No |
+| [CDX-REQ-001](./generated/cdx-req-001.md) | Unknown Codex requirements.toml Key | MEDIUM | Codex CLI | No |
+| [CDX-REQ-002](./generated/cdx-req-002.md) | Requirements Rule Without Prompt or Forbidden Decision | HIGH | Codex CLI | No |
+| [CDX-REQ-003](./generated/cdx-req-003.md) | Managed Hook Script Outside managed_dir | LOW | Codex CLI | No |
+| [CDX-REQ-004](./generated/cdx-req-004.md) | Conflicting experimental_network Domain Settings | LOW | Codex CLI | No |
+| [CDX-HK-000](./generated/cdx-hk-000.md) | Codex Hooks File Fails to Load | HIGH | Codex CLI | No |
+| [CDX-HK-001](./generated/cdx-hk-001.md) | Codex Hook Timeout Out of Range | MEDIUM | Codex CLI | No |
+| [CDX-HK-002](./generated/cdx-hk-002.md) | Codex Hook Handler Skipped | MEDIUM | Codex CLI | No |
+| [CDX-HK-003](./generated/cdx-hk-003.md) | Hooks in Both hooks.json and Inline [hooks] | LOW | Codex CLI | No |
+| [CDX-HK-004](./generated/cdx-hk-004.md) | additionalContextLimit Ineffective or Unbounded | LOW | Codex CLI | No |
+| [CDX-HK-005](./generated/cdx-hk-005.md) | Unknown Codex Hook Event | MEDIUM | Codex CLI | No |
+| [CDX-SUB-001](./generated/cdx-sub-001.md) | Invalid Codex Custom Agent File | HIGH | Codex CLI | No |
+| [CDX-SUB-002](./generated/cdx-sub-002.md) | Session Setting in Codex Custom Agent File | MEDIUM | Codex CLI | No |
+| [CDX-SUB-003](./generated/cdx-sub-003.md) | Custom Agent Replaces a Built-in Agent | LOW | Codex CLI | No |
+| [CDX-RL-001](./generated/cdx-rl-001.md) | Forbidden Rule Without Justification | LOW | Codex CLI | No |
+| [CDX-RL-002](./generated/cdx-rl-002.md) | Broad Allow Rule Outside the Sandbox | MEDIUM | Codex CLI | No |
+| [CDX-DEP-001](./generated/cdx-dep-001.md) | Deprecated Codex Custom Prompt | LOW | Codex CLI | No |
+| [CL-SK-001](./generated/cl-sk-001.md) | Cline Skill Uses Unsupported Field | MEDIUM | Cline Skills | Yes (safe/unsafe) |
+| [CL-SK-004](./generated/cl-sk-004.md) | Cline Skill Without Instructions | MEDIUM | Cline Skills | No |
+| [CLN-001](./generated/cln-001.md) | Empty Cline Rules File | HIGH | Cline | No |
+| [CLN-002](./generated/cln-002.md) | Invalid Paths Glob in Cline Rules | HIGH | Cline | No |
+| [CLN-003](./generated/cln-003.md) | Unknown Frontmatter Key in Cline Rules | MEDIUM | Cline | Yes (unsafe) |
+| [CLN-004](./generated/cln-004.md) | Scalar Paths in Cline Rules | HIGH | Cline | Yes (safe) |
+| [CLN-005](./generated/cln-005.md) | Empty Workflow File | HIGH | Cline | No |
+| [CLN-006](./generated/cln-006.md) | Unknown Frontmatter Key in Cline Workflow | MEDIUM | Cline | No |
+| [CLN-009](./generated/cln-009.md) | Unknown Hook Event Name | MEDIUM | Cline | No |
+| [CLN-010](./generated/cln-010.md) | Unparseable Cline Rule Frontmatter | HIGH | Cline | No |
+| [CLN-011](./generated/cln-011.md) | Invalid paths Entries in Cline Rules | HIGH | Cline | No |
+| [CLN-012](./generated/cln-012.md) | Cline Hook Not Runnable in the VS Code Extension | MEDIUM | Cline | No |
+| [CLN-013](./generated/cln-013.md) | Deprecated .clineignore | LOW | Cline | No |
+| [CLN-014](./generated/cln-014.md) | Literal Secret in Cline Rule or Workflow | MEDIUM | Cline | No |
+| [CLN-015](./generated/cln-015.md) | Cline paths Pattern Never Matches | MEDIUM | Cline | No |
+| [CLN-016](./generated/cln-016.md) | Remote MCP Server Without type in Cline Settings | MEDIUM | Cline | No |
+| [COP-001](./generated/cop-001.md) | Empty Copilot Instruction File | HIGH | GitHub Copilot | No |
+| [COP-002](./generated/cop-002.md) | Scoped Instructions Without applyTo or Valid Frontmatter | HIGH | GitHub Copilot | Yes (unsafe) |
+| [COP-003](./generated/cop-003.md) | Invalid Glob Pattern in applyTo | HIGH | GitHub Copilot | No |
+| [COP-004](./generated/cop-004.md) | Unknown Frontmatter Keys | MEDIUM | GitHub Copilot | Yes (safe) |
+| [COP-005](./generated/cop-005.md) | Invalid excludeAgent Value | HIGH | GitHub Copilot | Yes (unsafe) |
+| [COP-006](./generated/cop-006.md) | Instruction File Over About 1,000 Lines | MEDIUM | GitHub Copilot | No |
+| [COP-007](./generated/cop-007.md) | Custom Agent Missing Description | HIGH | GitHub Copilot | No |
+| [COP-008](./generated/cop-008.md) | Custom Agent Unknown or Invalid Frontmatter Field | MEDIUM | GitHub Copilot | Yes (safe) |
+| [COP-009](./generated/cop-009.md) | Custom Agent Invalid Target | HIGH | GitHub Copilot | Yes (unsafe) |
+| [COP-010](./generated/cop-010.md) | Custom Agent infer Field Must Be Boolean | MEDIUM | GitHub Copilot | No |
+| [COP-011](./generated/cop-011.md) | Custom Agent Prompt Body Exceeds Length Limit | HIGH | GitHub Copilot | No |
+| [COP-012](./generated/cop-012.md) | Custom Agent Field Ignored on GitHub.com | LOW | GitHub Copilot | No |
+| [COP-013](./generated/cop-013.md) | Prompt File Empty Body | HIGH | GitHub Copilot | No |
+| [COP-014](./generated/cop-014.md) | Prompt File Unknown Frontmatter Field | MEDIUM | GitHub Copilot | Yes (safe) |
+| [COP-015](./generated/cop-015.md) | Prompt File Agent Not Found | LOW | GitHub Copilot | No |
+| [COP-017](./generated/cop-017.md) | Copilot Hook File Schema | HIGH | GitHub Copilot | No |
+| [COP-018](./generated/cop-018.md) | Invalid copilot-setup-steps Job | HIGH | GitHub Copilot | No |
+| [COP-019](./generated/cop-019.md) | Plugin Manifest Missing Required Fields | HIGH | GitHub Copilot | No |
+| [COP-020](./generated/cop-020.md) | Plugin Invalid Field Types | MEDIUM | GitHub Copilot | No |
+| [COP-025](./generated/cop-025.md) | Agent File Wrong Location | LOW | GitHub Copilot | No |
+| [COP-027](./generated/cop-027.md) | Deprecated Infer Field | LOW | GitHub Copilot | Yes (unsafe) |
+| [COP-028](./generated/cop-028.md) | Custom Agent MCP Secret Without COPILOT_MCP_ Prefix | HIGH | GitHub Copilot | No |
+| [COP-029](./generated/cop-029.md) | copilot-setup-steps Job Setting Ignored | MEDIUM | GitHub Copilot | No |
+| [COP-030](./generated/cop-030.md) | File Reference Copilot CLI Does Not Load | MEDIUM | GitHub Copilot | No |
+| [COP-031](./generated/cop-031.md) | Copilot Hook Entry Violates Documented Constraints | HIGH | GitHub Copilot | No |
+| [COP-032](./generated/cop-032.md) | Legacy Chat Mode File | LOW | GitHub Copilot | No |
+| [COP-033](./generated/cop-033.md) | Invalid Custom Agent Filename | MEDIUM | GitHub Copilot | No |
+| [COP-034](./generated/cop-034.md) | Custom Agent MCP Server Tools List | MEDIUM | GitHub Copilot | No |
+| [COP-035](./generated/cop-035.md) | MCP File Uses Unsupported Feature or Wrong Server Key | MEDIUM | GitHub Copilot | No |
+| [COP-036](./generated/cop-036.md) | Copilot Hook Skipped by Cloud Agent or Missing Script | LOW | GitHub Copilot | No |
+| [COP-037](./generated/cop-037.md) | Literal Secret in Copilot Hook | MEDIUM | GitHub Copilot | No |
+| [COP-038](./generated/cop-038.md) | Code Review Instruction Points to an External Link | LOW | GitHub Copilot | No |
+| [COP-039](./generated/cop-039.md) | Copilot Plugin Name or Manifest Constraints | MEDIUM | GitHub Copilot | No |
+| [CP-SK-001](./generated/cp-sk-001.md) | Copilot Skill Uses Unsupported Field | MEDIUM | Copilot Skills | Yes (safe/unsafe) |
+| [CP-SK-002](./generated/cp-sk-002.md) | Copilot Skill Pre-approves shell or bash | MEDIUM | Copilot Skills | No |
+| [CR-SK-001](./generated/cr-sk-001.md) | Cursor Skill Uses Unsupported Field | MEDIUM | Cursor Skills | Yes (safe/unsafe) |
+| [CUR-001](./generated/cur-001.md) | Empty Cursor Rule File | HIGH | Cursor | No |
+| [CUR-002](./generated/cur-002.md) | Missing Frontmatter in .mdc File | MEDIUM | Cursor | Yes (unsafe) |
+| [CUR-003](./generated/cur-003.md) | Invalid YAML Frontmatter | HIGH | Cursor | No |
+| [CUR-004](./generated/cur-004.md) | Invalid Glob Pattern in globs Field | HIGH | Cursor | No |
+| [CUR-005](./generated/cur-005.md) | Unknown Frontmatter Keys | MEDIUM | Cursor | Yes (safe) |
+| [CUR-006](./generated/cur-006.md) | Legacy .cursorrules File Detected | LOW | Cursor | No |
+| [CUR-007](./generated/cur-007.md) | alwaysApply with Redundant globs | MEDIUM | Cursor | Yes (safe) |
+| [CUR-008](./generated/cur-008.md) | Invalid alwaysApply Type | HIGH | Cursor | Yes (safe) |
+| [CUR-009](./generated/cur-009.md) | Rule Applied Only When Mentioned | MEDIUM | Cursor | No |
+| [CUR-010](./generated/cur-010.md) | Invalid Cursor Hooks Schema | HIGH | Cursor | No |
+| [CUR-011](./generated/cur-011.md) | Unknown Cursor Hook Event Name | MEDIUM | Cursor | Yes (safe) |
+| [CUR-012](./generated/cur-012.md) | Hook Entry Missing Required Command Field | HIGH | Cursor | No |
+| [CUR-013](./generated/cur-013.md) | Invalid Cursor Hook Type Value | HIGH | Cursor | Yes (safe) |
+| [CUR-014](./generated/cur-014.md) | Invalid Cursor Subagent Frontmatter | HIGH | Cursor | No |
+| [CUR-015](./generated/cur-015.md) | Empty Cursor Subagent Body | MEDIUM | Cursor | No |
+| [CUR-016](./generated/cur-016.md) | Invalid Cursor Environment Schema | HIGH | Cursor | No |
+| [CUR-017](./generated/cur-017.md) | Invalid Hook Entry Field Types | MEDIUM | Cursor | No |
+| [CUR-018](./generated/cur-018.md) | Invalid or Missing Prompt Hook Field | MEDIUM | Cursor | No |
+| [CUR-019](./generated/cur-019.md) | Invalid Prompt Hook Model Type | LOW | Cursor | No |
+| [CUR-020](./generated/cur-020.md) | Ignored Plain Markdown Cursor Rule | HIGH | Cursor | No |
+| [CUR-021](./generated/cur-021.md) | Cursor Rule Over 500 Lines | MEDIUM | Cursor | No |
+| [CUR-022](./generated/cur-022.md) | Project Hook Script Path Relative to the Wrong Base | HIGH | Cursor | Yes (unsafe) |
+| [CUR-023](./generated/cur-023.md) | Cursor Skill Uses Legacy globs | LOW | Cursor | Yes (unsafe) |
+| [CUR-024](./generated/cur-024.md) | MCP Field Not Supported for the Transport | MEDIUM | Cursor | No |
+| [CUR-025](./generated/cur-025.md) | Cursor Permission Allows Everything | MEDIUM | Cursor | No |
+| [CUR-026](./generated/cur-026.md) | CLI Setting Ignored in a Project cli.json | MEDIUM | Cursor | No |
+| [CUR-027](./generated/cur-027.md) | Ignored permissions.json Entry | MEDIUM | Cursor | No |
+| [CUR-028](./generated/cur-028.md) | Cursor Subagent Without Description | LOW | Cursor | No |
+| [CUR-029](./generated/cur-029.md) | Cursor Subagent Prompt Too Long | LOW | Cursor | No |
+| [CUR-030](./generated/cur-030.md) | Invalid Cursor Plugin Manifest | HIGH | Cursor | No |
+| [CUR-031](./generated/cur-031.md) | Literal Secret in environment.json Command | MEDIUM | Cursor | No |
+| [CUR-032](./generated/cur-032.md) | MCP Permission Hook Fails Open | LOW | Cursor | No |
+| [CUR-033](./generated/cur-033.md) | Hook Not Run by Cloud Agents | LOW | Cursor | No |
+| [CUR-034](./generated/cur-034.md) | .cursorignore Negation Cannot Re-include | LOW | Cursor | No |
+| [CUR-035](./generated/cur-035.md) | Too Many Cursor Subagents | LOW | Cursor | No |
+| [CUR-036](./generated/cur-036.md) | Long Code Block in a Cursor Rule | LOW | Cursor | No |
+| [CUR-037](./generated/cur-037.md) | Long-running Process in environment.json install | LOW | Cursor | No |
+| [CUR-039](./generated/cur-039.md) | Invalid Cursor CLI Config | HIGH | Cursor | No |
+| [CUR-040](./generated/cur-040.md) | Cursor Plugin Submission Checklist | MEDIUM | Cursor | No |
+| [CX-SK-001](./generated/cx-sk-001.md) | Codex Skill Uses Unsupported Field | MEDIUM | Codex Skills | Yes (safe/unsafe) |
+| [CX-SK-004](./generated/cx-sk-004.md) | Skill Catalog Exceeds Codex Fallback Budget | LOW | Codex Skills | No |
+| [CX-SK-006](./generated/cx-sk-006.md) | agents/openai.yaml Field Ignored by Codex | MEDIUM | Codex Skills | No |
+| [CX-SK-007](./generated/cx-sk-007.md) | Auxiliary Documentation in Codex Skill Folder | LOW | Codex Skills | No |
+| [GM-001](./generated/gm-001.md) | Invalid Markdown Structure in GEMINI.md | MEDIUM | Gemini CLI | Yes (unsafe) |
+| [GM-002](./generated/gm-002.md) | Missing Section Headers in GEMINI.md | LOW | Gemini CLI | No |
+| [GM-003](./generated/gm-003.md) | Missing Project Context in GEMINI.md | LOW | Gemini CLI | No |
+| [GM-004](./generated/gm-004.md) | Invalid Gemini Hooks Configuration | MEDIUM | Gemini CLI | No |
+| [GM-005](./generated/gm-005.md) | Gemini Extension Manifest Does Not Load | HIGH | Gemini CLI | No |
+| [GM-006](./generated/gm-006.md) | Invalid .geminiignore File | LOW | Gemini CLI | No |
+| [GM-008](./generated/gm-008.md) | Invalid Extension contextFileName | HIGH | Gemini CLI | No |
+| [GM-009](./generated/gm-009.md) | Gemini Settings Parse Error or Unknown Top-Level Key | HIGH | Gemini CLI | Yes (unsafe) |
+| [GM-010](./generated/gm-010.md) | Stale experimental.memoryManager Setting | MEDIUM | Gemini CLI | No |
+| [GM-018](./generated/gm-018.md) | Gemini Hook Timeout Looks Like Seconds | MEDIUM | Gemini CLI | No |
+| [GM-019](./generated/gm-019.md) | Gemini Hook Script Not Found | MEDIUM | Gemini CLI | No |
+| [GM-026](./generated/gm-026.md) | Gemini Tool Hook Matches Every Tool | LOW | Gemini CLI | No |
+| [GM-028](./generated/gm-028.md) | Gemini Extension Manifest Advisory | LOW | Gemini CLI | No |
+| [GM-011](./generated/gm-011.md) | Gemini MCP Server Name Contains Underscore | MEDIUM | Gemini CLI | No |
+| [GM-013](./generated/gm-013.md) | Deprecated tools.exclude Setting | LOW | Gemini CLI | No |
+| [GM-014](./generated/gm-014.md) | Gemini MCP Server Transport Missing or Ambiguous | HIGH | Gemini CLI | No |
+| [GM-015](./generated/gm-015.md) | Gemini MCP Server Trust Bypasses Confirmations | MEDIUM | Gemini CLI | No |
+| [GM-016](./generated/gm-016.md) | Invalid Gemini Default Approval Mode | MEDIUM | Gemini CLI | No |
+| [GM-017](./generated/gm-017.md) | Gemini tools.core Lists Only Shell Entries | MEDIUM | Gemini CLI | No |
+| [GM-020](./generated/gm-020.md) | Gemini Workspace Policy File Has No Effect | LOW | Gemini CLI | No |
+| [GM-021](./generated/gm-021.md) | Ignored allow or yolo in Gemini Extension Policy | MEDIUM | Gemini CLI | No |
+| [GM-022](./generated/gm-022.md) | Gemini Extension Secret Setting Not Marked Sensitive | MEDIUM | Gemini CLI | No |
+| [GM-023](./generated/gm-023.md) | Gemini Extension MCP Command Not Portable | LOW | Gemini CLI | No |
+| [GM-024](./generated/gm-024.md) | Broad Shell Auto-Approval in Gemini Project Settings | MEDIUM | Gemini CLI | No |
+| [GM-025](./generated/gm-025.md) | Deprecated Gemini Settings Key | LOW | Gemini CLI | No |
+| [GM-027](./generated/gm-027.md) | Invalid Gemini Policy Rule | HIGH | Gemini CLI | No |
+| [GM-CMD-001](./generated/gm-cmd-001.md) | Invalid Gemini Custom Command File | HIGH | Gemini CLI | No |
+| [GM-CMD-002](./generated/gm-cmd-002.md) | Gemini Command Description Missing, Multi-Line or Truncated | LOW | Gemini CLI | No |
+| [GM-CMD-003](./generated/gm-cmd-003.md) | Unbalanced Braces in Gemini Command Injection | HIGH | Gemini CLI | No |
+| [GM-AG-001](./generated/gm-ag-001.md) | Invalid auth block in Gemini agent MCP server | HIGH | Gemini Agents | No |
+| [GM-AG-002](./generated/gm-ag-002.md) | Invalid Gemini Agent Frontmatter | HIGH | Gemini Agents | No |
+| [GM-AG-003](./generated/gm-ag-003.md) | Unknown Gemini Agent Frontmatter Key | HIGH | Gemini Agents | No |
+| [GM-AG-004](./generated/gm-ag-004.md) | Gemini Agent Numeric Field Out of Range | HIGH | Gemini Agents | No |
+| [GM-AG-005](./generated/gm-ag-005.md) | Literal Secret in Gemini Remote Agent Auth | MEDIUM | Gemini Agents | No |
+| [GM-AG-006](./generated/gm-ag-006.md) | Gemini Local Agent Inherits Every Tool | LOW | Gemini Agents | No |
+| [KIRO-001](./generated/kiro-001.md) | Invalid Steering File Inclusion Mode | HIGH | Kiro Steering | Yes (unsafe) |
+| [KIRO-002](./generated/kiro-002.md) | Inclusion Mode Without the Field It Loads By | HIGH | Kiro Steering | No |
+| [KIRO-003](./generated/kiro-003.md) | fileMatchPattern Does Not Match as Written | MEDIUM | Kiro Steering | No |
+| [KIRO-004](./generated/kiro-004.md) | Empty Kiro Steering File | MEDIUM | Kiro Steering | No |
+| [KIRO-005](./generated/kiro-005.md) | Empty Steering Body After Frontmatter | MEDIUM | Kiro Steering | No |
+| [KIRO-006](./generated/kiro-006.md) | Secrets Detected in Steering File | HIGH | Kiro Steering | No |
+| [KIRO-007](./generated/kiro-007.md) | fileMatchPattern Without fileMatch Inclusion | MEDIUM | Kiro Steering | No |
+| [KIRO-008](./generated/kiro-008.md) | Unknown Kiro Steering Frontmatter Field | MEDIUM | Kiro Steering | No |
+| [KIRO-009](./generated/kiro-009.md) | Broken Inline Steering Reference | MEDIUM | Kiro Steering | No |
+| [KIRO-010](./generated/kiro-010.md) | On-Demand Steering Fields Without Inclusion Mode | MEDIUM | Kiro Steering | No |
+| [KIRO-011](./generated/kiro-011.md) | Always-Included Steering Doc Excessively Long | LOW | Kiro Steering | No |
+| [KIRO-015](./generated/kiro-015.md) | Steering Frontmatter Kiro Cannot Read | HIGH | Kiro Steering | No |
+| [KIRO-016](./generated/kiro-016.md) | AGENTS.md Exceeds Kiro Truncation Limit | MEDIUM | Kiro Steering | No |
+| [KIRO-017](./generated/kiro-017.md) | Kiro Steering Frontmatter in AGENTS.md | MEDIUM | Kiro Steering | No |
+| [KIRO-018](./generated/kiro-018.md) | Vague Auto Steering Description | LOW | Kiro Steering | No |
+| [KIRO-026](./generated/kiro-026.md) | Kiro Configuration File Never Loaded | MEDIUM | Kiro Steering | No |
+| [KR-SK-001](./generated/kr-sk-001.md) | Kiro Skill Uses Unsupported Field | MEDIUM | Kiro Skills | Yes (safe/unsafe) |
+| [KR-SK-002](./generated/kr-sk-002.md) | Vague Kiro Skill Description | LOW | Kiro Skills | No |
+| [KR-AG-001](./generated/kr-ag-001.md) | Unknown or Ignored Kiro Agent Field | MEDIUM | Kiro Agents | No |
+| [KR-AG-002](./generated/kr-ag-002.md) | Invalid Kiro Agent Resource Entry | HIGH | Kiro Agents | No |
+| [KR-AG-003](./generated/kr-ag-003.md) | allowedTools Trusts a Tool Not in tools | MEDIUM | Kiro Agents | No |
+| [KR-AG-004](./generated/kr-ag-004.md) | Kiro Agent Model Is Not a Kiro Model ID | MEDIUM | Kiro Agents | No |
+| [KR-AG-005](./generated/kr-ag-005.md) | Referenced MCP Server Not Loaded by Kiro CLI 2.x | MEDIUM | Kiro Agents | No |
+| [KR-AG-006](./generated/kr-ag-006.md) | Kiro Agent Sub-agent Access Cannot Work | MEDIUM | Kiro Agents | No |
+| [KR-AG-008](./generated/kr-ag-008.md) | Invalid Explicit Agent Name | HIGH | Kiro Agents | No |
+| [KR-AG-009](./generated/kr-ag-009.md) | Agent Prompt Empty or Invalid | HIGH | Kiro Agents | No |
+| [KR-AG-010](./generated/kr-ag-010.md) | Duplicate Tool Entries | MEDIUM | Kiro Agents | No |
+| [KR-AG-011](./generated/kr-ag-011.md) | Empty Tools Array | LOW | Kiro Agents | No |
+| [KR-AG-012](./generated/kr-ag-012.md) | toolAliases Renames a Tool Not in tools | MEDIUM | Kiro Agents | No |
+| [KR-AG-013](./generated/kr-ag-013.md) | Secrets in Agent Prompt | HIGH | Kiro Agents | No |
+| [KR-AG-014](./generated/kr-ag-014.md) | Invalid Kiro Agent Permissions Block | HIGH | Kiro Agents | No |
+| [KR-AG-015](./generated/kr-ag-015.md) | Unconverted CLI 2.x Trust Configuration | MEDIUM | Kiro Agents | Yes (unsafe) |
+| [KR-AG-016](./generated/kr-ag-016.md) | Invalid Kiro Agent JSON | HIGH | Kiro Agents | No |
+| [KR-AG-017](./generated/kr-ag-017.md) | Invalid Kiro Markdown Agent Frontmatter | HIGH | Kiro Agents | No |
+| [KR-AG-018](./generated/kr-ag-018.md) | Kiro Agent Field Has the Wrong Type | HIGH | Kiro Agents | No |
+| [KR-AG-019](./generated/kr-ag-019.md) | Kiro Agent Missing Name for CLI 2.x | HIGH | Kiro Agents | No |
+| [KR-AG-020](./generated/kr-ag-020.md) | Non-Agent File in Kiro Agents Directory | MEDIUM | Kiro Agents | No |
+| [KR-AG-021](./generated/kr-ag-021.md) | Kiro Agent file:// Prompt Cannot Be Loaded | HIGH | Kiro Agents | No |
+| [KR-AG-022](./generated/kr-ag-022.md) | Reserved or Duplicate Kiro Agent Name | MEDIUM | Kiro Agents | No |
+| [KR-AG-023](./generated/kr-ag-023.md) | Invalid Inline MCP Server in Kiro Agent | HIGH | Kiro Agents | No |
+| [KR-AG-024](./generated/kr-ag-024.md) | Kiro Agent Tool Name Matches No Tool | MEDIUM | Kiro Agents | No |
+| [KR-AG-025](./generated/kr-ag-025.md) | Agent Hook Matcher Never Fires in Kiro CLI 2.x | MEDIUM | Kiro Agents | No |
+| [KR-AG-026](./generated/kr-ag-026.md) | Kiro Agent Hook Timeout Field or Unit Mismatch | MEDIUM | Kiro Agents | No |
+| [KR-AG-027](./generated/kr-ag-027.md) | Kiro Agent Hook Field Ignored | MEDIUM | Kiro Agents | No |
+| [KR-AG-028](./generated/kr-ag-028.md) | Agent File Not Loaded by a Targeted Kiro Engine | MEDIUM | Kiro Agents | No |
+| [KR-AG-029](./generated/kr-ag-029.md) | Overly Broad Kiro Agent Resource Glob | LOW | Kiro Agents | No |
+| [KR-AG-030](./generated/kr-ag-030.md) | Sub-agent Description Missing or Too Short | LOW | Kiro Agents | No |
+| [KR-HK-001](./generated/kr-hk-001.md) | Invalid Kiro IDE Hook Event Type | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-002](./generated/kr-hk-002.md) | Kiro File Hook Missing Patterns | HIGH | Kiro Hooks | No |
+| [KR-HK-003](./generated/kr-hk-003.md) | Kiro IDE Hook Missing Action | HIGH | Kiro Hooks | No |
+| [KR-HK-004](./generated/kr-hk-004.md) | Kiro Tool Hook Missing toolTypes Filter | MEDIUM | Kiro Hooks | No |
+| [KR-HK-005](./generated/kr-hk-005.md) | Invalid Kiro Agent Hook Trigger | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-006](./generated/kr-hk-006.md) | Invalid Kiro Agent Hook Entry | HIGH | Kiro Hooks | No |
+| [KR-HK-009](./generated/kr-hk-009.md) | Command Uses Absolute Path | LOW | Kiro Hooks | No |
+| [KR-HK-010](./generated/kr-hk-010.md) | Secrets in Hook Command | HIGH | Kiro Hooks | No |
+| [KR-HK-011](./generated/kr-hk-011.md) | Invalid Kiro V3 Hook Document Version | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-012](./generated/kr-hk-012.md) | Invalid Kiro V3 Hook Entry | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-013](./generated/kr-hk-013.md) | Invalid Kiro V3 Hook Action | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-015](./generated/kr-hk-015.md) | Legacy IDE Hook Saved as a V3 Hook File | HIGH | Kiro Hooks | No |
+| [KR-HK-016](./generated/kr-hk-016.md) | V3 Hook File Saved as .kiro.hook | HIGH | Kiro Hooks | No |
+| [KR-HK-017](./generated/kr-hk-017.md) | Invalid Kiro V3 Hook Field Value | HIGH | Kiro Hooks | Yes (unsafe) |
+| [KR-HK-018](./generated/kr-hk-018.md) | Invalid Kiro V3 Hook Confirm Block | HIGH | Kiro Hooks | No |
+| [KR-HK-019](./generated/kr-hk-019.md) | Kiro V3 Hook Matcher Is Not a Valid Regex | HIGH | Kiro Hooks | No |
+| [KR-HK-020](./generated/kr-hk-020.md) | Kiro V3 Hook Matcher Has No Effect | MEDIUM | Kiro Hooks | No |
+| [KR-HK-021](./generated/kr-hk-021.md) | Kiro V3 Tool Matcher Uses Non-V3 Tool Names | MEDIUM | Kiro Hooks | No |
+| [KR-HK-022](./generated/kr-hk-022.md) | Misplaced or Misspelled Kiro V3 Hook Field | MEDIUM | Kiro Hooks | No |
+| [KR-HK-023](./generated/kr-hk-023.md) | Kiro V3 Hook Command Uses Unsupported Placeholder | MEDIUM | Kiro Hooks | No |
+| [KR-HK-024](./generated/kr-hk-024.md) | Kiro V3 Hook Never Runs | MEDIUM | Kiro Hooks | No |
+| [KR-HK-025](./generated/kr-hk-025.md) | Standalone Hook File Ignored by Pinned Kiro CLI 2.x | LOW | Kiro Hooks | No |
+| [KR-HK-026](./generated/kr-hk-026.md) | Invalid Kiro IDE Hook File | HIGH | Kiro Hooks | No |
+| [KR-HK-027](./generated/kr-hk-027.md) | Kiro Tool Hook Without a Specific Matcher | LOW | Kiro Hooks | No |
+| [KR-HK-028](./generated/kr-hk-028.md) | Kiro File Hook Matching Every File | LOW | Kiro Hooks | No |
+| [KR-HK-029](./generated/kr-hk-029.md) | Kiro Tool Matcher Is an Unanchored Regex | LOW | Kiro Hooks | No |
+| [KR-HK-030](./generated/kr-hk-030.md) | Kiro Hook File Name Not Kebab-Case | LOW | Kiro Hooks | No |
+| [KR-MCP-001](./generated/kr-mcp-001.md) | Kiro MCP Config Fails to Load | HIGH | Kiro MCP | No |
+| [KR-MCP-002](./generated/kr-mcp-002.md) | Hardcoded Secret in Kiro MCP Server Config | MEDIUM | Kiro MCP | No |
+| [KR-MCP-003](./generated/kr-mcp-003.md) | Kiro MCP Command Includes Arguments | MEDIUM | Kiro MCP | No |
+| [KR-MCP-004](./generated/kr-mcp-004.md) | Invalid Kiro MCP Server URL | HIGH | Kiro MCP | No |
+| [KR-MCP-005](./generated/kr-mcp-005.md) | Duplicate Kiro MCP Server Name in One File | MEDIUM | Kiro MCP | No |
+| [KR-MCP-006](./generated/kr-mcp-006.md) | Invalid OAuth Configuration | MEDIUM | Kiro MCP | No |
+| [KR-MCP-007](./generated/kr-mcp-007.md) | Invalid Kiro MCP Server Field Type | HIGH | Kiro MCP | No |
+| [KR-MCP-008](./generated/kr-mcp-008.md) | Kiro MCP Remote URL Uses Plain HTTP | HIGH | Kiro MCP | No |
+| [KR-MCP-009](./generated/kr-mcp-009.md) | Unexpanded Variable Reference in Kiro MCP Config | MEDIUM | Kiro MCP | No |
+| [KR-MCP-010](./generated/kr-mcp-010.md) | Unknown Kiro MCP Server Field | LOW | Kiro MCP | No |
+| [KR-MCP-011](./generated/kr-mcp-011.md) | Kiro MCP Server Has Both command and url | LOW | Kiro MCP | No |
+| [KR-MCP-012](./generated/kr-mcp-012.md) | Agent Plugins mcp.json Schema Missing or Mismatched | HIGH | Kiro MCP | No |
+| [KR-MCP-013](./generated/kr-mcp-013.md) | Unknown Top-Level Field in Agent Plugins mcp.json | HIGH | Kiro MCP | No |
+| [KR-MCP-014](./generated/kr-mcp-014.md) | Invalid Agent Plugins MCP Server Entry | HIGH | Kiro MCP | No |
+| [KR-MCP-015](./generated/kr-mcp-015.md) | Kiro MCP autoApprove Wildcard | MEDIUM | Kiro MCP | No |
+| [KR-PW-001](./generated/kr-pw-001.md) | POWER.md Frontmatter Kiro Cannot Use | HIGH | Kiro Powers | No |
+| [KR-PW-002](./generated/kr-pw-002.md) | Empty POWER.md Keywords Array | MEDIUM | Kiro Powers | No |
+| [KR-PW-003](./generated/kr-pw-003.md) | Empty POWER.md Body | MEDIUM | Kiro Powers | No |
+| [KR-PW-004](./generated/kr-pw-004.md) | Adjacent Power mcp.json Kiro Cannot Use | MEDIUM | Kiro Powers | No |
+| [KR-PW-006](./generated/kr-pw-006.md) | Duplicate Keywords | LOW | Kiro Powers | No |
+| [KR-PW-007](./generated/kr-pw-007.md) | Name Invalid Characters | MEDIUM | Kiro Powers | No |
+| [KR-PW-008](./generated/kr-pw-008.md) | Secrets in Power Body | HIGH | Kiro Powers | No |
+| [KR-PW-009](./generated/kr-pw-009.md) | plugin.json Is Not a JSON Object | HIGH | Kiro Powers | No |
+| [KR-PW-010](./generated/kr-pw-010.md) | Missing or Unsupported plugin.json $schema | HIGH | Kiro Powers | No |
+| [KR-PW-011](./generated/kr-pw-011.md) | Missing or Invalid plugin.json Name | HIGH | Kiro Powers | No |
+| [KR-PW-012](./generated/kr-pw-012.md) | plugin.json Field Outside the Agent Plugins Manifest | MEDIUM | Kiro Powers | No |
+| [KR-PW-013](./generated/kr-pw-013.md) | plugin.json Value Kiro Ignores | MEDIUM | Kiro Powers | No |
+| [KR-PW-014](./generated/kr-pw-014.md) | Plugin Skill Kiro Skips | HIGH | Kiro Powers | No |
+| [KR-PW-015](./generated/kr-pw-015.md) | Power Without Activation Description or Keywords | MEDIUM | Kiro Powers | No |
+| [KR-PW-016](./generated/kr-pw-016.md) | Documented plugin.json Field Missing or Not Semver | LOW | Kiro Powers | No |
+| [KR-PW-017](./generated/kr-pw-017.md) | POWER.md Ignored Next to plugin.json | MEDIUM | Kiro Powers | No |
+| [KR-PW-018](./generated/kr-pw-018.md) | Legacy steering Directory in a plugin.json Power | MEDIUM | Kiro Powers | No |
+| [KR-PW-019](./generated/kr-pw-019.md) | Legacy POWER.md Power Format | LOW | Kiro Powers | No |
+| [KR-SET-001](./generated/kr-set-001.md) | Invalid toolSearch.enabled Value | MEDIUM | Kiro Settings | Yes (unsafe) |
+| [KR-SET-002](./generated/kr-set-002.md) | Invalid toolSearch.minPct Value | MEDIUM | Kiro Settings | Yes (unsafe) |
+| [KR-SET-003](./generated/kr-set-003.md) | Invalid toolSearch.minTokens Value | MEDIUM | Kiro Settings | Yes (unsafe) |
+| [KR-SET-004](./generated/kr-set-004.md) | Unparseable Kiro CLI Settings File | HIGH | Kiro Settings | No |
+| [KR-SET-005](./generated/kr-set-005.md) | Unknown Kiro CLI Setting | LOW | Kiro Settings | No |
+| [KR-SET-006](./generated/kr-set-006.md) | Config Section Misplaced in Kiro CLI Settings | MEDIUM | Kiro Settings | No |
+| [KR-SET-007](./generated/kr-set-007.md) | Nested Kiro CLI Settings Object | MEDIUM | Kiro Settings | No |
+| [KR-SET-008](./generated/kr-set-008.md) | Kiro CLI Setting Has Wrong Value Type | MEDIUM | Kiro Settings | Yes (unsafe) |
+| [KR-SET-009](./generated/kr-set-009.md) | Unrecognized Kiro CLI Setting Value | MEDIUM | Kiro Settings | No |
+| [KR-SET-010](./generated/kr-set-010.md) | Duplicate Kiro CLI Setting Key | MEDIUM | Kiro Settings | No |
+| [KR-SET-011](./generated/kr-set-011.md) | Global-Only Kiro CLI Setting in Workspace File | LOW | Kiro Settings | No |
+| [KR-WF-001](./generated/kr-wf-001.md) | Workflow Recipe Exceeds Kiro Limits | HIGH | Kiro Workflows | No |
+| [KR-WF-002](./generated/kr-wf-002.md) | Invalid Workflow Repeat Cap | HIGH | Kiro Workflows | No |
+| [KR-WF-003](./generated/kr-wf-003.md) | Workflow Recipe Suffix Conflict | MEDIUM | Kiro Workflows | No |
+| [KR-WF-004](./generated/kr-wf-004.md) | Invalid Workflow Recipe Document | HIGH | Kiro Workflows | No |
+| [KR-WF-005](./generated/kr-wf-005.md) | Interactive Workflow Step Inside Parallel | HIGH | Kiro Workflows | No |
+| [KR-WF-006](./generated/kr-wf-006.md) | Invalid Workflow Stop Condition | HIGH | Kiro Workflows | No |
+| [KR-WF-007](./generated/kr-wf-007.md) | Invalid Workflow Template Reference | HIGH | Kiro Workflows | No |
+| [KR-WF-008](./generated/kr-wf-008.md) | Invalid Workflow Watch Configuration | HIGH | Kiro Workflows | No |
+| [KR-WF-009](./generated/kr-wf-009.md) | Workflow Loop Stop File Never Written | MEDIUM | Kiro Workflows | No |
+| [KR-IGN-001](./generated/kr-ign-001.md) | Ineffective Kiro Ignore Negation | MEDIUM | Kiro Ignore | No |
+| [MCP-001](./generated/mcp-001.md) | Invalid JSON-RPC Version | HIGH | MCP | Yes (safe) |
+| [MCP-002](./generated/mcp-002.md) | Missing Required Tool Field | HIGH | MCP | No |
+| [MCP-003](./generated/mcp-003.md) | Invalid JSON Schema | HIGH | MCP | No |
+| [MCP-004](./generated/mcp-004.md) | Missing Tool Description | LOW | MCP | No |
+| [MCP-006](./generated/mcp-006.md) | Unknown Tool Annotation Key | LOW | MCP | No |
+| [MCP-007](./generated/mcp-007.md) | MCP Parse Error | HIGH | MCP | No |
+| [MCP-008](./generated/mcp-008.md) | Protocol Version Mismatch | MEDIUM | MCP | Yes (unsafe) |
+| [MCP-009](./generated/mcp-009.md) | Missing command for stdio server | HIGH | MCP | No |
+| [MCP-010](./generated/mcp-010.md) | Missing url for remote server | HIGH | MCP | No |
+| [MCP-011](./generated/mcp-011.md) | Invalid MCP server type | HIGH | MCP | Yes (unsafe) |
+| [MCP-012](./generated/mcp-012.md) | Deprecated SSE transport | MEDIUM | MCP | Yes (unsafe) |
+| [MCP-013](./generated/mcp-013.md) | Invalid Tool Name Format | MEDIUM | MCP | Yes (unsafe) |
+| [MCP-014](./generated/mcp-014.md) | Invalid outputSchema Definition | HIGH | MCP | No |
+| [MCP-015](./generated/mcp-015.md) | Missing Resource Required Fields | HIGH | MCP | No |
+| [MCP-016](./generated/mcp-016.md) | Missing Prompt Required Name | HIGH | MCP | No |
+| [MCP-017](./generated/mcp-017.md) | Non-HTTPS Remote HTTP Server URL | MEDIUM | MCP | Yes (unsafe) |
+| [MCP-018](./generated/mcp-018.md) | Potential Plaintext Secret in MCP Env | MEDIUM | MCP | No |
+| [MCP-019](./generated/mcp-019.md) | Potentially Dangerous Stdio Command | MEDIUM | MCP | No |
+| [MCP-020](./generated/mcp-020.md) | Unknown Capability Declaration Key | MEDIUM | MCP | No |
+| [MCP-021](./generated/mcp-021.md) | Wildcard HTTP Interface Binding | MEDIUM | MCP | Yes (unsafe) |
+| [MCP-022](./generated/mcp-022.md) | Invalid args Array Type | HIGH | MCP | No |
+| [MCP-023](./generated/mcp-023.md) | Duplicate MCP Server Names | HIGH | MCP | No |
+| [MCP-024](./generated/mcp-024.md) | Empty MCP Server Configuration | HIGH | MCP | No |
+| [CC-MCP-001](./generated/cc-mcp-001.md) | Credential Variable Reads as Empty in Remote MCP Server | HIGH | Claude MCP | No |
+| [CC-MCP-002](./generated/cc-mcp-002.md) | CLAUDE_PROJECT_DIR Without Default in Project .mcp.json | MEDIUM | Claude MCP | No |
+| [CC-MCP-003](./generated/cc-mcp-003.md) | MCP Tool Description or Instructions Truncated | LOW | Claude MCP | No |
+| [CC-MCP-004](./generated/cc-mcp-004.md) | Non-boolean alwaysLoad in Claude Code MCP Config | MEDIUM | Claude MCP | Yes (unsafe) |
+| [CC-MCP-005](./generated/cc-mcp-005.md) | Reserved MCP Server Name | HIGH | Claude MCP | No |
+| [MCP-027](./generated/mcp-027.md) | Unpinned Stdio MCP Server Package | MEDIUM | MCP | No |
+| [MCP-028](./generated/mcp-028.md) | Plaintext Credential in MCP Server Headers, URL or OAuth Secret | MEDIUM | MCP | No |
+| [MCP-029](./generated/mcp-029.md) | MCP Server Given the Home Directory or Filesystem Root | MEDIUM | MCP | No |
+| [MCP-030](./generated/mcp-030.md) | Duplicate Tool Names Within a Server | MEDIUM | MCP | No |
+| [MCP-031](./generated/mcp-031.md) | Invalid x-mcp-header Annotation | HIGH | MCP | No |
+| [MCP-032](./generated/mcp-032.md) | Deprecated MCP Capability Declared | LOW | MCP | No |
+| [MCP-033](./generated/mcp-033.md) | No-Parameter Tool Accepts Arbitrary Properties | LOW | MCP | No |
+| [OC-001](./generated/oc-001.md) | Invalid Share Mode | HIGH | OpenCode | Yes (unsafe) |
+| [OC-002](./generated/oc-002.md) | Invalid Instruction Path | HIGH | OpenCode | No |
+| [OC-003](./generated/oc-003.md) | opencode.json Parse Error | HIGH | OpenCode | No |
+| [OC-004](./generated/oc-004.md) | Unknown Config Key | MEDIUM | OpenCode | No |
+| [OC-006](./generated/oc-006.md) | Remote URL in Instructions | LOW | OpenCode | No |
+| [OC-007](./generated/oc-007.md) | Invalid Agent Definition | MEDIUM | OpenCode | No |
+| [OC-008](./generated/oc-008.md) | Invalid Permission Config | HIGH | OpenCode | Yes (unsafe) |
+| [OC-009](./generated/oc-009.md) | Invalid Variable Substitution | MEDIUM | OpenCode | No |
+| [OC-SK-001](./generated/oc-sk-001.md) | OpenCode Skill Uses Unsupported Field | MEDIUM | OpenCode Skills | Yes (safe/unsafe) |
+| [PE-002](./generated/pe-002.md) | Chain-of-Thought on Simple Task | LOW | Prompt Engineering | No |
+| [PE-004](./generated/pe-004.md) | Ambiguous Instructions | MEDIUM | Prompt Engineering | No |
+| [PE-005](./generated/pe-005.md) | Redundant Generic Instructions | MEDIUM | Prompt Engineering | Yes (unsafe) |
+| [PE-006](./generated/pe-006.md) | Negative-Only Instructions | MEDIUM | Prompt Engineering | No |
+| [REF-001](./generated/ref-001.md) | Import File Not Found | HIGH | References | No |
+| [REF-002](./generated/ref-002.md) | Broken Markdown Link | HIGH | References | No |
+| [REF-003](./generated/ref-003.md) | Duplicate Import | LOW | References | Yes (unsafe) |
+| [VER-001](./generated/ver-001.md) | No Tool/Spec Versions Pinned | LOW | Version Awareness | No |
+| [WS-001](./generated/ws-001.md) | Empty Windsurf Rule File | MEDIUM | windsurf | No |
+| [WS-002](./generated/ws-002.md) | Windsurf Rule File Exceeds Character Limit | HIGH | windsurf | No |
+| [WS-003](./generated/ws-003.md) | Empty or Oversized Windsurf Workflow File | HIGH | windsurf | No |
+| [WS-004](./generated/ws-004.md) | Legacy .windsurfrules File Detected | LOW | windsurf | No |
+| [WS-005](./generated/ws-005.md) | Model-Decision Rule Without Description | MEDIUM | windsurf | No |
+| [WS-006](./generated/ws-006.md) | Invalid or Missing Windsurf Rule Trigger | MEDIUM | windsurf | No |
+| [WS-007](./generated/ws-007.md) | Legacy .windsurf Directory | LOW | windsurf | No |
+| [WS-008](./generated/ws-008.md) | Generic Instruction in Windsurf Rule | LOW | windsurf | No |
+| [WS-009](./generated/ws-009.md) | Workflow Not Supported by the Devin Local Agent | LOW | windsurf | No |
+| [WS-010](./generated/ws-010.md) | Global Rules File Exceeds Character Limit | HIGH | windsurf | No |
+| [WS-011](./generated/ws-011.md) | AGENTS.md Exceeds Windsurf Rule Character Limit (Inferred) | MEDIUM | windsurf | No |
+| [WS-HK-001](./generated/ws-hk-001.md) | Invalid Cascade Hooks File | HIGH | windsurf | No |
+| [WS-HK-002](./generated/ws-hk-002.md) | Unknown Cascade Hook Event | MEDIUM | windsurf | No |
+| [WS-HK-003](./generated/ws-hk-003.md) | Cascade Hook Skipped or Option Ignored | MEDIUM | windsurf | No |
+| [WS-HK-004](./generated/ws-hk-004.md) | Relative Script Path in Cascade Hook | LOW | windsurf | No |
+| [WS-HK-005](./generated/ws-hk-005.md) | Secret in Workspace Hook Command | MEDIUM | windsurf | No |
+| [WS-SK-001](./generated/ws-sk-001.md) | Windsurf Skill Uses Unsupported Field | MEDIUM | Windsurf Skills | Yes (safe/unsafe) |
+| [XML-001](./generated/xml-001.md) | Unclosed XML Tag | MEDIUM | XML | Yes (unsafe) |
+| [XML-002](./generated/xml-002.md) | Mismatched Closing Tag | MEDIUM | XML | Yes (unsafe) |
+| [XML-003](./generated/xml-003.md) | Unmatched Closing Tag | MEDIUM | XML | Yes (unsafe) |
+| [XP-001](./generated/xp-001.md) | Inert or Partly Supported Content in AGENTS.md | LOW | Cross-Platform | No |
+| [XP-002](./generated/xp-002.md) | AGENTS.md Heading Hierarchy | LOW | Cross-Platform | No |
+| [XP-003](./generated/xp-003.md) | Hard-Coded User Home Path | MEDIUM | Cross-Platform | No |
+| [XP-004](./generated/xp-004.md) | Conflicting Build/Test Commands | MEDIUM | Cross-Platform | No |
+| [XP-005](./generated/xp-005.md) | Conflicting Tool Constraints | MEDIUM | Cross-Platform | No |
+| [XP-006](./generated/xp-006.md) | Several Tools' Instruction Files Without a Note | LOW | Cross-Platform | No |
+| [XP-008](./generated/xp-008.md) | CLAUDE.md @-Imports Cursor Does Not Inline | MEDIUM | Cross-Platform | No |
+| [XP-SK-001](./generated/xp-sk-001.md) | Skill Uses Client-Specific Features | LOW | Cross-Platform | No |
+| [XP-SK-002](./generated/xp-sk-002.md) | Hardcoded User Directory Path In Skill | MEDIUM | Cross-Platform | No |
+| [XP-SK-003](./generated/xp-sk-003.md) | Hardcoded Secret in Skill Files | MEDIUM | Cross-Platform | No |
+| [XP-SK-004](./generated/xp-sk-004.md) | Backslash Path in Skill | LOW | Cross-Platform | No |
+| [OC-CFG-001](./generated/oc-cfg-001.md) | Invalid Model Format | HIGH | OpenCode | No |
+| [OC-CFG-002](./generated/oc-cfg-002.md) | Invalid autoupdate or update Value | HIGH | OpenCode | No |
+| [OC-CFG-004](./generated/oc-cfg-004.md) | Invalid Default Agent | MEDIUM | OpenCode | No |
+| [OC-CFG-005](./generated/oc-cfg-005.md) | Hardcoded Secret in Config | MEDIUM | OpenCode | No |
+| [OC-CFG-006](./generated/oc-cfg-006.md) | Invalid MCP Server Structure | HIGH | OpenCode | No |
+| [OC-CFG-007](./generated/oc-cfg-007.md) | Invalid MCP Server Command, URL, cwd, or Environment | HIGH | OpenCode | No |
+| [OC-AG-001](./generated/oc-ag-001.md) | Invalid Agent Mode Value | HIGH | OpenCode | No |
+| [OC-AG-002](./generated/oc-ag-002.md) | Invalid Color Format | HIGH | OpenCode | No |
+| [OC-AG-003](./generated/oc-ag-003.md) | Temperature Out of Range | MEDIUM | OpenCode | No |
+| [OC-AG-004](./generated/oc-ag-004.md) | Steps Not a Positive Integer | HIGH | OpenCode | No |
+| [OC-PM-002](./generated/oc-pm-002.md) | Possibly Misspelled Permission Key | LOW | OpenCode | No |
+| [OC-AGM-002](./generated/oc-agm-002.md) | Secrets in AGENTS.md | MEDIUM | OpenCode | No |
+| [OC-DEP-001](./generated/oc-dep-001.md) | Deprecated mode Map | MEDIUM | OpenCode | Yes (unsafe) |
+| [OC-DEP-002](./generated/oc-dep-002.md) | Deprecated tools Field | MEDIUM | OpenCode | No |
+| [OC-DEP-003](./generated/oc-dep-003.md) | Deprecated autoshare Field | MEDIUM | OpenCode | Yes (unsafe) |
+| [OC-DEP-005](./generated/oc-dep-005.md) | Deprecated TUI Keys | MEDIUM | OpenCode | Yes (unsafe) |
+| [OC-DEP-006](./generated/oc-dep-006.md) | Deprecated maxSteps Field | MEDIUM | OpenCode | Yes (unsafe) |
+| [OC-DEP-007](./generated/oc-dep-007.md) | Deprecated reference Field | MEDIUM | OpenCode | Yes (unsafe) |
+| [OC-CFG-008](./generated/oc-cfg-008.md) | Invalid Log Level | HIGH | OpenCode | Yes (unsafe) |
+| [OC-CFG-009](./generated/oc-cfg-009.md) | Invalid Compaction Token Budget | HIGH | OpenCode | No |
+| [OC-CFG-010](./generated/oc-cfg-010.md) | Invalid Skills URL | HIGH | OpenCode | No |
+| [OC-CFG-011](./generated/oc-cfg-011.md) | Invalid MCP Timeout | HIGH | OpenCode | No |
+| [OC-CFG-012](./generated/oc-cfg-012.md) | Invalid MCP OAuth Config | HIGH | OpenCode | No |
+| [OC-CFG-013](./generated/oc-cfg-013.md) | Invalid Server Config | HIGH | OpenCode | No |
+| [OC-CFG-014](./generated/oc-cfg-014.md) | Invalid subagent_depth Value | MEDIUM | OpenCode | No |
+| [OC-AG-005](./generated/oc-ag-005.md) | top_p Out of Range | HIGH | OpenCode | No |
+| [OC-AG-006](./generated/oc-ag-006.md) | Invalid Named Color | MEDIUM | OpenCode | Yes (unsafe) |
+| [OC-AG-007](./generated/oc-ag-007.md) | Redundant steps and maxSteps | MEDIUM | OpenCode | No |
+| [OC-AG-008](./generated/oc-ag-008.md) | Invalid hidden Type | HIGH | OpenCode | No |
+| [OC-AG-009](./generated/oc-ag-009.md) | Invalid Agent disable or disabled Type | HIGH | OpenCode | No |
+| [OC-LSP-001](./generated/oc-lsp-001.md) | LSP Command Without Extensions | MEDIUM | OpenCode | No |
+| [OC-LSP-002](./generated/oc-lsp-002.md) | Invalid LSP Extensions | HIGH | OpenCode | No |
+| [OC-TUI-001](./generated/oc-tui-001.md) | Unknown TUI Key | MEDIUM | OpenCode | No |
+| [OC-TUI-002](./generated/oc-tui-002.md) | Invalid scroll_speed | HIGH | OpenCode | No |
+| [OC-TUI-003](./generated/oc-tui-003.md) | Invalid diff_style | HIGH | OpenCode | Yes (unsafe) |
+| [OC-CFG-015](./generated/oc-cfg-015.md) | Shell-Style Variable Not Expanded | MEDIUM | OpenCode | No |
+| [OC-CFG-017](./generated/oc-cfg-017.md) | Mixed OpenCode 1 and 2 Fields in One Entry | MEDIUM | OpenCode | No |
+| [OC-CFG-018](./generated/oc-cfg-018.md) | Reference Without Description | LOW | OpenCode | No |
+| [OC-CFG-019](./generated/oc-cfg-019.md) | Bare Reference Shorthand Read as Git Repository | LOW | OpenCode | No |
+| [OC-CFG-020](./generated/oc-cfg-020.md) | Many Enabled MCP Servers | LOW | OpenCode | No |
+| [OC-CFG-021](./generated/oc-cfg-021.md) | OpenCode 1 Field in an mcp.servers Entry | MEDIUM | OpenCode | No |
+| [OC-CFG-022](./generated/oc-cfg-022.md) | Global-Only Setting in Project Config | MEDIUM | OpenCode | No |
+| [OC-AG-010](./generated/oc-ag-010.md) | OpenCode Agent Without Description | MEDIUM | OpenCode | No |
+| [OC-AG-011](./generated/oc-ag-011.md) | hidden on a Non-Subagent | LOW | OpenCode | No |
+| [OC-PM-003](./generated/oc-pm-003.md) | Permission Rule Shadowed by Later Catch-All | MEDIUM | OpenCode | No |
+| [OC-PM-004](./generated/oc-pm-004.md) | Broad external_directory Allow | MEDIUM | OpenCode | No |
+| [OC-PM-005](./generated/oc-pm-005.md) | OpenCode 1 Action Name in a permissions Array | MEDIUM | OpenCode | No |
+| [OC-PM-006](./generated/oc-pm-006.md) | Shell Allow-All With Deny Patterns | LOW | OpenCode | No |
+| [OC-PM-007](./generated/oc-pm-007.md) | Shell Pattern Without Argument Wildcard | LOW | OpenCode | No |
+| [OC-POL-001](./generated/oc-pol-001.md) | Invalid Policy Statement | HIGH | OpenCode | No |
+| [OC-CMD-001](./generated/oc-cmd-001.md) | Command Argument Inside Shell Block | MEDIUM | OpenCode | No |
+| [OC-CMD-002](./generated/oc-cmd-002.md) | JSON Command Without Template | HIGH | OpenCode | No |
+| [OC-CMD-003](./generated/oc-cmd-003.md) | template in Markdown Command Frontmatter | LOW | OpenCode | No |
+| [OC-DEP-008](./generated/oc-dep-008.md) | Legacy Singular .opencode Subdirectory | LOW | OpenCode | No |
+| [OC-DEP-009](./generated/oc-dep-009.md) | Field Ignored by OpenCode 2 | MEDIUM | OpenCode | No |
+| [OC-AGM-003](./generated/oc-agm-003.md) | CLAUDE.md Ignored by OpenCode 2 | MEDIUM | OpenCode | No |
+| [OC-SK-002](./generated/oc-sk-002.md) | Duplicate OpenCode Skill ID | LOW | OpenCode | No |
+| [OC-TOOL-001](./generated/oc-tool-001.md) | Custom Tool Shadows Built-in Tool | LOW | OpenCode | No |
+| [CC-PL-017](./generated/cc-pl-017.md) | Unknown Plugin Manifest Field | MEDIUM | Claude Plugins | No |
+| [CC-PL-018](./generated/cc-pl-018.md) | Reserved Plugin Name | HIGH | Claude Plugins | No |
+| [CC-PL-019](./generated/cc-pl-019.md) | Invalid Dependency Version Range | MEDIUM | Claude Plugins | No |
+| [CC-PL-020](./generated/cc-pl-020.md) | Unbraced Plugin Variable in Plugin Content | MEDIUM | Claude Plugins | No |
+| [CC-PL-021](./generated/cc-pl-021.md) | Plugin Settings Key Dropped | MEDIUM | Claude Plugins | No |
+| [CC-PL-022](./generated/cc-pl-022.md) | Monitor Command References user_config | HIGH | Claude Plugins | No |
+| [CC-PL-023](./generated/cc-pl-023.md) | Invalid Key or Value in Strict Manifest Object | HIGH | Claude Plugins | No |
+| [CC-MP-001](./generated/cc-mp-001.md) | Marketplace Parse Error or Missing Required Field | HIGH | Claude Marketplaces | No |
+| [CC-MP-002](./generated/cc-mp-002.md) | Invalid or Reserved Marketplace or Plugin Name | HIGH | Claude Marketplaces | No |
+| [CC-MP-003](./generated/cc-mp-003.md) | Invalid Plugin Source, Duplicate Entry or Unresolved Rename | HIGH | Claude Marketplaces | No |
+| [CC-MP-004](./generated/cc-mp-004.md) | Marketplace Entry Fails to Load | HIGH | Claude Marketplaces | No |
+| [CC-MP-005](./generated/cc-mp-005.md) | Marketplace Field Ignored or Missing Metadata | LOW | Claude Marketplaces | No |
+| [KR-PM-001](./generated/kr-pm-001.md) | Invalid Kiro Permissions Document | HIGH | Kiro Permissions | No |
+| [KR-PM-002](./generated/kr-pm-002.md) | Invalid Kiro Permission Capability | HIGH | Kiro Permissions | No |
+| [KR-PM-003](./generated/kr-pm-003.md) | Invalid Kiro Permission Effect | HIGH | Kiro Permissions | No |
+| [KR-PM-004](./generated/kr-pm-004.md) | Invalid Kiro Permission Patterns | HIGH | Kiro Permissions | No |
+| [KR-PM-005](./generated/kr-pm-005.md) | Unknown Field in Kiro Permission Rule | HIGH | Kiro Permissions | No |
+| [KR-PM-006](./generated/kr-pm-006.md) | Invalid Kiro Permission Policy Presets | HIGH | Kiro Permissions | No |
+| [KR-PM-007](./generated/kr-pm-007.md) | Kiro Permission Pattern Has No Effect | MEDIUM | Kiro Permissions | No |
+| [KR-PM-008](./generated/kr-pm-008.md) | Empty Kiro Permission match List Matches Everything | MEDIUM | Kiro Permissions | No |
+| [KR-PM-009](./generated/kr-pm-009.md) | Kiro Does Not Read This Permissions File | LOW | Kiro Permissions | No |
+| [KR-PM-010](./generated/kr-pm-010.md) | Unrestricted Kiro Allow Rule for a Write-Capable Capability | MEDIUM | Kiro Permissions | No |
+| [KR-PM-011](./generated/kr-pm-011.md) | Unsupported Pattern Syntax in Kiro Shell, Web or MCP Rule | MEDIUM | Kiro Permissions | No |
+| [KR-PM-012](./generated/kr-pm-012.md) | Shadowed Kiro sandbox_network Deny | MEDIUM | Kiro Permissions | No |
+| [KR-HK-014](./generated/kr-hk-014.md) | Kiro Hook Migration and Canonical Trigger Hint | LOW | Kiro Hooks | Yes (safe) |
+| [PI-CFG-001](./generated/pi-cfg-001.md) | Invalid Pi Configuration JSON | HIGH | pi | No |
+| [PI-CFG-002](./generated/pi-cfg-002.md) | Invalid Pi Settings Value | HIGH | pi | No |
+| [PI-CFG-003](./generated/pi-cfg-003.md) | Ignored Pi Project Configuration | MEDIUM | pi | No |
+| [PI-MDL-001](./generated/pi-mdl-001.md) | Invalid Pi Model Definition | HIGH | pi | No |
+| [PI-MDL-002](./generated/pi-mdl-002.md) | Unusable Pi Provider Configuration | HIGH | pi | No |
+| [PI-KB-001](./generated/pi-kb-001.md) | Invalid Pi Keybinding | HIGH | pi | No |
+| [PI-MCP-001](./generated/pi-mcp-001.md) | Invalid Pi MCP Configuration | HIGH | pi | No |
+| [PI-MCP-002](./generated/pi-mcp-002.md) | Invalid Pi MCP Server | HIGH | pi | No |
+| [PI-MCP-003](./generated/pi-mcp-003.md) | Invalid Pi Provider Authentication Scope | HIGH | pi | No |
+| [PI-MCP-004](./generated/pi-mcp-004.md) | Colliding Pi MCP Namespaces | HIGH | pi | No |
+| [PI-MCP-005](./generated/pi-mcp-005.md) | Invalid Pi MCP OAuth Configuration | HIGH | pi | No |
+| [PI-PKG-001](./generated/pi-pkg-001.md) | Invalid Pi Package Resources | HIGH | pi | No |
+| [PI-PKG-002](./generated/pi-pkg-002.md) | Bundled Pi Host Dependency | MEDIUM | pi | No |
+| [PI-TH-001](./generated/pi-th-001.md) | Invalid Pi Theme Structure | HIGH | pi | No |
+| [PI-TH-002](./generated/pi-th-002.md) | Invalid Pi Theme Resolution | HIGH | pi | No |
+| [PI-PR-001](./generated/pi-pr-001.md) | Invalid Pi Prompt YAML | HIGH | pi | No |
+| [PI-PR-002](./generated/pi-pr-002.md) | Ignored Pi Prompt Metadata | MEDIUM | pi | No |
+| [AGY-CFG-001](./generated/agy-cfg-001.md) | Invalid Antigravity Configuration JSON | HIGH | antigravity | No |
+| [AGY-CFG-002](./generated/agy-cfg-002.md) | Invalid Antigravity Setting | HIGH | antigravity | No |
+| [AGY-CFG-003](./generated/agy-cfg-003.md) | Misplaced Antigravity Customization | MEDIUM | antigravity | No |
+| [AGY-CFG-004](./generated/agy-cfg-004.md) | Ignored Antigravity Permission Resource | MEDIUM | antigravity | No |
+| [AGY-CFG-005](./generated/agy-cfg-005.md) | Antigravity Formatter Fallback | MEDIUM | antigravity | No |
+| [AGY-KB-001](./generated/agy-kb-001.md) | Invalid Antigravity Keybinding | MEDIUM | antigravity | No |
+| [AGY-MCP-001](./generated/agy-mcp-001.md) | Invalid Antigravity MCP Server | HIGH | antigravity | No |
+| [AGY-MCP-002](./generated/agy-mcp-002.md) | Unsupported Antigravity MCP Transport | HIGH | antigravity | No |
+| [AGY-PL-001](./generated/agy-pl-001.md) | Invalid Antigravity Plugin Field | HIGH | antigravity | No |
+| [AGY-PL-002](./generated/agy-pl-002.md) | Ignored Antigravity Plugin Metadata | MEDIUM | antigravity | No |
+| [AGY-HK-001](./generated/agy-hk-001.md) | Invalid Antigravity Hook Structure | HIGH | antigravity | No |
+| [AGY-HK-002](./generated/agy-hk-002.md) | Unknown Antigravity Hook Event | MEDIUM | antigravity | No |
+| [AGY-RL-001](./generated/agy-rl-001.md) | Invalid Antigravity Rule Trigger | HIGH | antigravity | No |
+| [AGY-RL-002](./generated/agy-rl-002.md) | Invalid Antigravity Rule Metadata | HIGH | antigravity | No |
+| [AGY-RL-003](./generated/agy-rl-003.md) | Truncated Antigravity Rule | HIGH | antigravity | No |
+| [AGY-RL-004](./generated/agy-rl-004.md) | Invalid Antigravity Rule Registry | HIGH | antigravity | No |
+| [AGY-AG-001](./generated/agy-ag-001.md) | Invalid Antigravity Agent YAML | HIGH | antigravity | No |
+| [AGY-AG-002](./generated/agy-ag-002.md) | Invalid Antigravity Agent Metadata | HIGH | antigravity | No |
+| [GRK-CFG-001](./generated/grk-cfg-001.md) | Invalid Grok Configuration Syntax | HIGH | grok | No |
+| [GRK-CFG-002](./generated/grk-cfg-002.md) | Ignored Grok Project Setting | MEDIUM | grok | No |
+| [GRK-CFG-003](./generated/grk-cfg-003.md) | Invalid Grok Setting Value | MEDIUM | grok | No |
+| [GRK-CFG-004](./generated/grk-cfg-004.md) | Retired or Legacy Grok Setting | MEDIUM | grok | No |
+| [GRK-CFG-005](./generated/grk-cfg-005.md) | Ignored Grok Policy Lock | MEDIUM | grok | No |
+| [GRK-CFG-006](./generated/grk-cfg-006.md) | Invalid Grok Version Override | HIGH | grok | No |
+| [GRK-SBX-001](./generated/grk-sbx-001.md) | Redefined Grok Sandbox Builtin | HIGH | grok | No |
+| [GRK-SBX-002](./generated/grk-sbx-002.md) | Invalid Grok Sandbox Profile | HIGH | grok | No |
+| [GRK-MCP-001](./generated/grk-mcp-001.md) | Invalid Grok MCP Server | HIGH | grok | No |
+| [GRK-HK-001](./generated/grk-hk-001.md) | Invalid Grok Hook Handler | HIGH | grok | No |
+| [GRK-HK-002](./generated/grk-hk-002.md) | Unknown Grok Hook Event | MEDIUM | grok | No |
+| [GRK-HK-003](./generated/grk-hk-003.md) | Invalid Grok Hook Matcher | MEDIUM | grok | No |
+| [GRK-PL-001](./generated/grk-pl-001.md) | Invalid Grok Plugin Manifest | HIGH | grok | No |
+| [GRK-PL-002](./generated/grk-pl-002.md) | Escaping Grok Plugin Component | MEDIUM | grok | No |
+| [GRK-AG-001](./generated/grk-ag-001.md) | Invalid Grok Agent YAML | HIGH | grok | No |
+| [GRK-AG-002](./generated/grk-ag-002.md) | Invalid Grok Agent Metadata | HIGH | grok | No |
+| [GRK-AG-003](./generated/grk-ag-003.md) | Invalid Grok Role or Persona | HIGH | grok | No |
+| [GRK-AG-004](./generated/grk-ag-004.md) | Restricted Grok Plugin Agent Field | MEDIUM | grok | No |
+| [GRK-SK-001](./generated/grk-sk-001.md) | Grok Skill Tool Policy Advisory | LOW | grok | No |
+| [GRK-SK-002](./generated/grk-sk-002.md) | Ignored Grok Skill Boolean | MEDIUM | grok | No |
