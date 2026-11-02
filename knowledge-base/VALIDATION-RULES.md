@@ -430,7 +430,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 
 <a id="cc-sk-028"></a>
 ### CC-SK-028 [MEDIUM] Injected Command Not Run
-**Requirement**: `!` command injection SHOULD use a form Claude Code runs. Vendor text: "The inline form is only recognized when `!` appears at the start of a line or immediately after whitespace. If `!` follows another character, as in `` KEY=!`cmd` ``, the placeholder is left as literal text and the command does not run." and "`No shell command in <name> was run` means one of the file's `!` commands contains a raw control character other than tab or newline, so none of them runs." (skills, "Inject dynamic context")
+**Requirement**: `!` command injection SHOULD use a form Claude Code runs. Vendor text: "The inline form is only recognized when `!` appears at the start of a line or immediately after whitespace. If `!` follows another character, as in `` KEY=!`cmd` ``, the placeholder is left as literal text and the command does not run." and "`No shell command in <name> was run` means one of its shell commands contains a character the tool doesn't accept. To find and remove the character, see the error reference." (skills, "Inject dynamic context"; the error reference spells the message "No shell command in <name> was run, because the <tool> tool does not accept one of them". agnix checks the control-character subset of the rejected set: a raw control character other than tab or newline, so none of the file's commands runs.)
 **Detection**: in prose (outside code spans and fences), `` !` `` preceded by a non-whitespace character on the same line; and a control character other than tab, newline or carriage return inside a recognized inline command or closed executable ```` ```! ```` block. Explicit `shell: powershell` also refuses U+FEFF and U+180E. Control characters in frontmatter, surrounding prose and ordinary code examples do not trigger this rule.
 **Fix**: Manual
 **Source**: code.claude.com/docs/en/skills
@@ -2917,10 +2917,10 @@ OpenCode 1 (`opencode-ai`) and OpenCode 2 (`@opencode/cli`, released 2026-09-11)
 
 <a id="oc-cfg-009"></a>
 ### OC-CFG-009 [HIGH] Invalid Compaction Token Budget
-**Requirement**: `compaction.reserved` (OpenCode 1), `compaction.buffer` and `compaction.keep.tokens` (OpenCode 2) MUST be non-negative integers (schema `minimum: 0`)
+**Requirement**: `compaction.reserved` (OpenCode 1), `compaction.keep.tokens` and `compaction.buffer` (OpenCode 2) MUST be non-negative integers. Since OpenCode 2 v2.2.5, `compaction.buffer` also accepts a percentage of the model's context window as a string, such as `"20%"` or `"12.5%"`, from 1% up to but not including 100% (tagged schema pattern `^([1-9]\d?(\.\d+)?)%$`); OpenCode 1 keeps the token-count-only contract, so the string form is accepted only when the file targets OpenCode 2
 **Detection**: Error at the value
 **Fix**: No auto-fix
-**Source**: opencode.ai/config.json
+**Source**: opencode.ai/config.json, github.com/anomalyco/opencode/releases/tag/v2.2.5
 
 <a id="oc-cfg-010"></a>
 ### OC-CFG-010 [HIGH] Invalid Skills URL
@@ -4740,10 +4740,10 @@ Capability policies are read by the V3 engine (and Kiro IDE 1.0) from `~/.kiro/s
 
 <a id="kr-pm-006"></a>
 ### KR-PM-006 [HIGH] Invalid Kiro Permission Policy Presets
-**Requirement**: The optional top-level `policies` list MUST be an array of preset id strings: `allow-all`, `edit-workspace`, `read-workspace`, `read-all`, `read-only-shell`, `dev-shell`.
-**Detection**: A non-array `policies` or a non-string entry is fatal (error). An unknown preset id is skipped (warning). In managed-settings.json every preset is skipped because presets contain only allow rules (warning).
+**Requirement**: The optional top-level `policies` list MUST be an array of preset id strings: `allow-all`, `edit-workspace`, `read-workspace`, `read-all`, `read-only-shell`, `dev-shell`, `approve-for-me`.
+**Detection**: A non-array `policies` or a non-string entry is fatal (error). An unknown preset id is skipped (warning). In managed-settings.json every preset is skipped because presets contain only allow rules (warning). `approve-for-me` is accepted because Kiro itself writes it: "Kiro adds the `approve-for-me` policy preset to the workspace permissions file" (CLI 2.36.0 changelog); the permissions reference's preset table had not listed it yet when verified on 2026-11-02.
 **Fix**: No auto-fix - list valid preset ids or write explicit rules.
-**Source**: kiro.dev/docs/permissions ("Policy presets"), kiro.dev/docs/cli/v3/permissions
+**Source**: kiro.dev/docs/permissions ("Policy presets"), kiro.dev/docs/cli/v3/permissions, kiro.dev/changelog/cli
 
 <a id="kr-pm-007"></a>
 ### KR-PM-007 [MEDIUM] Kiro Permission Pattern Has No Effect
@@ -4937,6 +4937,7 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 **Requirement**: Keys SHOULD be Kiro CLI settings (`kiro-cli settings` refuses to write other keys).
 **Detection**: Info for any other top-level key (`chat.autoCompact`, third-party keys), with a suggestion for a close or known spelling. Kiro ignores these keys.
 **2.34 reference refresh**: `chat.workflowLaunch` is a documented string setting with `when-asked`, `large-tasks` and `delegate-all` choices. KR-SET-008/009 check its type and choices; no undocumented scope restriction is inferred.
+**2.35 changelog refresh**: `app.warnOnElevatedPrivileges` is a documented boolean setting ("turn the warning off with `kiro-cli settings app.warnOnElevatedPrivileges false`", CLI 2.35.0 changelog); the settings reference table had not listed it yet when verified on 2026-11-02, and no workspace restriction is documented, so none is inferred.
 **Fix**: No auto-fix - correct or remove the key.
 **Source**: kiro.dev/docs/reference/settings
 

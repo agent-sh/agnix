@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-10-28T21:15:09Z",
+  "last_updated": "2026-11-02T07:27:57Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -28,7 +28,7 @@
       "mcp-spec": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/index.md",
-        "hash": "10a982e47c02684d10c24c6a7d9ab19f424eab767ac31e7c1595cc469cfda0b5",
+        "hash": "367fe3c143676f4cffcd01cbd9699c7ea7c58c3224e29c9a4432ffc60d017d96",
         "github_repo": "modelcontextprotocol/modelcontextprotocol",
         "rules": [
           "MCP-001",
@@ -102,7 +102,7 @@
       "mcp-spec-security": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/security_best_practices",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/security_best_practices.md",
-        "hash": "9c9917dcde72102aff5e6cc0354f9433cade906e752aaae81d46e8ad6db584bd",
+        "hash": "a38640214db9bd1253ffac3cfc1389710861746c8e4b2546879e6561a291a257",
         "rules": [
           "MCP-018",
           "MCP-019",
@@ -139,7 +139,7 @@
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-        "hash": "4dd52664edb08c9d73e04daa59c0e25a10db17a4a8d9e52525bd1dd5c65980d8",
+        "hash": "4dbc59ce81a4b431d4fe819939760b1a5ac73d5aa41e27c47e5d7c06411bdf31",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -165,7 +165,7 @@
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-        "hash": "942a10cce0b454dc75b1953db4d431732d8bf3cb76a494abb6b53e7b28b63648",
+        "hash": "d1cfcd4a5a898f34674a494cc0cbe14cc3b1613bb855133870f5ad9a0ab95bea",
         "rules": [
           "AS-021",
           "CC-SK-001",
@@ -201,7 +201,7 @@
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
         "content_url": "https://code.claude.com/docs/en/sub-agents.md",
-        "hash": "7ee4221bb9e94cb2394ad23bc55180f0bd2ef123dcbf68097d8f6a5d73d3a62b",
+        "hash": "410d576b916a8dd6a313c3bdf169f9dd88152e9ac6d0887ec15f4c2db5fcd604",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",

@@ -157,6 +157,32 @@ fn kiro_permissions_admin_scope_allows_only_deny_and_ask() {
 }
 
 #[test]
+fn kiro_permissions_approve_for_me_preset_is_known() {
+    // CLI 2.36.0 changelog: "Kiro adds the `approve-for-me` policy preset to
+    // the workspace permissions file". Kiro writes this value itself, so it
+    // must not warn as an unknown preset.
+    for path in [
+        "/home/u/.kiro/settings/permissions.yaml",
+        "/home/u/.kiro/workspace-roots/0123456789abcdef/permissions.yaml",
+    ] {
+        let diagnostics = validate_at(path, "policies: [approve-for-me]\nrules: []\n");
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "KR-PM-006"),
+            "{path}: {diagnostics:#?}"
+        );
+    }
+    // An administrator file still skips every preset, this one included.
+    let d = only(
+        &validate_at(
+            "it/managed-settings.json",
+            r#"{"policies": ["approve-for-me"], "rules": []}"#,
+        ),
+        "KR-PM-006",
+    );
+    assert_eq!(d.level, DiagnosticLevel::Warning);
+}
+
+#[test]
 fn kiro_permissions_json_files_are_strict_json() {
     let path = "/home/u/.kiro/settings/permissions.json";
     assert!(

@@ -1289,6 +1289,15 @@ impl Cx<'_, '_, '_> {
             ] {
                 if let Some(node) = node
                     && !node.is_null()
+                    // OpenCode 2 (v2.2.5+) also accepts a percentage of the
+                    // model's context window for compaction.buffer: a string
+                    // such as "20%", from 1% up to but not including 100%
+                    // (tagged schema pattern `^([1-9]\d?(\.\d+)?)%$` in
+                    // packages/schema/src/config/compaction.ts). OpenCode 1
+                    // keeps the token-count-only contract.
+                    && !(field == "compaction.buffer"
+                        && self.lines.v2
+                        && node.str().is_some_and(is_percent_buffer))
                     && !node.i64().is_some_and(|value| value >= 0)
                 {
                     self.out.error(
@@ -1816,6 +1825,24 @@ fn legacy_tui_cleanup(content: &str) -> Option<String> {
     // Always check syntax after composing the cleanup, including JSONC input.
     parse_config(&fixed).ok()?;
     Some(fixed)
+}
+
+/// OpenCode 2's percentage form of `compaction.buffer`: a share of the
+/// model's context window such as "20%" or "12.5%", from 1% up to but not
+/// including 100% (no leading zero, no bare "100%", no "0%").
+fn is_percent_buffer(value: &str) -> bool {
+    let Some(percent) = value.strip_suffix('%') else {
+        return false;
+    };
+    let (whole, frac) = match percent.split_once('.') {
+        Some((w, f)) => (w, Some(f)),
+        None => (percent, None),
+    };
+    !whole.is_empty()
+        && whole.bytes().all(|b| b.is_ascii_digit())
+        && !whole.starts_with('0')
+        && whole.len() <= 2
+        && frac.is_none_or(|f| !f.is_empty() && f.bytes().all(|b| b.is_ascii_digit()))
 }
 
 /// Truncate a string for display in diagnostic messages.
@@ -3030,6 +3057,39 @@ mod tests {
     fn test_oc_cfg_009_type_error() {
         let diagnostics = validate(r#"{"compaction": {"reserved": "five"}}"#);
         assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-009"));
+    }
+
+    // ===== OC-CFG-009: percentage compaction.buffer (OpenCode 2 v2.2.5+) =====
+
+    #[test]
+    fn test_oc_cfg_009_percent_buffer_accepted_on_v2() {
+        for buffer in ["\"20%\"", "\"12.5%\"", "\"1%\"", "\"99%\""] {
+            let content = format!(r#"{{"compaction": {{"buffer": {buffer}}}}}"#);
+            let diagnostics = validate_with_config(&content, &pinned("2.2.5"));
+            assert!(
+                !diagnostics.iter().any(|d| d.rule == "OC-CFG-009"),
+                "{buffer}: {diagnostics:#?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_oc_cfg_009_percent_buffer_rejected_on_v1() {
+        let diagnostics =
+            validate_with_config(r#"{"compaction": {"buffer": "20%"}}"#, &pinned("1.19.5"));
+        assert!(diagnostics.iter().any(|d| d.rule == "OC-CFG-009"));
+    }
+
+    #[test]
+    fn test_oc_cfg_009_out_of_range_percent_buffer() {
+        for buffer in ["\"0%\"", "\"100%\"", "\"020%\"", "\"20 %.%\"", "\"20\""] {
+            let content = format!(r#"{{"compaction": {{"buffer": {buffer}}}}}"#);
+            let diagnostics = validate_with_config(&content, &pinned("2.2.5"));
+            assert!(
+                diagnostics.iter().any(|d| d.rule == "OC-CFG-009"),
+                "{buffer}: {diagnostics:#?}"
+            );
+        }
     }
 
     // ===== OC-CFG-010: Invalid skills.urls =====

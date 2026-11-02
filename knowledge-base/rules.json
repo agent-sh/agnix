@@ -15029,9 +15029,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://kiro.dev/docs/reference/settings/"
+          "https://kiro.dev/docs/reference/settings/",
+          "https://kiro.dev/changelog/cli/"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-02",
         "applies_to": {
           "tool": "kiro"
         },
@@ -18529,9 +18530,11 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://opencode.ai/config.json",
-          "https://opencode.ai/v2/docs/migrate-v1/"
+          "https://opencode.ai/v2/docs/migrate-v1/",
+          "https://github.com/anomalyco/opencode/releases/tag/v2.2.5",
+          "https://github.com/anomalyco/opencode/blob/v2.2.5/packages/schema/src/config/compaction.ts"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-02",
         "applies_to": {
           "tool": "opencode"
         },
@@ -20138,9 +20141,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://kiro.dev/docs/permissions/",
-          "https://kiro.dev/docs/cli/v3/permissions/"
+          "https://kiro.dev/docs/cli/v3/permissions/",
+          "https://kiro.dev/changelog/cli/"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-02",
         "applies_to": {
           "tool": "kiro",
           "spec_revision": "CLI V3 / IDE 1.x capability permissions"
