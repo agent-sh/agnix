@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- Accept Kiro CLI 2.35+/2.36.0 additions: the documented `app.warnOnElevatedPrivileges` boolean setting joins the KR-SET-005 known-key list, and the Kiro-written `approve-for-me` policy preset joins KR-PM-006's valid presets.
+- Accept OpenCode 2 v2.2.5's percentage form of `compaction.buffer` (a string such as "20%", from 1% up to but not including 100%) when the file targets OpenCode 2; OpenCode 1 keeps the integer-only contract.
+
+### Changed
+- Review Antigravity CLI 1.4.12 (via `agy changelog` and the published schemas, both byte-identical), Kiro 2.35.2 superseded by 2.36.0, OpenCode 2 v2.2.5 and the five changed spec sources from the drift sentinel; refresh all five spec baseline hashes and CC-SK-028's reworded vendor quote. No Claude Code or MCP rule-bearing change was needed.
+
+### Fixed
 - Correct the package and editor READMEs: the agnix-core `validate_project_rules` example now compiles, the Zed `.agnix.toml` example uses valid keys, npm and Homebrew are no longer listed as `agnix-lsp` installs, the Zed rule count and the npm and CLI command lists match the binary, and the Neovim link points at `editors/neovim`.
 
 ### Changed
