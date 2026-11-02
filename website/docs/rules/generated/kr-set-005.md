@@ -13,7 +13,7 @@ keywords: ["KR-SET-005", "unknown kiro cli setting", "kiro settings", "validatio
 - **Category**: `Kiro Settings`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-02`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["KR-SET-005", "unknown kiro cli setting", "kiro settings", "validatio
 ## Evidence Sources
 
 - https://kiro.dev/docs/reference/settings/
+- https://kiro.dev/changelog/cli/
 
 ## Test Coverage Metadata
 

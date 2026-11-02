@@ -13,7 +13,7 @@ keywords: ["OC-CFG-009", "invalid compaction token budget", "opencode", "validat
 - **Category**: `OpenCode`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-02`
 
 ## Applicability
 
@@ -25,6 +25,8 @@ keywords: ["OC-CFG-009", "invalid compaction token budget", "opencode", "validat
 
 - https://opencode.ai/config.json
 - https://opencode.ai/v2/docs/migrate-v1/
+- https://github.com/anomalyco/opencode/releases/tag/v2.2.5
+- https://github.com/anomalyco/opencode/blob/v2.2.5/packages/schema/src/config/compaction.ts
 
 ## Test Coverage Metadata
 

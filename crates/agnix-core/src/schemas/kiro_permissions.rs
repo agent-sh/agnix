@@ -41,7 +41,11 @@ pub const UNSUPPORTED_PERMISSION_EFFECT: &str = "evaluate";
 pub const VALID_PERMISSION_RULE_FIELDS: &[&str] = &["capability", "effect", "match", "exclude"];
 
 /// Preset ids accepted in a policy file's `policies` list. Every preset
-/// contains only `allow` rules.
+/// contains only `allow` rules. `approve-for-me` is written by Kiro itself
+/// (CLI 2.36.0 changelog: "Kiro adds the `approve-for-me` policy preset to
+/// the workspace permissions file"); the permissions reference's preset table
+/// had not listed it yet when verified, so unknown-preset warnings on a
+/// Kiro-written value would be false positives.
 pub const VALID_PERMISSION_POLICIES: &[&str] = &[
     "allow-all",
     "edit-workspace",
@@ -49,6 +53,7 @@ pub const VALID_PERMISSION_POLICIES: &[&str] = &[
     "read-all",
     "read-only-shell",
     "dev-shell",
+    "approve-for-me",
 ];
 
 /// Keep YAML values uncoerced: numeric/bool scalars are not pattern strings.

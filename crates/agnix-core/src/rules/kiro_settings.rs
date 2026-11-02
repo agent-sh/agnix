@@ -19,7 +19,8 @@
 //!   workspace level").
 //!
 //! The key list and value types come from `kiro-cli settings list --all`
-//! 2.32.1 (140 keys), plus `chat.workflowLaunch` from the 2.34 reference.
+//! 2.32.1 (140 keys), plus `chat.workflowLaunch` from the 2.34 reference and
+//! `app.warnOnElevatedPrivileges` from the 2.35.0 CLI changelog.
 //! A value of the wrong type is not coerced: the Q
 //! Developer CLI lineage reads settings with typed getters that return no
 //! value, so Kiro falls back to the default.
@@ -160,6 +161,11 @@ const SETTINGS: &[SettingSpec] = &[
     spec("cleanup.periodDays", Number, true, &[]),
     spec("chat.disableGranularTrust", Bool, false, &[]),
     spec("app.disableAutoupdates", Bool, true, &[]),
+    // Kiro CLI 2.35.0 changelog: "turn the warning off with `kiro-cli settings
+    // app.warnOnElevatedPrivileges false`" (boolean feature toggle; the
+    // settings reference table had not listed it yet when verified). No
+    // workspace restriction is documented, so none is inferred.
+    spec("app.warnOnElevatedPrivileges", Bool, false, &[]),
     spec("hooks.showStatus", Bool, false, &[]),
     spec("chat.autoExpandToolOutput", Bool, false, &[]),
     spec("chat.disableTrustAllConfirmation", Bool, true, &[]),

@@ -13,7 +13,7 @@ keywords: ["KR-PM-006", "invalid kiro permission policy presets", "kiro permissi
 - **Category**: `Kiro Permissions`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-02`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["KR-PM-006", "invalid kiro permission policy presets", "kiro permissi
 
 - https://kiro.dev/docs/permissions/
 - https://kiro.dev/docs/cli/v3/permissions/
+- https://kiro.dev/changelog/cli/
 
 ## Test Coverage Metadata
 

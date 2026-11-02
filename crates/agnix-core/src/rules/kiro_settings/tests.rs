@@ -233,6 +233,22 @@ fn test_kr_set_005_unknown_keys() {
 }
 
 #[test]
+fn test_kr_set_005_warn_on_elevated_privileges_is_known() {
+    // Documented in the CLI 2.35.0 changelog: "turn the warning off with
+    // `kiro-cli settings app.warnOnElevatedPrivileges false`".
+    assert!(
+        validate(r#"{"app.warnOnElevatedPrivileges": false}"#).is_empty(),
+        "known boolean setting must not report KR-SET-005"
+    );
+    // A non-boolean value is still a wrong type (KR-SET-008).
+    let d = only(
+        &validate(r#"{"app.warnOnElevatedPrivileges": "false"}"#),
+        "KR-SET-008",
+    );
+    assert_eq!(d.level, DiagnosticLevel::Warning);
+}
+
+#[test]
 fn test_kr_set_006_misplaced_sections() {
     let content = r#"{"chat.defaultAgent": "oma-hooks", "mcpServers": {"serena": {"command": "oma"}}, "hooks": {"stop": []}}"#;
     let found = hits(&validate(content), "KR-SET-006");
@@ -437,7 +453,7 @@ fn test_does_not_panic_on_non_ascii_content() {
 
 #[test]
 fn test_settings_table_includes_kiro_234_workflow_launch() {
-    assert_eq!(SETTINGS.len(), 141);
+    assert_eq!(SETTINGS.len(), 142);
     let mut keys: Vec<_> = SETTINGS.iter().map(|s| s.key).collect();
     keys.sort_unstable();
     keys.dedup();
