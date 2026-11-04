@@ -336,7 +336,7 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
         ".pi" => SkillClient::Pi,
         "agent" if owner_idx > 0 && components[owner_idx - 1] == ".pi" => SkillClient::Pi,
         ".grok" => SkillClient::Grok,
-        ".agent" | "antigravity-cli" => SkillClient::Antigravity,
+        ".agent" | "_agents" | "_agent" | "antigravity-cli" => SkillClient::Antigravity,
         "config" if owner_idx > 0 && components[owner_idx - 1] == ".gemini" => {
             SkillClient::Antigravity
         }

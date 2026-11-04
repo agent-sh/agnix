@@ -234,7 +234,60 @@ fn pi_resource(
     None
 }
 
+/// Where a discovery manifest's relative paths start (customization
+/// discovery, "Paths and patterns"). In a project's manifest: "relative paths
+/// start at the folder that contains the `.agents/` folder ... If a relative
+/// path doesn't exist there, Antigravity tries it from the repository root."
+/// In a personal manifest: "relative paths in `entries` start at
+/// `~/.gemini/config/`."
+fn manifest_bases(registry: &Path, fs: &dyn FileSystem) -> Vec<PathBuf> {
+    let folder = normalized(registry.parent().unwrap_or_else(|| Path::new(".")));
+    let project = folder
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| super::AGY_PROJECT_FOLDERS.contains(&name));
+    if !project {
+        return vec![folder];
+    }
+    let owner = folder
+        .parent()
+        .map_or_else(|| folder.clone(), Path::to_path_buf);
+    let mut bases = vec![owner.clone()];
+    if let Some(repo) = owner.ancestors().find(|dir| fs.exists(&dir.join(".git"))) {
+        if repo != owner {
+            bases.push(repo.to_path_buf());
+        }
+    }
+    bases
+}
+
+/// A manifest `path` resolved against the first base where it exists, else
+/// the first base. "Antigravity doesn't expand `~`", so `~/x` stays relative.
+fn manifest_path(bases: &[PathBuf], value: &str, fs: &dyn FileSystem) -> PathBuf {
+    let candidates: Vec<PathBuf> = bases
+        .iter()
+        .map(|base| normalized(&base.join(value)))
+        .collect();
+    candidates
+        .iter()
+        .find(|candidate| fs.exists(candidate))
+        .unwrap_or(&candidates[0])
+        .clone()
+}
+
+/// An `include_only` or `exclude` item names a rule "by name or by relative
+/// path": "A file name, with or without `.md`" or "A relative path for nested
+/// items". "Wildcards aren't supported".
+fn manifest_item(relative: &Path, item: &str) -> bool {
+    let item = normalized(Path::new(item.trim_end_matches('/')));
+    relative == item || relative.with_extension("") == item
+}
+
+/// Whether a `rules.json` (or a manifest it inherits) registers `path`. A
+/// folder entry is scanned "one level deep"; nested rules load only when
+/// `include_only` names them. Entry and top-level `exclude` lists hide items.
 fn registry_owns(path: &Path, registry: &Path, fs: &dyn FileSystem) -> bool {
+    let file = normalized(path);
     let mut pending = vec![registry.to_path_buf()];
     let mut visited = HashSet::new();
     let mut bytes = 0u64;
@@ -252,19 +305,29 @@ fn registry_owns(path: &Path, registry: &Path, fs: &dyn FileSystem) -> bool {
         if bytes > crate::file_utils::DEFAULT_MAX_FILE_SIZE {
             break;
         }
-        let Some(value) = small_json(&registry, fs) else {
+        let Some(manifest) = small_json(&registry, fs) else {
             continue;
         };
-        let base = registry.parent().unwrap_or_else(|| Path::new("."));
-        if let Some(inherits) = value.get("inherits").and_then(Value::as_array) {
+        let bases = manifest_bases(&registry, fs);
+        if let Some(inherits) = manifest.get("inherits").and_then(Value::as_array) {
             pending.extend(
                 inherits
                     .iter()
-                    .filter_map(|value| value.get("path").and_then(Value::as_str))
-                    .map(|value| target(base, value)),
+                    .filter_map(|inherit| inherit.get("path").and_then(Value::as_str))
+                    .map(|value| manifest_path(&bases, value, fs)),
             );
         }
-        for entry in value
+        let hidden = |relative: &Path, list: Option<&Value>| {
+            let name = relative.file_name().map(Path::new);
+            list.and_then(Value::as_array).is_some_and(|items| {
+                items.iter().filter_map(Value::as_str).any(|item| {
+                    manifest_item(relative, item)
+                        || name.is_some_and(|name| manifest_item(name, item))
+                        || relative.starts_with(normalized(Path::new(item.trim_end_matches('/'))))
+                })
+            })
+        };
+        for entry in manifest
             .get("entries")
             .and_then(Value::as_array)
             .into_iter()
@@ -273,30 +336,30 @@ fn registry_owns(path: &Path, registry: &Path, fs: &dyn FileSystem) -> bool {
             let Some(value) = entry.get("path").and_then(Value::as_str) else {
                 continue;
             };
-            if !member(path, base, value, fs) {
-                continue;
-            }
-            let root = target(base, value);
-            let filter_base = if fs.is_dir(&root) {
-                root.as_path()
+            let root = manifest_path(&bases, value, fs);
+            let relative = if fs.is_dir(&root) {
+                let Ok(relative) = file.strip_prefix(&root) else {
+                    continue;
+                };
+                let included = match entry.get("include_only").and_then(Value::as_array) {
+                    Some(items) => items
+                        .iter()
+                        .filter_map(Value::as_str)
+                        .any(|item| manifest_item(relative, item)),
+                    None => relative.components().count() == 1,
+                };
+                if !included {
+                    continue;
+                }
+                relative.to_path_buf()
+            } else if file == root {
+                PathBuf::from(root.file_name().unwrap_or_default())
             } else {
-                root.parent().unwrap_or(base)
+                continue;
             };
-            // The docs establish relative file/directory lists, not glob syntax.
-            let matches = |filter: &Value| {
-                filter
-                    .as_str()
-                    .is_some_and(|value| member(path, filter_base, value, fs))
-            };
-            let included = entry
-                .get("include_only")
-                .and_then(Value::as_array)
-                .is_none_or(|items| items.iter().any(matches));
-            let excluded = entry
-                .get("exclude")
-                .and_then(Value::as_array)
-                .is_some_and(|items| items.iter().any(matches));
-            if included && !excluded {
+            if !hidden(&relative, entry.get("exclude"))
+                && !hidden(&relative, manifest.get("exclude"))
+            {
                 return true;
             }
         }
@@ -392,11 +455,12 @@ pub(crate) fn resource_owner(
             root.join(".pi/settings.json"),
             root.join(".pi/agent/settings.json"),
         ]);
-        registries.extend([
-            root.join(".agents/rules.json"),
-            root.join(".agent/rules.json"),
-            root.join(".gemini/config/rules.json"),
-        ]);
+        registries.extend(
+            super::AGY_PROJECT_FOLDERS
+                .iter()
+                .map(|folder| root.join(folder).join("rules.json")),
+        );
+        registries.push(root.join(".gemini/config/rules.json"));
     }
     if let Some(home) = std::env::var_os("PI_CODING_AGENT_DIR") {
         settings.push(PathBuf::from(home).join("settings.json"));

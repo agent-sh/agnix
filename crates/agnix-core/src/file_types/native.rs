@@ -395,6 +395,11 @@ pub(crate) fn grok_relative(path: &Path) -> Vec<String> {
     index.map_or_else(Vec::new, |index| parts[index + 1..].to_vec())
 }
 
+/// Folder names Antigravity reads as a project customization folder:
+/// "Antigravity also recognizes folders named `.agent/`, `_agents/`, and
+/// `_agent/`. Use `.agents/` for new projects." (customization discovery).
+pub(crate) const AGY_PROJECT_FOLDERS: &[&str] = &[".agents", ".agent", "_agents", "_agent"];
+
 pub(crate) fn detect(path: &Path) -> Option<FileType> {
     let path = native_path(path);
     let parts = components(&path);
@@ -440,14 +445,14 @@ pub(crate) fn detect(path: &Path) -> Option<FileType> {
     let agy_global = sequence(&parts, &[".gemini", "config"]);
     let agy_project = parts
         .iter()
-        .any(|part| matches!(part.as_str(), ".agents" | ".agent"));
+        .any(|part| AGY_PROJECT_FOLDERS.contains(&part.as_str()));
     let agy_plugin = parts.iter().any(|part| part == ".antigravity-plugin");
     if agy_cli || agy_global || agy_project || agy_plugin {
         let index = parts
             .iter()
             .enumerate()
             .filter_map(|(index, part)| {
-                if matches!(part.as_str(), ".agents" | ".agent" | ".antigravity-plugin") {
+                if AGY_PROJECT_FOLDERS.contains(&part.as_str()) || part == ".antigravity-plugin" {
                     Some(index)
                 } else if part == ".gemini"
                     && parts
@@ -465,7 +470,12 @@ pub(crate) fn detect(path: &Path) -> Option<FileType> {
         let relative = if plugin { &tail[2..] } else { tail };
         if filename == "skill.md"
             && relative.first().is_some_and(|part| part == "skills")
-            && (agy_cli || agy_global || plugin || parts.iter().any(|part| part == ".agent"))
+            && (agy_cli
+                || agy_global
+                || plugin
+                || parts
+                    .iter()
+                    .any(|part| matches!(part.as_str(), ".agent" | "_agents" | "_agent")))
         {
             return Some(FileType::Skill);
         }

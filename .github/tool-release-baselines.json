@@ -535,9 +535,9 @@
         "mcp"
       ],
       "validation_status": "implemented",
-      "last_known_version": "1.4.12",
+      "last_known_version": "1.5.0",
       "tracked": true,
-      "notes": "Native static configuration validation. Read official CLI release notes with agy changelog, documented at https://antigravity.google/docs/cli/commands/changelog; the old /docs/release-notes URL is unavailable. v1.4.10 has six runtime fixes and byte-identical published settings/plugin schemas. Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. No extension or command execution during validation. Latest review: knowledge-base/reviews/2026-11-02-release-triage.md.",
+      "notes": "Native static configuration validation. Read official CLI release notes with agy changelog, documented at https://antigravity.google/docs/cli/commands/changelog; the old /docs/release-notes URL is unavailable. v1.4.10 has six runtime fixes and byte-identical published settings/plugin schemas. Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. No extension or command execution during validation. Latest review: knowledge-base/reviews/2026-11-04-release-triage.md.",
       "html_url": "https://antigravity.google/docs/cli/commands/changelog",
       "content_url": "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json",
       "version_extractor": "antigravity-manifest",

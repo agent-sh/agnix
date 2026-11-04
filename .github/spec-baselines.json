@@ -449,7 +449,7 @@
       "antigravity-settings": {
         "url": "https://antigravity.google/schemas/v1/settings.json",
         "content_url": "https://antigravity.google/schemas/v1/settings.json",
-        "hash": "24e5e7d5d715ddf318a63c5f37adbe395da13e779916aadaf5839cfd8996f0f2",
+        "hash": "607ed49919b07cc8d3f2a9ff536b0f1a3c95dd93ca4d98b62e6054c864626e1c",
         "rules": [
           "AGY-CFG-001",
           "AGY-CFG-002",
@@ -458,7 +458,7 @@
           "AGY-CFG-005",
           "AGY-KB-001"
         ],
-        "last_checked": "2026-10-29"
+        "last_checked": "2026-11-04"
       },
       "antigravity-plugin": {
         "url": "https://antigravity.google/schemas/v1/plugin.json",
@@ -472,15 +472,27 @@
       },
       "antigravity-rules": {
         "url": "https://antigravity.google/docs/rules",
-        "content_url": "https://antigravity.google/docs/rules",
-        "hash": "827fcd52b0e9aec3dcfc1014cf5a4a581dcb119f576d10ed62a84b5c4650036f",
+        "content_url": "https://antigravity.google/docs/rules.md",
+        "hash": "da142a2920f0b8dae56a6a7fc1a2bcedb46bcfe929ef5e24d0ad3e956880fbb3",
         "rules": [
           "AGY-RL-001",
           "AGY-RL-002",
           "AGY-RL-003",
           "AGY-RL-004"
         ],
-        "last_checked": "2026-10-29"
+        "last_checked": "2026-11-04"
+      },
+      "antigravity-discovery": {
+        "url": "https://antigravity.google/docs/customization-discovery",
+        "content_url": "https://antigravity.google/docs/customization-discovery.md",
+        "hash": "ad17fd95ed873820f870daff76091d697e02981733a1aa6ddf7ed256387e5021",
+        "last_checked": "2026-11-04",
+        "rules": [
+          "AGY-RL-001",
+          "AGY-RL-002",
+          "AGY-RL-003",
+          "AGY-RL-004"
+        ]
       },
       "grok-build-reference": {
         "url": "https://docs.x.ai/build/cli/reference",

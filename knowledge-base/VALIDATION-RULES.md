@@ -5741,7 +5741,7 @@ Detection: Modular rules need YAML frontmatter with always_on, model_decision, g
 
 Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
 
-Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents), [reference 6](https://antigravity.google/docs/customization-discovery).
 
 ### AGY-RL-002 [HIGH] Invalid Antigravity Rule Metadata
 
@@ -5749,7 +5749,7 @@ Detection: model_decision requires a description; glob requires a non-empty glob
 
 Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
 
-Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents), [reference 6](https://antigravity.google/docs/customization-discovery).
 
 ### AGY-RL-003 [HIGH] Truncated Antigravity Rule
 
@@ -5757,7 +5757,7 @@ Detection: Antigravity truncates individual rules above 24,000 bytes after file 
 
 Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
 
-Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents), [reference 6](https://antigravity.google/docs/customization-discovery).
 
 ### AGY-RL-004 [HIGH] Invalid Antigravity Rule Registry
 
@@ -5765,7 +5765,7 @@ Detection: Rule registry inherits and entries arrays contain path objects with o
 
 Applies to: `antigravity`; qualified configuration reference `>=1.4.9`.
 
-Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents).
+Sources: [reference 1](https://antigravity.google/docs/settings?tab=cli), [reference 2](https://antigravity.google/docs/plugins), [reference 3](https://antigravity.google/docs/hooks), [reference 4](https://antigravity.google/docs/rules), [reference 5](https://antigravity.google/docs/subagents), [reference 6](https://antigravity.google/docs/customization-discovery).
 
 ### AGY-AG-001 [HIGH] Invalid Antigravity Agent YAML
 

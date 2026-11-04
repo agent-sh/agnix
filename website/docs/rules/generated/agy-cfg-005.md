@@ -13,7 +13,7 @@ keywords: ["AGY-CFG-005", "antigravity formatter fallback", "antigravity", "vali
 - **Category**: `antigravity`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 

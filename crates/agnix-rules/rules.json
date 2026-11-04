@@ -20850,7 +20850,7 @@
           "https://antigravity.google/schemas/v1/settings.json",
           "https://antigravity.google/docs/remote-control"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -20878,7 +20878,7 @@
           "https://antigravity.google/schemas/v1/settings.json",
           "https://antigravity.google/docs/remote-control"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -20906,7 +20906,7 @@
           "https://antigravity.google/schemas/v1/settings.json",
           "https://antigravity.google/docs/remote-control"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -20934,7 +20934,7 @@
           "https://antigravity.google/schemas/v1/settings.json",
           "https://antigravity.google/docs/remote-control"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -20962,7 +20962,7 @@
           "https://antigravity.google/schemas/v1/settings.json",
           "https://antigravity.google/docs/remote-control"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -20988,7 +20988,7 @@
         "source_urls": [
           "https://antigravity.google/docs/settings?tab=cli"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -21170,9 +21170,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://antigravity.google/docs/rules"
+          "https://antigravity.google/docs/rules",
+          "https://antigravity.google/docs/customization-discovery"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -21196,9 +21197,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://antigravity.google/docs/rules"
+          "https://antigravity.google/docs/rules",
+          "https://antigravity.google/docs/customization-discovery"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -21222,9 +21224,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://antigravity.google/docs/rules"
+          "https://antigravity.google/docs/rules",
+          "https://antigravity.google/docs/customization-discovery"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -21248,9 +21251,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://antigravity.google/docs/rules"
+          "https://antigravity.google/docs/rules",
+          "https://antigravity.google/docs/customization-discovery"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"

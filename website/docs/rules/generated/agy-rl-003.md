@@ -13,7 +13,7 @@ keywords: ["AGY-RL-003", "truncated antigravity rule", "antigravity", "validatio
 - **Category**: `antigravity`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["AGY-RL-003", "truncated antigravity rule", "antigravity", "validatio
 ## Evidence Sources
 
 - https://antigravity.google/docs/rules
+- https://antigravity.google/docs/customization-discovery
 
 ## Test Coverage Metadata
 

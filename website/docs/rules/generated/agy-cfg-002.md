@@ -13,7 +13,7 @@ keywords: ["AGY-CFG-002", "invalid antigravity setting", "antigravity", "validat
 - **Category**: `antigravity`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 

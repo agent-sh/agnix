@@ -13,7 +13,7 @@ keywords: ["AGY-CFG-003", "misplaced antigravity customization", "antigravity", 
 - **Category**: `antigravity`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 

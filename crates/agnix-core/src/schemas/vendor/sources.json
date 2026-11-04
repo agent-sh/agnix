@@ -4,14 +4,14 @@
     "source_url": "https://antigravity.google/schemas/v1/plugin.json",
     "source_sha256": "0eea5e483af6f03fa099f32b065d2924a323f1a616ed0323cfa0b7a74ff9543c",
     "constraint_sha256": "1497addd7543ea960eb8e43c0d119f7bfb8cd29f03ef16536bd924f10e1008c0",
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-11-04"
   },
   {
     "file": "antigravity-settings.json",
     "source_url": "https://antigravity.google/schemas/v1/settings.json",
-    "source_sha256": "6d4ab641fff729c0ec416afc8c96ccb414d9f438fe3f28fec294086a8f824877",
+    "source_sha256": "3a29af2bf64043f689b952ebe569c5ba546944d962a1423b4fc8f2df26686486",
     "constraint_sha256": "1aab6bf9e0464f437abdcc2674eb4449f51058112144d28012fba68b66cdcb2b",
-    "verified_on": "2026-10-29"
+    "verified_on": "2026-11-04"
   },
   {
     "file": "pi-keybindings.json",

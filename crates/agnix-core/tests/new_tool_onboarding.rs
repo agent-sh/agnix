@@ -238,12 +238,13 @@ fn antigravity_registry_owns_only_registered_nested_and_external_rules() {
     ] {
         std::fs::write(root.join(name), "Missing native frontmatter.\n").unwrap();
     }
+    // Project manifest paths start at the folder that contains `.agents/`.
     std::fs::write(
         root.join(".agents/rules.json"),
-        r#"{"inherits":[{"path":"inherited.json"}]}"#,
+        r#"{"inherits":[{"path":".agents/inherited.json"}]}"#,
     )
     .unwrap();
-    std::fs::write(root.join(".agents/inherited.json"), r#"{"inherits":[{"path":"rules.json"}],"entries":[{"path":"../registered","include_only":["yes.md"],"exclude":["no.md"]}]}"#).unwrap();
+    std::fs::write(root.join(".agents/inherited.json"), r#"{"inherits":[{"path":".agents/rules.json"}],"entries":[{"path":"registered","include_only":["yes.md"],"exclude":["no.md"]}]}"#).unwrap();
     let mut config = LintConfig::default();
     config.set_root_dir(root.to_path_buf());
     for (name, expected) in [
@@ -1365,5 +1366,142 @@ fn pi_metadata_only_manifest_keeps_directory_auto_discovery() {
             expected,
             "{manifest}: {result:?}"
         );
+    }
+}
+
+/// Writes `files` under `root` and reports which of `checks` get AGY-RL-001
+/// (their content lacks the native frontmatter).
+fn agy_owned(root: &Path, files: &[(&str, &str)], project: &Path, checks: &[&str]) -> Vec<bool> {
+    for (name, content) in files {
+        let path = root.join(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, content).unwrap();
+    }
+    let mut config = LintConfig::default();
+    config.set_root_dir(project.to_path_buf());
+    checks
+        .iter()
+        .map(|name| {
+            let result = agnix_core::validate_file(&root.join(name), &config).unwrap();
+            format!("{result:?}").contains("AGY-RL-001")
+        })
+        .collect()
+}
+
+const NO_FRONTMATTER: &str = "Missing native frontmatter.\n";
+
+#[test]
+fn antigravity_registry_docs_example_names_a_nested_rule() {
+    // Customization discovery: `"include_only": ["security/api-keys.md"]` loads
+    // the nested rule; the rules page example uses `"path": ".agents/rules"`.
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let owned = agy_owned(
+        root,
+        &[
+            (
+                ".agents/rules.json",
+                r#"{"entries":[{"path":".agents/rules","include_only":["frontend/react.md"]}]}"#,
+            ),
+            (".agents/rules/frontend/react.md", NO_FRONTMATTER),
+            (".agents/rules/frontend/vue.md", NO_FRONTMATTER),
+        ],
+        root,
+        &[
+            ".agents/rules/frontend/react.md",
+            ".agents/rules/frontend/vue.md",
+        ],
+    );
+    assert_eq!(owned, [true, false]);
+}
+
+#[test]
+fn antigravity_registry_folder_entry_loads_direct_children_only() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let owned = agy_owned(
+        root,
+        &[
+            (".agents/rules.json", r#"{"entries":[{"path":"shared"}]}"#),
+            ("shared/top.md", NO_FRONTMATTER),
+            ("shared/sub/deep.md", NO_FRONTMATTER),
+        ],
+        root,
+        &["shared/top.md", "shared/sub/deep.md"],
+    );
+    assert_eq!(owned, [true, false]);
+}
+
+#[test]
+fn antigravity_registry_paths_do_not_start_inside_the_agents_folder() {
+    // `../shared` from the folder that holds `.agents/` leaves the project.
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path().join("project");
+    let owned = agy_owned(
+        &root,
+        &[
+            (
+                ".agents/rules.json",
+                r#"{"entries":[{"path":"../shared"},{"path":"~/home-rules"}]}"#,
+            ),
+            ("shared/top.md", NO_FRONTMATTER),
+            ("~/home-rules/x.md", NO_FRONTMATTER),
+        ],
+        &root,
+        &["shared/top.md", "~/home-rules/x.md"],
+    );
+    // `~` is not expanded: it names a folder called `~` in the project.
+    assert_eq!(owned, [false, true]);
+}
+
+#[test]
+fn antigravity_registry_falls_back_to_the_repository_root() {
+    let temp = tempfile::tempdir().unwrap();
+    let repo = temp.path();
+    std::fs::create_dir_all(repo.join(".git")).unwrap();
+    let owned = agy_owned(
+        repo,
+        &[
+            (
+                "services/api/.agents/rules.json",
+                r#"{"entries":[{"path":"team-rules"}]}"#,
+            ),
+            ("team-rules/style.md", NO_FRONTMATTER),
+        ],
+        &repo.join("services/api"),
+        &["team-rules/style.md"],
+    );
+    assert_eq!(owned, [true]);
+}
+
+#[test]
+fn antigravity_registry_exclude_matches_names_without_md() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+    let owned = agy_owned(
+        root,
+        &[
+            (
+                ".agents/rules.json",
+                r#"{"exclude":["old"],"entries":[{"path":"shared","exclude":["draft"]}]}"#,
+            ),
+            ("shared/draft.md", NO_FRONTMATTER),
+            ("shared/old.md", NO_FRONTMATTER),
+            ("shared/live.md", NO_FRONTMATTER),
+        ],
+        root,
+        &["shared/draft.md", "shared/old.md", "shared/live.md"],
+    );
+    assert_eq!(owned, [false, false, true]);
+}
+
+#[test]
+fn antigravity_recognizes_underscore_customization_folders() {
+    for folder in ["_agents", "_agent"] {
+        let found = rules(
+            &format!("{folder}/rules/style.md"),
+            "---\ntrigger: alwaysOn\n---\nStyle.\n",
+        );
+        assert!(found.contains(&"AGY-RL-001".into()), "{folder}: {found:?}");
     }
 }
