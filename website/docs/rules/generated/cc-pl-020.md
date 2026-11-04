@@ -13,7 +13,7 @@ keywords: ["CC-PL-020", "unbraced plugin variable in plugin content", "claude pl
 - **Category**: `Claude Plugins`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 

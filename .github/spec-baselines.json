@@ -121,7 +121,7 @@
       "claude-code-memory": {
         "url": "https://code.claude.com/docs/en/memory",
         "content_url": "https://code.claude.com/docs/en/memory.md",
-        "hash": "4b5b5e9cb544f0959e0e8f41abdb2b8d75139eb5e31513b2e8b01ea2990e552e",
+        "hash": "ba5f52145910b15d92d9b23a68b2181e8cf648c79644db2a8048bfff559a6833",
         "rules": [
           "CC-MEM-001",
           "CC-MEM-002",
@@ -139,7 +139,7 @@
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-        "hash": "4dbc59ce81a4b431d4fe819939760b1a5ac73d5aa41e27c47e5d7c06411bdf31",
+        "hash": "62afd408e8fe643615312d9ca8a067f5e5f93b9d70afe7f45ca05b23a1fdb69e",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -184,7 +184,7 @@
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
         "content_url": "https://code.claude.com/docs/en/plugins-reference.md",
-        "hash": "429d7f0315da20fade015644ad9756de8ef335c8a7fdb825d55d23d3371f1d9c",
+        "hash": "b402b702d29c7f5953ad370ac3d4069301d125c170d96aa989640e7db4f2c066",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -201,7 +201,7 @@
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
         "content_url": "https://code.claude.com/docs/en/sub-agents.md",
-        "hash": "410d576b916a8dd6a313c3bdf169f9dd88152e9ac6d0887ec15f4c2db5fcd604",
+        "hash": "62a7d93eed76d8a13b6c71343d93c38d916b60d9be1dbec1de944ddebdee1dac",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",
@@ -308,6 +308,7 @@
       "cursor-rules": {
         "url": "https://cursor.com/docs/rules",
         "content_url": "https://cursor.com/docs/rules.md",
+        "accept": "*/*",
         "hash": "dda30726ed0e9f714e42b4660973d64a87ba4d1f70269f175ab53e6f9cb2f7a4",
         "rules": [
           "CUR-001",
@@ -327,6 +328,7 @@
       "cursor-hooks": {
         "url": "https://cursor.com/docs/hooks",
         "content_url": "https://cursor.com/docs/hooks.md",
+        "accept": "*/*",
         "hash": "d2532ce50b144ec80f8c301654420362ada749784e7eb4869bcacaf10e2cfb1d",
         "rules": [
           "CUR-010",
@@ -344,7 +346,8 @@
       "cursor-subagents": {
         "url": "https://cursor.com/docs/subagents",
         "content_url": "https://cursor.com/docs/subagents.md",
-        "hash": "d3ddbe27ff9d9fa35412d648b424450a2ec8229eaa0b8109e861e2622786f84c",
+        "accept": "*/*",
+        "hash": "83d76612ae1a4ff90a79064834b72d17312f7a3ea91d1655705b697acbe83160",
         "rules": [
           "CUR-014",
           "CUR-015",
@@ -356,6 +359,7 @@
       "cursor-environment": {
         "url": "https://cursor.com/docs/cloud-agent/setup",
         "content_url": "https://cursor.com/docs/cloud-agent/setup.md",
+        "accept": "*/*",
         "hash": "fea35174b16030d35dce458cb78e194ecb22275480f8679ed792883db7946103",
         "rules": [
           "CUR-016",
@@ -374,6 +378,7 @@
       "cursor-mcp": {
         "url": "https://cursor.com/docs/mcp",
         "content_url": "https://cursor.com/docs/mcp.md",
+        "accept": "*/*",
         "hash": "de104ff30abcf9ce98fa88336aa374658880a7d1e4e8d5a3ed81106fcd5dd91d",
         "rules": [
           "CUR-024",

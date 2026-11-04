@@ -1296,8 +1296,9 @@ impl Validator for AgentValidator {
         }
 
         // CC-PL-020 (owned by SkillValidator): a plugin agent body that writes
-        // `$CLAUDE_PLUGIN_ROOT` without braces gets no substitution, and the
-        // variable isn't in the Bash tool's environment.
+        // `$CLAUDE_PLUGIN_ROOT` (or another plugin path variable) without
+        // braces gets no substitution, and the variable isn't in the Bash
+        // tool's environment.
         if plugin_root.is_some()
             && config.is_rule_enabled("CC-PL-020")
             && let Some((pos, spelling)) = crate::rules::skill::unbraced_plugin_var(

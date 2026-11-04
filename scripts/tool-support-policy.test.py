@@ -76,6 +76,20 @@ class ToolSupportPolicy(unittest.TestCase):
         names = [name for group in sources.values() for name in group]
         self.assertEqual(len(names), len(set(names)), 'a source must not be polled twice')
 
+    def test_cursor_markdown_sources_override_accept(self):
+        # cursor.com answers 404 to its .md URLs when the request asks for
+        # text/markdown, which the sentinel sends by default. Every Cursor
+        # source failed to fetch from 2026-10-29 until the override.
+        sources = json.loads((ROOT / '.github/spec-baselines.json').read_text())['sources']
+        workflow = (ROOT / '.github/workflows/spec-drift.yml').read_text()
+        self.assertTrue('.accept // empty' in workflow, 'spec-drift.yml must read a per-source accept')
+        self.assertTrue('compute_hash "$content_url" "$accept"' in workflow, 'compute_hash must get it')
+        for tier in sources.values():
+            for name, source in tier.items():
+                url = source.get('content_url', source['url'])
+                if url.startswith('https://cursor.com/') and url.endswith('.md'):
+                    self.assertEqual(source.get('accept'), '*/*', name)
+
     def test_spec_schedule_and_manual_dispatch(self):
         script = ROOT / 'scripts/spec-drift-tiers.sh'
         for event, requested, cron, expected in [

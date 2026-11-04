@@ -11,8 +11,8 @@
 //! - CC-SK-032: description not written in the third person
 //! - CC-SK-033: vague skill name
 //! - CC-SK-034: long bundled reference file without a table of contents
-//! - CC-PL-020: unbraced `$CLAUDE_PLUGIN_ROOT` / `$CLAUDE_PLUGIN_DATA` in a
-//!   plugin skill body
+//! - CC-PL-020: unbraced `$CLAUDE_PLUGIN_ROOT` / `$CLAUDE_PLUGIN_DATA` /
+//!   `$CLAUDE_PROJECT_DIR` in a plugin skill body
 //! - CC-HK-0xx handler checks on skill frontmatter hooks
 
 use super::*;
@@ -51,7 +51,7 @@ static_regex!(
     fn xml_tag_regex,
     r#"</?[A-Za-z][A-Za-z0-9_.:-]*(?:\s+[A-Za-z_:][A-Za-z0-9_.:-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'<>=]+))?)*\s*/?>"#
 );
-static_regex!(fn unbraced_plugin_var_regex, r"\$CLAUDE_PLUGIN_(ROOT|DATA)\b");
+static_regex!(fn unbraced_plugin_var_regex, r"\$CLAUDE_(PLUGIN_ROOT|PLUGIN_DATA|PROJECT_DIR)\b");
 static_regex!(fn toc_heading_regex, r"(?im)^\s{0,3}#{1,6}\s*(table of contents|contents|toc)\b");
 
 /// Whether `path` is a legacy custom command file (`.claude/commands/**.md`).
@@ -61,7 +61,8 @@ pub(crate) fn is_claude_command_path(path: &Path) -> bool {
         && crate::file_types::path_contains_consecutive_components(path, ".claude", "commands")
 }
 
-/// The first unbraced `$CLAUDE_PLUGIN_ROOT` or `$CLAUDE_PLUGIN_DATA` in a
+/// The first unbraced `$CLAUDE_PLUGIN_ROOT`, `$CLAUDE_PLUGIN_DATA` or
+/// `$CLAUDE_PROJECT_DIR` (the three plugin path variables) in a
 /// Markdown body that Claude could run through the Bash tool: (byte offset,
 /// spelling). Hook and other config examples get the variable from their own
 /// environment, so these are skipped: a line that mentions hooks, a fenced
@@ -678,6 +679,11 @@ mod tests {
         );
         assert_eq!(unbraced_plugin_var("run ${CLAUDE_PLUGIN_ROOT}/x.sh"), None);
         assert_eq!(unbraced_plugin_var("$CLAUDE_PLUGIN_ROOTS"), None);
+        assert_eq!(
+            unbraced_plugin_var("cd $CLAUDE_PROJECT_DIR && make"),
+            Some((3, "$CLAUDE_PROJECT_DIR"))
+        );
+        assert_eq!(unbraced_plugin_var("cd \"${CLAUDE_PROJECT_DIR}\""), None);
         // Found inside a shell fence, after an earlier skipped line.
         assert_eq!(
             unbraced_plugin_var("intro\n```bash\nnode $CLAUDE_PLUGIN_DATA/x\n```\n"),
@@ -967,6 +973,15 @@ mod validator_tests {
             "---\nname: ok\ndescription: Runs the tool. Use when asked to run it.\n---\nRun `bash \"${CLAUDE_PLUGIN_ROOT}\"/scripts/run.sh`.\n",
         );
         assert_eq!(count(&check(&fixed), "CC-PL-020"), 0);
+        // The project root is the third plugin path variable; the Bash tool
+        // doesn't get it either.
+        let project = write(
+            temp.path(),
+            "skills/build/SKILL.md",
+            "---\nname: build\ndescription: Builds the project. Use when asked to build.\n---\nRun `cd $CLAUDE_PROJECT_DIR && make`.\n",
+        );
+        let diagnostics = check(&project);
+        assert_eq!(count(&diagnostics, "CC-PL-020"), 1, "{diagnostics:?}");
     }
 
     #[test]

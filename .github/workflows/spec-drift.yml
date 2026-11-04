@@ -97,9 +97,13 @@ jobs:
             sed 's/\r$//'
           }
 
-          # Function to compute hash of URL content
+          # Function to compute hash of URL content. The optional second
+          # argument overrides the Accept header for a source whose host
+          # rejects the default (cursor.com answers 404 to its .md URLs
+          # when text/markdown is requested).
           compute_hash() {
             local url="$1"
+            local accept="${2:-text/markdown, text/html, application/json;q=0.9, */*;q=0.8}"
             local content
             local hash
 
@@ -112,7 +116,7 @@ jobs:
             # Fetch with curl, follow redirects, timeout after 30s
             # Use separate variable for exit code to avoid partial content issues
             local exit_code
-            content=$(curl -fsSL --max-time 30 -A agnix-release-watch/1.0 -H 'Accept: text/markdown, text/html, application/json;q=0.9, */*;q=0.8' "$url" 2>/dev/null) && exit_code=0 || exit_code=$?
+            content=$(curl -fsSL --max-time 30 -A agnix-release-watch/1.0 -H "Accept: $accept" "$url" 2>/dev/null) && exit_code=0 || exit_code=$?
 
             if [[ $exit_code -ne 0 ]]; then
               echo "FETCH_FAILED"
@@ -159,8 +163,10 @@ jobs:
               local baseline_hash
               local rules
               local github_repo
+              local accept
 
               url=$(jq -r ".sources[\"$tier\"][\"$source\"].url" "$BASELINES_FILE")
+              accept=$(jq -r ".sources[\"$tier\"][\"$source\"].accept // empty" "$BASELINES_FILE")
               content_url=$(jq -r ".sources[\"$tier\"][\"$source\"].content_url // .sources[\"$tier\"][\"$source\"].url" "$BASELINES_FILE")
               baseline_hash=$(jq -r ".sources[\"$tier\"][\"$source\"].hash" "$BASELINES_FILE")
               rules=$(jq -r ".sources[\"$tier\"][\"$source\"].rules // [] | join(\", \")" "$BASELINES_FILE")
@@ -182,7 +188,7 @@ jobs:
 
               echo "Checking: $source ($content_url)"
 
-              current_hash=$(compute_hash "$content_url")
+              current_hash=$(compute_hash "$content_url" "$accept")
 
               if [[ "$current_hash" == "FETCH_FAILED" ]]; then
                 echo "  WARNING: Failed to fetch $source ($content_url)"

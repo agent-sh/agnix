@@ -1856,8 +1856,8 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="cc-pl-020"></a>
 ### CC-PL-020 [MEDIUM] Unbraced Plugin Variable in Plugin Content
 **Requirement**: Plugin skill, command and agent content SHOULD write path variables in braces. Vendor text: "The variables aren't present in the environment of commands Claude runs through the Bash tool, in the main session or in a subagent. In skill, command, and agent content, write the `${...}` reference in the Markdown body instead, and Claude Code substitutes the path inline when it loads the content." (plugins manifest reference, "Where each variable resolves")
-**Detection**: the body of a plugin skill (SKILL.md under a plugin root) or plugin agent contains `$CLAUDE_PLUGIN_ROOT` or `$CLAUDE_PLUGIN_DATA` without braces. Hook commands get the variables from their environment, so lines that mention hooks, fenced JSON blocks and inline code spans holding only the variable name are skipped. Plugin command files are not detected as a file type.
-**Fix**: Manual - write `${CLAUDE_PLUGIN_ROOT}`
+**Detection**: the body of a plugin skill (SKILL.md under a plugin root) or plugin agent contains `$CLAUDE_PLUGIN_ROOT`, `$CLAUDE_PLUGIN_DATA` or `$CLAUDE_PROJECT_DIR` without braces. The reference lists these three as the path variables plugin components get. Hook commands get the variables from their environment, so lines that mention hooks, fenced JSON blocks and inline code spans holding only the variable name are skipped. Plugin command files are not detected as a file type.
+**Fix**: Manual - write the braced form, such as `${CLAUDE_PLUGIN_ROOT}`
 **Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-021"></a>

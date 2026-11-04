@@ -19747,7 +19747,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "claude-code"
         },
