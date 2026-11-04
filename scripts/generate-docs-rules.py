@@ -221,12 +221,30 @@ def render_rule(rule: dict) -> str:
     template = TEMPLATES.get(category, DEFAULT_TEMPLATE)
     # Prefer per-rule examples from rules.json; fall back to category template.
     # Normalize so each example ends with exactly one trailing newline.
-    invalid = (rule.get("bad_example") or template["invalid"]).rstrip("\n") + "\n"
-    valid = (rule.get("good_example") or template["valid"]).rstrip("\n") + "\n"
-    lang = infer_fence_language(template["lang"], invalid, valid)
+    # An explicit empty string is the example itself (an empty file, as for
+    # WS-001 or KIRO-004); only a missing example falls back to the template.
+    def example(key: str, fallback: str) -> str:
+        value = rule.get(key)
+        if value is None:
+            value = fallback
+        return value if not value.strip() else value.rstrip("\n") + "\n"
+
+    invalid = example("bad_example", template["invalid"])
+    valid = example("good_example", template["valid"])
+    lang = infer_fence_language(template["lang"], invalid or "\n", valid or "\n")
 
     # Use longer fence when examples contain triple backticks to avoid breakout
     fence = "````" if ("```" in invalid or "```" in valid) else "```"
+
+    def block(text: str) -> str:
+        if not text:
+            return "_An empty file (no content)._"
+        if not text.strip():
+            return "_A file that contains only whitespace._"
+        return f"{fence}{lang}\n{text}{fence}"
+
+    invalid_block = block(invalid)
+    valid_block = block(valid)
 
     sources = "\n".join(
         f"- {url}" for url in evidence.get("source_urls", [])
@@ -303,13 +321,11 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ### Invalid
 
-{fence}{lang}
-{invalid}{fence}
+{invalid_block}
 
 ### Valid
 
-{fence}{lang}
-{valid}{fence}
+{valid_block}
 """
 
 

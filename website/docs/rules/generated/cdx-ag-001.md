@@ -37,9 +37,7 @@ The following examples demonstrate what triggers this rule and how to fix it.
 
 ### Invalid
 
-```toml
-
-```
+_An empty file (no content)._
 
 ### Valid
 

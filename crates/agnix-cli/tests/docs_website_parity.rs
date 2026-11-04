@@ -494,3 +494,45 @@ fn readme_rules_link_avoids_hardcoded_total_count() {
         "README.md should link to rules docs without a hardcoded total count"
     );
 }
+
+/// A rule whose `bad_example` is deliberately empty or whitespace-only (an
+/// empty-file rule such as WS-001) must render as that, not as the generic
+/// "Configuration omitted required fields" placeholder, which cannot trigger
+/// the rule.
+#[test]
+fn generated_rule_pages_keep_empty_examples() {
+    let root = workspace_root();
+    let rules: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(root.join("knowledge-base/rules.json")).unwrap())
+            .unwrap();
+    let mut checked = 0;
+    for rule in rules["rules"].as_array().unwrap() {
+        let Some(bad) = rule["bad_example"].as_str() else {
+            continue;
+        };
+        if !bad.trim().is_empty() {
+            continue;
+        }
+        let id = rule["id"].as_str().unwrap();
+        let page = fs::read_to_string(
+            root.join("website/docs/rules/generated")
+                .join(format!("{}.md", id.to_lowercase())),
+        )
+        .unwrap();
+        let expected = if bad.is_empty() {
+            "_An empty file (no content)._"
+        } else {
+            "_A file that contains only whitespace._"
+        };
+        assert!(page.contains(expected), "{id}: {expected}");
+        assert!(
+            !page.contains("Configuration omitted required fields"),
+            "{id}"
+        );
+        checked += 1;
+    }
+    assert!(
+        checked >= 5,
+        "expected the empty-file rules, found {checked}"
+    );
+}

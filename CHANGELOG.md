@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Rule docs pages for empty-file rules (WS-001, KIRO-004, CDX-AG-001, CLN-001, COP-001) show the empty or whitespace-only file that triggers them instead of a generic "Configuration omitted required fields" placeholder.
+
 ## [0.61.0] - 2026-11-04
 
 ### Added
