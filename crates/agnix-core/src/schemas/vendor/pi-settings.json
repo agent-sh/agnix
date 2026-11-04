@@ -9,6 +9,14 @@
     "lastChangelogVersion": {
       "type": "string"
     },
+    "extensionChangelogVersions": {
+      "type": "object",
+      "patternProperties": {
+        "^.*$": {
+          "type": "string"
+        }
+      }
+    },
     "defaultProvider": {
       "type": "string"
     },
@@ -219,6 +227,13 @@
       "items": {
         "type": "string"
       }
+    },
+    "selfUpdateCommand": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
     },
     "collapseChangelog": {
       "type": "boolean"

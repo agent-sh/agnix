@@ -13,7 +13,7 @@ keywords: ["PI-CFG-002", "invalid pi settings value", "pi", "validation", "agnix
 - **Category**: `pi`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 
@@ -23,9 +23,9 @@ keywords: ["PI-CFG-002", "invalid pi settings value", "pi", "validation", "agnix
 
 ## Evidence Sources
 
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/settings.schema.json
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/settings-manager.ts
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/settings.schema.json
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/settings-manager.ts
 
 ## Test Coverage Metadata
 

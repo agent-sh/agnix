@@ -13,7 +13,7 @@ keywords: ["PI-PR-001", "invalid pi prompt yaml", "pi", "validation", "agnix", "
 - **Category**: `pi`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 
@@ -23,8 +23,8 @@ keywords: ["PI-PR-001", "invalid pi prompt yaml", "pi", "validation", "agnix", "
 
 ## Evidence Sources
 
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/prompt-templates.md
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/prompt-templates.ts
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/prompt-templates.md
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/prompt-templates.ts
 
 ## Test Coverage Metadata
 

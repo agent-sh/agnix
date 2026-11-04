@@ -498,7 +498,7 @@
       "validation_status": "implemented",
       "github_repo": "earendil-works/pi",
       "release_tag_regex": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v1.4.0",
+      "last_known_version": "v1.5.0",
       "tracked": true,
       "notes": "Native static configuration validation. Research and qualified versions: knowledge-base/NATIVE-TOOL-CONTRACTS.md. No extension or command execution.",
       "changes_of_interest": {

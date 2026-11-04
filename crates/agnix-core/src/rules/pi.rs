@@ -1,4 +1,4 @@
-//! Pi configuration contracts, pinned to the documented v1.4.0 formats.
+//! Pi configuration contracts, pinned to the documented v1.5.0 formats.
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, DiagnosticLevel},
@@ -95,7 +95,12 @@ impl Validator for PiValidator {
             "settings.json" => {
                 check_schema(&mut cx, &root, &value, Schema::PiSettings, "PI-CFG-002");
                 if native::pi_project(path) {
-                    for key in ["cacheWarming", "defaultProjectTrust", "httpProxy"] {
+                    for key in [
+                        "cacheWarming",
+                        "defaultProjectTrust",
+                        "httpProxy",
+                        "selfUpdateCommand",
+                    ] {
                         if value.get(key).is_some() {
                             issue(
                                 &mut cx,
@@ -491,7 +496,8 @@ fn oauth_config(cx: &mut JsonCx<'_>, root: &JsonNode, base: &str, value: &Value)
     }
     if let Some(registration) = object.get("clientRegistration") {
         match registration.as_str() {
-            Some("dcr") => {}
+            // v1.5.0: "auto" is the default and is accepted with dcr/cimd.
+            Some("auto" | "dcr") => {}
             Some("cimd") => {
                 if object.contains_key("clientId") || object.contains_key("clientName") {
                     valid = false;
@@ -571,11 +577,29 @@ fn package(cx: &mut JsonCx<'_>, root: &JsonNode, value: &Value) {
             );
         }
     }
+    // Pi reads `changelogPath` only when it is a string and drops anything else.
+    if object.get("changelogPath").is_some_and(|v| !v.is_string()) {
+        issue(
+            cx,
+            root,
+            "PI-PKG-001",
+            "/pi/changelogPath",
+            DiagnosticLevel::Error,
+            t!("rules.pi_pkg_001.pi_changelog_path_must_be_a_string").as_ref(),
+            t!("rules.pi_pkg_001.point_changelogpath_at_a_package_file").as_ref(),
+        );
+    }
+    // HOST_PROVIDED_EXTENSION_PACKAGES in Pi's resource loader.
     for host in [
         "@earendil-works/pi-ai",
         "@earendil-works/pi-agent-core",
         "@earendil-works/pi-coding-agent",
         "@earendil-works/pi-tui",
+        "@mariozechner/pi-ai",
+        "@mariozechner/pi-agent-core",
+        "@mariozechner/pi-coding-agent",
+        "@mariozechner/pi-tui",
+        "@sinclair/typebox",
         "typebox",
     ] {
         if value

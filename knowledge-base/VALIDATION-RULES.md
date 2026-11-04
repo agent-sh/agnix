@@ -5506,7 +5506,7 @@ Detection: Use the file's native JSON dialect, with an object at its root. model
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-CFG-002 [HIGH] Invalid Pi Settings Value
 
@@ -5514,7 +5514,7 @@ Detection: Pi settings must satisfy the published field types, enums and numeric
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-CFG-003 [MEDIUM] Ignored Pi Project Configuration
 
@@ -5522,7 +5522,7 @@ Detection: Global-only settings, models and keybindings belong in the agent dire
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-MDL-001 [HIGH] Invalid Pi Model Definition
 
@@ -5530,7 +5530,7 @@ Detection: Provider and model definitions must match the published models schema
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-MDL-002 [HIGH] Unusable Pi Provider Configuration
 
@@ -5538,7 +5538,7 @@ Detection: OAuth needs an explicit baseUrl. A provider entry must change models,
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-KB-001 [HIGH] Invalid Pi Keybinding
 
@@ -5546,7 +5546,7 @@ Detection: Keybinding values and chord syntax must match Pi's published keybindi
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-MCP-001 [HIGH] Invalid Pi MCP Configuration
 
@@ -5554,7 +5554,7 @@ Detection: mcpServers must be an object and autoEnableCodemode a boolean when su
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-MCP-002 [HIGH] Invalid Pi MCP Server
 
@@ -5562,7 +5562,7 @@ Detection: Use a supported transport and the native option types. Project-only o
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-MCP-003 [HIGH] Invalid Pi Provider Authentication Scope
 
@@ -5570,7 +5570,7 @@ Detection: auth.provider is global-only and requires HTTPS or a loopback endpoin
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-MCP-004 [HIGH] Colliding Pi MCP Namespaces
 
@@ -5578,23 +5578,23 @@ Detection: Server names must remain distinct after hyphens are normalized to und
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-MCP-005 [HIGH] Invalid Pi MCP OAuth Configuration
 
-Detection: Use supported registration modes and valid loopback callback settings with consistent ports.
+Detection: Use supported registration modes (`auto`, the v1.5.0 default, `dcr` or `cimd`) and valid loopback callback settings with consistent ports.
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-PKG-001 [HIGH] Invalid Pi Package Resources
 
-Detection: Declare Pi resources in an object with string path arrays and string gallery media paths.
+Detection: Declare Pi resources in an object with string path arrays, string gallery media paths and a string `changelogPath`.
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-PKG-002 [MEDIUM] Bundled Pi Host Dependency
 
@@ -5602,7 +5602,7 @@ Detection: Host-provided Pi runtime packages belong in peerDependencies rather t
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-TH-001 [HIGH] Invalid Pi Theme Structure
 
@@ -5610,7 +5610,7 @@ Detection: Themes must match the published schema, including required color role
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-TH-002 [HIGH] Invalid Pi Theme Resolution
 
@@ -5618,7 +5618,7 @@ Detection: Theme names cannot be system or contain slashes. Color variables must
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-PR-001 [HIGH] Invalid Pi Prompt YAML
 
@@ -5626,7 +5626,7 @@ Detection: When frontmatter is parsed as YAML, it must be syntactically valid an
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ### PI-PR-002 [MEDIUM] Ignored Pi Prompt Metadata
 
@@ -5634,7 +5634,7 @@ Detection: Pi ignores non-string description and argument-hint metadata and uses
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.4.0/packages/coding-agent/src).
+Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.0/packages/coding-agent/src).
 
 ## Antigravity CLI Native Configuration
 

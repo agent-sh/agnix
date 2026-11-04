@@ -13,7 +13,7 @@ keywords: ["PI-PKG-002", "bundled pi host dependency", "pi", "validation", "agni
 - **Category**: `pi`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 
@@ -23,8 +23,8 @@ keywords: ["PI-PKG-002", "bundled pi host dependency", "pi", "validation", "agni
 
 ## Evidence Sources
 
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/packages.md
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/package-manager.ts
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/packages.md
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/package-manager.ts
 
 ## Test Coverage Metadata
 

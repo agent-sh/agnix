@@ -13,7 +13,7 @@ keywords: ["PI-TH-002", "invalid pi theme resolution", "pi", "validation", "agni
 - **Category**: `pi`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 
@@ -23,10 +23,10 @@ keywords: ["PI-TH-002", "invalid pi theme resolution", "pi", "validation", "agni
 
 ## Evidence Sources
 
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/themes.md
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/theme.schema.json
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/modes/interactive/theme/theme.ts
-- https://github.com/earendil-works/pi/blob/v1.4.0/packages/tui/src/colors.ts
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/themes.md
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/theme.schema.json
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/modes/interactive/theme/theme.ts
+- https://github.com/earendil-works/pi/blob/v1.5.0/packages/tui/src/colors.ts
 
 ## Test Coverage Metadata
 

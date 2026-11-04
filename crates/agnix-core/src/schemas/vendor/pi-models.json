@@ -219,13 +219,6 @@
                           "type": "array",
                           "items": {
                             "type": "object",
-                            "required": [
-                              "inputTokensAbove",
-                              "input",
-                              "output",
-                              "cacheRead",
-                              "cacheWrite"
-                            ],
                             "properties": {
                               "inputTokensAbove": {
                                 "type": "number"
@@ -242,7 +235,14 @@
                               "cacheWrite": {
                                 "type": "number"
                               }
-                            }
+                            },
+                            "required": [
+                              "inputTokensAbove",
+                              "input",
+                              "output",
+                              "cacheRead",
+                              "cacheWrite"
+                            ]
                           }
                         }
                       }
@@ -334,12 +334,6 @@
   "$defs": {
     "ModelCost": {
       "type": "object",
-      "required": [
-        "input",
-        "output",
-        "cacheRead",
-        "cacheWrite"
-      ],
       "properties": {
         "input": {
           "type": "number"
@@ -357,13 +351,6 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "inputTokensAbove",
-              "input",
-              "output",
-              "cacheRead",
-              "cacheWrite"
-            ],
             "properties": {
               "inputTokensAbove": {
                 "type": "number"
@@ -380,10 +367,23 @@
               "cacheWrite": {
                 "type": "number"
               }
-            }
+            },
+            "required": [
+              "inputTokensAbove",
+              "input",
+              "output",
+              "cacheRead",
+              "cacheWrite"
+            ]
           }
         }
-      }
+      },
+      "required": [
+        "input",
+        "output",
+        "cacheRead",
+        "cacheWrite"
+      ]
     },
     "ModelInputLimits": {
       "type": "object",
@@ -551,9 +551,6 @@
                 },
                 {
                   "type": "object",
-                  "required": [
-                    "$var"
-                  ],
                   "properties": {
                     "$var": {
                       "anyOf": [
@@ -574,7 +571,10 @@
                     "omitWhenOff": {
                       "type": "boolean"
                     }
-                  }
+                  },
+                  "required": [
+                    "$var"
+                  ]
                 }
               ]
             }
@@ -599,9 +599,6 @@
                 },
                 {
                   "type": "object",
-                  "required": [
-                    "$var"
-                  ],
                   "properties": {
                     "$var": {
                       "anyOf": [
@@ -622,7 +619,10 @@
                     "omitWhenOff": {
                       "type": "boolean"
                     }
-                  }
+                  },
+                  "required": [
+                    "$var"
+                  ]
                 }
               ]
             }
@@ -929,11 +929,6 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": [
-              "provider",
-              "model",
-              "cost"
-            ],
             "properties": {
               "provider": {
                 "type": "string",
@@ -946,7 +941,12 @@
               "cost": {
                 "$ref": "#/$defs/ModelCost"
               }
-            }
+            },
+            "required": [
+              "provider",
+              "model",
+              "cost"
+            ]
           },
           "maxItems": 3
         },

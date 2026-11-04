@@ -266,23 +266,23 @@
       "pi-settings": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/settings.schema.json",
         "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/settings.schema.json",
-        "hash": "a82fcfb6b3350f7d725a01005a59d05e3b2fc4c6294dc3e78e2c3c9112cb37e4",
+        "hash": "d46ea8863f3a20b9f651fca95b163ce8d5bb11dea02623212027f06199188dde",
         "rules": [
           "PI-CFG-001",
           "PI-CFG-002",
           "PI-CFG-003"
         ],
-        "last_checked": "2026-10-29"
+        "last_checked": "2026-11-04"
       },
       "pi-models": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
         "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
-        "hash": "c9370888741c89c6c997d500e4f3da0e8337a84bcacdd0bf231c3edde3a4970e",
+        "hash": "66ade0ce69584a4d709fab536f3015d46e3fc0d2344d28c747b5c5f6fc2a7fe4",
         "rules": [
           "PI-MDL-001",
           "PI-MDL-002"
         ],
-        "last_checked": "2026-10-29"
+        "last_checked": "2026-11-04"
       },
       "pi-keybindings": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/keybindings.schema.json",

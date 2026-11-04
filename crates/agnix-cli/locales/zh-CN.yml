@@ -246,7 +246,7 @@ rules:
     mcp_oauth_settings_must_be_an_object: "MCP OAuth 设置必须是对象。"
     use_the_documented_oauth_client_fields: "请使用文档规定的 OAuth 客户端字段。"
     invalid_pi_mcp_oauth_callback_or_client: "Pi MCP OAuth 回调或客户端注册设置无效。"
-    use_http_loopback_callbacks_matching_callback_ports: "请使用 HTTP 回环回调、匹配的回调端口，以及文档规定的 dcr/cimd 客户端选项。"
+    use_http_loopback_callbacks_matching_callback_ports: "请使用 HTTP 回环回调、匹配的回调端口，以及文档规定的 auto/dcr/cimd 客户端选项。"
   pi_mdl_001:
     schema_message: "配置字段 %{field} 不符合文档规定的 %{keyword} 约束。"
     schema_suggestion: "请使用工具配置参考中规定的值类型和选项。"
@@ -262,6 +262,8 @@ rules:
     use_paths_or_glob_exclusion_patterns_relative: "请使用相对于包根目录的路径、glob 模式或排除模式。"
     pi_gallery_media_must_be_a_path: "Pi 图库媒体必须是路径字符串。"
     set_a_relative_image_video_path_or: "请设置相对的图片或视频路径，或省略此可选字段。"
+    pi_changelog_path_must_be_a_string: "Pi 的 changelogPath 必须是路径字符串。"
+    point_changelogpath_at_a_package_file: "请将 changelogPath 指向包内的文件，或设为空字符串以关闭更新日志。"
   pi_pkg_002:
     a_host_provided_pi_package_is_installed: "由 Pi 宿主提供的包被安装为运行时依赖。"
     move_the_host_package_to_peerdependencies_with: "请将宿主包移至 peerDependencies，并使用 * 版本范围，以便扩展共享 Pi 的运行时模块。"

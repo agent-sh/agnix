@@ -20378,11 +20378,11 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/settings.schema.json",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/settings-manager.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/settings.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/settings-manager.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20406,11 +20406,11 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/settings.schema.json",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/settings-manager.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/settings.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/settings-manager.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20434,11 +20434,11 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/settings.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/settings.schema.json",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/settings-manager.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/settings.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/settings-manager.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20462,11 +20462,11 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/models.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/models.schema.json",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/model-config.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/models.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/models.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/model-config.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20490,11 +20490,11 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/models.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/models.schema.json",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/model-config.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/models.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/models.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/model-config.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20518,10 +20518,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/keybindings.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/keybindings.schema.json"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/keybindings.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/keybindings.schema.json"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20545,10 +20545,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/mcp.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/mcp-servers.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/mcp.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/mcp-servers.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20572,10 +20572,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/mcp.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/mcp-servers.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/mcp.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/mcp-servers.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20599,10 +20599,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/mcp.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/mcp-servers.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/mcp.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/mcp-servers.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20626,10 +20626,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/mcp.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/mcp-servers.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/mcp.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/mcp-servers.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20653,10 +20653,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/mcp.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/mcp-servers.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/mcp.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/mcp-servers.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20680,10 +20680,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/packages.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/package-manager.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/packages.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/package-manager.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20707,10 +20707,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/packages.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/package-manager.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/packages.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/package-manager.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20734,12 +20734,12 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/themes.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/theme.schema.json",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/modes/interactive/theme/theme.ts",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/tui/src/colors.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/themes.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/theme.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/modes/interactive/theme/theme.ts",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/tui/src/colors.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20763,12 +20763,12 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/themes.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/schemas/theme.schema.json",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/modes/interactive/theme/theme.ts",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/tui/src/colors.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/themes.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/theme.schema.json",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/modes/interactive/theme/theme.ts",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/tui/src/colors.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20792,10 +20792,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/prompt-templates.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/prompt-templates.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/prompt-templates.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/prompt-templates.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20819,10 +20819,10 @@
       "evidence": {
         "source_type": "vendor_code",
         "source_urls": [
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/docs/prompt-templates.md",
-          "https://github.com/earendil-works/pi/blob/v1.4.0/packages/coding-agent/src/core/prompt-templates.ts"
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/prompt-templates.md",
+          "https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/prompt-templates.ts"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"

@@ -180,6 +180,21 @@ fn pi_entries(
     enabled
 }
 
+/// Whether a package's `pi` object lists any resources. Since v1.5.0 a `pi`
+/// object holding only metadata (`changelogPath`, gallery `image`/`video`)
+/// keeps directory auto-discovery: "Packages whose `pi` object holds only
+/// metadata ... still use directory auto-discovery" (package-manager.ts).
+fn pi_lists_resources(value: &Value) -> bool {
+    ["extensions", "skills", "prompts", "themes"]
+        .iter()
+        .any(|key| {
+            value
+                .get(*key)
+                .and_then(Value::as_array)
+                .is_some_and(|items| items.iter().all(Value::is_string))
+        })
+}
+
 fn pi_resource(
     path: &Path,
     base: &Path,
@@ -198,12 +213,18 @@ fn pi_resource(
         {
             continue;
         }
-        if let Some(entries) = value.get(kind).and_then(Value::as_array) {
+        // A package manifest keeps a resource list only when every entry is a
+        // string (Pi's readPiManifest drops the rest).
+        let declared = value
+            .get(kind)
+            .and_then(Value::as_array)
+            .filter(|items| !manifest || items.iter().all(Value::is_string));
+        if let Some(entries) = declared {
             if pi_entries(path, base, entries, manifest, fs, kind == "skills") {
                 return Some(resource);
             }
         } else if manifest
-            && value.is_null()
+            && !pi_lists_resources(value)
             && member(path, base, kind, fs)
             && (kind != "skills" || pi_skill_in_directory(path, &base.join(kind), fs))
         {

@@ -1274,3 +1274,96 @@ fn every_native_catalog_rule_is_exercised_by_a_contract_fixture() {
         );
     }
 }
+
+#[test]
+fn pi_mcp_oauth_accepts_the_v1_5_auto_client_registration() {
+    let mcp = |mode: &str| {
+        rules(
+            ".pi/mcp.json",
+            &format!(
+                r#"{{"mcpServers":{{"api":{{"url":"https://example.com/mcp","oauth":{{"clientRegistration":"{mode}"}}}}}}}}"#
+            ),
+        )
+    };
+    let auto = mcp("auto");
+    assert!(!auto.contains(&"PI-MCP-005".into()), "{auto:?}");
+    assert!(mcp("automatic").contains(&"PI-MCP-005".into()));
+}
+
+#[test]
+fn pi_self_update_command_is_agent_directory_only_and_typed() {
+    let command = r#"{"selfUpdateCommand":["mise","use","-g","npm:{packageName}@{version}"]}"#;
+    assert!(rules(".pi/settings.json", command).contains(&"PI-CFG-003".into()));
+    let global = rules("/fixture/.pi/agent/settings.json", command);
+    assert!(
+        !global.iter().any(|id| id.starts_with("PI-CFG-")),
+        "{global:?}"
+    );
+    for bad in [
+        r#"{"selfUpdateCommand":"npm"}"#,
+        r#"{"selfUpdateCommand":[]}"#,
+        r#"{"extensionChangelogVersions":{"pkg":1}}"#,
+    ] {
+        assert!(
+            rules("/fixture/.pi/agent/settings.json", bad).contains(&"PI-CFG-002".into()),
+            "{bad}"
+        );
+    }
+    let ok = rules(
+        "/fixture/.pi/agent/settings.json",
+        r#"{"extensionChangelogVersions":{"pkg":"1.2.0"}}"#,
+    );
+    assert!(!ok.contains(&"PI-CFG-002".into()), "{ok:?}");
+}
+
+#[test]
+fn pi_package_changelog_path_must_be_a_string() {
+    let bad = rules("package.json", r#"{"name":"p","pi":{"changelogPath":5}}"#);
+    assert!(bad.contains(&"PI-PKG-001".into()), "{bad:?}");
+    let off = rules("package.json", r#"{"name":"p","pi":{"changelogPath":""}}"#);
+    assert!(!off.contains(&"PI-PKG-001".into()), "{off:?}");
+}
+
+#[test]
+fn pi_legacy_host_packages_belong_in_peer_dependencies() {
+    for host in ["@mariozechner/pi-coding-agent", "@sinclair/typebox"] {
+        let found = rules(
+            "package.json",
+            &format!(
+                r#"{{"name":"p","keywords":["pi-package"],"dependencies":{{"{host}":"1.0.0"}}}}"#
+            ),
+        );
+        assert!(found.contains(&"PI-PKG-002".into()), "{host}: {found:?}");
+    }
+}
+
+#[test]
+fn pi_metadata_only_manifest_keeps_directory_auto_discovery() {
+    for (manifest, expected) in [
+        (
+            r#"{"name":"p","pi":{"changelogPath":"docs/CHANGELOG.md"}}"#,
+            true,
+        ),
+        (r#"{"name":"p","pi":{"image":"shot.png"}}"#, true),
+        (r#"{"name":"p","keywords":["pi-package"]}"#, true),
+        (r#"{"name":"p","pi":{"extensions":[]}}"#, false),
+    ] {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("prompts")).unwrap();
+        std::fs::write(root.join("package.json"), manifest).unwrap();
+        std::fs::write(
+            root.join("prompts/review.md"),
+            "---\ndescription: 42\n---\nReview changes.\n",
+        )
+        .unwrap();
+        let result =
+            agnix_core::validate_file(&root.join("prompts/review.md"), &LintConfig::default())
+                .unwrap();
+        assert_eq!(
+            format!("{result:?}").contains("PI-PR-002"),
+            expected,
+            "{manifest}: {result:?}"
+        );
+    }
+}
