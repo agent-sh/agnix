@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0] - 2026-11-04
+
 ### Added
 - KR-SET-012 (Info): settings marked "classic only" in the Kiro settings reference, and the values that selected Classic (`chat.agentEngine: "v1"`, `chat.ui: "classic"`, `chat.uiMode: "structured"`), have no effect from Kiro CLI 3.0. Not reported when Kiro is pinned to 2.x.
 

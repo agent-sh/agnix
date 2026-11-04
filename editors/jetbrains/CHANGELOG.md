@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.61.0] - 2026-11-04
+
+### Changed
+
+- Update the default language-server download to agnix-lsp 0.61.0, with Pi v1.5.0, Kiro CLI 3.0.0 and Antigravity registry compatibility fixes and the new KR-SET-012 rule.
+
 ## [0.60.3] - 2026-11-02
 
 ### Changed
