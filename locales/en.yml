@@ -244,7 +244,7 @@ rules:
     mcp_oauth_settings_must_be_an_object: "MCP OAuth settings must be an object."
     use_the_documented_oauth_client_fields: "Use the documented OAuth client fields."
     invalid_pi_mcp_oauth_callback_or_client: "Invalid Pi MCP OAuth callback or client registration settings."
-    use_http_loopback_callbacks_matching_callback_ports: "Use HTTP loopback callbacks, matching callback ports, and the documented dcr/cimd client options."
+    use_http_loopback_callbacks_matching_callback_ports: "Use HTTP loopback callbacks, matching callback ports, and the documented auto/dcr/cimd client options."
   pi_mdl_001:
     schema_message: "Configuration field %{field} violates the documented %{keyword} constraint."
     schema_suggestion: "Use the value types and choices in the tool's configuration reference."
@@ -260,6 +260,8 @@ rules:
     use_paths_or_glob_exclusion_patterns_relative: "Use paths or glob/exclusion patterns relative to the package root."
     pi_gallery_media_must_be_a_path: "Pi gallery media must be a path string."
     set_a_relative_image_video_path_or: "Set a relative image/video path, or omit this optional field."
+    pi_changelog_path_must_be_a_string: "Pi changelogPath must be a path string."
+    point_changelogpath_at_a_package_file: "Point changelogPath at a file inside the package, or set it to an empty string to turn the changelog off."
   pi_pkg_002:
     a_host_provided_pi_package_is_installed: "A host-provided Pi package is installed as a runtime dependency."
     move_the_host_package_to_peerdependencies_with: "Move the host package to peerDependencies with a * range so extensions share Pi's runtime modules."
@@ -296,9 +298,8 @@ rules:
     suggestion: "Use a documented capability such as shell, fs_read, fs_write, mcp, or a meta-capability (all, builtin, filesystem)."
   kr_pm_003:
     message: "Permission rule at index %{index} has a missing or invalid effect; %{consequence}"
-    evaluate: "Permission rule at index %{index} uses effect 'evaluate', which Kiro does not support yet; the rule is skipped"
     scope: "Permission rule at index %{index} uses effect '%{effect}', which an administrator managed-settings.json cannot contain; %{consequence}"
-    suggestion: "Set effect to allow, deny, or ask. Review the policy before changing access."
+    suggestion: "Set effect to allow, deny, ask or evaluate. Review the policy before changing access."
     admin_suggestion: "Administrator policies may only deny or ask; grant allow rules in user, workspace or agent permissions instead."
   kr_pm_004:
     message: "Permission rule at index %{index}: %{field} must be an array of strings; %{consequence}"
@@ -310,7 +311,7 @@ rules:
     not_array: "Kiro permissions 'policies' must be an array of preset id strings; Kiro rejects the whole file and fails closed, denying all tool calls"
     unknown: "Kiro permissions preset '%{policy}' is unknown and skipped"
     admin: "Kiro permissions preset '%{policy}' contains allow rules, which an administrator policy cannot hold; Kiro skips them"
-    suggestion: "Use preset ids allow-all, edit-workspace, read-workspace, read-all, read-only-shell or dev-shell."
+    suggestion: "Use preset ids allow-all, edit-workspace, read-workspace, read-all, read-only-shell, dev-shell or approve-for-me."
   kr_pm_007:
     message: "Permission rule at index %{index}: %{field} pattern %{reason}"
     mcp_at: "'%{pattern}' never matches; MCP permission resources are server/tool without '@' (use '%{fixed}')"
@@ -2602,7 +2603,7 @@ rules:
     ignored: 'Kiro agent permissions: %{issue}'
     suggestion: Use permissions.rules entries with a known capability, an allow, ask, or deny effect, and string-array match and exclude fields
   kr_ag_015:
-    message: 'Kiro agent uses CLI 2.x trust fields (%{fields}) without a permissions block; CLI V3 skips this profile until it is upgraded'
+    message: 'Kiro agent uses CLI 2.x trust fields (%{fields}) without a permissions block; CLI V3 cannot load this profile as written, and Kiro CLI 2.37 or later rewrites it at the next V3 launch (keeping a .json.bak copy) unless chat.enableAutoAgentUpgrade is false'
     suggestion: Run /upgrade-agent in a V3 session (or kiro-cli agent upgrade) to convert allowedTools/toolsSettings into permissions.rules, or add a permissions block manually
     empty_suggestion: Remove the empty field (kiro-cli agent upgrade leaves such profiles unconverted), or add a permissions block
     fix: Remove the empty CLI 2.x trust field so Kiro CLI V3 loads the agent

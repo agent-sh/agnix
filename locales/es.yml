@@ -246,7 +246,7 @@ rules:
     mcp_oauth_settings_must_be_an_object: "Las opciones OAuth de MCP deben ser un objeto."
     use_the_documented_oauth_client_fields: "Usa los campos de cliente OAuth documentados."
     invalid_pi_mcp_oauth_callback_or_client: "Opciones de callback OAuth o registro de cliente MCP de Pi no válidas."
-    use_http_loopback_callbacks_matching_callback_ports: "Usa callbacks HTTP de loopback, puertos de callback coincidentes y las opciones de cliente dcr/cimd documentadas."
+    use_http_loopback_callbacks_matching_callback_ports: "Usa callbacks HTTP de loopback, puertos de callback coincidentes y las opciones de cliente auto/dcr/cimd documentadas."
   pi_mdl_001:
     schema_message: "El campo de configuración %{field} incumple la restricción %{keyword} documentada."
     schema_suggestion: "Usa los tipos de valores y las opciones de la referencia de configuración de la herramienta."
@@ -262,6 +262,8 @@ rules:
     use_paths_or_glob_exclusion_patterns_relative: "Usa rutas o patrones glob y de exclusión relativos a la raíz del paquete."
     pi_gallery_media_must_be_a_path: "Los medios de la galería de Pi deben ser una cadena de ruta."
     set_a_relative_image_video_path_or: "Establece una ruta relativa de imagen o vídeo, u omite este campo opcional."
+    pi_changelog_path_must_be_a_string: "changelogPath de Pi debe ser una ruta en texto."
+    point_changelogpath_at_a_package_file: "Apunta changelogPath a un archivo dentro del paquete, o usa una cadena vacía para desactivar el changelog."
   pi_pkg_002:
     a_host_provided_pi_package_is_installed: "Un paquete proporcionado por Pi está instalado como dependencia de ejecución."
     move_the_host_package_to_peerdependencies_with: "Mueve el paquete del entorno anfitrión a peerDependencies con el rango * para que las extensiones compartan los módulos de ejecución de Pi."
@@ -673,7 +675,7 @@ rules:
     message: 'Regla de permisos universales de Kiro invalida: %{issue}'
     suggestion: Usa entradas permissions.rules con una capacidad documentada, efecto deny/ask/allow y listas de cadenas match/exclude
   kr_ag_015:
-    message: 'El agente de Kiro usa campos de confianza de CLI 2.x (%{fields}) sin bloque permissions; CLI V3 omite este perfil hasta actualizarlo'
+    message: 'El agente de Kiro usa campos de confianza de CLI 2.x (%{fields}) sin bloque permissions; CLI V3 no puede cargar este perfil tal cual, y Kiro CLI 2.37 o posterior lo reescribe al siguiente inicio de V3 (con una copia .json.bak) salvo que chat.enableAutoAgentUpgrade sea false'
     suggestion: Ejecuta /upgrade-agent en una sesión V3 para convertir allowedTools/toolsSettings en permissions.rules, o añade un bloque permissions
   kr_hk_011:
     message: "El documento de hooks V3 de Kiro tiene %{version_desc}"
