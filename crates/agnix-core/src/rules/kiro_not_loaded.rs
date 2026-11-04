@@ -22,9 +22,10 @@ use std::path::Path;
 
 const RULE_IDS: &[&str] = &["KIRO-026"];
 
-/// Setting keys Kiro CLI 2.32 accepts in `settings/cli.json`
-/// (`kiro-cli settings list --all`).
+/// Setting keys Kiro CLI accepts in `settings/cli.json` (`kiro-cli settings
+/// list --all` 2.32.1, plus the later keys in the KR-SET table).
 pub(crate) const KIRO_CLI_SETTING_KEYS: &[&str] = &[
+    "acp.agentEngine",
     "api.codewhisperer.service",
     "api.cps.service",
     "api.kiroauth.service",
@@ -36,6 +37,7 @@ pub(crate) const KIRO_CLI_SETTING_KEYS: &[&str] = &[
     "api.subagentTimeout",
     "api.timeout",
     "app.disableAutoupdates",
+    "app.warnOnElevatedPrivileges",
     "chat.agentEngine",
     "chat.allowAnimations",
     "chat.allowAsciiArt",
@@ -131,6 +133,7 @@ pub(crate) const KIRO_CLI_SETTING_KEYS: &[&str] = &[
     "chat.verbosity.lite",
     "chat.verbosity.tui",
     "chat.workflow.continueInterrupted",
+    "chat.workflowLaunch",
     "chat.workflowMonitor.mouseEnabled",
     "cleanup.periodDays",
     "codeWhisperer.shareCodeWhispererContentWithAWS",
@@ -621,6 +624,6 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(sorted, KIRO_CLI_SETTING_KEYS);
-        assert_eq!(KIRO_CLI_SETTING_KEYS.len(), 140);
+        assert_eq!(KIRO_CLI_SETTING_KEYS.len(), 143);
     }
 }

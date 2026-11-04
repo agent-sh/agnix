@@ -27,25 +27,23 @@ pub const VALID_PERMISSION_CAPABILITIES: &[&str] = &[
     "workflow",
 ];
 
-/// Effects a rule may use in user, workspace and agent scope.
-pub const VALID_PERMISSION_EFFECTS: &[&str] = &["allow", "deny", "ask"];
+/// Effects a rule may use in user, workspace and agent scope. `evaluate` is
+/// the weakest effect, which the `approve-for-me` preset adds: "Both scopes
+/// support all effects (`deny`, `ask`, `allow`, and `evaluate`)" (permissions
+/// reference, verified 2026-11-04).
+pub const VALID_PERMISSION_EFFECTS: &[&str] = &["allow", "deny", "ask", "evaluate"];
 
 /// Effects allowed in an administrator `managed-settings.json`.
 pub const ADMIN_PERMISSION_EFFECTS: &[&str] = &["deny", "ask"];
-
-/// Effect the engine parses but skips ("not supported yet").
-pub const UNSUPPORTED_PERMISSION_EFFECT: &str = "evaluate";
 
 /// Rule fields the strict policy parser accepts; any other key in a rule
 /// rejects the whole file.
 pub const VALID_PERMISSION_RULE_FIELDS: &[&str] = &["capability", "effect", "match", "exclude"];
 
 /// Preset ids accepted in a policy file's `policies` list. Every preset
-/// contains only `allow` rules. `approve-for-me` is written by Kiro itself
-/// (CLI 2.36.0 changelog: "Kiro adds the `approve-for-me` policy preset to
-/// the workspace permissions file"); the permissions reference's preset table
-/// had not listed it yet when verified, so unknown-preset warnings on a
-/// Kiro-written value would be false positives.
+/// except `approve-for-me` contains only `allow` rules; `approve-for-me` is
+/// "The `edit-workspace` and `read-only-shell` sets, plus an `evaluate` rule
+/// for every capability" (permissions reference preset table).
 pub const VALID_PERMISSION_POLICIES: &[&str] = &[
     "allow-all",
     "edit-workspace",

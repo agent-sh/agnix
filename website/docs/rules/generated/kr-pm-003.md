@@ -13,7 +13,7 @@ keywords: ["KR-PM-003", "invalid kiro permission effect", "kiro permissions", "v
 - **Category**: `Kiro Permissions`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 

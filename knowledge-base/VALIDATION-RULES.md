@@ -808,7 +808,7 @@ Rules are active by default. Deprecated rules should include `status`, `deprecat
 **Fix**: No auto-fix (describe the task and add "Use when ...")
 **Source**: kiro.dev/docs/skills/
 
-Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a file targets. Kiro CLI 2.x ships two agent engines: V2, the 2.x default, loads the top-level `*.json` files with a strict loader; V3, opt-in since CLI 2.8.0 and the default from CLI 3.0, loads JSON (comments and trailing commas allowed) and Markdown agents recursively. `[tool_versions] kiro = "2.x"` checks V2 only and `"3.x"` V3 only. Unpinned, a JSON file with only CLI 2.x fields (`allowedTools`, `toolsSettings`, `toolAliases`, `keyboardShortcut`, `useLegacyMcpJson`, object-form `hooks`) targets V2, one with only V3 fields (non-null `permissions`, `excludedTools`, `includePowers`, `effortLevel`, `dispatchKind`, array `hooks`) targets V3, and other files target both; Markdown and nested JSON agents always target V3. A condition that makes every targeted engine skip the agent is an error, one that makes only one targeted engine skip it is a warning naming that engine, and dropped or ignored values are warnings or info. For an unpinned CLI 2.x-only file, conditions that will make V3 skip the agent are migration warnings. Evidence: the kiro.dev docs below, the Kiro CLI 2.32.1 loader (`kiro-cli agent validate`) and the V3 engine it bundles. Agent-embedded hooks that target V3 also get the hook rules KR-HK-021 (CLI 2.x or Claude Code tool names in a matcher), KR-HK-027 (tool hook without a specific matcher) and KR-HK-029 (unanchored regex matcher); the standalone hook file rules are documented with the Kiro hooks rules.
+Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a file targets. Kiro CLI 2.x ships two agent engines: V2, the 2.x default, loads the top-level `*.json` files with a strict loader; V3, opt-in since CLI 2.8.0 and the default from CLI 3.0, loads JSON (comments and trailing commas allowed) and Markdown agents recursively. `[tool_versions] kiro = "2.x"` checks V2 only and `"3.x"` V3 only. Kiro CLI 3.0 makes V3 the interactive default, but "A local headless run with no explicit or saved harness runs V2" (agent-harness reference), so a project whose CI runs Kiro 3.x headless should leave Kiro unpinned to check both engines. Unpinned, a JSON file with only CLI 2.x fields (`allowedTools`, `toolsSettings`, `toolAliases`, `keyboardShortcut`, `useLegacyMcpJson`, object-form `hooks`) targets V2, one with only V3 fields (non-null `permissions`, `excludedTools`, `includePowers`, `effortLevel`, `dispatchKind`, array `hooks`) targets V3, and other files target both; Markdown and nested JSON agents always target V3. A condition that makes every targeted engine skip the agent is an error, one that makes only one targeted engine skip it is a warning naming that engine, and dropped or ignored values are warnings or info. For an unpinned CLI 2.x-only file, conditions that will make V3 skip the agent are migration warnings. Evidence: the kiro.dev docs below, the Kiro CLI 2.32.1 loader (`kiro-cli agent validate`) and the V3 engine it bundles. Agent-embedded hooks that target V3 also get the hook rules KR-HK-021 (CLI 2.x or Claude Code tool names in a matcher), KR-HK-027 (tool hook without a specific matcher) and KR-HK-029 (unanchored regex matcher); the standalone hook file rules are documented with the Kiro hooks rules.
 
 <a id="kr-ag-001"></a>
 ### KR-AG-001 [MEDIUM] Unknown or Ignored Kiro Agent Field
@@ -904,7 +904,7 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 <a id="kr-ag-015"></a>
 ### KR-AG-015 [MEDIUM] Unconverted CLI 2.x Trust Configuration
 **Requirement**: A JSON agent with an `allowedTools` or `toolsSettings` key MUST also have a non-null `permissions` block to load in Kiro CLI V3
-**Detection**: Key presence counts, even for null, `[]` or `{}`. Markdown agents are not reported (V3 strips the keys there; see KR-AG-001). Warning when unpinned, error when pinned to 3.x, nothing when pinned to 2.x
+**Detection**: Key presence counts, even for null, `[]` or `{}`. Markdown agents are not reported (V3 strips the keys there; see KR-AG-001). Warning when unpinned, error when pinned to 3.x, nothing when pinned to 2.x. Since 2.37 a V3 session rewrites such a profile when it starts ("Each rewritten file first gets a `.json.bak` backup") unless `chat.enableAutoAgentUpgrade` is false, so a committed profile changes on the next launch
 **Fix**: [AUTO-FIX, unsafe] When every such key is empty or null, remove them (`kiro-cli agent upgrade` leaves such profiles unconverted); this makes V3 load the agent. Otherwise run `/upgrade-agent` (or `kiro-cli agent upgrade`) or add a `permissions` block
 **Source**: kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/docs/cli/v3/migration-guide, kiro.dev/docs/cli/v3/upgrade-agent
 
@@ -4701,7 +4701,7 @@ Kiro CLI V3 (opt-in in CLI 2.x with `kiro-cli --v3`, the default from CLI 3.0) a
 
 ## KIRO PERMISSIONS RULES
 
-Capability policies are read by the V3 engine (and Kiro IDE 1.0) from `~/.kiro/settings/permissions.yaml` (or `permissions.json`; the YAML file wins when both exist), from `~/.kiro/workspace-roots/<hash>/permissions.yaml` (workspace scope, stored outside the repository) and from an administrator `managed-settings.json` (`/Library/Application Support/Kiro/`, `/etc/kiro/`, `C:\ProgramData\Kiro\`; deny and ask only). `$KIRO_HOME` replaces `~/.kiro`. `permissions.yml` is never read (KIRO-026). A repository-local `.kiro/settings/permissions.yaml` is linted as a template; Kiro does not read it (KR-PM-009). The engine's parser is strict: a fatal problem drops every rule of the file and the session fails closed, denying all tool calls until the file is fixed. An unknown capability, the unsupported effect `evaluate` and an unknown preset only skip that entry. All corrections below are manual because permissions affect access.
+Capability policies are read by the V3 engine (and Kiro IDE 1.0) from `~/.kiro/settings/permissions.yaml` (or `permissions.json`; the YAML file wins when both exist), from `~/.kiro/workspace-roots/<hash>/permissions.yaml` (workspace scope, stored outside the repository) and from an administrator `managed-settings.json` (`/Library/Application Support/Kiro/`, `/etc/kiro/`, `C:\ProgramData\Kiro\`; deny and ask only). `$KIRO_HOME` replaces `~/.kiro`. `permissions.yml` is never read (KIRO-026). A repository-local `.kiro/settings/permissions.yaml` is linted as a template; Kiro does not read it (KR-PM-009). The engine's parser is strict: a fatal problem drops every rule of the file and the session fails closed, denying all tool calls until the file is fixed. An unknown capability, and an unknown preset only skip that entry. All corrections below are manual because permissions affect access.
 
 <a id="kr-pm-001"></a>
 ### KR-PM-001 [HIGH] Invalid Kiro Permissions Document
@@ -4719,8 +4719,8 @@ Capability policies are read by the V3 engine (and Kiro IDE 1.0) from `~/.kiro/s
 
 <a id="kr-pm-003"></a>
 ### KR-PM-003 [HIGH] Invalid Kiro Permission Effect
-**Requirement**: Each rule MUST have a string `effect` of `allow`, `deny`, or `ask`; an administrator `managed-settings.json` may use only `deny` and `ask`.
-**Detection**: A missing, wrong-type or unknown effect (`permit`, `Allow`) and an `allow` rule in managed-settings.json are fatal (error). `effect: evaluate` is parsed but skipped as "not supported yet" (warning).
+**Requirement**: Each rule MUST have a string `effect` of `allow`, `deny`, `ask` or `evaluate` ("Both scopes support all effects (`deny`, `ask`, `allow`, and `evaluate`)"); an administrator `managed-settings.json` may use only `deny` and `ask`.
+**Detection**: A missing, wrong-type or unknown effect (`permit`, `Allow`) and an `allow` or `evaluate` rule in managed-settings.json are fatal (error).
 **Fix**: No auto-fix - explicitly select the intended access decision.
 **Source**: kiro.dev/docs/permissions, kiro.dev/docs/cli/v3/permissions, kiro.dev/docs/enterprise/governance/permissions
 
@@ -4741,7 +4741,7 @@ Capability policies are read by the V3 engine (and Kiro IDE 1.0) from `~/.kiro/s
 <a id="kr-pm-006"></a>
 ### KR-PM-006 [HIGH] Invalid Kiro Permission Policy Presets
 **Requirement**: The optional top-level `policies` list MUST be an array of preset id strings: `allow-all`, `edit-workspace`, `read-workspace`, `read-all`, `read-only-shell`, `dev-shell`, `approve-for-me`.
-**Detection**: A non-array `policies` or a non-string entry is fatal (error). An unknown preset id is skipped (warning). In managed-settings.json every preset is skipped because presets contain only allow rules (warning). `approve-for-me` is accepted because Kiro itself writes it: "Kiro adds the `approve-for-me` policy preset to the workspace permissions file" (CLI 2.36.0 changelog); the permissions reference's preset table had not listed it yet when verified on 2026-11-02.
+**Detection**: A non-array `policies` or a non-string entry is fatal (error). An unknown preset id is skipped (warning). In managed-settings.json every preset is skipped because presets contain allow rules (and, for `approve-for-me`, evaluate rules) (warning). The permissions reference's preset table lists `approve-for-me` as "The `edit-workspace` and `read-only-shell` sets, plus an `evaluate` rule for every capability".
 **Fix**: No auto-fix - list valid preset ids or write explicit rules.
 **Source**: kiro.dev/docs/permissions ("Policy presets"), kiro.dev/docs/cli/v3/permissions, kiro.dev/changelog/cli
 
@@ -4937,7 +4937,8 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 **Requirement**: Keys SHOULD be Kiro CLI settings (`kiro-cli settings` refuses to write other keys).
 **Detection**: Info for any other top-level key (`chat.autoCompact`, third-party keys), with a suggestion for a close or known spelling. Kiro ignores these keys.
 **2.34 reference refresh**: `chat.workflowLaunch` is a documented string setting with `when-asked`, `large-tasks` and `delegate-all` choices. KR-SET-008/009 check its type and choices; no undocumented scope restriction is inferred.
-**2.35 changelog refresh**: `app.warnOnElevatedPrivileges` is a documented boolean setting ("turn the warning off with `kiro-cli settings app.warnOnElevatedPrivileges false`", CLI 2.35.0 changelog); the settings reference table had not listed it yet when verified on 2026-11-02, and no workspace restriction is documented, so none is inferred.
+**2.35 changelog refresh**: `app.warnOnElevatedPrivileges` is a documented boolean setting ("turn the warning off with `kiro-cli settings app.warnOnElevatedPrivileges false`", CLI 2.35.0 changelog). The settings reference now says it "is global; a workspace's `.kiro/settings/cli.json` cannot override it", so KR-SET-011 applies.
+**2.36 reference refresh**: `acp.agentEngine` is a documented global string setting, the harness `kiro-cli acp` starts: "`v3`, `v2`, or `v1` (Kiro CLI 2.36 or later)". KR-SET-009 checks its choices.
 **Fix**: No auto-fix - correct or remove the key.
 **Source**: kiro.dev/docs/reference/settings
 
@@ -4965,7 +4966,7 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 <a id="kr-set-009"></a>
 ### KR-SET-009 [MEDIUM] Unrecognized Kiro CLI Setting Value
 **Requirement**: Settings with documented values SHOULD use one of them.
-**Detection**: Warn on values outside the documented sets: `chat.agentEngine` (v1, v2, v3), `chat.uiMode` (lite, tui, structured), `chat.ui` (legacy, classic, tui), `chat.notificationMethod`, `chat.screenReader`, `chat.historyMode`, `chat.defaultInterruptBehavior`, `chat.modelPicker.sortBy`, `chat.sessionDashboard.scope`, `memory.mode`, `compaction.excludeContextWindowPercent` (0-100) and `chat.fullscreenWheelRows` (1-3).
+**Detection**: Warn on values outside the documented sets: `chat.agentEngine` (v1, v2, v3), `acp.agentEngine` (v1, v2, v3), `chat.uiMode` (lite, tui, structured), `chat.ui` (legacy, classic, tui), `chat.notificationMethod`, `chat.screenReader`, `chat.historyMode`, `chat.defaultInterruptBehavior`, `chat.modelPicker.sortBy`, `chat.sessionDashboard.scope`, `memory.mode`, `compaction.excludeContextWindowPercent` (0-100) and `chat.fullscreenWheelRows` (1-3).
 **Fix**: No auto-fix - choose a documented value.
 **Source**: kiro.dev/docs/reference/settings
 
@@ -4979,7 +4980,7 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 <a id="kr-set-011"></a>
 ### KR-SET-011 [LOW] Global-Only Kiro CLI Setting in Workspace File
 **Requirement**: Global-only settings SHOULD be set in `~/.kiro/settings/cli.json`.
-**Detection**: Info when a workspace `.kiro/settings/cli.json` (any cli.json outside `~/.kiro` or `$KIRO_HOME`) sets one of the 76 keys `kiro-cli settings --workspace` refuses ("cannot be overridden at workspace level"), for example `chat.uiMode`, `chat.agentEngine` or `telemetry.enabled`; Kiro ignores the workspace value.
+**Detection**: Info when a workspace `.kiro/settings/cli.json` (any cli.json outside `~/.kiro` or `$KIRO_HOME`) sets one of the 78 keys `kiro-cli settings --workspace` refuses ("cannot be overridden at workspace level"), for example `chat.uiMode`, `chat.agentEngine` or `telemetry.enabled`; Kiro ignores the workspace value. `chat.enableAutoAgentUpgrade` is one of them; since 2.37 users set it themselves, so it no longer marks a file as a copy of the global file.
 **Fix**: No auto-fix - move the key to the global file.
 **Source**: kiro.dev/docs/reference/settings
 

@@ -126,12 +126,15 @@ fn kiro_permissions_effects() {
         "KR-PM-003",
     );
     assert_eq!(d.level, DiagnosticLevel::Error);
-    let d = only(
-        &validate("rules: [{capability: shell, effect: evaluate}]"),
-        "KR-PM-003",
+    // `evaluate` is a documented effect in user and workspace scope, and an
+    // administrator policy may only deny or ask.
+    let d = validate("rules: [{capability: shell, effect: evaluate}]");
+    assert!(hits(&d, "KR-PM-003").is_empty(), "{d:#?}");
+    let d = validate_at(
+        "it/managed-settings.json",
+        r#"{"rules": [{"capability": "shell", "effect": "evaluate"}]}"#,
     );
-    assert_eq!(d.level, DiagnosticLevel::Warning);
-    assert!(d.message.contains("skipped"));
+    assert_eq!(only(&d, "KR-PM-003").level, DiagnosticLevel::Error);
     for effect in ["permit", "Allow", "1"] {
         let content = format!("rules: [{{capability: shell, effect: {effect}}}]");
         assert_eq!(

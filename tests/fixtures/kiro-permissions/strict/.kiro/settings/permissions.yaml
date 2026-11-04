@@ -14,7 +14,7 @@ rules:
     match: []
     effect: deny
   - capability: workflow
-    effect: evaluate
+    effect: Evaluate
   - capability: shell
     match: ["npm run **"]
     effect: ask

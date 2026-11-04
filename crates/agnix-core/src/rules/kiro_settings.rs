@@ -19,8 +19,9 @@
 //!   workspace level").
 //!
 //! The key list and value types come from `kiro-cli settings list --all`
-//! 2.32.1 (140 keys), plus `chat.workflowLaunch` from the 2.34 reference and
-//! `app.warnOnElevatedPrivileges` from the 2.35.0 CLI changelog.
+//! 2.32.1 (140 keys), plus `chat.workflowLaunch` from the 2.34 reference,
+//! `app.warnOnElevatedPrivileges` from the 2.35.0 CLI changelog and
+//! `acp.agentEngine` from the 2.36 reference.
 //! A value of the wrong type is not coerced: the Q
 //! Developer CLI lineage reads settings with typed getters that return no
 //! value, so Kiro falls back to the default.
@@ -161,11 +162,9 @@ const SETTINGS: &[SettingSpec] = &[
     spec("cleanup.periodDays", Number, true, &[]),
     spec("chat.disableGranularTrust", Bool, false, &[]),
     spec("app.disableAutoupdates", Bool, true, &[]),
-    // Kiro CLI 2.35.0 changelog: "turn the warning off with `kiro-cli settings
-    // app.warnOnElevatedPrivileges false`" (boolean feature toggle; the
-    // settings reference table had not listed it yet when verified). No
-    // workspace restriction is documented, so none is inferred.
-    spec("app.warnOnElevatedPrivileges", Bool, false, &[]),
+    // Settings reference: "This setting is on by default and is global; a
+    // workspace's `.kiro/settings/cli.json` cannot override it".
+    spec("app.warnOnElevatedPrivileges", Bool, true, &[]),
     spec("hooks.showStatus", Bool, false, &[]),
     spec("chat.autoExpandToolOutput", Bool, false, &[]),
     spec("chat.disableTrustAllConfirmation", Bool, true, &[]),
@@ -233,6 +232,9 @@ const SETTINGS: &[SettingSpec] = &[
     spec("chat.keybindings.closeMenu", Str, true, &[]),
     spec("chat.keybindings.quit", Str, true, &[]),
     spec("chat.agentEngine", Str, true, &["v1", "v2", "v3"]),
+    // Settings reference, "Agent Client Protocol (ACP)": "`v3`, `v2`, or `v1`
+    // (Kiro CLI 2.36 or later)", global only.
+    spec("acp.agentEngine", Str, true, &["v1", "v2", "v3"]),
     spec("chat.allowAnimations", Bool, true, &[]),
     spec("chat.allowAsciiArt", Bool, true, &[]),
     spec("chat.allowIcons", Bool, true, &[]),
@@ -281,12 +283,13 @@ const SETTINGS: &[SettingSpec] = &[
 
 /// Global-only keys Kiro writes on its own (startup prompts, pickers, MCP
 /// bookkeeping), never through `kiro-cli settings --workspace`.
+/// `chat.enableAutoAgentUpgrade` is not one: since 2.37 users set it
+/// themselves ("run `kiro-cli settings chat.enableAutoAgentUpgrade false`").
 const GLOBAL_STATE_KEYS: &[&str] = &[
     "mcp.loadedBefore",
     "chat.modelPicker.lastUsed",
     "chat.hasSeenLogo",
     "telemetryClientId",
-    "chat.enableAutoAgentUpgrade",
     "chat.disabledModelFallbacks",
 ];
 

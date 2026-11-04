@@ -13,7 +13,7 @@ keywords: ["KR-PM-006", "invalid kiro permission policy presets", "kiro permissi
 - **Category**: `Kiro Permissions`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-11-02`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 

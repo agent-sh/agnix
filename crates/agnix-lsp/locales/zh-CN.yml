@@ -657,7 +657,7 @@ rules:
     message: '无效的 Kiro 通用权限规则：%{issue}'
     suggestion: permissions.rules 条目应使用已记录的 capability、deny/ask/allow effect，以及字符串数组 match/exclude
   kr_ag_015:
-    message: 'Kiro agent 使用 CLI 2.x 信任字段（%{fields}）但没有 permissions 块；CLI V3 会跳过该 profile 直到升级'
+    message: 'Kiro agent 使用 CLI 2.x 信任字段（%{fields}）但没有 permissions 块；CLI V3 无法按原样加载该 profile，Kiro CLI 2.37 或更高版本会在下次启动 V3 时改写它（保留 .json.bak 副本），除非 chat.enableAutoAgentUpgrade 为 false'
     suggestion: 在 V3 会话中运行 /upgrade-agent 将 allowedTools/toolsSettings 转换为 permissions.rules，或手动添加 permissions 块
   kr_hk_011:
     message: "Kiro V3 hook 文档%{version_desc}"

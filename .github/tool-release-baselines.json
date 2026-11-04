@@ -230,7 +230,7 @@
       "github_repo": null,
       "html_url": "https://kiro.dev/changelog/cli/",
       "notes_extractor": "glm",
-      "last_known_version": "2.36.0",
+      "last_known_version": "3.0.0",
       "tracked": true,
       "notes": "Proprietary CLI. Extract the highest published CLI release or patch from canonical /changelog/cli/ release links. Ignore other products, prose and framework versions. Release-note bodies may be upgraded via GLM. The IDE has a separate changelog and is not tracked here.",
       "changes_of_interest": {

@@ -11,17 +11,16 @@
 //! rule that is not an object or lacks a string `capability`, an invalid
 //! `effect`, a non-string-array `match`/`exclude` or an unknown rule key is
 //! FATAL. A fatal error drops every rule and the session fails closed: every
-//! tool call is denied until the file is fixed. An unknown capability, the
-//! unsupported effect `evaluate` and an unknown preset only skip that entry.
+//! tool call is denied until the file is fixed. An unknown capability and an
+//! unknown preset only skip that entry.
 //! Sources: spec section 6.3 (kiro.dev/docs/permissions, V3 policy parser).
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, DiagnosticLevel},
     rules::{Validator, ValidatorMetadata},
     schemas::kiro_permissions::{
-        ADMIN_PERMISSION_EFFECTS, UNSUPPORTED_PERMISSION_EFFECT, VALID_PERMISSION_CAPABILITIES,
-        VALID_PERMISSION_EFFECTS, VALID_PERMISSION_POLICIES, VALID_PERMISSION_RULE_FIELDS,
-        parse_kiro_permissions,
+        ADMIN_PERMISSION_EFFECTS, VALID_PERMISSION_CAPABILITIES, VALID_PERMISSION_EFFECTS,
+        VALID_PERMISSION_POLICIES, VALID_PERMISSION_RULE_FIELDS, parse_kiro_permissions,
     },
 };
 use rust_i18n::t;
@@ -272,22 +271,9 @@ fn check_rule(cx: &mut Cx<'_>, index: usize, rule: &Value, scope: Scope) {
     };
     let consequence = consequence.as_str();
 
-    let mut skipped = latent;
+    let skipped = latent;
     if cx.enabled("KR-PM-003") {
         match map.get("effect").and_then(Value::as_str) {
-            Some(UNSUPPORTED_PERMISSION_EFFECT) => {
-                skipped = true;
-                if !latent {
-                    cx.push_rule(
-                        DiagnosticLevel::Warning,
-                        "KR-PM-003",
-                        index,
-                        Some("effect"),
-                        t!("rules.kr_pm_003.evaluate", index = index).to_string(),
-                        t!("rules.kr_pm_003.suggestion").to_string(),
-                    );
-                }
-            }
             Some(effect) if VALID_PERMISSION_EFFECTS.contains(&effect) => {
                 if !scope.effects().contains(&effect) {
                     cx.push_rule(

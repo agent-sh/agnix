@@ -13,7 +13,7 @@ keywords: ["KR-SET-011", "global-only kiro cli setting in workspace file", "kiro
 - **Category**: `Kiro Settings`
 - **Normative Level**: `BEST_PRACTICE`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 

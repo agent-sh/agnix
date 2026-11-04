@@ -675,7 +675,7 @@ rules:
     message: 'Regla de permisos universales de Kiro invalida: %{issue}'
     suggestion: Usa entradas permissions.rules con una capacidad documentada, efecto deny/ask/allow y listas de cadenas match/exclude
   kr_ag_015:
-    message: 'El agente de Kiro usa campos de confianza de CLI 2.x (%{fields}) sin bloque permissions; CLI V3 omite este perfil hasta actualizarlo'
+    message: 'El agente de Kiro usa campos de confianza de CLI 2.x (%{fields}) sin bloque permissions; CLI V3 no puede cargar este perfil tal cual, y Kiro CLI 2.37 o posterior lo reescribe al siguiente inicio de V3 (con una copia .json.bak) salvo que chat.enableAutoAgentUpgrade sea false'
     suggestion: Ejecuta /upgrade-agent en una sesión V3 para convertir allowedTools/toolsSettings en permissions.rules, o añade un bloque permissions
   kr_hk_011:
     message: "El documento de hooks V3 de Kiro tiene %{version_desc}"

@@ -237,7 +237,11 @@ fn test_kr_set_005_warn_on_elevated_privileges_is_known() {
     // Documented in the CLI 2.35.0 changelog: "turn the warning off with
     // `kiro-cli settings app.warnOnElevatedPrivileges false`".
     assert!(
-        validate(r#"{"app.warnOnElevatedPrivileges": false}"#).is_empty(),
+        hits(
+            &validate(r#"{"app.warnOnElevatedPrivileges": false}"#),
+            "KR-SET-005"
+        )
+        .is_empty(),
         "known boolean setting must not report KR-SET-005"
     );
     // A non-boolean value is still a wrong type (KR-SET-008).
@@ -453,13 +457,55 @@ fn test_does_not_panic_on_non_ascii_content() {
 
 #[test]
 fn test_settings_table_includes_kiro_234_workflow_launch() {
-    assert_eq!(SETTINGS.len(), 142);
+    assert_eq!(SETTINGS.len(), 143);
     let mut keys: Vec<_> = SETTINGS.iter().map(|s| s.key).collect();
     keys.sort_unstable();
     keys.dedup();
     assert_eq!(keys.len(), SETTINGS.len(), "duplicate keys in SETTINGS");
     assert!(setting("chat.uiMode").unwrap().global_only);
     assert!(!setting("chat.defaultAgent").unwrap().global_only);
+    assert!(setting("acp.agentEngine").unwrap().global_only);
+    assert!(setting("app.warnOnElevatedPrivileges").unwrap().global_only);
+}
+
+#[test]
+fn test_kr_set_acp_agent_engine_is_a_known_setting() {
+    // Settings reference: "`acp.agentEngine` | string | Agent harness for
+    // `kiro-cli acp`: `v3`, `v2`, or `v1` (Kiro CLI 2.36 or later)".
+    assert!(hits(&validate(r#"{"acp.agentEngine": "v3"}"#), "KR-SET-005").is_empty());
+    let d = validate(r#"{"acp.agentEngine": "v4"}"#);
+    assert!(hits(&d, "KR-SET-005").is_empty(), "{d:#?}");
+    only(&d, "KR-SET-009");
+}
+
+#[test]
+fn test_kr_set_011_kiro_3_global_settings_in_workspace_file() {
+    let temp = tempfile::TempDir::new().unwrap();
+    let path = temp.path().join(".kiro/settings/cli.json");
+    if is_workspace_settings_file(&path) != Some(true) {
+        return;
+    }
+    for content in [
+        r#"{"acp.agentEngine": "v3"}"#,
+        r#"{"app.warnOnElevatedPrivileges": false}"#,
+        r#"{"chat.enableAutoAgentUpgrade": false}"#,
+    ] {
+        let diagnostics = KiroSettingsValidator.validate(&path, content, &LintConfig::default());
+        assert_eq!(
+            only(&diagnostics, "KR-SET-011").level,
+            DiagnosticLevel::Info,
+            "{content}"
+        );
+    }
+    // Users now set chat.enableAutoAgentUpgrade themselves, so it no longer
+    // marks the file as a copy of the global one.
+    let content = r#"{"chat.enableAutoAgentUpgrade": false, "chat.uiMode": "tui"}"#;
+    let diagnostics = KiroSettingsValidator.validate(&path, content, &LintConfig::default());
+    assert_eq!(
+        hits(&diagnostics, "KR-SET-011").len(),
+        2,
+        "{diagnostics:#?}"
+    );
 }
 
 #[test]

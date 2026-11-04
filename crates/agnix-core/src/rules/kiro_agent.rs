@@ -5041,6 +5041,13 @@ mod tests {
         let unpinned = check("a.json", content);
         assert_eq!(unpinned.one("KR-AG-015").level, DiagnosticLevel::Warning);
         assert!(unpinned.one("KR-AG-015").fixes.is_empty());
+        // Kiro CLI 2.37+ rewrites such a profile at the next V3 launch.
+        assert!(
+            unpinned
+                .one("KR-AG-015")
+                .message
+                .contains("chat.enableAutoAgentUpgrade")
+        );
         assert_eq!(
             check_with("a.json", content, Some("3.0.0"), &[])
                 .one("KR-AG-015")

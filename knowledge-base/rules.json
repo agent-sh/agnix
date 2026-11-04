@@ -12700,7 +12700,7 @@
           "https://kiro.dev/docs/cli/v3/migration-guide/",
           "https://kiro.dev/docs/cli/v3/upgrade-agent/"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "kiro",
           "version_range": ">=2.8.0"
@@ -15032,7 +15032,7 @@
           "https://kiro.dev/docs/reference/settings/",
           "https://kiro.dev/changelog/cli/"
         ],
-        "verified_on": "2026-11-02",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "kiro"
         },
@@ -15142,7 +15142,7 @@
         "source_urls": [
           "https://kiro.dev/docs/reference/settings/"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "kiro"
         },
@@ -15196,7 +15196,7 @@
         "source_urls": [
           "https://kiro.dev/docs/reference/settings/"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "kiro"
         },
@@ -20055,7 +20055,7 @@
           "https://kiro.dev/docs/cli/v3/permissions/",
           "https://kiro.dev/docs/enterprise/governance/permissions/"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "kiro",
           "spec_revision": "CLI V3 / IDE 1.x capability permissions"
@@ -20144,7 +20144,7 @@
           "https://kiro.dev/docs/cli/v3/permissions/",
           "https://kiro.dev/changelog/cli/"
         ],
-        "verified_on": "2026-11-02",
+        "verified_on": "2026-11-04",
         "applies_to": {
           "tool": "kiro",
           "spec_revision": "CLI V3 / IDE 1.x capability permissions"

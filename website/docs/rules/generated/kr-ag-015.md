@@ -13,7 +13,7 @@ keywords: ["KR-AG-015", "unconverted cli 2.x trust configuration", "kiro agents"
 - **Category**: `Kiro Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-04`
 
 ## Applicability
 
