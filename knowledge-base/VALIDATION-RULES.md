@@ -4984,6 +4984,13 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 **Fix**: No auto-fix - move the key to the global file.
 **Source**: kiro.dev/docs/reference/settings
 
+<a id="kr-set-012"></a>
+### KR-SET-012 [LOW] Classic-Only Kiro CLI Setting
+**Requirement**: Settings for the retired Classic interface SHOULD be removed for Kiro CLI 3.0 or later. Vendor text: "Settings marked **classic only** configured the Classic interface. In Kiro CLI 3.0.0 or later, Classic no longer runs for interactive chat, so these settings have no effect in a terminal UI session." (settings reference)
+**Detection**: Info for a classic-only key in any Kiro `cli.json` (`chat.diffTool`, `chat.editMode`, `chat.disableMarkdownRendering`, `chat.enableHistoryHints`, `chat.enableContextUsageIndicator`, `chat.enableTangentMode`, `introspect.tangentMode`, `chat.enableCheckpoint`, `chat.enableDelegate` and the Classic key bindings `chat.skimCommandKey`, `chat.autocompletionKey`, `chat.tangentModeKey`, `chat.delegateModeKey`), and for the values that selected or shaped Classic: `chat.agentEngine: "v1"` ("now opens the Classic upgrade prompt"), `chat.ui: "classic"` ("no longer runs for interactive chat") and `chat.uiMode: "structured"` ("has no effect in Kiro CLI 3.0.0 or later"). Not reported when `[tool_versions] kiro` pins 2.x. `chat.enableTodoList` is not marked classic only and is not reported.
+**Fix**: No auto-fix - remove the setting, or pin Kiro to 2.x for a project that still runs Classic.
+**Source**: kiro.dev/docs/reference/settings, kiro.dev/changelog/cli/3-0
+
 <a id="kr-wf-001"></a>
 ### KR-WF-001 [HIGH] Workflow Recipe Exceeds Kiro Limits
 **Requirement**: A recipe MUST have at most 50 `step` nodes, nest nodes at most 8 levels deep, give every node a unique `id`, and use at most 50 `include` nodes.
@@ -5451,7 +5458,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
 | Kiro MCP | 15 | 7 | 6 | 2 | 0 |
 | Kiro Powers | 18 | 6 | 9 | 3 | 0 |
-| Kiro Settings | 11 | 1 | 8 | 2 | 4 |
+| Kiro Settings | 12 | 1 | 8 | 3 | 4 |
 | Kiro Workflows | 9 | 7 | 2 | 0 | 0 |
 | Kiro Ignore | 1 | 0 | 1 | 0 | 0 |
 | Kiro Skills | 2 | 0 | 1 | 1 | 1 |
@@ -5465,7 +5472,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 16 | 4 | 7 | 5 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **757** | **291** | **331** | **135** | **125** |
+| **TOTAL** | **758** | **291** | **331** | **136** | **125** |
 
 
 ---
@@ -5493,11 +5500,11 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 757 validation rules across 46 categories
+**Total Coverage**: 758 validation rules across 46 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 291 HIGH, 331 MEDIUM, 135 LOW
-**Auto-Fixable**: 125 rules (17%)
+**Certainty**: 291 HIGH, 331 MEDIUM, 136 LOW
+**Auto-Fixable**: 125 rules (16%)
 
 ## Pi Native Configuration
 

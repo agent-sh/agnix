@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 757,
-  "last_updated": "2026-10-29",
+  "total_rules": 758,
+  "last_updated": "2026-11-04",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -15214,6 +15214,35 @@
       "bad_example": "{\"chat.uiMode\": \"tui\"}"
     },
     {
+      "id": "KR-SET-012",
+      "name": "Classic-Only Kiro CLI Setting",
+      "severity": "LOW",
+      "category": "kiro-settings",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/docs/reference/settings/",
+          "https://kiro.dev/changelog/cli/3-0/"
+        ],
+        "verified_on": "2026-11-04",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=3.0.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": false,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{\"chat.ui\": \"tui\"}",
+      "bad_example": "{\"chat.diffTool\": \"delta\"}"
+    },
+    {
       "id": "KR-WF-001",
       "name": "Workflow Recipe Exceeds Kiro Limits",
       "severity": "HIGH",
@@ -22087,7 +22116,7 @@
     },
     "kiro-settings": {
       "prefix": "KR-SET",
-      "count": 11,
+      "count": 12,
       "description": "Kiro CLI settings (.kiro/settings/cli.json) rules"
     },
     "kiro-workflows": {

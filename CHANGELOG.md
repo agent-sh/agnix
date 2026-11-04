@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- KR-SET-012 (Info): settings marked "classic only" in the Kiro settings reference, and the values that selected Classic (`chat.agentEngine: "v1"`, `chat.ui: "classic"`, `chat.uiMode: "structured"`), have no effect from Kiro CLI 3.0. Not reported when Kiro is pinned to 2.x.
+
 ### Fixed
 - Accept Pi v1.5.0's default `oauth.clientRegistration: "auto"` (PI-MCP-005 rejected it), report `selfUpdateCommand` in project settings (PI-CFG-003), check the new `extensionChangelogVersions` and `selfUpdateCommand` settings shapes, keep directory auto-discovery for a `pi` object with only metadata, report a non-string `pi.changelogPath` (PI-PKG-001) and cover the legacy host-provided package names (PI-PKG-002).
 - Accept Kiro's `evaluate` permission effect in user, workspace and agent scope (KR-PM-003 warned that it was unsupported) and the global `acp.agentEngine` setting (KR-SET-005); treat `app.warnOnElevatedPrivileges` as global, and stop `chat.enableAutoAgentUpgrade` from hiding KR-SET-011 for a whole workspace file.

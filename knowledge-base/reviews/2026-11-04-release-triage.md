@@ -2,10 +2,10 @@
 
 Covers the six open bot issues: #1789 Cursor 3.28.7, #1790 Kiro CLI (2.37.1
 marker, 3.0.0 live), #1791 Pi v1.5.0, #1792 spec drift, #1793 Antigravity CLI
-1.5.0 and #1794 Claude Code v2.1.318. Every version was checked against the
+1.5.0 and #1794 Claude Code v2.1.318, plus an unfinished MCP fix found in a local checkout. Every version was checked against the
 live upstream surface on 2026-11-04, and all 32 tracked spec sources were
 re-hashed with the sentinel's own fetch and normalization, not only the four
-the issue named. The catalog stays at 757 rule IDs.
+the issue named.
 
 | Item | Result and primary evidence |
 | --- | --- |
@@ -19,9 +19,12 @@ the issue named. The catalog stays at 757 rule IDs.
 | Antigravity CLI 1.5.0 (#1793) | The installer manifest reports `1.5.0`; `agy changelog` lists 13 entries, none on a file agnix validates (ACP modes, CLI flags, runtime fixes; the alt-screen rename keeps the saved setting). Baseline advances. |
 | Antigravity drift (#1792) | `settings.json`: only the `agentMode` default changed (`""` to `"auto"`); the constraint file is byte-identical, so only the source digest is refreshed. `rules`: the page now points to [Customization discovery](https://antigravity.google/docs/customization-discovery), which defines registry resolution. agnix resolved entries from the `.agents/` folder, registered every file below a folder entry and expanded `~`, so AGY-RL-001..003 ran on the wrong files. Registry paths now start at the folder that contains `.agents/`, then the repository root; personal manifests start at `~/.gemini/config/`; `~` is not expanded; folder entries load direct children only, and `include_only`/`exclude` match names with or without `.md` or relative paths. The `_agents/` and `_agent/` folders are recognized. The rules source now tracks `rules.md` (the HTML hash changed on every deploy) and the discovery page is a new source. |
 
+## New rule
+
+- KR-SET-012 (Info): the settings reference marks 13 Kiro settings "classic only"; "In Kiro CLI 3.0.0 or later, Classic no longer runs for interactive chat, so these settings have no effect in a terminal UI session". The rule also reports `chat.agentEngine: "v1"`, `chat.ui: "classic"` and `chat.uiMode: "structured"`, and stays silent under a 2.x pin. The catalog grows to 758 rule IDs.
+
 ## Not changed, with reasons
 
-- Kiro "classic only" settings (`chat.diffTool`, `chat.enableTangentMode` and others) have no effect in a 3.0 terminal UI session. Reporting them would be a new rule; it is left for a separate decision.
 - Kiro `evaluate` in agent `permissions`: the agent configuration reference lists three effects while the permissions Scopes table lists four. KR-AG-014 is unchanged until the two agree.
 - Antigravity `~/.gemini/antigravity-cli/rules/*.md`: dropped from the docs without a changelog entry; agnix still treats those files as rules.
 

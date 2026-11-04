@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `757` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `758` validation rules generated from `knowledge-base/rules.json`.
 `125` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -531,6 +531,7 @@ This section contains all `757` validation rules generated from `knowledge-base/
 | [KR-SET-009](./generated/kr-set-009.md) | Unrecognized Kiro CLI Setting Value | MEDIUM | Kiro Settings | No |
 | [KR-SET-010](./generated/kr-set-010.md) | Duplicate Kiro CLI Setting Key | MEDIUM | Kiro Settings | No |
 | [KR-SET-011](./generated/kr-set-011.md) | Global-Only Kiro CLI Setting in Workspace File | LOW | Kiro Settings | No |
+| [KR-SET-012](./generated/kr-set-012.md) | Classic-Only Kiro CLI Setting | LOW | Kiro Settings | No |
 | [KR-WF-001](./generated/kr-wf-001.md) | Workflow Recipe Exceeds Kiro Limits | HIGH | Kiro Workflows | No |
 | [KR-WF-002](./generated/kr-wf-002.md) | Invalid Workflow Repeat Cap | HIGH | Kiro Workflows | No |
 | [KR-WF-003](./generated/kr-wf-003.md) | Workflow Recipe Suffix Conflict | MEDIUM | Kiro Workflows | No |

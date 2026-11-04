@@ -3126,6 +3126,11 @@ rules:
   kr_set_011:
     message: "Setting '%{key}' is global-only; Kiro ignores it in a workspace .kiro/settings/cli.json"
     suggestion: "Set it in ~/.kiro/settings/cli.json instead (kiro-cli settings --global)"
+  kr_set_012:
+    message: "Setting '%{key}' configured the Classic interface, which no longer runs for interactive chat in Kiro CLI 3.0 or later; it has no effect in a terminal UI session"
+    suggestion: "Remove the setting, or pin [tool_versions] kiro to 2.x if this project still runs Classic"
+    value: "'%{key}': '%{value}' selected the retired Classic interface; Kiro CLI 3.0 or later ignores it or offers V3 instead"
+    value_suggestion: "Use the terminal UI values (chat.ui: tui, chat.uiMode: tui, chat.agentEngine: v3), or pin [tool_versions] kiro to 2.x"
   kr_wf_001:
     steps: Workflow recipe has more than %{limit} step nodes; Kiro rejects it at load
     depth: Workflow recipe nests nodes deeper than %{limit} levels; Kiro rejects it at load

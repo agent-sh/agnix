@@ -514,3 +514,43 @@ fn test_metadata() {
     assert_eq!(metadata.name, "KiroSettingsValidator");
     assert_eq!(metadata.rule_ids, RULE_IDS);
 }
+
+#[test]
+fn test_kr_set_012_classic_only_settings() {
+    // Settings reference: "Settings marked classic only ... have no effect in
+    // a terminal UI session" from Kiro CLI 3.0.0.
+    let d = only(&validate(r#"{"chat.diffTool": "delta"}"#), "KR-SET-012");
+    assert_eq!(d.level, DiagnosticLevel::Info);
+    assert!(d.message.contains("chat.diffTool"));
+    only(&validate(r#"{"chat.skimCommandKey": "f"}"#), "KR-SET-012");
+    for content in [
+        r#"{"chat.agentEngine": "v1"}"#,
+        r#"{"chat.ui": "classic"}"#,
+        r#"{"chat.uiMode": "structured"}"#,
+    ] {
+        let d = only(&validate(content), "KR-SET-012");
+        assert!(d.message.contains("Classic"), "{content}: {d:?}");
+    }
+    for content in [
+        r#"{"chat.agentEngine": "v3"}"#,
+        r#"{"chat.ui": "tui"}"#,
+        r#"{"chat.enableTodoList": true}"#,
+    ] {
+        assert!(
+            hits(&validate(content), "KR-SET-012").is_empty(),
+            "{content}"
+        );
+    }
+}
+
+#[test]
+fn test_kr_set_012_skips_a_kiro_2_pin() {
+    let mut config = LintConfig::default();
+    config.tool_versions_mut().kiro = Some("2.36.0".into());
+    let content = r#"{"chat.diffTool": "delta", "chat.ui": "classic"}"#;
+    let d = KiroSettingsValidator.validate(Path::new(PATH), content, &config);
+    assert!(hits(&d, "KR-SET-012").is_empty(), "{d:#?}");
+    config.tool_versions_mut().kiro = Some("3.0.0".into());
+    let d = KiroSettingsValidator.validate(Path::new(PATH), content, &config);
+    assert_eq!(hits(&d, "KR-SET-012").len(), 2, "{d:#?}");
+}

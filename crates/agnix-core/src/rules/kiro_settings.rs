@@ -1,4 +1,4 @@
-//! Kiro CLI settings validation (KR-SET-001 to KR-SET-011). Kiro settings left
+//! Kiro CLI settings validation (KR-SET-001 to KR-SET-012). Kiro settings left
 //! in the legacy `.kiro/settings.json` are reported by KIRO-026.
 //!
 //! Validates Kiro CLI settings files: `~/.kiro/settings/cli.json` (global,
@@ -52,6 +52,7 @@ const RULE_IDS: &[&str] = &[
     "KR-SET-009",
     "KR-SET-010",
     "KR-SET-011",
+    "KR-SET-012",
 ];
 
 /// Value type of a setting.
@@ -281,6 +282,36 @@ const SETTINGS: &[SettingSpec] = &[
     spec("voice.autoSubmit", Bool, false, &[]),
 ];
 
+/// Settings the reference marks "classic only": "In Kiro CLI 3.0.0 or later,
+/// Classic no longer runs for interactive chat, so these settings have no
+/// effect in a terminal UI session", plus the four Classic key bindings that
+/// "have no effect in the terminal UI".
+const CLASSIC_ONLY_KEYS: &[&str] = &[
+    "chat.diffTool",
+    "chat.editMode",
+    "chat.disableMarkdownRendering",
+    "chat.enableHistoryHints",
+    "chat.enableContextUsageIndicator",
+    "chat.enableTangentMode",
+    "introspect.tangentMode",
+    "chat.enableCheckpoint",
+    "chat.enableDelegate",
+    "chat.skimCommandKey",
+    "chat.autocompletionKey",
+    "chat.tangentModeKey",
+    "chat.delegateModeKey",
+];
+
+/// Values that selected or shaped the retired Classic interface: `v1` "now
+/// opens the Classic upgrade prompt", `classic` "no longer runs for
+/// interactive chat", and `structured` "has no effect in Kiro CLI 3.0.0 or
+/// later" (settings reference).
+const CLASSIC_VALUES: &[(&str, &str)] = &[
+    ("chat.agentEngine", "v1"),
+    ("chat.ui", "classic"),
+    ("chat.uiMode", "structured"),
+];
+
 /// Global-only keys Kiro writes on its own (startup prompts, pickers, MCP
 /// bookkeeping), never through `kiro-cli settings --workspace`.
 /// `chat.enableAutoAgentUpgrade` is not one: since 2.37 users set it
@@ -494,6 +525,33 @@ fn validate_member(cx: &mut Cx<'_>, content: &str, member: &JsonMember, workspac
             t!("rules.kr_set_011.message", key = key).to_string(),
             t!("rules.kr_set_011.suggestion").to_string(),
         );
+    }
+    // KR-SET-012: Classic settings do nothing from Kiro CLI 3.0; a 2.x pin
+    // still runs Classic.
+    if cx.enabled("KR-SET-012")
+        && crate::rules::kiro_engine::pinned_engine(cx.config)
+            != Some(crate::rules::kiro_engine::KiroEngine::V2)
+    {
+        let value = member.value.value.as_str();
+        if CLASSIC_ONLY_KEYS.contains(&key) {
+            cx.push(
+                DiagnosticLevel::Info,
+                "KR-SET-012",
+                member.key_start,
+                member.key_end,
+                t!("rules.kr_set_012.message", key = key).to_string(),
+                t!("rules.kr_set_012.suggestion").to_string(),
+            );
+        } else if let Some(value) = value.filter(|v| CLASSIC_VALUES.contains(&(key, *v))) {
+            cx.push(
+                DiagnosticLevel::Info,
+                "KR-SET-012",
+                member.value.start,
+                member.value.end,
+                t!("rules.kr_set_012.value", key = key, value = value).to_string(),
+                t!("rules.kr_set_012.value_suggestion").to_string(),
+            );
+        }
     }
     match key {
         "toolSearch.enabled" => validate_tool_search_enabled(cx, content, member),
