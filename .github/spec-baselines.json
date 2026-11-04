@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-11-02T07:27:57Z",
+  "last_updated": "2026-11-04T12:55:48Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {

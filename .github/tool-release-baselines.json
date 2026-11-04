@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-11-02",
+  "last_updated": "2026-11-04",
   "description": "Support tiers and release baselines for the owner-selected tool roster. Tier is a maintenance priority, not a claim that a validator exists. Entries with validation_status=pending have no tool-specific validation yet. Shared Agent Skills monitoring and the second OpenCode release line are separate entries. validators lists implemented rule modules only. tracked=false entries include a primary publication URL and a manual-monitoring reason. retired_tools preserves old baselines for shipped compatibility checks but is never polled. excluded_tools receives no active support or release monitoring. Optional changes_of_interest describes validated surfaces and relevant configuration changes for issue triage.",
   "tools": {
     "claude-code": {

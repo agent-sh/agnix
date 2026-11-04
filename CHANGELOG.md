@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Accept Pi v1.5.0's default `oauth.clientRegistration: "auto"` (PI-MCP-005 rejected it), report `selfUpdateCommand` in project settings (PI-CFG-003), check the new `extensionChangelogVersions` and `selfUpdateCommand` settings shapes, keep directory auto-discovery for a `pi` object with only metadata, report a non-string `pi.changelogPath` (PI-PKG-001) and cover the legacy host-provided package names (PI-PKG-002).
+- Accept Kiro's `evaluate` permission effect in user, workspace and agent scope (KR-PM-003 warned that it was unsupported) and the global `acp.agentEngine` setting (KR-SET-005); treat `app.warnOnElevatedPrivileges` as global, and stop `chat.enableAutoAgentUpgrade` from hiding KR-SET-011 for a whole workspace file.
+- Antigravity `rules.json` registries resolve paths the documented way: from the folder that contains `.agents/`, then the repository root, without `~` expansion; a folder entry registers its direct children only; `include_only`/`exclude` match names with or without `.md`. The `_agents/` and `_agent/` folders are recognized. AGY-RL-001..003 previously ran on files Antigravity does not load and skipped some it does.
+- CC-PL-020 also reports unbraced `$CLAUDE_PROJECT_DIR` in plugin skill and agent bodies.
+- The Spec Drift Sentinel fetches Cursor sources again: cursor.com answers 404 to `.md` URLs requested as `text/markdown`, so sources can now set their own `Accept` header.
+
+### Changed
+- Review Claude Code v2.1.316-v2.1.318, Kiro CLI 3.0.0, Pi v1.5.0, Antigravity CLI 1.5.0, Cursor 3.28.7 and the spec drift notice; re-vendor the Pi v1.5.0 settings and models constraints and refresh the changed spec baselines. KR-AG-015's message notes that Kiro 2.37+ rewrites unconverted profiles at the next V3 launch.
+
 ## [0.60.3] - 2026-11-02
 
 ### Fixed
