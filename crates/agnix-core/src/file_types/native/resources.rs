@@ -353,7 +353,21 @@ fn registry_owns(path: &Path, registry: &Path, fs: &dyn FileSystem) -> bool {
                 }
                 relative.to_path_buf()
             } else if file == root {
-                PathBuf::from(root.file_name().unwrap_or_default())
+                let name = PathBuf::from(root.file_name().unwrap_or_default());
+                // "Load only the matching items" holds for a single file too.
+                let included = entry
+                    .get("include_only")
+                    .and_then(Value::as_array)
+                    .is_none_or(|items| {
+                        items
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .any(|item| manifest_item(&name, item))
+                    });
+                if !included {
+                    continue;
+                }
+                name
             } else {
                 continue;
             };

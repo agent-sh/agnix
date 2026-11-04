@@ -309,7 +309,9 @@ pub(crate) fn detect_client(path: &Path) -> SkillClient {
     {
         return SkillClient::Grok;
     }
-    if crate::file_types::native::sequence(&native_parts, &[".agents", "plugins"])
+    if crate::file_types::native::AGY_PROJECT_FOLDERS
+        .iter()
+        .any(|folder| crate::file_types::native::sequence(&native_parts, &[folder, "plugins"]))
         || crate::file_types::native::sequence(&native_parts, &[".gemini", "config", "plugins"])
         || crate::file_types::native::sequence(
             &native_parts,
@@ -1179,6 +1181,21 @@ mod tests {
     }
 
     // ===== detect_client tests =====
+
+    #[test]
+    fn test_detect_client_antigravity_plugin_folder_aliases() {
+        // Customization discovery: "Antigravity also recognizes folders named
+        // `.agent/`, `_agents/`, and `_agent/`", plugins included.
+        for folder in [".agents", ".agent", "_agents", "_agent"] {
+            assert_eq!(
+                detect_client(Path::new(&format!(
+                    "{folder}/plugins/demo/skills/review/SKILL.md"
+                ))),
+                SkillClient::Antigravity,
+                "{folder}"
+            );
+        }
+    }
 
     #[test]
     fn test_detect_client_claude() {

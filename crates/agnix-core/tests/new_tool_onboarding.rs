@@ -1505,3 +1505,44 @@ fn antigravity_recognizes_underscore_customization_folders() {
         assert!(found.contains(&"AGY-RL-001".into()), "{folder}: {found:?}");
     }
 }
+
+#[test]
+fn antigravity_registry_single_file_entry_honors_include_only() {
+    for (include_only, expected) in [
+        ("[]", false),
+        (r#"["other"]"#, false),
+        (r#"["review"]"#, true),
+    ] {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        let manifest = format!(
+            r#"{{"entries":[{{"path":"shared/review.md","include_only":{include_only}}}]}}"#
+        );
+        let owned = agy_owned(
+            root,
+            &[
+                (".agents/rules.json", &manifest),
+                ("shared/review.md", NO_FRONTMATTER),
+            ],
+            root,
+            &["shared/review.md"],
+        );
+        assert_eq!(owned, [expected], "{include_only}");
+    }
+}
+
+#[test]
+fn antigravity_plugin_manifest_under_underscore_folders_is_owned() {
+    for folder in ["_agents", "_agent"] {
+        let found = validate_content(
+            Path::new(&format!("{folder}/plugins/review/plugin.json")),
+            r#"{"name":"review","logo":"https://example.com/logo.png"}"#,
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(
+            found.iter().any(|d| d.rule == "AGY-PL-002"),
+            "{folder}: {found:?}"
+        );
+    }
+}

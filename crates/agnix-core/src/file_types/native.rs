@@ -167,7 +167,9 @@ pub(crate) fn plugin_owner(
                 {
                     Some(Tool::Grok)
                 }
-                _ if sequence(&components(root), &[".agents", "plugins"])
+                _ if AGY_PROJECT_FOLDERS
+                    .iter()
+                    .any(|folder| sequence(&components(root), &[folder, "plugins"]))
                     || sequence(&components(root), &[".gemini", "config", "plugins"])
                     || sequence(
                         &components(root),
@@ -554,6 +556,24 @@ pub(crate) fn detect(path: &Path) -> Option<FileType> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn plugin_owner_recognizes_every_antigravity_project_folder() {
+        // A plugin.json without `$schema` is Antigravity's when it sits in a
+        // plugins folder of `.agents/`, `.agent/`, `_agents/` or `_agent/`.
+        for folder in AGY_PROJECT_FOLDERS {
+            let fs = crate::fs::MockFileSystem::new();
+            let root = Path::new("/work").join(folder).join("plugins/demo");
+            fs.add_file(root.join("plugin.json"), r#"{"name":"demo"}"#);
+            fs.add_file(root.join("custom/notes.md"), "notes");
+            let owner = plugin_owner(&root.join("custom/notes.md"), &fs, None);
+            assert_eq!(
+                owner.map(|(tool, _, _)| tool),
+                Some(Tool::Antigravity),
+                "{folder}"
+            );
+        }
+    }
 
     #[test]
     fn home_overrides_require_exact_absolute_directory_membership() {

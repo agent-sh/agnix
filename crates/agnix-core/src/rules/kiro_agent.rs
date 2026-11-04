@@ -2704,22 +2704,19 @@ impl Ctx<'_> {
                 ),
             }
             match rule.get("effect").and_then(Value::as_str) {
-                Some("allow" | "deny" | "ask") => {}
-                Some("evaluate") => self.push_permission_note(
-                    out,
-                    &field_path("effect"),
-                    Anchor::Value,
-                    format!("permissions.rules[{index}].effect 'evaluate' is not supported yet, so V3 skips this rule"),
-                ),
+                // Permissions reference, Scopes table: agent scope takes "deny,
+                // ask, allow, evaluate" (the agent configuration reference's
+                // "all three effects" predates `evaluate`).
+                Some("allow" | "deny" | "ask" | "evaluate") => {}
                 Some(effect) => self.push_permission_skip(
                     out,
                     &field_path("effect"),
-                    format!("permissions.rules[{index}].effect '{effect}' must be allow, ask, or deny"),
+                    format!("permissions.rules[{index}].effect '{effect}' must be allow, ask, deny or evaluate"),
                 ),
                 None => self.push_permission_skip(
                     out,
                     &rule_path,
-                    format!("permissions.rules[{index}].effect must be allow, ask, or deny"),
+                    format!("permissions.rules[{index}].effect must be allow, ask, deny or evaluate"),
                 ),
             }
             for field in ["match", "exclude"] {
@@ -5002,7 +4999,10 @@ mod tests {
             .iter()
             .map(|d| (d.level, d.message.clone()))
             .collect();
-        assert_eq!(messages.len(), 5, "{messages:#?}");
+        // `evaluate` is a supported agent-scope effect; the other four are
+        // skipped or stripped by V3.
+        assert_eq!(messages.len(), 4, "{messages:#?}");
+        assert!(!messages.iter().any(|(_, m)| m.contains("evaluate")));
         assert!(
             messages
                 .iter()
