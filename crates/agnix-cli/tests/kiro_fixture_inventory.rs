@@ -175,6 +175,7 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-reach/kr-pw-017/.kiro/powers/installed/supabase/POWER.md",
         "tests/fixtures/kiro-reach/kr-pw-018/.kiro/powers/installed/supabase/plugin.json",
         "tests/fixtures/kiro-reach/kr-pw-018/.kiro/powers/installed/supabase/steering/setup.md",
+        "tests/fixtures/kiro-reach/kr-set-012/.kiro/settings/cli.json",
         "tests/fixtures/kiro-reach/kr-sk-001/.kiro/skills/my-skill/SKILL.md",
         "tests/fixtures/kiro-reach/kr-sk-002/.kiro/skills/pr-review/SKILL.md",
         "tests/fixtures/kiro-reach/kr-wf-003/.kiro/workflows/plan.workflow.json",
@@ -434,7 +435,7 @@ fn kiro_fixture_families_are_cli_runnable() {
         // CDX-AG-009, the skills add AS-004 and AS-020, and several fixtures
         // also trip related Kiro rules (KR-AG-001, KR-AG-015, KR-PW-015,
         // KR-PW-016, ...).
-        ("tests/fixtures/kiro-reach", 60_u64, 68_u64),
+        ("tests/fixtures/kiro-reach", 61_u64, 69_u64),
     ];
 
     for (rel, expected_files_checked, expected_diagnostics) in fixture_roots {
