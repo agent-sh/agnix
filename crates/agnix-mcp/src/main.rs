@@ -424,6 +424,18 @@ fn validate_file_in_workspace(
     core_validate_file(&resolved.canonical_path, &config)
 }
 
+/// Validates a folder inside the MCP workspace with the workspace as the
+/// project root, as `validate_file_in_workspace` does, so imports written
+/// relative to the project root resolve when the client names a subfolder.
+fn validate_project_in_workspace(
+    resolved: &ResolvedMcpPath,
+    config: &LintConfig,
+) -> agnix_core::LintResult<agnix_core::ValidationResult> {
+    let mut config = config.clone();
+    config.set_root_dir(resolved.workspace_root.clone());
+    core_validate_project(&resolved.canonical_path, &config)
+}
+
 fn resolve_mcp_path_with_root(input_path: &str) -> Result<ResolvedMcpPath, McpError> {
     let workspace_root = std::env::current_dir()
         .map_err(|e| make_internal_error(format!("Failed to read current directory: {e}")))?
@@ -562,7 +574,7 @@ impl AgnixServer {
             "validate project",
             &input.path,
             &resolved_path.workspace_root,
-            || core_validate_project(&resolved_path.canonical_path, &config),
+            || validate_project_in_workspace(&resolved_path, &config),
         )?;
 
         let result = diagnostics_to_result(
@@ -719,6 +731,39 @@ mod tests {
             .collect();
         assert_eq!(references.len(), 1);
         assert!(references[0].message.contains("missing"));
+    }
+
+    #[test]
+    fn test_nested_project_imports_use_mcp_workspace_root() {
+        let workspace = tempfile::tempdir().unwrap();
+        let root = workspace.path().canonicalize().unwrap();
+        let commands = root.join(".claude/commands/myplugin");
+        std::fs::create_dir_all(&commands).unwrap();
+        std::fs::create_dir_all(root.join(".myplugin/commands")).unwrap();
+        std::fs::write(root.join(".myplugin/commands/command1.md"), "# Layer A\n").unwrap();
+        std::fs::write(
+            commands.join("spec.md"),
+            "---\ndescription: wrapper\n---\n\n@.myplugin/commands/command1.md\n",
+        )
+        .unwrap();
+        std::fs::write(
+            commands.join("bad.md"),
+            "---\ndescription: wrapper\n---\n\n@.myplugin/commands/missing.md\n",
+        )
+        .unwrap();
+        let resolved = super::ResolvedMcpPath {
+            canonical_path: commands,
+            workspace_root: root,
+        };
+        let result =
+            super::validate_project_in_workspace(&resolved, &LintConfig::default()).unwrap();
+        let missing: Vec<_> = result
+            .diagnostics
+            .iter()
+            .filter(|d| d.rule == "REF-001")
+            .collect();
+        assert_eq!(missing.len(), 1, "{missing:?}");
+        assert!(missing[0].message.contains("missing.md"));
     }
 
     #[test]

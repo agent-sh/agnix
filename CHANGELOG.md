@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accept Kiro's `evaluate` permission effect in user, workspace and agent scope (KR-PM-003 warned that it was unsupported) and the global `acp.agentEngine` setting (KR-SET-005); treat `app.warnOnElevatedPrivileges` as global, and stop `chat.enableAutoAgentUpgrade` from hiding KR-SET-011 for a whole workspace file.
 - Antigravity `rules.json` registries resolve paths the documented way: from the folder that contains `.agents/`, then the repository root, without `~` expansion; a folder entry registers its direct children only; `include_only`/`exclude` match names with or without `.md`. The `_agents/` and `_agent/` folders are recognized. AGY-RL-001..003 previously ran on files Antigravity does not load and skipped some it does.
 - CC-PL-020 also reports unbraced `$CLAUDE_PROJECT_DIR` in plugin skill and agent bodies.
+- The MCP server's project validation uses the workspace as the project root, as file validation already did; naming a subfolder no longer reports false REF-001 errors for imports written relative to the project root.
 - The Spec Drift Sentinel fetches Cursor sources again: cursor.com answers 404 to `.md` URLs requested as `text/markdown`, so sources can now set their own `Accept` header.
 
 ### Changed
