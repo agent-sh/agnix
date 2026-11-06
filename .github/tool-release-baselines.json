@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-11-04",
+  "last_updated": "2026-11-06",
   "description": "Support tiers and release baselines for the owner-selected tool roster. Tier is a maintenance priority, not a claim that a validator exists. Entries with validation_status=pending have no tool-specific validation yet. Shared Agent Skills monitoring and the second OpenCode release line are separate entries. validators lists implemented rule modules only. tracked=false entries include a primary publication URL and a manual-monitoring reason. retired_tools preserves old baselines for shipped compatibility checks but is never polled. excluded_tools receives no active support or release monitoring. Optional changes_of_interest describes validated surfaces and relevant configuration changes for issue triage.",
   "tools": {
     "claude-code": {
@@ -370,9 +370,9 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.28.7",
+      "last_known_version": "3.29.9",
       "tracked": true,
-      "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (readable in the HTML on 2026-10-22). Baseline 3.28.7 is the live stable marker reviewed with current official config references on 2026-11-04; the endpoint provides no per-patch release notes.",
+      "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (readable in the HTML on 2026-10-22). Baseline 3.29.9 is the live stable marker reviewed against the changelog's 2026-11-05 Build Live Apps entry on 2026-11-06; the endpoint provides no per-patch release notes.",
       "changes_of_interest": {
         "config_surfaces": [
           ".cursor/rules/**/*.mdc",
@@ -628,7 +628,7 @@
       "validation_status": "pending",
       "github_repo": "MoonshotAI/kimi-code",
       "release_tag_regex": "^@moonshot-ai/kimi-code@[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "@moonshot-ai/kimi-code@2.4.1",
+      "last_known_version": "@moonshot-ai/kimi-code@2.5.2",
       "tracked": true,
       "notes": "Tracks the current Kimi Code CLI release line, not the retired Python kimi-cli. Release tracking is implemented; tool-specific validation remains pending. https://moonshotai.github.io/kimi-code/"
     }

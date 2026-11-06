@@ -154,6 +154,51 @@ class ToolSupportPolicy(unittest.TestCase):
                 'api repos/MoonshotAI/kimi-code/releases?per_page=100',
             ])
 
+    def test_release_poll_extracts_cursor_marker_and_current_kimi_release(self):
+        # Pins the two extraction paths behind the 2026-11-06 baseline advance
+        # (#1798 Cursor 3.29.9, #1799 Kimi Code 2.5.x): the Cursor update
+        # endpoint's JSON name marker and the Kimi release-tag regex, which
+        # must skip non-CLI tags such as desktop-v9.0.0.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            baseline = dict(self.baselines)
+            baseline['tools'] = {
+                key: dict(self.baselines['tools'][key], last_known_version=version)
+                for key, version in [('cursor', '3.28.7'),
+                                     ('kimi-code', '@moonshot-ai/kimi-code@2.4.1')]
+            }
+            (root / 'baseline.json').write_text(json.dumps(baseline))
+            (root / 'bin').mkdir()
+            (root / 'bin/gh').write_text(
+                '#!/bin/sh\n'
+                'case "$*" in\n'
+                '"api repos/MoonshotAI/kimi-code/releases?per_page=100") '
+                'printf \'[{"tag_name":"desktop-v9.0.0","prerelease":false},'
+                '{"tag_name":"@moonshot-ai/kimi-code@2.5.2","prerelease":false}]\' ;;\n'
+                '*) exit 99 ;;\nesac\n')
+            (root / 'bin/curl').write_text(
+                '#!/bin/sh\n'
+                'case "$*" in\n'
+                '*api2.cursor.sh*) '
+                'printf \'{"url":"https://downloads.cursor.com/x/Cursor.zip","name":"3.29.9"}\' ;;\n'
+                '*) exit 22 ;;\nesac\n')
+            for program in (root / 'bin').iterdir():
+                program.chmod(0o755)
+            env = dict(os.environ)
+            env.pop('GLM_API_KEY', None)
+            env.update(PATH=str(root / 'bin') + os.pathsep + env['PATH'],
+                       BASELINES_FILE=str(root / 'baseline.json'), UPDATE_BASELINES='true',
+                       TOOL_FILTER='', GITHUB_STEP_SUMMARY=str(root / 'summary'))
+            result = subprocess.run(['bash', str(ROOT / 'scripts/check-tool-releases.sh')],
+                                    cwd=ROOT, env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn('new=2', result.stdout)
+            summary = (root / 'summary').read_text()
+            versions = {entry['id']: entry['version']
+                        for entry in json.loads(summary.split('```json\n')[1].split('```')[0])}
+            self.assertEqual(versions['cursor'], '3.29.9')
+            self.assertEqual(versions['kimi-code'], '@moonshot-ai/kimi-code@2.5.2')
+
 
 if __name__ == '__main__':
     unittest.main()
