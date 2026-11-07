@@ -62,7 +62,7 @@ github/codeql-action/upload-sarif@v4.39.1: 9b3254085494b55a0f7c4c2b3d2d52cc712ce
 softprops/action-gh-release@v3.0.3: efb35369e0ad2afab669f228072c1b0d510eae64
 
 # Claude Code
-anthropics/claude-code-action@v1.0.264: d70510b174a1244958df0b03166a54912811f3e6
+anthropics/claude-code-action@v1.0.267: 4845bacbb38b3c4b15d948f035349786f678e068
 ```
 
 ## Updating Action Versions
