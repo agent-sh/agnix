@@ -50,7 +50,7 @@ rhysd/actionlint@v1.7.12: 914e7df21a07ef503a81201c76d2b11c789d3fca
 # Rust Tooling
 Swatinem/rust-cache@v2.9.3: d1527c8f67ef9af357290475d4af4b0fab8f12e0
 dtolnay/rust-toolchain@stable: 4be9e76fd7c4901c61fb841f559994984270fce7
-taiki-e/install-action@v2.87.32: 5488ac5a951645ce95062214902ac4b6bc1a1037
+taiki-e/install-action@v2.90.0: b80e2bb2635f28eb98b9fce1e2f0887e1535c6b2
 
 # Security
 EmbarkStudios/cargo-deny-action@v2.1.1: 3c6349835b2b7b196a839186cb8b78e02f7b5f25
