@@ -3114,7 +3114,7 @@ impl Ctx<'_> {
                     .with_suggestion(t!("rules.kr_hk_031.suggestion")),
                 );
             }
-        } else if v3_trigger.is_none() {
+        } else if v3_trigger.is_none() && self.enabled("KR-HK-005") {
             out.push(
                 self.diag(
                     Warning,
@@ -5319,6 +5319,16 @@ mod tests {
             1,
             "{:#?}",
             array_run.diagnostics
+        );
+
+        // A V2-only pinned agent (compaction else-if gate fails) must not
+        // fall through to the KR-HK-005 v3_unknown branch while KR-HK-005
+        // is disabled.
+        let v2_only = check_rule_disabled("a.json", &object, Some("2.32"), "KR-HK-005");
+        assert!(
+            v2_only.rule("KR-HK-005").is_empty() && v2_only.rule("KR-HK-031").is_empty(),
+            "{:#?}",
+            v2_only.diagnostics
         );
     }
 
