@@ -71,6 +71,7 @@ fn required_paths() -> Vec<&'static str> {
         "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-028-broad-file-hook.json",
         "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-029-unanchored-matcher.json",
         "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-030-Lint_On_Save.json",
+        "tests/fixtures/kiro-hooks/v3/invalid/.kiro/hooks/kr-hk-031-pre-compact.json",
         "tests/fixtures/kiro-hooks/.kiro/hooks/kr-hk-016-v1-format.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/kr-hk-026-field-types.kiro.hook",
         "tests/fixtures/kiro-hooks/.kiro/hooks/valid-env-reference.kiro.hook",
@@ -417,7 +418,7 @@ fn kiro_fixture_families_are_cli_runnable() {
         ("tests/fixtures/kiro-agents", 16_u64, 16_u64),
         // V3 hook fixtures (v3/valid, v3/invalid: one file per rule) and the
         // legacy KR-HK-001/016/026 and valid IDE 0.x fixtures were added.
-        ("tests/fixtures/kiro-hooks", 34_u64, 31_u64),
+        ("tests/fixtures/kiro-hooks", 35_u64, 32_u64),
         // invalid/ and jsonc/ exercise KR-MCP-001..011 and 015.
         ("tests/fixtures/kiro-mcp", 3_u64, 13_u64),
         // strict/ adds KR-PM-003 (evaluate), 005..008 and 010..012; each

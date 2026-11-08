@@ -24,6 +24,8 @@
 //! - KR-HK-023: command placeholders and variables Kiro does not provide
 //! - KR-HK-024: hooks that never run (SessionEnd agent actions, Manual)
 //! - KR-HK-025: standalone hook files under a pinned Kiro CLI 2.x
+//! - KR-HK-031: compaction triggers (`PreCompact`/`PostCompact`, kiro-cli
+//!   3.1.0+) used where an older CLI skips the hook (info)
 //!
 //! Sources: <https://kiro.dev/docs/hooks/>, <https://kiro.dev/docs/hooks/types/>,
 //! <https://kiro.dev/docs/cli/v3/hooks-migration/>, and the V3 engine bundled
@@ -35,10 +37,10 @@ use crate::{
     diagnostics::{Diagnostic, DiagnosticLevel, Fix},
     rules::{Validator, ValidatorMetadata},
     schemas::kiro_hook_v3::{
-        JsonSpans, KIRO_V3_HOOK_ACTION_KEYS, KIRO_V3_HOOK_KEYS, MatcherSubject, Seg,
-        VALID_KIRO_V3_HOOK_DOC_VERSIONS, compile_js_regex, foreign_tool_names, is_tool_selector,
-        matcher_subject, matches_everything, resolve_trigger, tool_matcher_matches_builtin,
-        trigger_case_insensitive_match,
+        JsonSpans, KIRO_V3_HOOK_ACTION_KEYS, KIRO_V3_HOOK_KEYS, KIRO_V3_HOOK_TRIGGERS_SINCE_3_1_0,
+        MatcherSubject, Seg, VALID_KIRO_V3_HOOK_DOC_VERSIONS, compile_js_regex, foreign_tool_names,
+        is_compaction_trigger, is_tool_selector, matcher_subject, matches_everything,
+        resolve_trigger, tool_matcher_matches_builtin, trigger_case_insensitive_match,
     },
 };
 use rust_i18n::t;
@@ -65,6 +67,7 @@ const RULE_IDS: &[&str] = &[
     "KR-HK-028",
     "KR-HK-029",
     "KR-HK-030",
+    "KR-HK-031",
 ];
 
 pub struct KiroV3HookValidator;
@@ -597,6 +600,27 @@ impl Ctx<'_> {
                 Some(canonical)
             }
             None => {
+                // KR-HK-031: compaction triggers arrived with kiro-cli 3.1.0
+                // ("Compaction Hooks and Session Credits"). The engine table
+                // this validator mirrors is kiro-cli 2.32.1, so an install on
+                // 3.0.x or older skips the hook; 3.1.0+ runs it. Info only:
+                // the file itself is well-formed for current CLI.
+                if let Some(stat) = KIRO_V3_HOOK_TRIGGERS_SINCE_3_1_0
+                    .iter()
+                    .find(|name| **name == trigger)
+                    .copied()
+                {
+                    self.push(
+                        Finding::new(
+                            "KR-HK-031",
+                            DiagnosticLevel::Info,
+                            At::Value(&trigger_path),
+                            t!("rules.kr_hk_031.message", index = index, trigger = trigger),
+                        )
+                        .suggest(t!("rules.kr_hk_031.suggestion")),
+                    );
+                    return Some(stat);
+                }
                 let mut finding = Finding::error(
                     "KR-HK-012",
                     At::Value(&trigger_path),
@@ -896,6 +920,11 @@ impl Ctx<'_> {
     fn check_matcher(&mut self, index: usize, base: &[Seg<'_>], trigger: &str, matcher: &str) {
         if matcher.is_empty() {
             return; // empty = match everything
+        }
+        // Compaction triggers (kiro-cli 3.1.0+) have no documented matcher
+        // behavior yet; KR-HK-020 must not claim the matcher is ignored.
+        if is_compaction_trigger(trigger) {
+            return;
         }
         let matcher_path = path(base, &[Seg::Key("matcher")]);
         let subject = matcher_subject(trigger);
@@ -1740,6 +1769,45 @@ mod tests {
         assert_eq!(
             rules(&validate(&hook_doc(
                 serde_json::json!({"name": "a", "trigger": " Stop", "action": {"type": "command", "command": "echo"}})
+            ))),
+            ["KR-HK-012"]
+        );
+    }
+
+    #[test]
+    fn test_kr_hk_031_compaction_triggers_need_kiro_cli_3_1() {
+        for trigger in ["PreCompact", "PostCompact"] {
+            let diagnostics = validate(&hook_doc(
+                serde_json::json!({"name": "archive", "trigger": trigger, "action": {"type": "command", "command": "cp history.json archive/"}}),
+            ));
+            assert_eq!(
+                rules(&diagnostics),
+                ["KR-HK-031"],
+                "{trigger}: {:?}",
+                rules(&diagnostics)
+            );
+            assert_eq!(
+                diagnostics[0].level,
+                crate::diagnostics::DiagnosticLevel::Info
+            );
+            assert!(
+                diagnostics[0].message.contains("3.1.0"),
+                "{}",
+                diagnostics[0].message
+            );
+        }
+        // A matcher on a compaction trigger has no documented behavior:
+        // no KR-HK-020 "trigger ignores it" claim.
+        assert_eq!(
+            rules(&validate(&hook_doc(
+                serde_json::json!({"name": "a", "trigger": "PreCompact", "matcher": "manual", "action": {"type": "command", "command": "echo"}})
+            ))),
+            ["KR-HK-031"]
+        );
+        // The engine lookup is exact: misspellings stay unknown triggers.
+        assert_eq!(
+            rules(&validate(&hook_doc(
+                serde_json::json!({"name": "a", "trigger": "precompact", "action": {"type": "command", "command": "echo"}})
             ))),
             ["KR-HK-012"]
         );

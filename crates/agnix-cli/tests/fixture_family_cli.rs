@@ -252,6 +252,7 @@ make_cli_test!(
         "OC-004",
         "OC-PM-003",
         "OC-CFG-015",
+        "OC-CFG-023",
         "OC-DEP-009",
         "OC-PM-005",
         "OC-POL-001",

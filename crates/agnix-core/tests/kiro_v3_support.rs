@@ -739,7 +739,7 @@ fn kiro_v3_hook_fixtures_cover_each_rule() {
         assert!(rules.is_empty(), "{name}: {rules:?}");
     }
     let invalid = fixture_rules("invalid");
-    assert_eq!(invalid.len(), 18);
+    assert_eq!(invalid.len(), 19);
     for (name, rules) in invalid {
         // kr-hk-0NN-*.json reports exactly its own rule.
         let expected = name[..9].to_uppercase();

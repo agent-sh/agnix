@@ -49,6 +49,19 @@ pub const KIRO_V3_HOOK_TRIGGER_ALIASES: &[(&str, &str)] = &[
     ("userTriggered", "Manual"),
 ];
 
+/// Triggers the V3 engine added in kiro-cli 3.1.0 ("Compaction Hooks and
+/// Session Credits", 2026-11-05): `PreCompact` fires before manual or
+/// automatic compaction and can refuse it, `PostCompact` fires afterwards and
+/// receives the summary. The engine tables above mirror kiro-cli 2.32.1, so
+/// these stay out of the canonical list: `resolve_trigger` returns `None` for
+/// them and the validator reports KR-HK-031 instead of KR-HK-012.
+pub const KIRO_V3_HOOK_TRIGGERS_SINCE_3_1_0: &[&str] = &["PreCompact", "PostCompact"];
+
+/// Whether `trigger` is a compaction trigger introduced by kiro-cli 3.1.0.
+pub fn is_compaction_trigger(trigger: &str) -> bool {
+    KIRO_V3_HOOK_TRIGGERS_SINCE_3_1_0.contains(&trigger)
+}
+
 /// Every trigger name the V3 engine accepts (canonical names and aliases).
 /// Kept for validators of agent-embedded array hooks, which share the hook
 /// schema; prefer [`resolve_trigger`], which also returns the canonical name.

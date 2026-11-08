@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "archive-before-compact", "trigger": "PreCompact", "action": { "type": "command", "command": "cp history.json archive/" } }
+  ]
+}

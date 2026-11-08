@@ -1709,6 +1709,9 @@ rules:
   oc_cfg_022:
     message: "'%{key}' only works in the global config; OpenCode ignores project-level values"
     suggestion: "Move it to ~/.config/opencode/opencode.json(c)"
+  oc_cfg_023:
+    message: "MCP server '%{server}' has \"pool\": %{found}, but pool is a boolean (opt-in connection sharing added in OpenCode 2 v2.2.6)"
+    suggestion: "Use \"pool\": true to share one connection across directories that configure the server identically (only connections on the 2026-07-28 protocol revision are shared; \"legacy\" never shares), or drop the field"
   oc_cfg_021:
     enabled: "MCP server '%{server}' under mcp.servers uses 'enabled', which OpenCode 2 does not read there; use 'disabled'"
     enabled_suggestion: "Replace \"enabled\": false with \"disabled\": true (servers connect unless disabled)"
@@ -2842,6 +2845,9 @@ rules:
   kr_hk_030:
     message: 'Hook file name "%{name}" is not kebab-case'
     suggestion: 'Kiro suggests descriptive kebab-case names such as lint-on-save.json or guard-writes.json'
+  kr_hk_031:
+    message: 'hooks[%{index}] trigger "%{trigger}" is a compaction hook introduced by Kiro CLI 3.1.0; older CLI (3.0.x and earlier) skips this hook'
+    suggestion: 'Keep it only if every environment that reads this file runs Kiro CLI 3.1.0 or later. PreCompact can refuse compaction; PostCompact receives the summary.'
   cc_sk_021:
     message: Hardcoded user directory path '%{path}' leaks author identity and is not portable across machines
     suggestion: Replace with '~/', '$HOME/', a project-relative path, or an env var like '$PROJECT_ROOT'. For shebangs prefer

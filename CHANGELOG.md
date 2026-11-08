@@ -7,11 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- KR-HK-031 (Info): `PreCompact`/`PostCompact` compaction hooks need Kiro
+  CLI 3.1.0; an older CLI skips the hook (the V3 engine table mirrors
+  kiro-cli 2.32.1). A matcher on a compaction trigger has no documented
+  behavior, so KR-HK-020 stays silent for them.
+- OC-CFG-023 (Error): a `pool` value in an OpenCode 2 `mcp.servers` entry
+  must be a boolean. v2.2.6's `packages/schema/src/mcp.ts` declares
+  `pool: Schema.Boolean` on local and remote servers (opt-in connection
+  sharing; only 2026-07-28-protocol connections are shared).
+
 ### Changed
 - Advance the Cursor baseline to 3.29.9 (the 2026-11-05 Build Live Apps
   release changes no validated config surface) and the Kimi Code baseline to
   `@moonshot-ai/kimi-code@2.5.2` (runtime, web and server changes; no
   tool-specific validation exists yet).
+- Advance the Claude Code baseline to v2.1.319, Codex CLI to
+  rust-v0.167.0, Kiro CLI to 3.1.0, OpenCode 2 to v2.2.6, Antigravity CLI
+  to 1.5.3 and Gemini CLI to v0.67.0. Of these, only Kiro 3.1.0
+  (compaction hooks) and OpenCode v2.2.6 (`pool`) change a validated
+  surface; the rest are baseline-only (see
+  knowledge-base/reviews/2026-11-08-release-triage.md).
+- Refresh the claude-code-hooks and claude-code-skills spec baseline
+  hashes: the 2026-11-08 drift is prose-level; the schemas already cover
+  all documented events, matcher lists, handler types and frontmatter
+  fields.
 
 ### Fixed
 - Rule docs pages for empty-file rules (WS-001, KIRO-004, CDX-AG-001, CLN-001, COP-001) show the empty or whitespace-only file that triggers them instead of a generic "Configuration omitted required fields" placeholder.

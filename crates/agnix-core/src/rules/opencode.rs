@@ -61,6 +61,7 @@ const RULE_IDS: &[&str] = &[
     "OC-CFG-020",
     "OC-CFG-021",
     "OC-CFG-022",
+    "OC-CFG-023",
     "OC-AG-001",
     "OC-AG-002",
     "OC-AG-003",
@@ -1064,6 +1065,24 @@ impl Cx<'_, '_, '_> {
                         values = MCP_PROTOCOLS.join(", ")
                     ),
                     t!("rules.oc_cfg_007.suggestion_protocol"),
+                );
+            }
+            // OC-CFG-023: `pool` (v2.2.6) is Schema.Boolean on both local
+            // and remote server entries: `pool: true` shares one connection
+            // across every directory that configures the server
+            // identically. Any other value shape is a config error.
+            if let Some(pool) = server.at("pool")
+                && !pool.bool().is_some()
+            {
+                self.out.error(
+                    "OC-CFG-023",
+                    pool.pos,
+                    t!(
+                        "rules.oc_cfg_023.message",
+                        server = name,
+                        found = pool.type_name(),
+                    ),
+                    t!("rules.oc_cfg_023.suggestion"),
                 );
             }
             if let Some(enabled) = server.get("enabled") {
@@ -4189,6 +4208,46 @@ mod tests {
             r#"{"mcp": {"r": {"type": "remote", "url": "https://x.example", "oauth": true}}}"#,
         );
         assert_eq!(rules_of(&oauth_true), ["OC-CFG-012"]);
+    }
+
+    #[test]
+    fn mcp_pool_flag_must_be_boolean_in_v2() {
+        // v2.2.6 `pool` on a local server: a string is a config error.
+        let string_pool = validate(
+            r#"{"mcp": {"servers": {"shared": {"type": "local", "command": ["x"], "pool": "true"}}}}"#,
+        );
+        assert_eq!(rules_of(&string_pool), ["OC-CFG-023"]);
+        assert!(
+            string_pool[0].message.contains("boolean"),
+            "{}",
+            string_pool[0].message
+        );
+        // Same contract on a remote server, and for a number.
+        let remote_pool = validate(
+            r#"{"mcp": {"servers": {"shared": {"type": "remote", "url": "https://x.example/mcp", "pool": 1}}}}"#,
+        );
+        assert_eq!(rules_of(&remote_pool), ["OC-CFG-023"]);
+        // Documented booleans pass clean, both opt-in and default.
+        for content in [
+            r#"{"mcp": {"servers": {"shared": {"type": "local", "command": ["x"], "pool": true}}}}"#,
+            r#"{"mcp": {"servers": {"shared": {"type": "local", "command": ["x"], "pool": false}}}}"#,
+        ] {
+            let diagnostics = validate(content);
+            assert!(
+                !rules_of(&diagnostics).contains(&"OC-CFG-023"),
+                "{content}: {:?}",
+                rules_of(&diagnostics)
+            );
+        }
+        // OpenCode 1 nested servers directly under `mcp` (no v2 marker):
+        // `pool` is a v2.2.6 field, the v1 line stays silent about it.
+        let v1_shape =
+            validate(r#"{"mcp": {"shared": {"type": "local", "command": ["x"], "pool": "true"}}}"#);
+        assert!(
+            !rules_of(&v1_shape).contains(&"OC-CFG-023"),
+            "{:?}",
+            rules_of(&v1_shape)
+        );
     }
 
     #[test]

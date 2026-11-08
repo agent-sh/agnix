@@ -2800,6 +2800,7 @@ fn test_validate_project_finds_opencode_invalid_fixtures() {
         "OC-CFG-020",
         "OC-CFG-021",
         "OC-CFG-022",
+        "OC-CFG-023",
         "OC-CMD-001",
         "OC-CMD-002",
         "OC-CMD-003",

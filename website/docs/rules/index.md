@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `758` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `760` validation rules generated from `knowledge-base/rules.json`.
 `125` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -487,6 +487,7 @@ This section contains all `758` validation rules generated from `knowledge-base/
 | [KR-HK-028](./generated/kr-hk-028.md) | Kiro File Hook Matching Every File | LOW | Kiro Hooks | No |
 | [KR-HK-029](./generated/kr-hk-029.md) | Kiro Tool Matcher Is an Unanchored Regex | LOW | Kiro Hooks | No |
 | [KR-HK-030](./generated/kr-hk-030.md) | Kiro Hook File Name Not Kebab-Case | LOW | Kiro Hooks | No |
+| [KR-HK-031](./generated/kr-hk-031.md) | Kiro Compaction Hook Requires Kiro CLI 3.1.0 | LOW | Kiro Hooks | No |
 | [KR-MCP-001](./generated/kr-mcp-001.md) | Kiro MCP Config Fails to Load | HIGH | Kiro MCP | No |
 | [KR-MCP-002](./generated/kr-mcp-002.md) | Hardcoded Secret in Kiro MCP Server Config | MEDIUM | Kiro MCP | No |
 | [KR-MCP-003](./generated/kr-mcp-003.md) | Kiro MCP Command Includes Arguments | MEDIUM | Kiro MCP | No |
@@ -667,6 +668,7 @@ This section contains all `758` validation rules generated from `knowledge-base/
 | [OC-CFG-020](./generated/oc-cfg-020.md) | Many Enabled MCP Servers | LOW | OpenCode | No |
 | [OC-CFG-021](./generated/oc-cfg-021.md) | OpenCode 1 Field in an mcp.servers Entry | MEDIUM | OpenCode | No |
 | [OC-CFG-022](./generated/oc-cfg-022.md) | Global-Only Setting in Project Config | MEDIUM | OpenCode | No |
+| [OC-CFG-023](./generated/oc-cfg-023.md) | MCP Server pool Flag Not a Boolean | MEDIUM | OpenCode | No |
 | [OC-AG-010](./generated/oc-ag-010.md) | OpenCode Agent Without Description | MEDIUM | OpenCode | No |
 | [OC-AG-011](./generated/oc-ag-011.md) | hidden on a Non-Subagent | LOW | OpenCode | No |
 | [OC-PM-003](./generated/oc-pm-003.md) | Permission Rule Shadowed by Later Catch-All | MEDIUM | OpenCode | No |

@@ -3006,6 +3006,13 @@ OpenCode 1 (`opencode-ai`) and OpenCode 2 (`@opencode/cli`, released 2026-09-11)
 **Fix**: No auto-fix (move it to the global config)
 **Source**: opencode.ai/v2/docs/config
 
+<a id="oc-cfg-023"></a>
+### OC-CFG-023 [MEDIUM] MCP Server pool Flag Not a Boolean
+**Requirement**: A `pool` value in an `mcp.servers` entry MUST be a boolean. OpenCode 2 v2.2.6 added opt-in MCP connection sharing through `pool: true`: "Share one connection to this server across every directory that configures it identically, instead of one per directory. Only connections that negotiate the 2026-07-28 revision are shared; an unset 'protocol' becomes 'auto', and 'legacy' never shares. Defaults to false." (`packages/schema/src/mcp.ts`, `Schema.Boolean` on both local and remote server configs)
+**Detection**: Error at the non-boolean `pool` value of an `mcp.servers` entry (both `local` and `remote` types; the OpenCode 1 line stays silent)
+**Fix**: No auto-fix (write `true`/`false`, or drop the field)
+**Source**: github.com/anomalyco/opencode/releases/tag/v2.2.6, opencode.ai/v2/docs/mcp-servers
+
 <a id="oc-ag-001"></a>
 ### OC-AG-001 [HIGH] Invalid Agent Mode Value
 **Requirement**: Agent `mode` MUST be `primary`, `subagent` or `all` ("The `mode` option can be set to `primary`, `subagent`, or `all`.")
@@ -4697,6 +4704,13 @@ Kiro CLI V3 (opt-in in CLI 2.x with `kiro-cli --v3`, the default from CLI 3.0) a
 **Fix**: No auto-fix (rename the file)
 **Source**: kiro.dev/docs/hooks
 
+<a id="kr-hk-031"></a>
+### KR-HK-031 [LOW] Kiro Compaction Hook Requires Kiro CLI 3.1.0
+**Requirement**: A hook with the `PreCompact` or `PostCompact` trigger only runs on Kiro CLI 3.1.0 or later. Kiro CLI 3.1.0 ("Compaction Hooks and Session Credits", 2026-11-05) added them: "`PreCompact` fires before manual/automatic compaction and can refuse it; `PostCompact` fires afterward and receives the summary." The V3 engine this validator mirrors is kiro-cli 2.32.1, whose trigger table does not know them: an unrecognized trigger name makes the engine skip just that hook.
+**Detection**: Info at the `trigger` value. The file itself is well-formed for current CLI; an install on 3.0.x or older silently skips the hook. A matcher on a compaction trigger has no documented behavior yet, so KR-HK-020 stays silent.
+**Fix**: No auto-fix (keep it only when every environment that reads the file runs Kiro CLI 3.1.0+)
+**Source**: kiro.dev/changelog/cli
+
 ---
 
 ## KIRO PERMISSIONS RULES
@@ -5454,7 +5468,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Gemini Agents | 6 | 4 | 1 | 1 | 0 |
 | Gemini CLI | 29 | 7 | 12 | 10 | 2 |
 | Kiro Agents | 29 | 11 | 15 | 3 | 1 |
-| Kiro Hooks | 28 | 15 | 6 | 7 | 7 |
+| Kiro Hooks | 29 | 15 | 6 | 8 | 7 |
 | Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
 | Kiro MCP | 15 | 7 | 6 | 2 | 0 |
 | Kiro Powers | 18 | 6 | 9 | 3 | 0 |
@@ -5464,7 +5478,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro Skills | 2 | 0 | 1 | 1 | 1 |
 | Kiro Steering | 16 | 4 | 10 | 2 | 1 |
 | MCP | 30 | 14 | 12 | 4 | 7 |
-| OpenCode | 66 | 25 | 29 | 12 | 10 |
+| OpenCode | 67 | 25 | 30 | 12 | 10 |
 | OpenCode Skills | 1 | 0 | 1 | 0 | 1 |
 | Prompt Eng | 4 | 0 | 3 | 1 | 1 |
 | References | 3 | 2 | 0 | 1 | 1 |
@@ -5472,7 +5486,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 16 | 4 | 7 | 5 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **758** | **291** | **331** | **136** | **125** |
+| **TOTAL** | **760** | **291** | **332** | **137** | **125** |
 
 
 ---
@@ -5500,10 +5514,10 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 758 validation rules across 46 categories
+**Total Coverage**: 760 validation rules across 46 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 291 HIGH, 331 MEDIUM, 136 LOW
+**Certainty**: 291 HIGH, 332 MEDIUM, 137 LOW
 **Auto-Fixable**: 125 rules (16%)
 
 ## Pi Native Configuration

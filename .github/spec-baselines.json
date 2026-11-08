@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-11-04T12:55:48Z",
+  "last_updated": "2026-11-08T07:17:55Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -139,7 +139,7 @@
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-        "hash": "62afd408e8fe643615312d9ca8a067f5e5f93b9d70afe7f45ca05b23a1fdb69e",
+        "hash": "bf5bcc0cb4e835e37fe08997ec2e7bcd328c5c392bfe928e62fca8ffa4e55779",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -165,7 +165,7 @@
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-        "hash": "d1cfcd4a5a898f34674a494cc0cbe14cc3b1613bb855133870f5ad9a0ab95bea",
+        "hash": "2a0e2b6e35fbf75c7951a9d0fedf9fe1b513e30156f86a5da1b96f763df37a9c",
         "rules": [
           "AS-021",
           "CC-SK-001",

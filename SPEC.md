@@ -28,7 +28,7 @@
 | GitHub Copilot | .github/copilot-instructions.md, .github/instructions/*.instructions.md, .github/agents/*.agent.md, .github/prompts/*.prompt.md, .github/hooks/hooks.json, .github/workflows/copilot-setup-steps.yml | 33 |
 | Cursor Project Rules | .cursor/rules/*.mdc, .cursorrules, .cursor/hooks.json, .cursor/agents/**/*.md, .cursor/environment.json | 39 |
 | Cline | .clinerules, .clinerules/*.md, .clinerules/*.txt | 14 |
-| OpenCode | opencode.json, opencode.jsonc | 66 |
+| OpenCode | opencode.json, opencode.jsonc | 67 |
 | Gemini Agents | .gemini/agents/*.md, extension agents/*.md | 6 |
 | Gemini CLI | GEMINI.md, GEMINI.local.md, .gemini/settings.json (hooks), gemini-extension.json and extension hooks/hooks.json (extensions), .geminiignore | 29 |
 | Codex CLI | .codex/config.toml/.json/.yaml | 85 |
@@ -43,7 +43,7 @@
 | Kiro Steering | .kiro/steering/**/*.md (KIRO-026: near-miss names in Kiro config dirs) | 16 |
 | Kiro Skills | .kiro/skills/*/SKILL.md | 2 |
 | Kiro Agents | .kiro/agents/**/*.{json,md}, .amazonq/cli-agents/*.json (CLI 2.x fallback) | 29 |
-| Kiro Hooks | .kiro/hooks/*.kiro.hook, .kiro/hooks/*.json | 28 |
+| Kiro Hooks | .kiro/hooks/*.kiro.hook, .kiro/hooks/*.json | 29 |
 | Kiro Permissions | .kiro/settings/permissions.{yaml,json}, ~/.kiro/workspace-roots/<hash>/permissions.{yaml,json}, Kiro managed-settings.json | 12 |
 | Kiro MCP | .kiro/settings/mcp.json | 15 |
 | Kiro Powers | POWER.md, power plugin.json / mcp.json / steering/*.md (.kiro/powers/[installed/]<name>/, power/, powers/<name>/) | 18 |

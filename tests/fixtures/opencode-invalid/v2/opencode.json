@@ -10,7 +10,7 @@
   "mcp": {
     "servers": {
       "s1": { "type": "local", "command": ["x"], "enabled": false },
-      "s2": { "type": "local", "command": ["x"] },
+      "s2": { "type": "local", "command": ["x"], "pool": "true" },
       "s3": { "type": "local", "command": ["x"] },
       "s4": { "type": "local", "command": ["x"] },
       "s5": { "type": "local", "command": ["x"] },
