@@ -2894,7 +2894,10 @@ impl Ctx<'_> {
             let key_path = [K("hooks"), K(trigger)];
             let v2_valid = V2_HOOK_TRIGGERS.contains(&trigger.as_str());
             let v3_trigger = resolve_trigger(trigger);
-            if !v2_valid && self.enabled("KR-HK-005") {
+            // KR-HK-031 must survive a disabled KR-HK-005, so the call gate
+            // admits compaction triggers even then; the branches inside
+            // check their own rule switches.
+            if !v2_valid && (self.enabled("KR-HK-005") || is_compaction_trigger(trigger)) {
                 self.report_object_trigger(out, map, trigger, v3_trigger);
             }
 
@@ -3070,7 +3073,7 @@ impl Ctx<'_> {
             Some(replacement) => t!("rules.kr_hk_005.rename_suggestion", trigger = replacement),
             None => t!("rules.kr_hk_005.suggestion"),
         };
-        if self.engines.v2 {
+        if self.engines.v2 && self.enabled("KR-HK-005") {
             let v3 = self.engines.v3;
             let Some((level, effect)) = self.skip_effect(Fatal::V2) else {
                 return;
@@ -3096,7 +3099,7 @@ impl Ctx<'_> {
                 diagnostic = diagnostic.with_fix(fix);
             }
             out.push(self.assume(diagnostic));
-        } else if is_compaction_trigger(trigger) {
+        } else if is_compaction_trigger(trigger) && (self.engines.v3 || self.migration) {
             // KR-HK-031: object-key compaction trigger (kiro-cli 3.1.0+).
             // The engine skips it on older CLI; info instead of the
             // KR-HK-005 v3_unknown warning.
@@ -3431,21 +3434,18 @@ impl Ctx<'_> {
         trigger: &str,
         location: &str,
     ) {
-        if !self.enabled("KR-HK-005") || !(self.engines.v3 || self.migration) {
-            return;
-        }
-        let path = [K("hooks"), I(index), K("trigger")];
-        // KR-HK-031: compaction triggers (kiro-cli 3.1.0+) share the hook
-        // schema, so agent-embedded array hooks can name them too. Same fact
-        // as the standalone-file rule: older CLI skips the hook. Info, not
-        // the KR-HK-005 unknown-trigger warning.
         if is_compaction_trigger(trigger) {
-            if self.enabled("KR-HK-031") {
+            // KR-HK-031: compaction triggers (kiro-cli 3.1.0+) share the hook
+            // schema, so agent-embedded array hooks can name them too. Same fact
+            // as the standalone-file rule: older CLI skips the hook. Info, not
+            // the KR-HK-005 unknown-trigger warning. Checked before the
+            // KR-HK-005 gate so a disabled KR-HK-005 cannot silence it.
+            if self.enabled("KR-HK-031") && (self.engines.v3 || self.migration) {
                 out.push(
                     self.diag(
                         Info,
                         "KR-HK-031",
-                        self.at(&path, Anchor::Value),
+                        self.at(&[K("hooks"), I(index), K("trigger")], Anchor::Value),
                         t!(
                             "rules.kr_hk_031.agent_hook",
                             hook = location,
@@ -3457,6 +3457,10 @@ impl Ctx<'_> {
             }
             return;
         }
+        if !self.enabled("KR-HK-005") || !(self.engines.v3 || self.migration) {
+            return;
+        }
+        let path = [K("hooks"), I(index), K("trigger")];
         let replacement = trigger_case_insensitive_match(trigger).or_else(|| {
             trigger
                 .eq_ignore_ascii_case("agentSpawn")
@@ -4177,6 +4181,27 @@ mod tests {
 
     fn check(name: &str, content: &str) -> Run {
         check_with(name, content, None, &[])
+    }
+
+    /// Like [`check_with`], with one rule disabled (rule-filter regression).
+    fn check_rule_disabled(name: &str, content: &str, kiro: Option<&str>, rule: &str) -> Run {
+        // Reuse check_with's fs/path setup, then validate with the rule off.
+        let setup = check_with(name, content, kiro, &[]);
+        let config = LintConfig::builder()
+            .fs(setup.fs.clone())
+            .tool_versions(ToolVersions {
+                kiro: kiro.map(ToString::to_string),
+                ..ToolVersions::default()
+            })
+            .disable_rule(rule)
+            .build()
+            .unwrap();
+        let diagnostics = KiroAgentValidator.validate(&setup.path, content, &config);
+        Run {
+            diagnostics,
+            fs: setup.fs,
+            path: setup.path,
+        }
     }
 
     fn json(value: serde_json::Value) -> String {
@@ -5279,6 +5304,22 @@ mod tests {
         let run = check("a.json", &array);
         assert_eq!(run.rule("KR-HK-031").len(), 1, "{:#?}", run.diagnostics);
         assert!(run.rule("KR-HK-005").is_empty(), "{:#?}", run.diagnostics);
+
+        // A disabled KR-HK-005 must not silence KR-HK-031 on either path.
+        let object_run = check_rule_disabled("a.json", &object, Some("3.0"), "KR-HK-005");
+        assert_eq!(
+            object_run.rule("KR-HK-031").len(),
+            1,
+            "{:#?}",
+            object_run.diagnostics
+        );
+        let array_run = check_rule_disabled("a.json", &array, None, "KR-HK-005");
+        assert_eq!(
+            array_run.rule("KR-HK-031").len(),
+            1,
+            "{:#?}",
+            array_run.diagnostics
+        );
     }
 
     #[test]
