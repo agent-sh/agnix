@@ -71,8 +71,9 @@ use crate::schemas::kiro_agent::{
     v2_equivalent_for_v3_tool, v2_tool_group, v2_trigger_for, v3_replacement_for_v2_tool,
 };
 use crate::schemas::kiro_hook_v3::{
-    MatcherSubject, foreign_tool_names, is_tool_selector, matches_everything, resolve_trigger,
-    tool_matcher_matches_builtin, trigger_case_insensitive_match,
+    MatcherSubject, foreign_tool_names, is_compaction_trigger, is_tool_selector,
+    matches_everything, resolve_trigger, tool_matcher_matches_builtin,
+    trigger_case_insensitive_match,
 };
 use crate::schemas::kiro_permissions::VALID_PERMISSION_CAPABILITIES;
 
@@ -111,6 +112,7 @@ const RULE_IDS: &[&str] = &[
     "KR-AG-030",
     "KR-HK-005",
     "KR-HK-006",
+    "KR-HK-031",
 ];
 
 /// Directory levels searched below `.kiro/agents` for sibling agents.
@@ -3094,6 +3096,21 @@ impl Ctx<'_> {
                 diagnostic = diagnostic.with_fix(fix);
             }
             out.push(self.assume(diagnostic));
+        } else if is_compaction_trigger(trigger) {
+            // KR-HK-031: object-key compaction trigger (kiro-cli 3.1.0+).
+            // The engine skips it on older CLI; info instead of the
+            // KR-HK-005 v3_unknown warning.
+            if self.enabled("KR-HK-031") {
+                out.push(
+                    self.diag(
+                        Info,
+                        "KR-HK-031",
+                        key_offset,
+                        t!("rules.kr_hk_031.agent_key", trigger = trigger),
+                    )
+                    .with_suggestion(t!("rules.kr_hk_031.suggestion")),
+                );
+            }
         } else if v3_trigger.is_none() {
             out.push(
                 self.diag(
@@ -3418,6 +3435,28 @@ impl Ctx<'_> {
             return;
         }
         let path = [K("hooks"), I(index), K("trigger")];
+        // KR-HK-031: compaction triggers (kiro-cli 3.1.0+) share the hook
+        // schema, so agent-embedded array hooks can name them too. Same fact
+        // as the standalone-file rule: older CLI skips the hook. Info, not
+        // the KR-HK-005 unknown-trigger warning.
+        if is_compaction_trigger(trigger) {
+            if self.enabled("KR-HK-031") {
+                out.push(
+                    self.diag(
+                        Info,
+                        "KR-HK-031",
+                        self.at(&path, Anchor::Value),
+                        t!(
+                            "rules.kr_hk_031.agent_hook",
+                            hook = location,
+                            trigger = trigger
+                        ),
+                    )
+                    .with_suggestion(t!("rules.kr_hk_031.suggestion")),
+                );
+            }
+            return;
+        }
         let replacement = trigger_case_insensitive_match(trigger).or_else(|| {
             trigger
                 .eq_ignore_ascii_case("agentSpawn")
@@ -5213,6 +5252,33 @@ mod tests {
                 .level,
             DiagnosticLevel::Info
         );
+    }
+
+    #[test]
+    fn compaction_triggers_in_agent_hooks_get_kr_hk_031() {
+        // V3-only agent (array hooks and the permissions field are V3): both
+        // the object-key and the array form of a compaction trigger get the
+        // KR-HK-031 info, not the KR-HK-005 unknown-trigger warning.
+        let object = json(serde_json::json!({
+            "name": "a",
+            "permissions": {"rules": []},
+            "hooks": {"PreCompact": [{"command": "cp history.json archive/"}]}
+        }));
+        // Pinned to Kiro CLI 3.x the agent targets V3 only; unpinned, the
+        // object form also targets V2 and KR-HK-005 reports the 2.x skip.
+        let run = check_with("a.json", &object, Some("3.0"), &[]);
+        assert_eq!(run.rule("KR-HK-031").len(), 1, "{:#?}", run.diagnostics);
+        assert!(run.rule("KR-HK-005").is_empty(), "{:#?}", run.diagnostics);
+
+        let array = json(serde_json::json!({
+            "name": "a",
+            "hooks": [
+                {"name": "archive", "trigger": "PostCompact", "action": {"type": "command", "command": "cp history.json archive/"}}
+            ]
+        }));
+        let run = check("a.json", &array);
+        assert_eq!(run.rule("KR-HK-031").len(), 1, "{:#?}", run.diagnostics);
+        assert!(run.rule("KR-HK-005").is_empty(), "{:#?}", run.diagnostics);
     }
 
     #[test]

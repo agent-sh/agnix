@@ -2848,6 +2848,8 @@ rules:
   kr_hk_031:
     message: 'hooks[%{index}] trigger "%{trigger}" is a compaction hook introduced by Kiro CLI 3.1.0; older CLI (3.0.x and earlier) skips this hook'
     suggestion: 'Keep it only if every environment that reads this file runs Kiro CLI 3.1.0 or later. PreCompact can refuse compaction; PostCompact receives the summary.'
+    agent_hook: '%{hook} trigger "%{trigger}" is a compaction hook introduced by Kiro CLI 3.1.0; older CLI (3.0.x and earlier) skips this hook'
+    agent_key: 'Kiro agent hook trigger "%{trigger}" is a compaction hook introduced by Kiro CLI 3.1.0; older CLI (3.0.x and earlier) skips this hook'
   cc_sk_021:
     message: Hardcoded user directory path '%{path}' leaks author identity and is not portable across machines
     suggestion: Replace with '~/', '$HOME/', a project-relative path, or an env var like '$PROJECT_ROOT'. For shebangs prefer

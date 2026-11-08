@@ -4707,7 +4707,7 @@ Kiro CLI V3 (opt-in in CLI 2.x with `kiro-cli --v3`, the default from CLI 3.0) a
 <a id="kr-hk-031"></a>
 ### KR-HK-031 [LOW] Kiro Compaction Hook Requires Kiro CLI 3.1.0
 **Requirement**: A hook with the `PreCompact` or `PostCompact` trigger only runs on Kiro CLI 3.1.0 or later. Kiro CLI 3.1.0 ("Compaction Hooks and Session Credits", 2026-11-05) added them: "`PreCompact` fires before manual/automatic compaction and can refuse it; `PostCompact` fires afterward and receives the summary." The V3 engine this validator mirrors is kiro-cli 2.32.1, whose trigger table does not know them: an unrecognized trigger name makes the engine skip just that hook.
-**Detection**: Info at the `trigger` value. The file itself is well-formed for current CLI; an install on 3.0.x or older silently skips the hook. A matcher on a compaction trigger has no documented behavior yet, so KR-HK-020 stays silent.
+**Detection**: Info at the `trigger` value. The file itself is well-formed for current CLI; an install on 3.0.x or older silently skips the hook. A matcher on a compaction trigger has no documented behavior yet, so KR-HK-020 stays silent. Agent-embedded hooks (`.kiro/agents` object key or array `trigger`) get the same info instead of the KR-HK-005 unknown-trigger warning when they target V3.
 **Fix**: No auto-fix (keep it only when every environment that reads the file runs Kiro CLI 3.1.0+)
 **Source**: kiro.dev/changelog/cli
 

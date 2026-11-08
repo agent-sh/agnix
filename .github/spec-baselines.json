@@ -165,7 +165,7 @@
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-        "hash": "2a0e2b6e35fbf75c7951a9d0fedf9fe1b513e30156f86a5da1b96f763df37a9c",
+        "hash": "2a0e2b6e35fbf75c7951a9d0fedf9fe1b513e30156f8615da1b96f763df37a9c",
         "rules": [
           "AS-021",
           "CC-SK-001",

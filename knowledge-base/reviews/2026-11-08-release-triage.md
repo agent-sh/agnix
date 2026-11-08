@@ -30,6 +30,9 @@ that hook. The rule reports an Info at the `trigger` value instead of the
 KR-HK-012 unknown-trigger error: the file is well-formed for current CLI,
 but 3.0.x and older silently skip the hook. A matcher on a compaction
 trigger has no documented behavior, so KR-HK-020 stays silent for them.
+Agent-embedded hooks share the hook schema, so the same info replaces the
+KR-HK-005 unknown-trigger warning on the V3 path (object key and array
+`trigger`), keeping both surfaces consistent.
 
 ### OC-CFG-023 [MEDIUM] MCP Server pool Flag Not a Boolean
 
