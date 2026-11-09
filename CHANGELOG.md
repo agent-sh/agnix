@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Advance the Cursor baseline to 3.29.15 (the entries after the
+  2026-11-05 Build Live Apps release - voice chat with agents, the Agent SDK,
+  cloud-agent canvases and environments, the Origin app marketplace - change
+  no validated config surface).
 - Advance the Cursor baseline to 3.29.9 (the 2026-11-05 Build Live Apps
   release changes no validated config surface) and the Kimi Code baseline to
   `@moonshot-ai/kimi-code@2.5.2` (runtime, web and server changes; no
