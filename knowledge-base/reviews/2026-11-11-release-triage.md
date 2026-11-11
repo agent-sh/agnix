@@ -44,3 +44,23 @@ advance: `ok=14 new=0 errors=0` (agentskills-spec polled at its baseline
 commit marker). The four sentinel hashes in `.github/spec-baselines.json`
 reproduce exactly under the workflow's fetch recipe; the opencode-rules
 source fetches again at the new path.
+
+## Review round 2 (revuto findings and Cursor Bugbot)
+
+- Kiro 3.2.0 `chat.keybindings.viewDiagram` (Bugbot): added to the settings
+  table (Str, following the other `chat.keybindings.*` entries) and the
+  not-loaded list; count tests 143 -> 144; a type test covers a non-string
+  value (KR-SET-008). The 3.2.0 changelog quote is recorded in the
+  KR-SET-005 refresh notes.
+- The five no-issue tools' inventory rows (Claude Code, Codex CLI, Kiro CLI,
+  OpenCode, Gemini CLI) now carry the 2026-11-11 review date and advanced
+  versions.
+- The v1.5.2 qualification is propagated everywhere: sources.json
+  keybindings/theme entries repointed to v1.5.2 (both schemas byte-identical
+  between v1.5.0 and v1.5.2, hashes unchanged, verified by sha256 of both
+  tags), the pi.rs header pin, and the NATIVE-TOOL-CONTRACTS.md Pi row.
+- sources.json antigravity-settings: `source_sha256` now records the live
+  verbatim fetch (ab765e72...); the constraint is unchanged and the 2026-11-04
+  value described a superseded copy of the same annotations-only source.
+- spec-baselines.json: `last_checked` advanced to 2026-11-11 on the four
+  re-hashed entries and the repointed opencode-rules source.

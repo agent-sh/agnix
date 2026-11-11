@@ -88,6 +88,7 @@ pub(crate) const KIRO_CLI_SETTING_KEYS: &[&str] = &[
     "chat.keybindings.quit",
     "chat.keybindings.toggleInterruptBehavior",
     "chat.keybindings.toggleSessionDashboard",
+    "chat.keybindings.viewDiagram",
     "chat.modelDefaults",
     "chat.modelPicker.lastUsed",
     "chat.modelPicker.sortBy",
@@ -624,6 +625,7 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(sorted, KIRO_CLI_SETTING_KEYS);
-        assert_eq!(KIRO_CLI_SETTING_KEYS.len(), 143);
+        // 144 with the Kiro 3.2.0 chat.keybindings.viewDiagram addition.
+        assert_eq!(KIRO_CLI_SETTING_KEYS.len(), 144);
     }
 }

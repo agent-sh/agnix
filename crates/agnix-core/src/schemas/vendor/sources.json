@@ -9,16 +9,16 @@
   {
     "file": "antigravity-settings.json",
     "source_url": "https://antigravity.google/schemas/v1/settings.json",
-    "source_sha256": "3a29af2bf64043f689b952ebe569c5ba546944d962a1423b4fc8f2df26686486",
+    "source_sha256": "ab765e72f41321d2b36a388271e7b996499e4d116965f015c33dfeb19e273c2c",
     "constraint_sha256": "1aab6bf9e0464f437abdcc2674eb4449f51058112144d28012fba68b66cdcb2b",
     "verified_on": "2026-11-11"
   },
   {
     "file": "pi-keybindings.json",
-    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.0/packages/coding-agent/schemas/keybindings.schema.json",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.2/packages/coding-agent/schemas/keybindings.schema.json",
     "source_sha256": "46d494b2493cd9fcf957d352aac653fe6f04121254f34033a5664e7c8f9928aa",
     "constraint_sha256": "454120eeed85d2c4905878457d0e9bfbfdff58be84d3a57a657b1f23ea3bf055",
-    "verified_on": "2026-11-04"
+    "verified_on": "2026-11-11"
   },
   {
     "file": "pi-models.json",
@@ -36,9 +36,9 @@
   },
   {
     "file": "pi-theme.json",
-    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.0/packages/coding-agent/schemas/theme.schema.json",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.2/packages/coding-agent/schemas/theme.schema.json",
     "source_sha256": "f526a690b63c6303296f683c9df6077ddc290ee9acb1bc27eedef169c0caad59",
     "constraint_sha256": "22a314dc5b46af77bb7bdd41b44e0f22aa8a8ebde8d46ebbba22f0ef275ccd20",
-    "verified_on": "2026-11-04"
+    "verified_on": "2026-11-11"
   }
 ]

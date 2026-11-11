@@ -253,6 +253,27 @@ fn test_kr_set_005_warn_on_elevated_privileges_is_known() {
 }
 
 #[test]
+fn test_kr_set_005_kiro_3_2_view_diagram_is_known() {
+    // Documented in the CLI 3.2.0 changelog (2026-11-10): "Change the key
+    // with chat.keybindings.viewDiagram", a string like its sibling
+    // chat.keybindings.* settings.
+    assert!(
+        hits(
+            &validate(r#"{"chat.keybindings.viewDiagram": "ctrl+bracketright"}"#),
+            "KR-SET-005"
+        )
+        .is_empty(),
+        "known 3.2.0 keybinding setting must not report KR-SET-005"
+    );
+    // A non-string value is still a wrong type (KR-SET-008).
+    let d = only(
+        &validate(r#"{"chat.keybindings.viewDiagram": 5}"#),
+        "KR-SET-008",
+    );
+    assert_eq!(d.level, DiagnosticLevel::Warning);
+}
+
+#[test]
 fn test_kr_set_006_misplaced_sections() {
     let content = r#"{"chat.defaultAgent": "oma-hooks", "mcpServers": {"serena": {"command": "oma"}}, "hooks": {"stop": []}}"#;
     let found = hits(&validate(content), "KR-SET-006");
@@ -457,7 +478,8 @@ fn test_does_not_panic_on_non_ascii_content() {
 
 #[test]
 fn test_settings_table_includes_kiro_234_workflow_launch() {
-    assert_eq!(SETTINGS.len(), 143);
+    // 144 with the Kiro 3.2.0 chat.keybindings.viewDiagram addition.
+    assert_eq!(SETTINGS.len(), 144);
     let mut keys: Vec<_> = SETTINGS.iter().map(|s| s.key).collect();
     keys.sort_unstable();
     keys.dedup();

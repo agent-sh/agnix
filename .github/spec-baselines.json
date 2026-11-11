@@ -261,7 +261,8 @@
           "XP-004",
           "XP-005",
           "XP-006"
-        ]
+        ],
+        "last_checked": "2026-11-11"
       },
       "pi-settings": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/settings.schema.json",
@@ -272,7 +273,7 @@
           "PI-CFG-002",
           "PI-CFG-003"
         ],
-        "last_checked": "2026-11-04"
+        "last_checked": "2026-11-11"
       },
       "pi-models": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
@@ -282,7 +283,7 @@
           "PI-MDL-001",
           "PI-MDL-002"
         ],
-        "last_checked": "2026-11-04"
+        "last_checked": "2026-11-11"
       },
       "pi-keybindings": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/keybindings.schema.json",
@@ -458,7 +459,7 @@
           "AGY-CFG-005",
           "AGY-KB-001"
         ],
-        "last_checked": "2026-11-04"
+        "last_checked": "2026-11-11"
       },
       "antigravity-plugin": {
         "url": "https://antigravity.google/schemas/v1/plugin.json",
@@ -486,7 +487,7 @@
         "url": "https://antigravity.google/docs/customization-discovery",
         "content_url": "https://antigravity.google/docs/customization-discovery.md",
         "hash": "cc50d3e5731d404bea8e652d1249849d130d96fbc9389a336e288395f03eab41",
-        "last_checked": "2026-11-04",
+        "last_checked": "2026-11-11",
         "rules": [
           "AGY-RL-001",
           "AGY-RL-002",

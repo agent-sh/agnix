@@ -232,6 +232,7 @@ const SETTINGS: &[SettingSpec] = &[
     spec("chat.keybindings.cancelStream", Str, true, &[]),
     spec("chat.keybindings.closeMenu", Str, true, &[]),
     spec("chat.keybindings.quit", Str, true, &[]),
+    spec("chat.keybindings.viewDiagram", Str, true, &[]),
     spec("chat.agentEngine", Str, true, &["v1", "v2", "v3"]),
     // Settings reference, "Agent Client Protocol (ACP)": "`v3`, `v2`, or `v1`
     // (Kiro CLI 2.36 or later)", global only.

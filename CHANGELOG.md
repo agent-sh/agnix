@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `cacheWarming` default to `idle`, a global-only setting already flagged
   in project configuration by PI-CFG-003. Pi rule evidence repinned to
   the v1.5.2 tag; no rule semantics change.
+- Accept the Kiro CLI 3.2.0 `chat.keybindings.viewDiagram` string setting
+  (KR-SET-005/008; opens the newest wide Mermaid diagram on its own
+  screen, 2026-11-10 changelog) in the settings table and the
+  not-loaded list, with the table and list count tests advanced to 144.
 - Advance the 2026-11-11 baselines: Antigravity CLI 1.5.5 (issue #1815
   reported 1.5.4; the live marker moved on; the settings-schema drift is
   annotation-only and the discovery doc still matches AGY-RL-004), Grok

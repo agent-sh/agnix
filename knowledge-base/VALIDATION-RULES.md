@@ -4953,6 +4953,8 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 **2.34 reference refresh**: `chat.workflowLaunch` is a documented string setting with `when-asked`, `large-tasks` and `delegate-all` choices. KR-SET-008/009 check its type and choices; no undocumented scope restriction is inferred.
 **2.35 changelog refresh**: `app.warnOnElevatedPrivileges` is a documented boolean setting ("turn the warning off with `kiro-cli settings app.warnOnElevatedPrivileges false`", CLI 2.35.0 changelog). The settings reference now says it "is global; a workspace's `.kiro/settings/cli.json` cannot override it", so KR-SET-011 applies.
 **2.36 reference refresh**: `acp.agentEngine` is a documented global string setting, the harness `kiro-cli acp` starts: "`v3`, `v2`, or `v1` (Kiro CLI 2.36 or later)". KR-SET-009 checks its choices.
+**3.2.0 changelog refresh**: `chat.keybindings.viewDiagram` is a documented string setting ("Change the key with chat.keybindings.viewDiagram", CLI 3.2.0 changelog, 2026-11-10; opens the newest wide Mermaid diagram on its own screen). Added to the settings table and the not-loaded list, following the other `chat.keybindings.*` string settings.
+
 **Fix**: No auto-fix - correct or remove the key.
 **Source**: kiro.dev/docs/reference/settings
 
