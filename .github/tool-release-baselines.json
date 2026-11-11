@@ -180,7 +180,7 @@
       "release_tag_regex": "^v2\\.[0-9]+\\.[0-9]+$",
       "last_known_version": "v2.2.7",
       "tracked": true,
-      "notes": "OpenCode 2 line (npm @opencode/cli, docs at https://opencode.ai/v2/docs/). Stable v2.X.Y GitHub releases are filtered separately from OpenCode 1, with matching tags as a fallback. v2.2.1 publishes full GitHub release notes. The tagged v2.2.0/v2.2.1 schema review found the new timezone root key and experimental image_generate/schedules fields; timezone is recognized as V2-only and the experimental additions are already accepted. Shares validators with opencode (OpenCode 1). Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. Latest review: knowledge-base/reviews/2026-11-02-release-triage.md.",
+      "notes": "OpenCode 2 line (npm @opencode/cli, docs at https://opencode.ai/v2/docs/). Stable v2.X.Y GitHub releases are filtered separately from OpenCode 1, with matching tags as a fallback. v2.2.1 publishes full GitHub release notes. The tagged v2.2.0/v2.2.1 schema review found the new timezone root key and experimental image_generate/schedules fields; timezone is recognized as V2-only and the experimental additions are already accepted. Shares validators with opencode (OpenCode 1). Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. Latest review: knowledge-base/reviews/2026-11-11-release-triage.md.",
       "changes_of_interest": {
         "config_surfaces": [
           "AGENTS.md (nested; CLAUDE.md is not read)",
@@ -537,7 +537,7 @@
       "validation_status": "implemented",
       "last_known_version": "1.5.5",
       "tracked": true,
-      "notes": "Native static configuration validation. Read official CLI release notes with agy changelog, documented at https://antigravity.google/docs/cli/commands/changelog; the old /docs/release-notes URL is unavailable. v1.4.10 has six runtime fixes and byte-identical published settings/plugin schemas. Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. No extension or command execution during validation. Latest review: knowledge-base/reviews/2026-11-04-release-triage.md.",
+      "notes": "Native static configuration validation. Read official CLI release notes with agy changelog, documented at https://antigravity.google/docs/cli/commands/changelog; the old /docs/release-notes URL is unavailable. v1.4.10 has six runtime fixes and byte-identical published settings/plugin schemas. Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. No extension or command execution during validation. Latest review: knowledge-base/reviews/2026-11-11-release-triage.md.",
       "html_url": "https://antigravity.google/docs/cli/commands/changelog",
       "content_url": "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json",
       "version_extractor": "antigravity-manifest",

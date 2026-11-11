@@ -3318,7 +3318,7 @@
         "autofix": false
       },
       "good_example": "# Layout\n- API handlers live in src/api/handlers/ and must not import from src/ui/.",
-      "bad_example": "# Layout\n```\nrepo/\n\u251c\u2500\u2500 src/\n\u2502   \u251c\u2500\u2500 api/\n... (20+ tree lines)\n```"
+      "bad_example": "# Layout\n```\nrepo/\n├── src/\n│   ├── api/\n... (20+ tree lines)\n```"
     },
     {
       "id": "CC-PL-001",
