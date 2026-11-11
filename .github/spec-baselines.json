@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-11-08T07:17:55Z",
+  "last_updated": "2026-11-11T07:10:00Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -251,8 +251,8 @@
     "a-tier": {
       "opencode-rules": {
         "url": "https://opencode.ai/docs/rules/",
-        "content_url": "https://raw.githubusercontent.com/anomalyco/opencode/dev/packages/web/src/content/docs/rules.mdx",
-        "hash": "9ec707ba349c3eb2c37f2085d40875247b59e135386217b7150ba98f7e293aa8",
+        "content_url": "https://raw.githubusercontent.com/anomalyco/opencode/dev/services/site/src/docs/v1/content/rules.mdx",
+        "hash": "2d789f8467c7018a07b2307d44beb37ef13b10038aed1124aa20098cb4296fd9",
         "rules": [
           "OC-AGM-003",
           "XP-001",
@@ -266,7 +266,7 @@
       "pi-settings": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/settings.schema.json",
         "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/settings.schema.json",
-        "hash": "d46ea8863f3a20b9f651fca95b163ce8d5bb11dea02623212027f06199188dde",
+        "hash": "72c2b3f90a61a376b141eb4610cf7edb48f4ed2f6bc7036db13c102b2e901c41",
         "rules": [
           "PI-CFG-001",
           "PI-CFG-002",
@@ -277,7 +277,7 @@
       "pi-models": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
         "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
-        "hash": "66ade0ce69584a4d709fab536f3015d46e3fc0d2344d28c747b5c5f6fc2a7fe4",
+        "hash": "4be97124a976153163d3765cc5db2e21f14c3f4e5d12ab6610f8d60a80b65b61",
         "rules": [
           "PI-MDL-001",
           "PI-MDL-002"
@@ -449,7 +449,7 @@
       "antigravity-settings": {
         "url": "https://antigravity.google/schemas/v1/settings.json",
         "content_url": "https://antigravity.google/schemas/v1/settings.json",
-        "hash": "607ed49919b07cc8d3f2a9ff536b0f1a3c95dd93ca4d98b62e6054c864626e1c",
+        "hash": "b50f0aceb4e824b82137a5b15ecc6b5851a7f9caf07471d0432e55a59dc322bc",
         "rules": [
           "AGY-CFG-001",
           "AGY-CFG-002",
@@ -485,7 +485,7 @@
       "antigravity-discovery": {
         "url": "https://antigravity.google/docs/customization-discovery",
         "content_url": "https://antigravity.google/docs/customization-discovery.md",
-        "hash": "ad17fd95ed873820f870daff76091d697e02981733a1aa6ddf7ed256387e5021",
+        "hash": "cc50d3e5731d404bea8e652d1249849d130d96fbc9389a336e288395f03eab41",
         "last_checked": "2026-11-04",
         "rules": [
           "AGY-RL-001",

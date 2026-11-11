@@ -13,7 +13,7 @@ keywords: ["PI-PKG-001", "invalid pi package resources", "pi", "validation", "ag
 - **Category**: `pi`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-11-04`
+- **Verified On**: `2026-11-11`
 
 ## Applicability
 
@@ -23,8 +23,8 @@ keywords: ["PI-PKG-001", "invalid pi package resources", "pi", "validation", "ag
 
 ## Evidence Sources
 
-- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/packages.md
-- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/package-manager.ts
+- https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/packages.md
+- https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/src/core/package-manager.ts
 
 ## Test Coverage Metadata
 

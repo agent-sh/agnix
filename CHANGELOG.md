@@ -18,6 +18,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Re-vendor the Pi settings and models constraint schemas from v1.5.2
+  (#1817, #1818). `models.schema.json` adds the `compat` booleans
+  `requiresNonNullAssistantContent` and `requiresToolsWithToolHistory`,
+  the `promptCacheKeyMode` enum (`auto`/`enabled`/`disabled`) and
+  `supportsMessageThreads`; `settings.schema.json` changes only the
+  `cacheWarming` default to `idle`, a global-only setting already flagged
+  in project configuration by PI-CFG-003. Pi rule evidence repinned to
+  the v1.5.2 tag; no rule semantics change.
+- Advance the 2026-11-11 baselines: Antigravity CLI 1.5.5 (issue #1815
+  reported 1.5.4; the live marker moved on; the settings-schema drift is
+  annotation-only and the discovery doc still matches AGY-RL-004), Grok
+  Code 1.0.77 (hooks stay open-world, so the 1.0.71 `failClosed` flag
+  validates; the contract comment is reconciled through 1.0.77), Claude
+  Code v2.1.322, Codex CLI rust-v0.167.1, Gemini CLI v0.68.0, Kimi Code
+  2.5.3, Kiro CLI 3.2.0 and OpenCode 2 v2.2.7 (all baseline-only).
+- Repoint the opencode-rules spec source (#1818): the doc moved
+  byte-identical to
+  `services/site/src/docs/v1/content/rules.mdx` in anomalyco/opencode;
+  the old `packages/web` URL returns 404. Refresh the pi-models,
+  pi-settings, antigravity-discovery and antigravity-settings baseline
+  hashes after review (#1818).
 - Advance the Cursor baseline to 3.29.15. Voice chat with agents
   (2026-11-06) is the only changelog entry published after 2026-11-05 Build
   Live Apps; the Agent SDK (2026-10-20), cloud-agent canvases and

@@ -45,6 +45,25 @@ fn pi_models_validate_nested_model_definitions() {
 }
 
 #[test]
+fn pi_v1_5_2_provider_compat_fields_follow_the_vendored_schema() {
+    // promptCacheKeyMode joined the vendored ProviderCompat constraints in
+    // v1.5.2; values outside auto/enabled/disabled are invalid.
+    assert!(
+        rules(
+            "/fixture/.pi/agent/models.json",
+            r#"{"providers":{"gateway":{"baseUrl":"https://gw.example","compat":{"promptCacheKeyMode":"sometimes"}}}}"#
+        )
+        .contains(&"PI-MDL-001".into())
+    );
+    // the v1.5.2 additions all validate inside a well-formed provider
+    let found = rules(
+        "/fixture/.pi/agent/models.json",
+        r#"{"providers":{"gateway":{"baseUrl":"https://gw.example","compat":{"requiresNonNullAssistantContent":true,"requiresToolsWithToolHistory":true,"promptCacheKeyMode":"enabled","supportsMessageThreads":true}}}}"#,
+    );
+    assert!(!found.iter().any(|id| id.starts_with("PI-")), "{found:?}");
+}
+
+#[test]
 fn pi_declared_skill_name_can_be_omitted_or_differ_from_directory() {
     for frontmatter in ["", "name: other-name\n"] {
         let content = format!(

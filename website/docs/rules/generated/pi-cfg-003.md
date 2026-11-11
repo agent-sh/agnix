@@ -13,7 +13,7 @@ keywords: ["PI-CFG-003", "ignored pi project configuration", "pi", "validation",
 - **Category**: `pi`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-11-04`
+- **Verified On**: `2026-11-11`
 
 ## Applicability
 
@@ -23,9 +23,9 @@ keywords: ["PI-CFG-003", "ignored pi project configuration", "pi", "validation",
 
 ## Evidence Sources
 
-- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/settings.md
-- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/settings.schema.json
-- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/src/core/settings-manager.ts
+- https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/settings.md
+- https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/schemas/settings.schema.json
+- https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/src/core/settings-manager.ts
 
 ## Test Coverage Metadata
 

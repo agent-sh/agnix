@@ -11,7 +11,7 @@
     "source_url": "https://antigravity.google/schemas/v1/settings.json",
     "source_sha256": "3a29af2bf64043f689b952ebe569c5ba546944d962a1423b4fc8f2df26686486",
     "constraint_sha256": "1aab6bf9e0464f437abdcc2674eb4449f51058112144d28012fba68b66cdcb2b",
-    "verified_on": "2026-11-04"
+    "verified_on": "2026-11-11"
   },
   {
     "file": "pi-keybindings.json",
@@ -22,17 +22,17 @@
   },
   {
     "file": "pi-models.json",
-    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.0/packages/coding-agent/schemas/models.schema.json",
-    "source_sha256": "c9ed21414935bab8de93347970d035f997b5f8f28a2a4e5e0b501820fbb35f75",
-    "constraint_sha256": "c812e82e5da09f953bf361692f628270808fa1a0d62e94223ed2091eaf281bd2",
-    "verified_on": "2026-11-04"
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.2/packages/coding-agent/schemas/models.schema.json",
+    "source_sha256": "3e4cb1963defc0ea67a25d81a652536ed0a0d480c536db04dabe9d02baad8bdc",
+    "constraint_sha256": "c03a0de6c742761e50d7c4192da1f5fd5442a82c20104cd79c5398be6bf290fd",
+    "verified_on": "2026-11-11"
   },
   {
     "file": "pi-settings.json",
-    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.0/packages/coding-agent/schemas/settings.schema.json",
-    "source_sha256": "14fc87e12965bfb86b7f447af67a15d44a15490200137db663e1ea8ea0c2591a",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.2/packages/coding-agent/schemas/settings.schema.json",
+    "source_sha256": "10c0b73ace40dd0a3461a45f08cb819b39b1089ce7037e27b746fc812f28beb9",
     "constraint_sha256": "17d7228a42501e244a141b5df7862d7970b3106359dff78873047c1ccdbe915c",
-    "verified_on": "2026-11-04"
+    "verified_on": "2026-11-11"
   },
   {
     "file": "pi-theme.json",

@@ -478,6 +478,12 @@
         "requiresAssistantAfterToolResult": {
           "type": "boolean"
         },
+        "requiresNonNullAssistantContent": {
+          "type": "boolean"
+        },
+        "requiresToolsWithToolHistory": {
+          "type": "boolean"
+        },
         "requiresThinkingAsText": {
           "type": "boolean"
         },
@@ -883,6 +889,22 @@
             }
           ]
         },
+        "promptCacheKeyMode": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "const": "enabled"
+            },
+            {
+              "type": "string",
+              "const": "disabled"
+            }
+          ]
+        },
         "supportsLongCacheRetention": {
           "type": "boolean"
         },
@@ -923,6 +945,9 @@
           "type": "boolean"
         },
         "supportsMidConvoToolChanges": {
+          "type": "boolean"
+        },
+        "supportsMessageThreads": {
           "type": "boolean"
         },
         "allowedFallbackModels": {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "agnix-derived static constraints: docs.x.ai/build/settings/reference and xai-org/grok-build source revision 2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8, reconciled with CLI changelog through 1.0.70. Unknown settings remain open.",
+  "$comment": "agnix-derived static constraints: docs.x.ai/build/settings/reference and xai-org/grok-build source revision 2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8, reconciled with CLI changelog through 1.0.77. Unknown settings remain open.",
   "$ref": "#/$defs/config",
   "$defs": {
     "config": {

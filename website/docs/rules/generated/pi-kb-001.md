@@ -13,7 +13,7 @@ keywords: ["PI-KB-001", "invalid pi keybinding", "pi", "validation", "agnix", "l
 - **Category**: `pi`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-11-04`
+- **Verified On**: `2026-11-11`
 
 ## Applicability
 
@@ -23,8 +23,8 @@ keywords: ["PI-KB-001", "invalid pi keybinding", "pi", "validation", "agnix", "l
 
 ## Evidence Sources
 
-- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/docs/keybindings.md
-- https://github.com/earendil-works/pi/blob/v1.5.0/packages/coding-agent/schemas/keybindings.schema.json
+- https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/keybindings.md
+- https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/schemas/keybindings.schema.json
 
 ## Test Coverage Metadata
 
