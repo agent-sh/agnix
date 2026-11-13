@@ -103,11 +103,7 @@ impl TelemetryConfig {
         }
 
         // Disable in CI environments
-        if Self::is_ci_environment() {
-            return false;
-        }
-
-        true
+        !Self::is_ci_environment()
     }
 
     /// Check if running in a CI environment.

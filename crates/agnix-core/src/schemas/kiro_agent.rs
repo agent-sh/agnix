@@ -727,8 +727,9 @@ impl FrontmatterIndex {
                     let mut dash_indent = None;
                     let mut seen = 0;
                     let mut hit = None;
-                    for line in cursor + 1..block_end {
-                        let (_, indent, text) = &self.lines[line];
+                    for (offset, entry) in self.lines[cursor + 1..block_end].iter().enumerate() {
+                        let line = cursor + 1 + offset;
+                        let (_, indent, text) = entry;
                         let trimmed = text.trim_start();
                         if trimmed.is_empty() || trimmed.starts_with('#') {
                             continue;

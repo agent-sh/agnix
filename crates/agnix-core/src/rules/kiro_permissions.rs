@@ -883,11 +883,11 @@ impl<'a> Locator<'a> {
         let end = items.get(index + 1).copied().unwrap_or(self.lines.len());
         if let Some(key) = key {
             let needle = format!("{key}:");
-            for i in start..end {
-                let trimmed = self.lines[i].trim_start().trim_start_matches("- ");
+            for (offset, raw) in self.lines[start..end].iter().enumerate() {
+                let trimmed = raw.trim_start().trim_start_matches("- ");
                 if trimmed.starts_with(&needle) {
-                    let column = self.lines[i].len() - trimmed.len() + 1;
-                    return (i + 1, column);
+                    let column = raw.len() - trimmed.len() + 1;
+                    return (start + offset + 1, column);
                 }
             }
         }
