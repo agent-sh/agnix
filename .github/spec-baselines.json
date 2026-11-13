@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-11-11T07:10:00Z",
+  "last_updated": "2026-11-13T07:24:21Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -459,7 +459,7 @@
           "AGY-CFG-005",
           "AGY-KB-001"
         ],
-        "last_checked": "2026-11-11"
+        "last_checked": "2026-11-13"
       },
       "antigravity-plugin": {
         "url": "https://antigravity.google/schemas/v1/plugin.json",
@@ -469,7 +469,7 @@
           "AGY-PL-001",
           "AGY-PL-002"
         ],
-        "last_checked": "2026-10-29"
+        "last_checked": "2026-11-13"
       },
       "antigravity-rules": {
         "url": "https://antigravity.google/docs/rules",
@@ -481,13 +481,13 @@
           "AGY-RL-003",
           "AGY-RL-004"
         ],
-        "last_checked": "2026-11-04"
+        "last_checked": "2026-11-13"
       },
       "antigravity-discovery": {
         "url": "https://antigravity.google/docs/customization-discovery",
         "content_url": "https://antigravity.google/docs/customization-discovery.md",
         "hash": "cc50d3e5731d404bea8e652d1249849d130d96fbc9389a336e288395f03eab41",
-        "last_checked": "2026-11-11",
+        "last_checked": "2026-11-13",
         "rules": [
           "AGY-RL-001",
           "AGY-RL-002",

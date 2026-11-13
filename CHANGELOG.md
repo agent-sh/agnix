@@ -18,6 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Accept the nine Codex CLI `[features]` flags added by the tagged
+  rust-v0.167.0 through rust-v0.167.2 configuration schemas (CDX-CFG-011,
+  #1826): `incremental_tools_legacy_gcp` (the rust-v0.167.2 flat-bool
+  opt-out from incremental tool updates on Google Cloud Vertex AI, the
+  release's only config change) plus `apps_early_resource_discovery`,
+  `code_mode_host_output_truncation`, `gcp_setup_wizard`,
+  `incremental_exec_tools`, `incremental_tools_legacy`,
+  `interrupt_on_cancel`, `suppress_model_change_announcements` and
+  `tui_extensions_statusline`, schema additions the 0.167.0/0.167.1
+  release notes never name. Rule evidence repinned to the rust-v0.167.2
+  tagged schema; regression covers TOML, JSON and YAML. rust-v0.168.0
+  (published 2026-11-13) is left for its own issue and triage.
+- Advance the 2026-11-13 baselines (#1825, #1826): Codex CLI
+  rust-v0.167.2 and Antigravity CLI 1.5.8 (issue #1825 reported 1.5.6;
+  the live installer manifest moved on, and all four published
+  Antigravity schemas/docs are byte-identical to the 2026-11-11
+  baselines, so it is baseline-only with `last_checked` refreshed).
 - Re-vendor the Pi settings and models constraint schemas from v1.5.2
   (#1817, #1818). `models.schema.json` adds the `compat` booleans
   `requiresNonNullAssistantContent` and `requiresToolsWithToolHistory`,

@@ -43,6 +43,40 @@ fn codex_0166_accepts_tagged_features_in_root_and_profiles() {
 }
 
 #[test]
+fn codex_0167_accepts_tagged_feature_flags_in_all_config_formats() {
+    // rust-v0.167.0 added seven of these flags to config.schema.json and
+    // rust-v0.167.2 added incremental_tools_legacy_gcp (the flat-bool opt-out
+    // for incremental tool updates on Google Cloud Vertex AI); the 0.167
+    // releases never name the other eight in their notes, so the known-flag
+    // set behind CDX-CFG-011 is reconciled against the tagged schemas.
+    let features = serde_json::json!({
+        "apps_early_resource_discovery": true,
+        "code_mode_host_output_truncation": true,
+        "gcp_setup_wizard": false,
+        "incremental_exec_tools": true,
+        "incremental_tools_legacy": false,
+        "incremental_tools_legacy_gcp": false,
+        "interrupt_on_cancel": true,
+        "suppress_model_change_announcements": true,
+        "tui_extensions_statusline": true
+    });
+    let value = serde_json::json!({"features": features});
+    for (file, content) in [
+        (".codex/config.json", value.to_string()),
+        (".codex/config.yaml", serde_yaml::to_string(&value).unwrap()),
+        (".codex/config.toml", toml::to_string(&value).unwrap()),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(file),
+            &content,
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(diagnostics.is_empty(), "{file}: {diagnostics:?}");
+    }
+}
+
+#[test]
 fn opencode_223_accepts_separate_managed_policy_actions() {
     for version in [None, Some("2.2.3")] {
         let config = LintConfig::builder()

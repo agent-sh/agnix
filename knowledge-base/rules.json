@@ -6043,9 +6043,10 @@
         "source_urls": [
           "https://developers.openai.com/codex/config-reference",
           "https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json",
-          "https://github.com/openai/codex/blob/rust-v0.165.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.165.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/rust-v0.167.2/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-13",
         "applies_to": {
           "tool": "codex"
         },

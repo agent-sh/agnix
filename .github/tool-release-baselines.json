@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-11-11",
+  "last_updated": "2026-11-13",
   "description": "Support tiers and release baselines for the owner-selected tool roster. Tier is a maintenance priority, not a claim that a validator exists. Entries with validation_status=pending have no tool-specific validation yet. Shared Agent Skills monitoring and the second OpenCode release line are separate entries. validators lists implemented rule modules only. tracked=false entries include a primary publication URL and a manual-monitoring reason. retired_tools preserves old baselines for shipped compatibility checks but is never polled. excluded_tools receives no active support or release monitoring. Optional changes_of_interest describes validated surfaces and relevant configuration changes for issue triage.",
   "tools": {
     "claude-code": {
@@ -79,7 +79,7 @@
         "mcp"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.167.1",
+      "last_known_version": "rust-v0.167.2",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -535,9 +535,9 @@
         "mcp"
       ],
       "validation_status": "implemented",
-      "last_known_version": "1.5.5",
+      "last_known_version": "1.5.8",
       "tracked": true,
-      "notes": "Native static configuration validation. Read official CLI release notes with agy changelog, documented at https://antigravity.google/docs/cli/commands/changelog; the old /docs/release-notes URL is unavailable. v1.4.10 has six runtime fixes and byte-identical published settings/plugin schemas. Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. No extension or command execution during validation. Latest review: knowledge-base/reviews/2026-11-11-release-triage.md.",
+      "notes": "Native static configuration validation. Read official CLI release notes with agy changelog, documented at https://antigravity.google/docs/cli/commands/changelog; the old /docs/release-notes URL is unavailable. v1.4.10 has six runtime fixes and byte-identical published settings/plugin schemas. Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. No extension or command execution during validation. Latest review: knowledge-base/reviews/2026-11-13-release-triage.md.",
       "html_url": "https://antigravity.google/docs/cli/commands/changelog",
       "content_url": "https://antigravity-cli-auto-updater-974169037036.us-central1.run.app/manifests/linux_amd64.json",
       "version_extractor": "antigravity-manifest",
