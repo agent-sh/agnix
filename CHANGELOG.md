@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Batch the 10 open dependabot PRs (#1832-#1841): crate bumps uuid
+  1.29.2, jsonschema 0.61.1 (manifest + lockfile), notify 8.2.2,
+  toml 1.2.0+spec-1.1.0 and arc-swap 1.9.5, plus pinned-action bumps
+  github/codeql-action v4.39.3 (3 uses), softprops/action-gh-release
+  v3.0.4, anthropics/claude-code-action v1.0.271, actions/setup-java
+  v6.2.0 and taiki-e/install-action v2.90.3, with the
+  `.github/workflows/README.md` pin rows refreshed to match.
 - Accept the nine Codex CLI `[features]` flags added by the tagged
   rust-v0.167.0 through rust-v0.167.2 configuration schemas (CDX-CFG-011,
   #1826): `incremental_tools_legacy_gcp` (the rust-v0.167.2 flat-bool
