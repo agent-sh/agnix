@@ -24,7 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   github/codeql-action v4.39.3 (3 uses), softprops/action-gh-release
   v3.0.4, anthropics/claude-code-action v1.0.271, actions/setup-java
   v6.2.0 and taiki-e/install-action v2.90.3, with the
-  `.github/workflows/README.md` pin rows refreshed to match.
+  `.github/workflows/README.md` pin rows refreshed to match. Also
+  bump the transitive quinn-proto 0.11.19 and quinn-udp 0.5.16
+  (lockfile only) to clear RUSTSEC-2026-0523, RUSTSEC-2026-0524
+  and RUSTSEC-2026-0538, which the refreshed advisory database
+  raised against reqwest's quinn 0.11.9.
 - Accept the nine Codex CLI `[features]` flags added by the tagged
   rust-v0.167.0 through rust-v0.167.2 configuration schemas (CDX-CFG-011,
   #1826): `incremental_tools_legacy_gcp` (the rust-v0.167.2 flat-bool
