@@ -4272,6 +4272,8 @@ mod tests_claude_ext {
         let h = hits(&diagnostics, "CC-PL-021");
         assert_eq!(h.len(), 1, "{diagnostics:?}");
         assert!(h[0].message.contains("subagentStatusLine"));
+        // The message must not still claim subagentStatusLine takes effect.
+        assert!(!h[0].message.contains("subagentStatusLine take effect"));
     }
 
     #[test]

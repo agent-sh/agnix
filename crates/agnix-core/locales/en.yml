@@ -3438,7 +3438,7 @@ rules:
     message: Dependency '%{name}' has version '%{version}', which is not a semantic-version range such as ~2.1.0, ^2.0 or >=1.4
     suggestion: Write the constraint as a node-semver range; the dependency installs at the highest git tag that satisfies it
   cc_pl_021:
-    message: '''%{key}'' in plugin %{location} is dropped; only agent and subagentStatusLine take effect from a plugin'
+    message: '''%{key}'' in plugin %{location} is dropped; since Claude Code v2.1.323 only agent takes effect from a plugin'
     suggestion: Remove the key; plugins can't set other settings
   cc_pl_022:
     message: Monitor '%{monitor}' command references ${user_config.*}, so the monitor doesn't start
