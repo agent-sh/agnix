@@ -77,6 +77,51 @@ fn codex_0167_accepts_tagged_feature_flags_in_all_config_formats() {
 }
 
 #[test]
+fn codex_0169_accepts_tagged_feature_flags_and_tui_keys() {
+    // The tagged rust-v0.168.0 schema adds nine [features] flags and removes
+    // both incremental_tools_legacy names; rust-v0.169.0 adds three more,
+    // restores both legacy names, and the Tui definition gains
+    // collapse_turn_details, default_hosts and sidebar_width_percent. None are
+    // named in the release notes, so the allowlists behind CDX-CFG-011 and
+    // CDX-CFG-006 are reconciled against the tagged schemas.
+    let features = serde_json::json!({
+        "agent_message_board_mcp": true,
+        "async_compaction_root_only": true,
+        "cli_resume_account_check": true,
+        "command_sessions_world_state": true,
+        "daybreak_program_propagation": true,
+        "gateway_setup_wizard": false,
+        "guardian_denial_reconsideration": true,
+        "guardian_include_additional_context": true,
+        "hosted_search_policy": true,
+        "image_generation_animation": true,
+        "incremental_tools_legacy": false,
+        "incremental_tools_legacy_gcp": false,
+        "mcp_lazy_stdio_startup": true,
+        "tui_workspace": true
+    });
+    let tui = serde_json::json!({
+        "collapse_turn_details": true,
+        "default_hosts": "example.internal",
+        "sidebar_width_percent": 25
+    });
+    let value = serde_json::json!({"features": features, "tui": tui});
+    for (file, content) in [
+        (".codex/config.json", value.to_string()),
+        (".codex/config.yaml", serde_yaml::to_string(&value).unwrap()),
+        (".codex/config.toml", toml::to_string(&value).unwrap()),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(file),
+            &content,
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(diagnostics.is_empty(), "{file}: {diagnostics:?}");
+    }
+}
+
+#[test]
 fn opencode_223_accepts_separate_managed_policy_actions() {
     for version in [None, Some("2.2.3")] {
         let config = LintConfig::builder()

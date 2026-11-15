@@ -478,8 +478,10 @@ fn test_does_not_panic_on_non_ascii_content() {
 
 #[test]
 fn test_settings_table_includes_kiro_234_workflow_launch() {
-    // 144 with the Kiro 3.2.0 chat.keybindings.viewDiagram addition.
-    assert_eq!(SETTINGS.len(), 144);
+    // 146 with the Kiro 3.2.0 chat.keybindings.viewDiagram addition and the
+    // 3.3.0 review's compaction.autoCompactionThreshold and
+    // chat.enableSessionRecap (3.1.0) additions.
+    assert_eq!(SETTINGS.len(), 146);
     let mut keys: Vec<_> = SETTINGS.iter().map(|s| s.key).collect();
     keys.sort_unstable();
     keys.dedup();
@@ -575,4 +577,66 @@ fn test_kr_set_012_skips_a_kiro_2_pin() {
     config.tool_versions_mut().kiro = Some("3.0.0".into());
     let d = KiroSettingsValidator.validate(Path::new(PATH), content, &config);
     assert_eq!(hits(&d, "KR-SET-012").len(), 2, "{d:#?}");
+}
+
+// ===== KR-SET-013 =====
+
+#[test]
+fn test_kr_set_013_accepts_thresholds_in_range() {
+    // Kiro CLI 3.3.0: "kiro-cli settings accepts 0 to 100 with at most two
+    // decimal places" (settings reference). The key is also valid in a
+    // workspace file ("a workspace cli.json can override it").
+    for content in [
+        r#"{"compaction.autoCompactionThreshold": 0}"#,
+        r#"{"compaction.autoCompactionThreshold": 70}"#,
+        r#"{"compaction.autoCompactionThreshold": 100}"#,
+        r#"{"compaction.autoCompactionThreshold": 82.5}"#,
+        r#"{"compaction.autoCompactionThreshold": 99.99}"#,
+    ] {
+        assert!(validate(content).is_empty(), "{content}");
+    }
+}
+
+#[test]
+fn test_kr_set_013_flags_out_of_range_and_extra_decimals() {
+    let d = only(
+        &validate(r#"{"compaction.autoCompactionThreshold": 150}"#),
+        "KR-SET-013",
+    );
+    assert!(d.message.contains("0 to 100"), "{d:?}");
+    let d = only(
+        &validate(r#"{"compaction.autoCompactionThreshold": -1}"#),
+        "KR-SET-013",
+    );
+    assert!(d.message.contains("0 to 100"), "{d:?}");
+    let d = only(
+        &validate(r#"{"compaction.autoCompactionThreshold": 70.123}"#),
+        "KR-SET-013",
+    );
+    assert!(d.message.contains("two decimal places"), "{d:?}");
+}
+
+#[test]
+fn test_kr_set_013_leaves_wrong_types_to_kr_set_008() {
+    // A quoted number is KR-SET-008's finding with its fix; KR-SET-013 stays
+    // quiet so the value is reported once.
+    let d = only(
+        &validate(r#"{"compaction.autoCompactionThreshold": "70"}"#),
+        "KR-SET-008",
+    );
+    assert!(d.message.contains("number"), "{d:?}");
+    assert!(
+        hits(
+            &validate(r#"{"compaction.autoCompactionThreshold": "70"}"#),
+            "KR-SET-013"
+        )
+        .is_empty()
+    );
+}
+
+#[test]
+fn test_kr_set_005_knows_the_3_1_0_session_recap_key() {
+    // Documented with Kiro CLI 3.1.0 in the settings reference table; absent
+    // from the 2.32.1 `settings list --all` baseline.
+    assert!(validate(r#"{"chat.enableSessionRecap": true}"#).is_empty());
 }

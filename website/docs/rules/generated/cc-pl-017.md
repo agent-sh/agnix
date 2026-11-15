@@ -13,7 +13,7 @@ keywords: ["CC-PL-017", "unknown plugin manifest field", "claude plugins", "vali
 - **Category**: `Claude Plugins`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-15`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-PL-017", "unknown plugin manifest field", "claude plugins", "vali
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/plugins/manifest-reference
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.323
 
 ## Test Coverage Metadata
 

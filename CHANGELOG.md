@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- KR-SET-013 (Warning): Kiro CLI 3.3.0's
+  `compaction.autoCompactionThreshold` must be a number from 0 to 100 with
+  at most two decimal places ("`kiro-cli settings` accepts 0 to 100 with
+  at most two decimal places", settings reference; a workspace `cli.json`
+  can override the key). The 3.1.0 `chat.enableSessionRecap` boolean also
+  joins the known-settings list (#1830).
 - KR-HK-031 (Info): `PreCompact`/`PostCompact` compaction hooks need Kiro
   CLI 3.1.0; an older CLI skips the hook (the V3 engine table mirrors
   kiro-cli 2.32.1). A matcher on a compaction trigger has no documented
@@ -18,6 +24,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Claude Code v2.1.323/v2.1.325 (#1827, #1845): CC-PL-021 no longer
+  treats `subagentStatusLine` as a key that takes effect (the setting is
+  removed; only the deprecated `agent` still applies), CC-PL-017 accepts
+  the new `plugin.json` `engines` field, and CC-MP-002 no longer reports
+  `npm`/`pip`/`uv`/`cargo`/`github`/`gh` as reserved marketplace names
+  (v2.1.323 un-reserved them). The five drifted Claude doc baselines
+  (hooks, memory, plugins-reference, skills, sub-agents) refresh to the
+  live sentinel hashes; every affected rule's claims were re-verified
+  against the live text (33 hook events unchanged, memory limits
+  unchanged, skill frontmatter fields unchanged, agent model values
+  unchanged).
+- Codex CLI rust-v0.168.0/rust-v0.169.0 (#1846): accept the twelve new
+  `[features]` flags (`agent_message_board_mcp`,
+  `async_compaction_root_only`, `cli_resume_account_check`,
+  `command_sessions_world_state`, `daybreak_program_propagation`,
+  `gateway_setup_wizard`, `guardian_denial_reconsideration`,
+  `guardian_include_additional_context`, `hosted_search_policy`,
+  `image_generation_animation`, `mcp_lazy_stdio_startup`, `tui_workspace`)
+  and the three new `tui` keys (`collapse_turn_details`, `default_hosts`,
+  `sidebar_width_percent`) behind CDX-CFG-011 and CDX-CFG-006, evidence
+  repinned to the tagged rust-v0.169.0 schema.
+- Advance the 2026-11-15 baselines to the live markers (#1827-#1830,
+  #1842, #1844, #1846): Kiro CLI 3.3.0, OpenCode 2 v2.3.0 (provider
+  `settings.tls` validates without a rule; the provider settings object
+  is open), Antigravity CLI 1.5.9 (settings/plugin schema drift is
+  annotation-only), Kimi Code 2.6.2 and Cursor 3.30.14 (baseline-only).
 - Batch the 10 open dependabot PRs (#1832-#1841): crate bumps uuid
   1.29.2, jsonschema 0.61.1 (manifest + lockfile), notify 8.2.2,
   toml 1.2.0+spec-1.1.0 and arc-swap 1.9.5, plus pinned-action bumps

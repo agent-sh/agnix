@@ -473,16 +473,16 @@ impl Validator for HooksValidator {
 
         let locator = JsonLocator::new(content);
 
-        // CC-PL-021 (owned by PluginValidator): "Only two keys take effect from
-        // a plugin, `agent` and `subagentStatusLine`; every other key is
-        // dropped", so hooks in a plugin's root settings.json never run.
+        // CC-PL-021 (owned by PluginValidator): Claude Code v2.1.323 removed
+        // the `subagentStatusLine` setting, so only `agent` takes effect from
+        // a plugin and hooks in a plugin's root settings.json never run.
         if is_plugin_root_settings(path, config) {
             if config.is_rule_enabled("CC-PL-021")
                 && let Some(map) = raw_value.as_object()
             {
                 for key in map
                     .keys()
-                    .filter(|k| !matches!(k.as_str(), "agent" | "subagentStatusLine" | "$schema"))
+                    .filter(|k| !matches!(k.as_str(), "agent" | "$schema"))
                 {
                     let (line, col) = locator.key_pos(&[Seg::Key(key.as_str())]);
                     diagnostics.push(

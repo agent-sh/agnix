@@ -13,7 +13,7 @@ keywords: ["CC-MP-002", "invalid or reserved marketplace or plugin name", "claud
 - **Category**: `Claude Marketplaces`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-15`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["CC-MP-002", "invalid or reserved marketplace or plugin name", "claud
 
 - https://code.claude.com/docs/en/plugins/marketplace-reference
 - https://code.claude.com/docs/en/plugins/manifest-reference
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.323
 
 ## Test Coverage Metadata
 

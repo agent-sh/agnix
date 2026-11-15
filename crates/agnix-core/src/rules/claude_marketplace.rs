@@ -69,8 +69,11 @@ const INTERNAL_MARKETPLACE_NAMES: &[&str] = &[
     "claude-plugin-test",
 ];
 
-/// "reserved in any casing".
-const PACKAGE_MANAGER_NAMES: &[&str] = &["npm", "pip", "uv", "cargo", "github", "gh"];
+// Claude Code v2.1.323 "Fixed marketplaces named `npm`, `pip`, `uv`,
+// `cargo`, `github` or `gh` being refused as reserved names"; the live
+// marketplace reference no longer lists them under "Reserved names", so
+// these names are valid marketplace names and no longer reserved here
+// (CC-MP-002 refresh note in VALIDATION-RULES.md).
 
 /// "Member names that every JavaScript object has" (v2.1.296+).
 const JS_MEMBER_NAMES: &[&str] = &[
@@ -213,15 +216,8 @@ fn has_control_or_bidi(name: &str) -> bool {
 
 /// The reserved name `name` spells, if any: exact names, "a name that
 /// differs from a reserved name only by a trailing dot, or by a symbol other
-/// than an underscore in place of a hyphen", and the case-insensitive
-/// package-manager names.
+/// than an underscore in place of a hyphen".
 fn reserved_marketplace_name(name: &str) -> Option<String> {
-    if PACKAGE_MANAGER_NAMES
-        .iter()
-        .any(|n| n.eq_ignore_ascii_case(name))
-    {
-        return Some(name.to_ascii_lowercase());
-    }
     if JS_MEMBER_NAMES.contains(&name) || INTERNAL_MARKETPLACE_NAMES.contains(&name) {
         return Some(name.to_string());
     }
@@ -876,7 +872,11 @@ mod tests {
             ("my marketplace", true),
             ("claude-plugins-official", true),
             ("claude.code.plugins", true),
-            ("NPM", true),
+            // v2.1.323 un-reserved the package-manager names; the live
+            // marketplace reference no longer lists them.
+            ("NPM", false),
+            ("npm", false),
+            ("gh", false),
             ("claudeai-team", true),
             ("toString", true),
             ("-leading", true),

@@ -1834,10 +1834,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-017"></a>
 ### CC-PL-017 [MEDIUM] Unknown Plugin Manifest Field
+**v2.1.323 refresh**: Accept the new `engines` top-level field: "Added `engines[\"claude-code\"]` to `plugin.json`: plugins outside their stated Claude Code version range are not installed, updated or loaded" (v2.1.323 release notes; the manifest reference table has not caught up yet).
 **Requirement**: Manifest keys SHOULD match the documented top-level fields. Claude Code strips unknown keys at load time.
 **Detection**: Warn for keys outside the manifest reference, including misspellings such as `homepag`.
 **Fix**: Correct the key spelling or remove it.
-**Source**: code.claude.com/docs/en/plugins/manifest-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference, github.com/anthropics/claude-code/releases/tag/v2.1.323
 
 <a id="cc-pl-018"></a>
 ### CC-PL-018 [HIGH] Reserved Plugin Name
@@ -1862,10 +1863,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-021"></a>
 ### CC-PL-021 [MEDIUM] Plugin Settings Key Dropped
-**Requirement**: A plugin's settings SHOULD only use the keys that take effect. Vendor text: "Only two keys take effect from a plugin, `agent` and `subagentStatusLine`; every other key is dropped." (plugins components) and, for the manifest key, "Only `agent` and `subagentStatusLine` take effect; other keys are dropped at load." (plugins manifest reference, "`settings`")
-**Detection**: keys other than `agent`, `subagentStatusLine` (and `$schema`) in a `settings.json` beside `.claude-plugin/`, or in the manifest `settings` object
+**v2.1.323 refresh**: Claude Code "Removed the `subagentStatusLine` setting: subagent rows always use the default look, and settings files that still hold the key load as before" (v2.1.323 release notes), and the plugins components and manifest reference pages no longer document a plugin `settings` key taking effect. The same release deprecated the plugin `agent` setting ("it still applies, and now warns at startup, in `claude plugin list` and in `claude plugin validate`"), so `agent` remains the one key that takes effect.
+**Requirement**: A plugin's settings SHOULD only use the keys that take effect. Earlier vendor text: "Only two keys take effect from a plugin, `agent` and `subagentStatusLine`; every other key is dropped." (plugins components); since v2.1.323 only `agent` takes effect.
+**Detection**: keys other than `agent` (and `$schema`) in a `settings.json` beside `.claude-plugin/`, or in the manifest `settings` object
 **Fix**: Manual
-**Source**: code.claude.com/docs/en/plugins/components, code.claude.com/docs/en/plugins/manifest-reference
+**Source**: code.claude.com/docs/en/plugins/components, code.claude.com/docs/en/plugins/manifest-reference, github.com/anthropics/claude-code/releases/tag/v2.1.323
 
 <a id="cc-pl-022"></a>
 ### CC-PL-022 [HIGH] Monitor Command References user_config
@@ -1896,13 +1898,14 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-mp-002"></a>
 ### CC-MP-002 [HIGH] Invalid or Reserved Marketplace or Plugin Name
+**v2.1.323 refresh**: "Fixed marketplaces named `npm`, `pip`, `uv`, `cargo`, `github` or `gh` being refused as reserved names" (v2.1.323 release notes), and the live marketplace reference "Reserved names" section no longer lists them, so these six names are no longer reserved.
 **Requirement**: Marketplace and plugin entry names MUST be ids Claude Code accepts and MUST NOT be reserved. Vendor text: marketplace `name` "letters, digits, `.`, `_`, and `-`, starting with a letter or digit, and no `..`. `claude plugin validate` fails any other name, because Claude Code can't install plugins from a marketplace that uses one", and plugin entry `name` "letters, digits, `.`, `_`, and `-`, starting with a letter or digit. `claude plugin validate` fails other names, which Claude Code can't install" (marketplace reference, "Top-level fields", "Plugin entries"); "You can't give your marketplace any of the following names" ("Reserved names")
 **Detection**:
-  - marketplace `name`: control or bidirectional-formatting characters, non-ASCII ("any name containing a non-ASCII character"), spaces, `/`, `\`, `..` or `.`, other characters outside the id set, the `claudeai-` prefix, the official, community and directory names (unless the `owner` is Anthropic), another spelling of a reserved name (trailing dot, or a symbol other than `_` in place of `-`), `inline`, `builtin`, `skills-dir`, `synced`, `claude-plugin-test`, `npm`/`pip`/`uv`/`cargo`/`github`/`gh` in any casing, and JavaScript object member names
+  - marketplace `name`: control or bidirectional-formatting characters, non-ASCII ("any name containing a non-ASCII character"), spaces, `/`, `\`, `..` or `.`, other characters outside the id set, the `claudeai-` prefix, the official, community and directory names (unless the `owner` is Anthropic), another spelling of a reserved name (trailing dot, or a symbol other than `_` in place of `-`), `inline`, `builtin`, `skills-dir`, `synced`, `claude-plugin-test`, and JavaScript object member names. `npm`/`pip`/`uv`/`cargo`/`github`/`gh` were reserved before v2.1.323 and are no longer reported.
   - entry `name`: control characters, spaces, characters outside the id set, and the CC-PL-018 reserved-name table (error set as errors, warning set as warnings; skipped for an Anthropic owner or author)
   - not covered: the open-ended "names that impersonate an official marketplace" heuristic beyond non-ASCII, and the `<owner>-<repo>` download-folder clash, which depends on what the user has registered
 **Fix**: Manual
-**Source**: code.claude.com/docs/en/plugins/marketplace-reference, code.claude.com/docs/en/plugins/manifest-reference
+**Source**: code.claude.com/docs/en/plugins/marketplace-reference, code.claude.com/docs/en/plugins/manifest-reference, github.com/anthropics/claude-code/releases/tag/v2.1.323
 
 <a id="cc-mp-003"></a>
 ### CC-MP-003 [HIGH] Invalid Plugin Source, Duplicate Entry or Unresolved Rename
@@ -3608,6 +3611,7 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 <a id="cdx-cfg-006"></a>
 ### CDX-CFG-006 [MEDIUM] Unknown Codex Config Field
 **0.154 schema refresh**: Accept the new `tui.question_esc_back` and `tui.whimsy` preferences and the feature names listed under CDX-CFG-011.
+**0.169 schema refresh**: Accept the new `tui.collapse_turn_details`, `tui.default_hosts` and `tui.sidebar_width_percent` preferences added by the tagged rust-v0.168.0/rust-v0.169.0 schemas.
 **Requirement**: Codex config keys SHOULD match the official schema at top-level and known nested sections (`features`, `tui`, `shell_environment_policy`, `mcp_servers`, `apps`)
 **Detection**: Parse `.codex/config.toml|json|yaml`, compare observed keys against allowlists, and report unknown keys
 **Fix**: No auto-fix (remove or rename unsupported fields)
@@ -3646,6 +3650,7 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 **0.154 schema refresh**: Accept `reasoning_effort_override`, `unified_exec_tty`, `windows_sandbox_service`, and `worktrees`. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json).
 **0.165 schema refresh**: Accept `guardian_recorded_items`, `guardianv3`, `prediction_preserve_parent_tools` and `tui_multi_backend` in TOML, JSON and YAML configs. `guardianv3` accepts the tagged schema's boolean or `{ enabled: boolean }` form.
 **0.167 schema refresh**: Accept the nine `[features]` flags added by the tagged rust-v0.167.0 through rust-v0.167.2 schemas and never named in release notes: `apps_early_resource_discovery`, `code_mode_host_output_truncation`, `gcp_setup_wizard`, `incremental_exec_tools`, `incremental_tools_legacy`, `incremental_tools_legacy_gcp` (the rust-v0.167.2 flat-bool opt-out from incremental tool updates on Google Cloud Vertex AI), `interrupt_on_cancel`, `suppress_model_change_announcements` and `tui_extensions_statusline`. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.167.2/codex-rs/core/config.schema.json).
+**0.169 schema refresh**: Accept the twelve `[features]` flags added across the tagged rust-v0.168.0 and rust-v0.169.0 schemas: rust-v0.168.0 adds `agent_message_board_mcp`, `async_compaction_root_only`, `cli_resume_account_check`, `command_sessions_world_state`, `guardian_denial_reconsideration`, `guardian_include_additional_context`, `hosted_search_policy`, `image_generation_animation` and `tui_workspace`, and removes both `incremental_tools_legacy` names; rust-v0.169.0 adds `daybreak_program_propagation`, `gateway_setup_wizard`, `mcp_lazy_stdio_startup` and restores both `incremental_tools_legacy` names, so the net allowlist keeps them. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/core/config.schema.json).
 **Requirement**: Keys under `[features]` SHOULD use known Codex feature flag names; `non_prefixed_mcp_tool_names` MUST be a boolean or an object with optional boolean `enabled` and string-array `server_names`
 **Detection**: Parse config, report unknown keys under `features`, and validate the structured `non_prefixed_mcp_tool_names` value
 **Fix**: No auto-fix (remove unsupported flags or rename)
@@ -5008,6 +5013,14 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 **Fix**: No auto-fix - remove the setting, or pin Kiro to 2.x for a project that still runs Classic.
 **Source**: kiro.dev/docs/reference/settings, kiro.dev/changelog/cli/3-0
 
+<a id="kr-set-013"></a>
+### KR-SET-013 [MEDIUM] Invalid compaction.autoCompactionThreshold Value
+**3.3.0 changelog refresh**: Kiro CLI 3.3.0 made the auto-compaction threshold configurable: "The value is saved as `compaction.autoCompactionThreshold`, and a workspace `cli.json` can override it" (CLI changelog, "Choose when automatic compaction starts"), so the key is workspace-overridable and joins the known-settings list behind KR-SET-005 together with `chat.enableSessionRecap` (documented with 3.1.0).
+**Requirement**: `compaction.autoCompactionThreshold` MUST be a number from 0 to 100 with at most two decimal places. Vendor text: "`kiro-cli settings` accepts 0 to 100 with at most two decimal places; interactive sessions apply the range the agent harness advertises" (settings reference). A wrong type is KR-SET-008's or KR-SET-009's finding.
+**Detection**: Warning at the value in any Kiro `cli.json` when the number falls outside 0 to 100, or its literal has more than two decimal places.
+**Fix**: No auto-fix - set a number from 0 to 100 with at most two decimal places, such as `70` or `82.5`.
+**Source**: kiro.dev/docs/reference/settings, kiro.dev/changelog/cli
+
 <a id="kr-wf-001"></a>
 ### KR-WF-001 [HIGH] Workflow Recipe Exceeds Kiro Limits
 **Requirement**: A recipe MUST have at most 50 `step` nodes, nest nodes at most 8 levels deep, give every node a unique `id`, and use at most 50 `include` nodes.
@@ -5475,7 +5488,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
 | Kiro MCP | 15 | 7 | 6 | 2 | 0 |
 | Kiro Powers | 18 | 6 | 9 | 3 | 0 |
-| Kiro Settings | 12 | 1 | 8 | 3 | 4 |
+| Kiro Settings | 13 | 1 | 9 | 3 | 4 |
 | Kiro Workflows | 9 | 7 | 2 | 0 | 0 |
 | Kiro Ignore | 1 | 0 | 1 | 0 | 0 |
 | Kiro Skills | 2 | 0 | 1 | 1 | 1 |
@@ -5489,7 +5502,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 16 | 4 | 7 | 5 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **760** | **291** | **332** | **137** | **125** |
+| **TOTAL** | **761** | **291** | **333** | **137** | **125** |
 
 
 ---
@@ -5517,10 +5530,10 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 760 validation rules across 46 categories
+**Total Coverage**: 761 validation rules across 46 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 291 HIGH, 332 MEDIUM, 137 LOW
+**Certainty**: 291 HIGH, 333 MEDIUM, 137 LOW
 **Auto-Fixable**: 125 rules (16%)
 
 ## Pi Native Configuration

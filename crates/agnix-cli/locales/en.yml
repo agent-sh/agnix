@@ -3139,6 +3139,10 @@ rules:
     suggestion: "Remove the setting, or pin [tool_versions] kiro to 2.x if this project still runs Classic"
     value: "'%{key}': '%{value}' selected the retired Classic interface; Kiro CLI 3.0 or later ignores it or offers V3 instead"
     value_suggestion: "Use the terminal UI values (chat.ui: tui, chat.uiMode: tui, chat.agentEngine: v3), or pin [tool_versions] kiro to 2.x"
+  kr_set_013:
+    range: "'compaction.autoCompactionThreshold': %{value} is outside the 0 to 100 context-usage percentage Kiro CLI accepts"
+    decimals: "'compaction.autoCompactionThreshold': %{value} has more than two decimal places; kiro-cli settings accepts at most two"
+    suggestion: "Set a number from 0 to 100 with at most two decimal places, such as 70 or 82.5"
   kr_wf_001:
     steps: Workflow recipe has more than %{limit} step nodes; Kiro rejects it at load
     depth: Workflow recipe nests nodes deeper than %{limit} levels; Kiro rejects it at load

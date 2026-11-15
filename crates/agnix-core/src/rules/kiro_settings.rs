@@ -20,8 +20,10 @@
 //!
 //! The key list and value types come from `kiro-cli settings list --all`
 //! 2.32.1 (140 keys), plus `chat.workflowLaunch` from the 2.34 reference,
-//! `app.warnOnElevatedPrivileges` from the 2.35.0 CLI changelog and
-//! `acp.agentEngine` from the 2.36 reference.
+//! `app.warnOnElevatedPrivileges` from the 2.35.0 CLI changelog,
+//! `acp.agentEngine` from the 2.36 reference, `chat.enableSessionRecap` from
+//! the 3.1.0 settings reference and `compaction.autoCompactionThreshold`
+//! (KR-SET-013) from the 3.3.0 CLI changelog and settings reference.
 //! A value of the wrong type is not coerced: the Q
 //! Developer CLI lineage reads settings with typed getters that return no
 //! value, so Kiro falls back to the default.
@@ -53,6 +55,7 @@ const RULE_IDS: &[&str] = &[
     "KR-SET-010",
     "KR-SET-011",
     "KR-SET-012",
+    "KR-SET-013",
 ];
 
 /// Value type of a setting.
@@ -109,6 +112,10 @@ const SETTINGS: &[SettingSpec] = &[
     spec("chat.enableThinking", Bool, false, &[]),
     spec("chat.enableKnowledge", Bool, false, &[]),
     spec("chat.enableCodeIntelligence", Bool, false, &[]),
+    // `chat.enableSessionRecap` is documented with Kiro CLI 3.1.0 (the
+    // settings reference table; absent from the 2.32.1 `settings list --all`
+    // baseline).
+    spec("chat.enableSessionRecap", Bool, false, &[]),
     spec("knowledge.defaultIncludePatterns", StringArray, false, &[]),
     spec("knowledge.defaultExcludePatterns", StringArray, false, &[]),
     spec("knowledge.maxFiles", Number, false, &[]),
@@ -152,6 +159,11 @@ const SETTINGS: &[SettingSpec] = &[
     spec("chat.disableAutoCompaction", Bool, false, &[]),
     spec("compaction.excludeContextWindowPercent", Number, false, &[]),
     spec("compaction.excludeMessages", Number, false, &[]),
+    // Kiro CLI 3.3.0: "The value is saved as
+    // compaction.autoCompactionThreshold, and a workspace cli.json can
+    // override it" (changelog), so the key is not global-only. KR-SET-013
+    // checks its range.
+    spec("compaction.autoCompactionThreshold", Number, false, &[]),
     spec("chat.enableHistoryHints", Bool, false, &[]),
     spec("chat.enablePromptHints", Bool, false, &[]),
     spec("chat.enableTodoList", Bool, false, &[]),
@@ -558,6 +570,12 @@ fn validate_member(cx: &mut Cx<'_>, content: &str, member: &JsonMember, workspac
         "toolSearch.enabled" => validate_tool_search_enabled(cx, content, member),
         "toolSearch.minPct" => validate_tool_search_min_pct(cx, content, member),
         "toolSearch.minTokens" => validate_tool_search_min_tokens(cx, content, member),
+        "compaction.autoCompactionThreshold" => {
+            // KR-SET-008/009 (via validate_value) own the type and choice
+            // findings; KR-SET-013 owns the range and decimal-places limit.
+            validate_value(cx, content, member, spec);
+            validate_compaction_auto_threshold(cx, content, member);
+        }
         _ => validate_value(cx, content, member, spec),
     }
 }
@@ -855,6 +873,52 @@ fn validate_tool_search_min_tokens(cx: &mut Cx<'_>, content: &str, member: &Json
         diagnostic = diagnostic.with_fix(fix);
     }
     cx.diagnostics.push(diagnostic);
+}
+
+/// KR-SET-013: `compaction.autoCompactionThreshold` (Kiro CLI 3.3.0) must be
+/// a number from 0 to 100 with at most two decimal places. The settings
+/// reference: "`kiro-cli settings` accepts 0 to 100 with at most two decimal
+/// places; interactive sessions apply the range the agent harness
+/// advertises". A wrong type falls through to KR-SET-008, which owns type
+/// errors; this rule owns the range and the decimal-places limit.
+fn validate_compaction_auto_threshold(cx: &mut Cx<'_>, content: &str, member: &JsonMember) {
+    if !cx.enabled("KR-SET-013") {
+        return;
+    }
+    let node = &member.value;
+    let Some(n) = node.value.as_number().and_then(serde_json::Number::as_f64) else {
+        // A quoted number is KR-SET-008's finding (with its fix); a string or
+        // other shape is KR-SET-009's. Report nothing here.
+        return;
+    };
+    let literal = content.get(node.start..node.end).unwrap_or_default();
+    let decimals = literal
+        .split_once('.')
+        .map(|(_, frac)| {
+            let frac = frac.trim_end_matches(['e', 'E'].as_slice());
+            let digits = frac
+                .char_indices()
+                .take_while(|(_, c)| c.is_ascii_digit())
+                .count();
+            let exponent = frac.len() > digits;
+            (digits, exponent)
+        })
+        .unwrap_or((0, false));
+    let message = if !(0.0..=100.0).contains(&n) {
+        t!("rules.kr_set_013.range", value = literal).to_string()
+    } else if decimals.0 > 2 && !decimals.1 {
+        t!("rules.kr_set_013.decimals", value = literal).to_string()
+    } else {
+        return;
+    };
+    cx.push(
+        DiagnosticLevel::Warning,
+        "KR-SET-013",
+        node.start,
+        node.end,
+        message,
+        t!("rules.kr_set_013.suggestion").to_string(),
+    );
 }
 
 /// Whether `path` is a workspace `.kiro/settings/cli.json` rather than the

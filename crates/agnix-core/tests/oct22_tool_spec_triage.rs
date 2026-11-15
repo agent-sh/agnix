@@ -103,7 +103,7 @@ fn claude_current_plugin_component_fields_are_known() {
     // https://code.claude.com/docs/en/plugins-reference.md - Fields.
     let diagnostics = validate_content(
         Path::new(".claude-plugin/plugin.json"),
-        r#"{"name":"review-demo","description":"Review demo","version":"1.0.0","types":"./index.d.ts","workflows":"./workflows","experimental":{"themes":"./themes","monitors":[],"evals":"./evals"},"metadata":{"owner":"team"},"defaultEnabled":true}"#,
+        r#"{"name":"review-demo","description":"Review demo","version":"1.0.0","types":"./index.d.ts","workflows":"./workflows","engines":{"claude-code":">=2.1.323"},"experimental":{"themes":"./themes","monitors":[],"evals":"./evals"},"metadata":{"owner":"team"},"defaultEnabled":true}"#,
         &LintConfig::default(),
         &ValidatorRegistry::with_defaults(),
     );

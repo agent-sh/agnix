@@ -13,7 +13,7 @@ keywords: ["CC-PL-021", "plugin settings key dropped", "claude plugins", "valida
 - **Category**: `Claude Plugins`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-15`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["CC-PL-021", "plugin settings key dropped", "claude plugins", "valida
 
 - https://code.claude.com/docs/en/plugins/components
 - https://code.claude.com/docs/en/plugins/manifest-reference
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.323
 
 ## Test Coverage Metadata
 

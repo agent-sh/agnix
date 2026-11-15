@@ -340,6 +340,7 @@ impl Validator for PluginValidator {
                 "defaultEnabled",
                 "dependencies",
                 "termsOfServiceUrl",
+                "engines",
                 "types",
                 "channels",
                 "experimental",
@@ -909,8 +910,13 @@ const LSP_SERVER_KEYS: &[&str] = &[
     "diagnostics",
 ];
 const MONITOR_KEYS: &[&str] = &["name", "command", "description", "when"];
-/// "Only `agent` and `subagentStatusLine` take effect".
-const PLUGIN_SETTINGS_KEYS: &[&str] = &["agent", "subagentStatusLine"];
+/// Claude Code v2.1.323 removed the `subagentStatusLine` setting ("subagent
+/// rows always use the default look, and settings files that still hold the
+/// key load as before"), so only `agent` still takes effect from a plugin.
+/// The same release deprecated the plugin `agent` setting: it still applies
+/// and now warns at startup, in `claude plugin list` and in
+/// `claude plugin validate`.
+const PLUGIN_SETTINGS_KEYS: &[&str] = &["agent"];
 
 /// Whether a node-semver range parses: `||` alternatives of space-separated
 /// comparators (`>=1.4`, `~2.1.0`, `^2.0`, `=2.1.0`, `1.x`, `*`) or a hyphen
@@ -4257,6 +4263,15 @@ mod tests_claude_ext {
         let h = hits(&diagnostics, "CC-PL-021");
         assert_eq!(h.len(), 1, "{diagnostics:?}");
         assert!(h[0].message.contains("permissions"));
+        // v2.1.323 removed subagentStatusLine; a plugin settings key that
+        // still holds it no longer takes effect and is reported too.
+        let (_t, diagnostics) = plugin(
+            r#"{"name": "p", "settings": {"subagentStatusLine": {"command": "x"}}}"#,
+            &[],
+        );
+        let h = hits(&diagnostics, "CC-PL-021");
+        assert_eq!(h.len(), 1, "{diagnostics:?}");
+        assert!(h[0].message.contains("subagentStatusLine"));
     }
 
     #[test]

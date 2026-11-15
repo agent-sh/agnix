@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-11-13T07:24:21Z",
+  "last_updated": "2026-11-15T09:18:49Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -121,7 +121,7 @@
       "claude-code-memory": {
         "url": "https://code.claude.com/docs/en/memory",
         "content_url": "https://code.claude.com/docs/en/memory.md",
-        "hash": "ba5f52145910b15d92d9b23a68b2181e8cf648c79644db2a8048bfff559a6833",
+        "hash": "59dc16a661447ba674f35f2877241ae1a4db865ffe9862f0b64292ffd3105b79",
         "rules": [
           "CC-MEM-001",
           "CC-MEM-002",
@@ -134,12 +134,13 @@
           "CC-MEM-020",
           "CC-MEM-021",
           "CC-SET-040"
-        ]
+        ],
+        "last_checked": "2026-11-15"
       },
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-        "hash": "bf5bcc0cb4e835e37fe08997ec2e7bcd328c5c392bfe928e62fca8ffa4e55779",
+        "hash": "7ceda675627fff38e81d4629a57fbd2b4d173129248f5b2d4745bee0087b21a6",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -160,12 +161,13 @@
           "CC-HK-033",
           "CC-HK-034",
           "CC-HK-035"
-        ]
+        ],
+        "last_checked": "2026-11-15"
       },
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-        "hash": "2a0e2b6e35fbf75c7951a9d0fedf9fe1b513e30156f8615da1b96f763df37a9c",
+        "hash": "7f651afc13392cf8f716826a3482fdf0b6db684552cf8c67fe721cf5e2d00010",
         "rules": [
           "AS-021",
           "CC-SK-001",
@@ -179,12 +181,13 @@
           "CC-SK-025",
           "CC-SK-027",
           "CC-SK-028"
-        ]
+        ],
+        "last_checked": "2026-11-15"
       },
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
         "content_url": "https://code.claude.com/docs/en/plugins-reference.md",
-        "hash": "b402b702d29c7f5953ad370ac3d4069301d125c170d96aa989640e7db4f2c066",
+        "hash": "0c841fc3dd19233e9651625302e463a318dbac53650e10ffd852936413ec9688",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -196,12 +199,13 @@
           "CC-PL-021",
           "CC-PL-022",
           "CC-PL-023"
-        ]
+        ],
+        "last_checked": "2026-11-15"
       },
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
         "content_url": "https://code.claude.com/docs/en/sub-agents.md",
-        "hash": "62a7d93eed76d8a13b6c71343d93c38d916b60d9be1dbec1de944ddebdee1dac",
+        "hash": "c882b207572a81c77c7ca2ac122c9b5cedf9438f87b76a483d1dacc05c1e801f",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",
@@ -226,7 +230,8 @@
           "CC-AG-024",
           "CC-MEM-016",
           "CC-MEM-020"
-        ]
+        ],
+        "last_checked": "2026-11-15"
       },
       "codex-cli-agents-md": {
         "url": "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
@@ -450,7 +455,7 @@
       "antigravity-settings": {
         "url": "https://antigravity.google/schemas/v1/settings.json",
         "content_url": "https://antigravity.google/schemas/v1/settings.json",
-        "hash": "b50f0aceb4e824b82137a5b15ecc6b5851a7f9caf07471d0432e55a59dc322bc",
+        "hash": "ab765e72f41321d2b36a388271e7b996499e4d116965f015c33dfeb19e273c2c",
         "rules": [
           "AGY-CFG-001",
           "AGY-CFG-002",
@@ -459,17 +464,17 @@
           "AGY-CFG-005",
           "AGY-KB-001"
         ],
-        "last_checked": "2026-11-13"
+        "last_checked": "2026-11-15"
       },
       "antigravity-plugin": {
         "url": "https://antigravity.google/schemas/v1/plugin.json",
         "content_url": "https://antigravity.google/schemas/v1/plugin.json",
-        "hash": "c54359a306b651bec8536ddeda580997f9da93c53e686952ad287f2be6fabb63",
+        "hash": "0eea5e483af6f03fa099f32b065d2924a323f1a616ed0323cfa0b7a74ff9543c",
         "rules": [
           "AGY-PL-001",
           "AGY-PL-002"
         ],
-        "last_checked": "2026-11-13"
+        "last_checked": "2026-11-15"
       },
       "antigravity-rules": {
         "url": "https://antigravity.google/docs/rules",
@@ -481,13 +486,13 @@
           "AGY-RL-003",
           "AGY-RL-004"
         ],
-        "last_checked": "2026-11-13"
+        "last_checked": "2026-11-15"
       },
       "antigravity-discovery": {
         "url": "https://antigravity.google/docs/customization-discovery",
         "content_url": "https://antigravity.google/docs/customization-discovery.md",
         "hash": "cc50d3e5731d404bea8e652d1249849d130d96fbc9389a336e288395f03eab41",
-        "last_checked": "2026-11-13",
+        "last_checked": "2026-11-15",
         "rules": [
           "AGY-RL-001",
           "AGY-RL-002",
