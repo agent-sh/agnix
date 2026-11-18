@@ -10,6 +10,7 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 ignore = [
     "RUSTSEC-2025-0141", # bincode (via iai-callgrind) - dev-only dependency, low risk
     "RUSTSEC-2026-0173", # proc-macro-error2 unmaintained (via iai-callgrind) - dev-only dependency, no safe upgrade
+    "RUSTSEC-2026-0543", # chrono unmaintained - no vulnerability, required non-optionally by rmcp (also 3.11.0); no upgrade path
 ]
 
 [licenses]

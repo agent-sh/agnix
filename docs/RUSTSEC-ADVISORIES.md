@@ -55,6 +55,33 @@ Related: [Issue #346](https://github.com/agent-sh/agnix/issues/346) (this tracki
 - Advisory: https://rustsec.org/advisories/RUSTSEC-2026-0173
 - Announcement: https://github.com/GnomedDev/proc-macro-error-2/issues/17
 
+### RUSTSEC-2026-0543 - `chrono` (via `rmcp` and `schemars`)
+
+**Status**: Unmaintained-only advisory; no known vulnerability, no upgrade path
+
+**Details**:
+- Published against chrono 0.4.44 (advisory date 2026-09-14; entered the
+  RustSec database the week of 2026-11-16, breaking `cargo audit` on main
+  and all open PRs). `patched = []`: no fixed version exists or is planned.
+- chrono reaches the lockfile non-optionally through `rmcp` (the
+  `agnix-mcp` server) and through `schemars`; rmcp 3.11.0 (2026-11-17,
+  the latest release) still depends on it, and schemars 1.2.3 is the
+  latest schemars. No dependency change can remove it today.
+
+**Risk Level**: Low
+- Unmaintained advisory only - no known exploitable vulnerability
+- Used for timestamps in the MCP server, not for parsing untrusted input
+
+**Action Items**:
+- Watch rmcp for a release that drops or replaces chrono, then bump and
+  remove this ignore
+- Remove this advisory ignore from:
+  - `deny.toml` in the `[advisories]` ignore list
+  - `.github/workflows/security.yml` in the `cargo audit` command
+
+**References**:
+- Advisory: https://rustsec.org/advisories/RUSTSEC-2026-0543
+
 ## Review Schedule
 
 These advisories should be reviewed:

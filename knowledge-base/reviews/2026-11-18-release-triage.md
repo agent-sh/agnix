@@ -25,6 +25,22 @@ sections quoted below. All quotes come from the fresh fetches.
 
 ## Verification
 
+- Supply-chain note: two brand-new advisories broke the security jobs for
+  every PR in the repo (main's last Security run, 2026-11-16, predates
+  them): RUSTSEC-2026-0543 (`chrono` unmaintained, no vulnerability, no
+  patched version; required non-optionally by rmcp 3.9.0 and latest
+  3.11.0) and GHSA-fc5q-39xc-vjpf (picomatch ReDoS "through 4.0.7", no
+  vendor fix), the latter reddening the npm audit of the website (26
+  high) and the VS Code extension (6 high) through chokidar/micromatch
+  and @vscode/vsce/tinyglobby dev toolchains. The cargo side follows the
+  repo's documented remediation for unmaintained crates (ignore in
+  security.yml + deny.toml + docs/RUSTSEC-ADVISORIES.md, cf. the
+  RUSTSEC-2025-0141/0173 precedents); verified locally with
+  `cargo audit --deny warnings` and `cargo deny check advisories`, both
+  clean. The npm audit was NOT modified: no fixed version exists to bump
+  to and the project has no npm-ignore mechanism, so that check stays
+  red until the advisory is revised upstream - recorded here and in the
+  PR body as the one open CI blocker.
 - `UPDATE_BASELINES=true TOOL_FILTER=<tool> bash scripts/check-tool-releases.sh`
   for kiro, claude-code and antigravity: `new=1` before the baseline edits
   (3.4.0, v2.1.327, 1.5.11); after the edits each per-tool poll reports

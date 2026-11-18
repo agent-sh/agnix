@@ -61,6 +61,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   #1850): Claude Code v2.1.327 (covers v2.1.326), Kiro CLI 3.4.0 and
   Antigravity CLI 1.5.11 (covers 1.5.10; the changelog source remains
   a version marker only).
+- Supply-chain CI repair: ignore RUSTSEC-2026-0543 (`chrono` unmaintained)
+  in `cargo audit` and `cargo-deny`, tracked in
+  docs/RUSTSEC-ADVISORIES.md like the two existing unmaintained-crate
+  ignores. The advisory entered the RustSec database the week of
+  2026-11-16 and breaks the Security Audit job on main and every open
+  PR; it is unmaintained-only (no vulnerability, `patched = []`), and
+  chrono reaches the tree non-optionally through rmcp (still true in
+  rmcp 3.11.0, 2026-11-17) and schemars, so no dependency change can
+  remove it today.
 - Claude Code v2.1.323/v2.1.325 (#1827, #1845): CC-PL-021 no longer
   treats `subagentStatusLine` as a key that takes effect (the setting is
   removed; only the deprecated `agent` still applies), CC-PL-017 accepts
