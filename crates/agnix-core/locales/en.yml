@@ -2167,7 +2167,7 @@ rules:
     message: 'Invalid author object: ''author.name'' must be a non-empty string'
     suggestion: Set 'author.name' to a non-empty string
   cc_pl_010:
-    message: 'Plugin homepage ''%{url}'' does not parse as a URL, so the plugin fails to load'
+    message: 'Plugin homepage ''%{url}'' does not parse as a URL; Claude Code v2.1.326 or later ignores the field and loads the plugin, older versions refuse to load it'
     suggestion: Set homepage to an absolute URL such as https://example.com/docs, or remove it
     scheme: Plugin homepage '%{url}' parses as a URL but isn't http or https
     scheme_suggestion: Use an https:// documentation URL
@@ -2850,6 +2850,14 @@ rules:
     suggestion: 'Keep it only if every environment that reads this file runs Kiro CLI 3.1.0 or later. PreCompact can refuse compaction; PostCompact receives the summary.'
     agent_hook: '%{hook} trigger "%{trigger}" is a compaction hook introduced by Kiro CLI 3.1.0; older CLI (3.0.x and earlier) skips this hook'
     agent_key: 'Kiro agent hook trigger "%{trigger}" is a compaction hook introduced by Kiro CLI 3.1.0; older CLI (3.0.x and earlier) skips this hook'
+  kr_hk_032:
+    message: 'hooks[%{index}] trigger "%{trigger}" answers permission prompts only on Kiro CLI 3.4.0 or later (V3 sessions); older CLI (3.3.x and earlier) skips this hook'
+    suggestion: 'Keep it only if every environment that reads this file runs Kiro CLI 3.4.0 or later in V3 sessions. The hook command answers allow or deny; its answer covers one tool call only.'
+    agent_hook: '%{hook} trigger "%{trigger}" answers permission prompts only on Kiro CLI 3.4.0 or later (V3 sessions); older CLI (3.3.x and earlier) skips this hook'
+    agent_key: 'Kiro agent hook trigger "%{trigger}" answers permission prompts only on Kiro CLI 3.4.0 or later (V3 sessions); older CLI (3.3.x and earlier) skips this hook'
+  kr_hk_033:
+    message: 'hooks[%{index}] action.command prints an updatedInput decision, which only Kiro CLI 3.4.0 or later reads; older CLI treats the JSON as plain output and the exit code is the only decision'
+    suggestion: 'Keep the rewrite only if every environment that reads this file runs Kiro CLI 3.4.0 or later. updatedInput replaces the whole tool_input object; it is not merged.'
   cc_sk_021:
     message: Hardcoded user directory path '%{path}' leaks author identity and is not portable across machines
     suggestion: Replace with '~/', '$HOME/', a project-relative path, or an env var like '$PROJECT_ROOT'. For shebangs prefer

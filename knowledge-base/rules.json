@@ -1,8 +1,8 @@
 {
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
-  "total_rules": 761,
-  "last_updated": "2026-11-15",
+  "total_rules": 763,
+  "last_updated": "2026-11-18",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -3572,14 +3572,15 @@
     {
       "id": "CC-PL-010",
       "name": "Invalid Homepage URL",
-      "severity": "HIGH",
+      "severity": "MEDIUM",
       "category": "claude-plugins",
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins/manifest-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.326"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-18",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -13980,6 +13981,64 @@
       "bad_example": "A PreCompact hook in a repository whose CI or teammates still run Kiro CLI 3.0.x"
     },
     {
+      "id": "KR-HK-032",
+      "name": "Kiro PermissionRequest Hook Requires Kiro CLI 3.4.0",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/changelog/cli/",
+          "https://kiro.dev/docs/hooks/types/"
+        ],
+        "verified_on": "2026-11-18",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "{ \"trigger\": \"PermissionRequest\", \"matcher\": \"^read_file$\", \"action\": { \"type\": \"command\", \"command\": \"answer.sh\" } } (on Kiro CLI >= 3.4.0 in a V3 session)",
+      "bad_example": "A PermissionRequest hook in a repository whose CI or teammates still run Kiro CLI 3.3.x or older"
+    },
+    {
+      "id": "KR-HK-033",
+      "name": "Kiro PreToolUse updatedInput Decision Requires Kiro CLI 3.4.0",
+      "severity": "LOW",
+      "category": "kiro-hooks",
+      "evidence": {
+        "source_type": "vendor_docs",
+        "source_urls": [
+          "https://kiro.dev/changelog/cli/",
+          "https://kiro.dev/docs/hooks/types/"
+        ],
+        "verified_on": "2026-11-18",
+        "applies_to": {
+          "tool": "kiro",
+          "version_range": ">=2.8.0"
+        },
+        "normative_level": "BEST_PRACTICE",
+        "tests": {
+          "unit": true,
+          "fixtures": true,
+          "e2e": false
+        }
+      },
+      "fix": {
+        "autofix": false
+      },
+      "good_example": "A PreToolUse command hook whose STDOUT prints { \"hookSpecificOutput\": { \"permissionDecision\": \"allow\", \"updatedInput\": { \"path\": \"docs/README.md\" } } } (on Kiro CLI >= 3.4.0)",
+      "bad_example": "The same hook on Kiro CLI 3.3.x or older: the JSON is plain output, the exit code is the only decision, and the tool call keeps its original inputs"
+    },
+    {
       "id": "KR-MCP-001",
       "name": "Kiro MCP Config Fails to Load",
       "severity": "HIGH",
@@ -22188,7 +22247,7 @@
     },
     "kiro-hooks": {
       "prefix": "KR-HK",
-      "count": 29,
+      "count": 31,
       "description": "Kiro IDE and CLI hook rules"
     },
     "kiro-permissions": {

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-11-15T09:18:49Z",
+  "last_updated": "2026-11-18T07:40:10Z",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -257,7 +257,7 @@
       "opencode-rules": {
         "url": "https://opencode.ai/docs/rules/",
         "content_url": "https://raw.githubusercontent.com/anomalyco/opencode/dev/services/site/src/docs/v1/content/rules.mdx",
-        "hash": "2d789f8467c7018a07b2307d44beb37ef13b10038aed1124aa20098cb4296fd9",
+        "hash": "9ec707ba349c3eb2c37f2085d40875247b59e135386217b7150ba98f7e293aa8",
         "rules": [
           "OC-AGM-003",
           "XP-001",
@@ -267,7 +267,7 @@
           "XP-005",
           "XP-006"
         ],
-        "last_checked": "2026-11-11"
+        "last_checked": "2026-11-18"
       },
       "pi-settings": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/settings.schema.json",
@@ -283,12 +283,12 @@
       "pi-models": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
         "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
-        "hash": "4be97124a976153163d3765cc5db2e21f14c3f4e5d12ab6610f8d60a80b65b61",
+        "hash": "e132feaec22f980a62856b4c383c9335819fabafafdea4c41a092ec4999238ca",
         "rules": [
           "PI-MDL-001",
           "PI-MDL-002"
         ],
-        "last_checked": "2026-11-11"
+        "last_checked": "2026-11-18"
       },
       "pi-keybindings": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/keybindings.schema.json",
@@ -455,7 +455,7 @@
       "antigravity-settings": {
         "url": "https://antigravity.google/schemas/v1/settings.json",
         "content_url": "https://antigravity.google/schemas/v1/settings.json",
-        "hash": "ab765e72f41321d2b36a388271e7b996499e4d116965f015c33dfeb19e273c2c",
+        "hash": "b50f0aceb4e824b82137a5b15ecc6b5851a7f9caf07471d0432e55a59dc322bc",
         "rules": [
           "AGY-CFG-001",
           "AGY-CFG-002",
@@ -464,17 +464,17 @@
           "AGY-CFG-005",
           "AGY-KB-001"
         ],
-        "last_checked": "2026-11-15"
+        "last_checked": "2026-11-18"
       },
       "antigravity-plugin": {
         "url": "https://antigravity.google/schemas/v1/plugin.json",
         "content_url": "https://antigravity.google/schemas/v1/plugin.json",
-        "hash": "0eea5e483af6f03fa099f32b065d2924a323f1a616ed0323cfa0b7a74ff9543c",
+        "hash": "c54359a306b651bec8536ddeda580997f9da93c53e686952ad287f2be6fabb63",
         "rules": [
           "AGY-PL-001",
           "AGY-PL-002"
         ],
-        "last_checked": "2026-11-15"
+        "last_checked": "2026-11-18"
       },
       "antigravity-rules": {
         "url": "https://antigravity.google/docs/rules",

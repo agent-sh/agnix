@@ -1,6 +1,6 @@
 # Rules Reference
 
-This section contains all `761` validation rules generated from `knowledge-base/rules.json`.
+This section contains all `763` validation rules generated from `knowledge-base/rules.json`.
 `125` rules have automatic fixes.
 
 | Rule | Name | Severity | Category | Auto-Fix |
@@ -128,7 +128,7 @@ This section contains all `761` validation rules generated from `knowledge-base/
 | [CC-PL-007](./generated/cc-pl-007.md) | Invalid Component Path | HIGH | Claude Plugins | Yes (safe) |
 | [CC-PL-008](./generated/cc-pl-008.md) | Component Inside .claude-plugin | HIGH | Claude Plugins | No |
 | [CC-PL-009](./generated/cc-pl-009.md) | Invalid Author Object | MEDIUM | Claude Plugins | No |
-| [CC-PL-010](./generated/cc-pl-010.md) | Invalid Homepage URL | HIGH | Claude Plugins | No |
+| [CC-PL-010](./generated/cc-pl-010.md) | Invalid Homepage URL | MEDIUM | Claude Plugins | No |
 | [CC-PL-011](./generated/cc-pl-011.md) | LSP Server Missing Required Fields | HIGH | Claude Plugins | No |
 | [CC-PL-012](./generated/cc-pl-012.md) | Invalid UserConfig Key | MEDIUM | Claude Plugins | No |
 | [CC-PL-013](./generated/cc-pl-013.md) | Channel Missing Server Reference | MEDIUM | Claude Plugins | No |
@@ -488,6 +488,8 @@ This section contains all `761` validation rules generated from `knowledge-base/
 | [KR-HK-029](./generated/kr-hk-029.md) | Kiro Tool Matcher Is an Unanchored Regex | LOW | Kiro Hooks | No |
 | [KR-HK-030](./generated/kr-hk-030.md) | Kiro Hook File Name Not Kebab-Case | LOW | Kiro Hooks | No |
 | [KR-HK-031](./generated/kr-hk-031.md) | Kiro Compaction Hook Requires Kiro CLI 3.1.0 | LOW | Kiro Hooks | No |
+| [KR-HK-032](./generated/kr-hk-032.md) | Kiro PermissionRequest Hook Requires Kiro CLI 3.4.0 | LOW | Kiro Hooks | No |
+| [KR-HK-033](./generated/kr-hk-033.md) | Kiro PreToolUse updatedInput Decision Requires Kiro CLI 3.4.0 | LOW | Kiro Hooks | No |
 | [KR-MCP-001](./generated/kr-mcp-001.md) | Kiro MCP Config Fails to Load | HIGH | Kiro MCP | No |
 | [KR-MCP-002](./generated/kr-mcp-002.md) | Hardcoded Secret in Kiro MCP Server Config | MEDIUM | Kiro MCP | No |
 | [KR-MCP-003](./generated/kr-mcp-003.md) | Kiro MCP Command Includes Arguments | MEDIUM | Kiro MCP | No |

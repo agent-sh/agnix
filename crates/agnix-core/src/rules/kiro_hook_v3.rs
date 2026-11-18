@@ -26,6 +26,10 @@
 //! - KR-HK-025: standalone hook files under a pinned Kiro CLI 2.x
 //! - KR-HK-031: compaction triggers (`PreCompact`/`PostCompact`, kiro-cli
 //!   3.1.0+) used where an older CLI skips the hook (info)
+//! - KR-HK-032: the `PermissionRequest` trigger (kiro-cli 3.4.0+, V3 only)
+//!   used where an older CLI skips the hook (info)
+//! - KR-HK-033: a PreToolUse command whose STDOUT decision rewrites
+//!   `updatedInput` (kiro-cli 3.4.0+); older CLI ignores the JSON (info)
 //!
 //! Sources: <https://kiro.dev/docs/hooks/>, <https://kiro.dev/docs/hooks/types/>,
 //! <https://kiro.dev/docs/cli/v3/hooks-migration/>, and the V3 engine bundled
@@ -39,8 +43,9 @@ use crate::{
     schemas::kiro_hook_v3::{
         JsonSpans, KIRO_V3_HOOK_ACTION_KEYS, KIRO_V3_HOOK_KEYS, KIRO_V3_HOOK_TRIGGERS_SINCE_3_1_0,
         MatcherSubject, Seg, VALID_KIRO_V3_HOOK_DOC_VERSIONS, compile_js_regex, foreign_tool_names,
-        is_compaction_trigger, is_tool_selector, matcher_subject, matches_everything,
-        resolve_trigger, tool_matcher_matches_builtin, trigger_case_insensitive_match,
+        is_compaction_trigger, is_permission_request_trigger, is_tool_selector, matcher_subject,
+        matches_everything, resolve_trigger, tool_matcher_matches_builtin,
+        trigger_case_insensitive_match,
     },
 };
 use rust_i18n::t;
@@ -68,6 +73,8 @@ const RULE_IDS: &[&str] = &[
     "KR-HK-029",
     "KR-HK-030",
     "KR-HK-031",
+    "KR-HK-032",
+    "KR-HK-033",
 ];
 
 pub struct KiroV3HookValidator;
@@ -493,6 +500,7 @@ impl Ctx<'_> {
         }
         self.check_misplaced_fields(index, &base, hook);
         self.check_never_runs(index, &base, trigger, action);
+        self.check_updated_input(index, &base, trigger, action, hook);
     }
 
     fn check_name(&mut self, index: usize, base: &[Seg<'_>], hook: &Map<String, Value>) {
@@ -600,6 +608,30 @@ impl Ctx<'_> {
                 Some(canonical)
             }
             None => {
+                // KR-HK-032: the PermissionRequest trigger arrived with
+                // kiro-cli 3.4.0 ("Hooks That Rewrite Tool Inputs and Answer
+                // Permission Prompts"). The mirrored engine table is
+                // kiro-cli 2.32.1, so an install on 3.3.x or older skips the
+                // hook; 3.4.0+ runs it (V3 sessions only; the camelCase alias
+                // `permissionRequest` is accepted there too). Info only, and
+                // silent when the CLI is pinned to 3.4.0 or later.
+                if is_permission_request_trigger(trigger) {
+                    if self.config.is_rule_enabled("KR-HK-032")
+                        && kiro_cli_below(self.config, (3, 4, 0))
+                    {
+                        self.push(
+                            Finding::new(
+                                "KR-HK-032",
+                                DiagnosticLevel::Info,
+                                At::Value(&trigger_path),
+                                t!("rules.kr_hk_032.message", index = index, trigger = trigger),
+                            )
+                            .suggest(t!("rules.kr_hk_032.suggestion")),
+                        );
+                    }
+                    // "The matcher field works as it does for Pre Tool Use."
+                    return Some("PermissionRequest");
+                }
                 // KR-HK-031: compaction triggers arrived with kiro-cli 3.1.0
                 // ("Compaction Hooks and Session Credits"). The engine table
                 // this validator mirrors is kiro-cli 2.32.1, so an install on
@@ -1408,6 +1440,56 @@ impl Ctx<'_> {
             _ => {}
         }
     }
+
+    /// KR-HK-033: a PreToolUse command action that prints a structured
+    /// STDOUT decision carrying `updatedInput` rewrites the tool call's
+    /// inputs only on kiro-cli 3.4.0+. Before that "the exit code was the
+    /// only decision a CLI Hook could make", so the JSON is plain output and
+    /// the rewrite never happens.
+    fn check_updated_input(
+        &mut self,
+        index: usize,
+        base: &[Seg<'_>],
+        trigger: Option<&str>,
+        action: Option<&str>,
+        hook: &Map<String, Value>,
+    ) {
+        if trigger != Some("PreToolUse")
+            || action != Some("command")
+            || !self.config.is_rule_enabled("KR-HK-033")
+            || !kiro_cli_below(self.config, (3, 4, 0))
+        {
+            return;
+        }
+        let Some(Value::String(command)) =
+            hook.get("action").and_then(|action| action.get("command"))
+        else {
+            return;
+        };
+        if command.contains("updatedInput") {
+            let command_path = path(base, &[Seg::Key("action"), Seg::Key("command")]);
+            self.push(
+                Finding::new(
+                    "KR-HK-033",
+                    DiagnosticLevel::Info,
+                    At::Value(&command_path),
+                    t!("rules.kr_hk_033.message", index = index),
+                )
+                .suggest(t!("rules.kr_hk_033.suggestion")),
+            );
+        }
+    }
+}
+
+/// Whether the pinned Kiro CLI version is below `minimum`, counting an
+/// unpinned or unparseable version as below: the version-gated info rules
+/// fire in exactly those cases, because the file may then be read by an
+/// older CLI.
+fn kiro_cli_below(config: &PerFileLintConfig<'_>, minimum: (u64, u64, u64)) -> bool {
+    config
+        .get_kiro_version()
+        .and_then(|version| semver::Version::parse(version.trim()).ok())
+        .is_none_or(|parsed| parsed < semver::Version::new(minimum.0, minimum.1, minimum.2))
 }
 
 /// A `confirm` string field that is missing (when required), not a string,
@@ -1811,6 +1893,106 @@ mod tests {
             ))),
             ["KR-HK-012"]
         );
+    }
+
+    #[test]
+    fn test_kr_hk_032_permission_request_trigger_needs_kiro_cli_3_4() {
+        for trigger in ["PermissionRequest", "permissionRequest"] {
+            let diagnostics = validate(&hook_doc(
+                serde_json::json!({"name": "approve", "trigger": trigger, "matcher": "^read_file$", "action": {"type": "command", "command": "answer.sh"}}),
+            ));
+            assert_eq!(
+                rules(&diagnostics),
+                ["KR-HK-032"],
+                "{trigger}: {:?}",
+                rules(&diagnostics)
+            );
+            assert_eq!(diagnostics[0].level, DiagnosticLevel::Info);
+            assert!(
+                diagnostics[0].message.contains("3.4.0"),
+                "{}",
+                diagnostics[0].message
+            );
+        }
+        // No matcher-specific claim is violated: the matcher works as it does
+        // for Pre Tool Use, so a specific matcher reports nothing else and a
+        // missing matcher gets the KR-HK-027 note instead of KR-HK-020.
+        assert_eq!(
+            rules(&validate(&hook_doc(
+                serde_json::json!({"name": "a", "trigger": "PermissionRequest", "action": {"type": "command", "command": "echo"}})
+            ))),
+            ["KR-HK-032", "KR-HK-027"]
+        );
+        // Pinned to Kiro CLI 3.4.0+ the trigger is fully supported: silent.
+        let config = LintConfig::builder()
+            .tool_versions(crate::config::ToolVersions {
+                kiro: Some("3.4.0".into()),
+                ..Default::default()
+            })
+            .build()
+            .unwrap();
+        let diagnostics = KiroV3HookValidator.validate(
+            Path::new(".kiro/hooks/a.json"),
+            &hook_doc(serde_json::json!({"name": "a", "trigger": "PermissionRequest", "matcher": "^read_file$", "action": {"type": "command", "command": "echo"}})),
+            &config,
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        // The engine lookup is exact: misspellings stay unknown triggers.
+        assert_eq!(
+            rules(&validate(&hook_doc(
+                serde_json::json!({"name": "a", "trigger": "permissionrequest", "action": {"type": "command", "command": "echo"}})
+            ))),
+            ["KR-HK-012"]
+        );
+    }
+
+    #[test]
+    fn test_kr_hk_033_updated_input_decision_needs_kiro_cli_3_4() {
+        let rewrite = r#"echo '{"hookSpecificOutput":{"permissionDecision":"allow","updatedInput":{"path":"docs/README.md"}}}'"#;
+        let diagnostics = validate(&hook_doc(
+            serde_json::json!({"name": "rewrite", "trigger": "PreToolUse", "matcher": "^read_file$", "action": {"type": "command", "command": rewrite}}),
+        ));
+        assert_eq!(rules(&diagnostics), ["KR-HK-033"]);
+        assert_eq!(diagnostics[0].level, DiagnosticLevel::Info);
+        assert!(
+            diagnostics[0].message.contains("updatedInput"),
+            "{}",
+            diagnostics[0].message
+        );
+        // Other triggers, agent actions and unrelated commands stay silent.
+        for (trigger, action) in [
+            (
+                "PostToolUse",
+                "{\"type\": \"command\", \"command\": \"echo updatedInput\"}",
+            ),
+            (
+                "PreToolUse",
+                "{\"type\": \"agent\", \"prompt\": \"rewrite with updatedInput\"}",
+            ),
+            (
+                "PreToolUse",
+                "{\"type\": \"command\", \"command\": \"echo ok\"}",
+            ),
+        ] {
+            let action: serde_json::Value = serde_json::from_str(action).unwrap();
+            let hook = serde_json::json!({"name": "a", "trigger": trigger, "matcher": "^read_file$", "action": action});
+            let diagnostics = validate(&hook_doc(hook));
+            assert!(diagnostics.is_empty(), "{trigger}: {diagnostics:?}");
+        }
+        // Pinned to Kiro CLI 3.4.0+ the decision is fully supported: silent.
+        let config = LintConfig::builder()
+            .tool_versions(crate::config::ToolVersions {
+                kiro: Some("3.4.0".into()),
+                ..Default::default()
+            })
+            .build()
+            .unwrap();
+        let diagnostics = KiroV3HookValidator.validate(
+            Path::new(".kiro/hooks/a.json"),
+            &hook_doc(serde_json::json!({"name": "a", "trigger": "PreToolUse", "matcher": "^read_file$", "action": {"type": "command", "command": rewrite}})),
+            &config,
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
     }
 
     #[test]

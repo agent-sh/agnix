@@ -1776,16 +1776,16 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="cc-pl-009"></a>
 ### CC-PL-009 [MEDIUM] Invalid Author Object
 **Requirement**: If `author` field is present, `author.name` SHOULD be a non-empty string
-**Detection**: Check `author.name` exists and is non-empty when `author` is present
+**Detection**: Check `author.name` exists and is non-empty when `author` is present. Since Claude Code v2.1.326 a malformed display field such as `author` is ignored with a note ("Added a note in `/plugin` and `claude plugin list` when a malformed `plugin.json` field such as `author` or `homepage` is ignored"), and "enabled plugins that were refused for a malformed `plugin.json` display field ... now load, with their hooks and MCP servers"; the finding stays a warning because the broken field still surfaces to administrators.
 **Fix**: Manual fix required
 **Source**: code.claude.com/docs/en/plugins/manifest-reference
 
 <a id="cc-pl-010"></a>
-### CC-PL-010 [HIGH] Invalid Homepage URL
-**Requirement**: If `homepage` is present, it MUST parse as a URL. Vendor text: "Documentation URL. Must parse as a URL, or the plugin fails to load" (plugins manifest reference, "Fields")
-**Detection**: `url::Url::parse(homepage)` fails, or `homepage` is not a string (error). A URL that parses but isn't `http` or `https` gets an info note, since the doc only says "parse as a URL". An empty string is not reported.
+### CC-PL-010 [MEDIUM] Invalid Homepage URL
+**Requirement**: If `homepage` is present, it MUST parse as a URL. Vendor text: "Documentation URL. Must parse as a URL, or the plugin fails to load" (plugins manifest reference, "Fields"). Claude Code v2.1.326 changed the failure: "Changed enabled plugins that were refused for a malformed `plugin.json` display field: they now load, with their hooks and MCP servers", with a note naming the ignored field; the manifest reference table still carries the older sentence. The practical effect on current CLI is a broken documentation link, so the rule is a warning (matching CC-PL-009's display-field class), not a load failure.
+**Detection**: `url::Url::parse(homepage)` fails, or `homepage` is not a string (warning). A URL that parses but isn't `http` or `https` gets an info note, since the doc only says "parse as a URL". An empty string is not reported.
 **Fix**: Manual fix required
-**Source**: code.claude.com/docs/en/plugins/manifest-reference
+**Source**: code.claude.com/docs/en/plugins/manifest-reference, github.com/anthropics/claude-code/releases/tag/v2.1.326
 
 <a id="cc-pl-011"></a>
 ### CC-PL-011 [HIGH] LSP Server Missing Required Fields
@@ -4717,6 +4717,20 @@ Kiro CLI V3 (opt-in in CLI 2.x with `kiro-cli --v3`, the default from CLI 3.0) a
 **Fix**: No auto-fix (keep it only when every environment that reads the file runs Kiro CLI 3.1.0+)
 **Source**: kiro.dev/changelog/cli
 
+<a id="kr-hk-032"></a>
+### KR-HK-032 [LOW] Kiro PermissionRequest Hook Requires Kiro CLI 3.4.0
+**Requirement**: A hook with the `PermissionRequest` trigger only runs on Kiro CLI 3.4.0 or later, in V3 sessions. Kiro CLI 3.4.0 ("Hooks That Rewrite Tool Inputs and Answer Permission Prompts", 2026-11-16) added it: "the `PermissionRequest` trigger runs in a V3 session after Kiro has evaluated its permission policy, immediately before a tool call would prompt you"; its command answers `allow` or `deny` and "each answer applies to that one tool call only". The camelCase alias `permissionRequest` is accepted there too, and "the `matcher` field works as it does for Pre Tool Use". CLI 2.x has no equivalent, and the V3 engine this validator mirrors is kiro-cli 2.32.1, whose trigger table knows neither spelling: an unrecognized trigger name makes the engine skip just that hook.
+**Detection**: Info at the `trigger` value for `PermissionRequest` or `permissionRequest`, when the resolved Kiro CLI version is unpinned or pinned below 3.4.0 (silent at 3.4.0+, where the trigger is fully supported). The file is well-formed for current CLI; an install on 3.3.x or older silently skips the hook. The matcher is checked with Pre Tool Use semantics (KR-HK-020 stays silent, KR-HK-027/028/029 apply). Agent-embedded hooks (`.kiro/agents` object key or array `trigger`) get the same info instead of the KR-HK-005 unknown-trigger warning when they target V3. Only command actions run on this trigger; an agent action is left to KR-HK-024's future coverage.
+**Fix**: No auto-fix (keep it only when every environment that reads the file runs Kiro CLI 3.4.0+ in V3 sessions)
+**Source**: kiro.dev/changelog/cli, kiro.dev/docs/hooks/types
+
+<a id="kr-hk-033"></a>
+### KR-HK-033 [LOW] Kiro PreToolUse updatedInput Decision Requires Kiro CLI 3.4.0
+**Requirement**: A PreToolUse hook's STDOUT JSON decision carrying `updatedInput` only rewrites the tool call on Kiro CLI 3.4.0 or later, in V3 sessions. Kiro CLI 3.4.0 ("Hooks That Rewrite Tool Inputs and Answer Permission Prompts", 2026-11-16): "In Kiro CLI 3.4.0 or later, a V3 Hook that exits 0 can also print a JSON decision on STDOUT. Before 3.4.0, the exit code was the only decision a CLI Hook could make." `updatedInput` "replaces the whole `tool_input` object. It is not merged, and later Pre Tool Use Hooks receive the replacement."
+**Detection**: Info at `action.command` when the resolved trigger is PreToolUse, the action type is `command`, and the command text references `updatedInput`, with the Kiro CLI version unpinned or pinned below 3.4.0 (silent at 3.4.0+). On older CLI the JSON is plain output: the rewrite never happens and the exit code alone decides.
+**Fix**: No auto-fix (keep the rewrite only when every environment that reads the file runs Kiro CLI 3.4.0+)
+**Source**: kiro.dev/changelog/cli, kiro.dev/docs/hooks/types
+
 ---
 
 ## KIRO PERMISSIONS RULES
@@ -5467,7 +5481,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Claude Hooks | 32 | 19 | 10 | 3 | 11 |
 | Claude Memory | 15 | 4 | 6 | 5 | 1 |
 | Claude Output Styles | 6 | 2 | 3 | 1 | 2 |
-| Claude Plugins | 23 | 12 | 10 | 1 | 3 |
+| Claude Plugins | 23 | 11 | 11 | 1 | 3 |
 | Claude Marketplaces | 5 | 4 | 0 | 1 | 0 |
 | Claude MCP | 5 | 2 | 2 | 1 | 1 |
 | Claude Settings | 35 | 2 | 32 | 1 | 12 |
@@ -5484,7 +5498,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Gemini Agents | 6 | 4 | 1 | 1 | 0 |
 | Gemini CLI | 29 | 7 | 12 | 10 | 2 |
 | Kiro Agents | 29 | 11 | 15 | 3 | 1 |
-| Kiro Hooks | 29 | 15 | 6 | 8 | 7 |
+| Kiro Hooks | 31 | 15 | 6 | 10 | 7 |
 | Kiro Permissions | 12 | 6 | 5 | 1 | 0 |
 | Kiro MCP | 15 | 7 | 6 | 2 | 0 |
 | Kiro Powers | 18 | 6 | 9 | 3 | 0 |
@@ -5502,7 +5516,7 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 | Windsurf | 16 | 4 | 7 | 5 | 0 |
 | Windsurf Skills | 1 | 0 | 1 | 0 | 1 |
 | XML | 3 | 0 | 3 | 0 | 3 |
-| **TOTAL** | **761** | **291** | **333** | **137** | **125** |
+| **TOTAL** | **763** | **290** | **334** | **139** | **125** |
 
 
 ---
@@ -5530,10 +5544,10 @@ pub fn validate_skill(path: &Path, content: &str) -> Vec<Diagnostic> {
 
 ---
 
-**Total Coverage**: 761 validation rules across 46 categories
+**Total Coverage**: 763 validation rules across 46 categories
 
 **Knowledge Base**: 11,036 lines, 320KB, 75+ sources
-**Certainty**: 291 HIGH, 333 MEDIUM, 137 LOW
+**Certainty**: 290 HIGH, 334 MEDIUM, 139 LOW
 **Auto-Fixable**: 125 rules (16%)
 
 ## Pi Native Configuration

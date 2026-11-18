@@ -1,0 +1,6 @@
+{
+  "version": "v1",
+  "hooks": [
+    { "name": "approve-reads", "trigger": "PermissionRequest", "matcher": "^read_file$", "action": { "type": "command", "command": "answer.sh" } }
+  ]
+}

@@ -62,6 +62,22 @@ pub fn is_compaction_trigger(trigger: &str) -> bool {
     KIRO_V3_HOOK_TRIGGERS_SINCE_3_1_0.contains(&trigger)
 }
 
+/// The trigger kiro-cli 3.4.0 added ("Hooks That Rewrite Tool Inputs and
+/// Answer Permission Prompts", 2026-11-16): `PermissionRequest` runs in a V3
+/// session after Kiro has evaluated its permission policy, immediately before
+/// a tool call would prompt, and its command answers with `allow` or `deny`.
+/// The camelCase alias `permissionRequest` is also accepted. CLI 2.x has no
+/// equivalent, and the mirrored 2.32.1 engine table knows neither spelling,
+/// so both stay out of the canonical list and the validator reports KR-HK-032
+/// instead of KR-HK-012 / KR-HK-005.
+pub const KIRO_V3_HOOK_TRIGGERS_SINCE_3_4_0: &[&str] = &["PermissionRequest", "permissionRequest"];
+
+/// Whether `trigger` names the permission-prompt trigger of kiro-cli 3.4.0
+/// (canonical PascalCase or the documented camelCase alias).
+pub fn is_permission_request_trigger(trigger: &str) -> bool {
+    KIRO_V3_HOOK_TRIGGERS_SINCE_3_4_0.contains(&trigger)
+}
+
 /// Every trigger name the V3 engine accepts (canonical names and aliases).
 /// Kept for validators of agent-embedded array hooks, which share the hook
 /// schema; prefer [`resolve_trigger`], which also returns the canonical name.
@@ -140,6 +156,9 @@ pub enum MatcherSubject {
 pub fn matcher_subject(canonical_trigger: &str) -> MatcherSubject {
     match canonical_trigger {
         "PreToolUse" | "PostToolUse" => MatcherSubject::Tool,
+        // kiro-cli 3.4.0: "The matcher field works as it does for Pre Tool
+        // Use" for PermissionRequest.
+        "PermissionRequest" => MatcherSubject::Tool,
         "PostFileCreate" | "PostFileSave" | "PostFileDelete" => MatcherSubject::FilePath,
         _ => MatcherSubject::None,
     }

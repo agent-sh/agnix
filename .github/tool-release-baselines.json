@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-11-15",
+  "last_updated": "2026-11-18",
   "description": "Support tiers and release baselines for the owner-selected tool roster. Tier is a maintenance priority, not a claim that a validator exists. Entries with validation_status=pending have no tool-specific validation yet. Shared Agent Skills monitoring and the second OpenCode release line are separate entries. validators lists implemented rule modules only. tracked=false entries include a primary publication URL and a manual-monitoring reason. retired_tools preserves old baselines for shipped compatibility checks but is never polled. excluded_tools receives no active support or release monitoring. Optional changes_of_interest describes validated surfaces and relevant configuration changes for issue triage.",
   "tools": {
     "claude-code": {
@@ -21,7 +21,7 @@
         "agents_md"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.325",
+      "last_known_version": "v2.1.327",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -230,7 +230,7 @@
       "github_repo": null,
       "html_url": "https://kiro.dev/changelog/cli/",
       "notes_extractor": "glm",
-      "last_known_version": "3.3.0",
+      "last_known_version": "3.4.0",
       "tracked": true,
       "notes": "Proprietary CLI. Extract the highest published CLI release or patch from canonical /changelog/cli/ release links. Ignore other products, prose and framework versions. Release-note bodies may be upgraded via GLM. The IDE has a separate changelog and is not tracked here.",
       "changes_of_interest": {
@@ -535,7 +535,7 @@
         "mcp"
       ],
       "validation_status": "implemented",
-      "last_known_version": "1.5.9",
+      "last_known_version": "1.5.11",
       "tracked": true,
       "notes": "Native static configuration validation. Read official CLI release notes with agy changelog, documented at https://antigravity.google/docs/cli/commands/changelog; the old /docs/release-notes URL is unavailable. v1.4.10 has six runtime fixes and byte-identical published settings/plugin schemas. Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. No extension or command execution during validation. Latest review: knowledge-base/reviews/2026-11-15-release-triage.md.",
       "html_url": "https://antigravity.google/docs/cli/commands/changelog",

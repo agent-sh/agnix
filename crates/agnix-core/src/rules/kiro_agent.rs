@@ -71,8 +71,8 @@ use crate::schemas::kiro_agent::{
     v2_equivalent_for_v3_tool, v2_tool_group, v2_trigger_for, v3_replacement_for_v2_tool,
 };
 use crate::schemas::kiro_hook_v3::{
-    MatcherSubject, foreign_tool_names, is_compaction_trigger, is_tool_selector,
-    matches_everything, resolve_trigger, tool_matcher_matches_builtin,
+    MatcherSubject, foreign_tool_names, is_compaction_trigger, is_permission_request_trigger,
+    is_tool_selector, matches_everything, resolve_trigger, tool_matcher_matches_builtin,
     trigger_case_insensitive_match,
 };
 use crate::schemas::kiro_permissions::VALID_PERMISSION_CAPABILITIES;
@@ -113,6 +113,7 @@ const RULE_IDS: &[&str] = &[
     "KR-HK-005",
     "KR-HK-006",
     "KR-HK-031",
+    "KR-HK-032",
 ];
 
 /// Directory levels searched below `.kiro/agents` for sibling agents.
@@ -2896,8 +2897,13 @@ impl Ctx<'_> {
             let v3_trigger = resolve_trigger(trigger);
             // KR-HK-031 must survive a disabled KR-HK-005, so the call gate
             // admits compaction triggers even then; the branches inside
-            // check their own rule switches.
-            if !v2_valid && (self.enabled("KR-HK-005") || is_compaction_trigger(trigger)) {
+            // check their own rule switches. KR-HK-032's permission-request
+            // trigger is admitted the same way.
+            if !v2_valid
+                && (self.enabled("KR-HK-005")
+                    || is_compaction_trigger(trigger)
+                    || is_permission_request_trigger(trigger))
+            {
                 self.report_object_trigger(out, map, trigger, v3_trigger);
             }
 
@@ -3112,6 +3118,21 @@ impl Ctx<'_> {
                         t!("rules.kr_hk_031.agent_key", trigger = trigger),
                     )
                     .with_suggestion(t!("rules.kr_hk_031.suggestion")),
+                );
+            }
+        } else if is_permission_request_trigger(trigger) && (self.engines.v3 || self.migration) {
+            // KR-HK-032: object-key permission-request trigger (kiro-cli
+            // 3.4.0+, V3 sessions only). Older CLI skips the hook; info
+            // instead of the KR-HK-005 v3_unknown warning.
+            if self.enabled("KR-HK-032") {
+                out.push(
+                    self.diag(
+                        Info,
+                        "KR-HK-032",
+                        key_offset,
+                        t!("rules.kr_hk_032.agent_key", trigger = trigger),
+                    )
+                    .with_suggestion(t!("rules.kr_hk_032.suggestion")),
                 );
             }
         } else if v3_trigger.is_none() && self.enabled("KR-HK-005") {
@@ -3453,6 +3474,28 @@ impl Ctx<'_> {
                         ),
                     )
                     .with_suggestion(t!("rules.kr_hk_031.suggestion")),
+                );
+            }
+            return;
+        }
+        if is_permission_request_trigger(trigger) {
+            // KR-HK-032: the permission-request trigger (kiro-cli 3.4.0+,
+            // V3 sessions only) also shares the hook schema. Older CLI skips
+            // the hook. Info, not the KR-HK-005 unknown-trigger warning, and
+            // checked before the KR-HK-005 gate for the same reason.
+            if self.enabled("KR-HK-032") && (self.engines.v3 || self.migration) {
+                out.push(
+                    self.diag(
+                        Info,
+                        "KR-HK-032",
+                        self.at(&[K("hooks"), I(index), K("trigger")], Anchor::Value),
+                        t!(
+                            "rules.kr_hk_032.agent_hook",
+                            hook = location,
+                            trigger = trigger
+                        ),
+                    )
+                    .with_suggestion(t!("rules.kr_hk_032.suggestion")),
                 );
             }
             return;
@@ -5327,6 +5370,64 @@ mod tests {
         let v2_only = check_rule_disabled("a.json", &object, Some("2.32"), "KR-HK-005");
         assert!(
             v2_only.rule("KR-HK-005").is_empty() && v2_only.rule("KR-HK-031").is_empty(),
+            "{:#?}",
+            v2_only.diagnostics
+        );
+    }
+
+    #[test]
+    fn permission_request_triggers_in_agent_hooks_get_kr_hk_032() {
+        // V3-only agent (array hooks and the permissions field are V3): both
+        // the object-key and the array form of the kiro-cli 3.4.0 trigger get
+        // the KR-HK-032 info, not the KR-HK-005 unknown-trigger warning.
+        let object = json(serde_json::json!({
+            "name": "a",
+            "permissions": {"rules": []},
+            "hooks": {"PermissionRequest": [{"command": "answer.sh"}]}
+        }));
+        let run = check_with("a.json", &object, Some("3.0"), &[]);
+        assert_eq!(run.rule("KR-HK-032").len(), 1, "{:#?}", run.diagnostics);
+        assert!(run.rule("KR-HK-005").is_empty(), "{:#?}", run.diagnostics);
+
+        // The camelCase alias the docs also accept takes the same path.
+        let alias = json(serde_json::json!({
+            "name": "a",
+            "permissions": {"rules": []},
+            "hooks": {"permissionRequest": [{"command": "answer.sh"}]}
+        }));
+        let run = check_with("a.json", &alias, Some("3.0"), &[]);
+        assert_eq!(run.rule("KR-HK-032").len(), 1, "{:#?}", run.diagnostics);
+
+        let array = json(serde_json::json!({
+            "name": "a",
+            "hooks": [
+                {"name": "approve", "trigger": "PermissionRequest", "matcher": "^read_file$", "action": {"type": "command", "command": "answer.sh"}}
+            ]
+        }));
+        let run = check("a.json", &array);
+        assert_eq!(run.rule("KR-HK-032").len(), 1, "{:#?}", run.diagnostics);
+        assert!(run.rule("KR-HK-005").is_empty(), "{:#?}", run.diagnostics);
+
+        // A disabled KR-HK-005 must not silence KR-HK-032 on either path.
+        let object_run = check_rule_disabled("a.json", &object, Some("3.0"), "KR-HK-005");
+        assert_eq!(
+            object_run.rule("KR-HK-032").len(),
+            1,
+            "{:#?}",
+            object_run.diagnostics
+        );
+        let array_run = check_rule_disabled("a.json", &array, None, "KR-HK-005");
+        assert_eq!(
+            array_run.rule("KR-HK-032").len(),
+            1,
+            "{:#?}",
+            array_run.diagnostics
+        );
+
+        // A V2-only pinned agent gets neither the info nor a fall-through.
+        let v2_only = check_rule_disabled("a.json", &object, Some("2.32"), "KR-HK-005");
+        assert!(
+            v2_only.rule("KR-HK-005").is_empty() && v2_only.rule("KR-HK-032").is_empty(),
             "{:#?}",
             v2_only.diagnostics
         );

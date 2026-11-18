@@ -530,7 +530,13 @@ impl Validator for PluginValidator {
         }
 
         // CC-PL-010: homepage "Must parse as a URL, or the plugin fails to
-        // load". A URL that parses but isn't http(s) only gets a note.
+        // load" (manifest reference). Claude Code v2.1.326 changed the
+        // failure: "Changed enabled plugins that were refused for a
+        // malformed plugin.json display field: they now load, with their
+        // hooks and MCP servers", with a note naming the ignored field, so
+        // the practical effect is a broken documentation link. Warning, like
+        // the other display-field rule (CC-PL-009). A URL that parses but
+        // isn't http(s) only gets a note.
         if config.is_rule_enabled("CC-PL-010") {
             if let Some(homepage_val) = raw_value.get("homepage") {
                 let (line, col) = locator.value_pos(&[Seg::Key("homepage")]);
@@ -558,7 +564,7 @@ impl Validator for PluginValidator {
                     }
                     _ => {
                         diagnostics.push(
-                            Diagnostic::error(
+                            Diagnostic::warning(
                                 path.to_path_buf(),
                                 line,
                                 col,
@@ -4195,7 +4201,9 @@ mod tests_claude_ext {
         let (_t, diagnostics) = plugin(r#"{"name": "p", "homepage": "not a url"}"#, &[]);
         let h = hits(&diagnostics, "CC-PL-010");
         assert_eq!(h.len(), 1);
-        assert_eq!(h[0].level, DiagnosticLevel::Error);
+        // Warning since Claude Code v2.1.326 ignores a malformed display
+        // field and loads the plugin instead of refusing it.
+        assert_eq!(h[0].level, DiagnosticLevel::Warning);
         assert_eq!(h[0].line, 1);
         let (_t, diagnostics) = plugin(r#"{"name": "p", "homepage": "mailto:x@y.z"}"#, &[]);
         assert_eq!(

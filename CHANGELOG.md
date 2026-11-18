@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- KR-HK-032 (Info): the Kiro `PermissionRequest` trigger (Kiro CLI 3.4.0,
+  "Hooks That Rewrite Tool Inputs and Answer Permission Prompts") needs
+  Kiro CLI 3.4.0 in a V3 session; an older CLI (3.3.x and earlier) skips
+  the hook, and the camelCase alias `permissionRequest` is accepted on
+  3.4.0+. Reported when the Kiro version is unpinned or pinned below
+  3.4.0; the matcher is checked with Pre Tool Use semantics, and
+  agent-embedded hooks get the info instead of the KR-HK-005
+  unknown-trigger warning (#1850).
+- KR-HK-033 (Info): a PreToolUse command action whose STDOUT decision
+  carries `updatedInput` rewrites the tool call's inputs only on Kiro CLI
+  3.4.0+ ("Before 3.4.0, the exit code was the only decision a CLI Hook
+  could make"); on older CLI the JSON is plain output and the rewrite
+  never happens (#1850).
 - KR-SET-013 (Warning): Kiro CLI 3.3.0's
   `compaction.autoCompactionThreshold` must be a number from 0 to 100 with
   at most two decimal places ("`kiro-cli settings` accepts 0 to 100 with
@@ -24,6 +37,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Claude Code v2.1.326/v2.1.327 (#1849): CC-PL-010 drops from
+  HIGH/error to MEDIUM/warning and CC-PL-009's detection note records
+  that v2.1.326 ignores a malformed `plugin.json` display field such as
+  `author` or `homepage` with a note instead of refusing the plugin
+  ("they now load, with their hooks and MCP servers"); the manifest
+  reference table still carries the older "fails to load" sentence.
+  v2.1.327 changes no validated surface (baseline-only). The
+  `--allowedTools` startup warning, the settings depth cap and the HTTP
+  hook `Content-Length`/`Transfer-Encoding` change touch nothing agnix
+  validates.
+- Spec drift (#1851): all four drifted sources re-fetched under the
+  sentinel recipe (live hashes reproduce the issue values byte for
+  byte) and none changes a rule: opencode-rules is prose-level (the
+  CLAUDE.md fallback, precedence list and "doesn't automatically parse
+  file references" claims behind OC-AGM-003 and XP-001..006 are
+  intact), pi-models changed one `supportsMessageThreads` description
+  word (constraint-identical to the vendored v1.5.2 skeleton), and the
+  two Antigravity schemas are annotation-only against the vendored
+  copies (no key, type or constraint change). All four baseline hashes
+  and `last_checked` refresh.
+- Advance the 2026-11-18 baselines to the live markers (#1848, #1849,
+  #1850): Claude Code v2.1.327 (covers v2.1.326), Kiro CLI 3.4.0 and
+  Antigravity CLI 1.5.11 (covers 1.5.10; the changelog source remains
+  a version marker only).
 - Claude Code v2.1.323/v2.1.325 (#1827, #1845): CC-PL-021 no longer
   treats `subagentStatusLine` as a key that takes effect (the setting is
   removed; only the deprecated `agent` still applies), CC-PL-017 accepts
