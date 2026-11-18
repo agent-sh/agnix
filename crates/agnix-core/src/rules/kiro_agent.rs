@@ -60,7 +60,9 @@ use serde_json::{Map, Value};
 use crate::config::PerFileLintConfig;
 use crate::diagnostics::{Diagnostic, DiagnosticLevel, Fix};
 use crate::parsers::frontmatter::{check_yaml_depth, split_frontmatter};
-use crate::rules::kiro_engine::{KiroEngine, KiroEngines, engines_for, pinned_engine};
+use crate::rules::kiro_engine::{
+    KiroEngine, KiroEngines, engines_for, kiro_cli_below, pinned_engine,
+};
 use crate::rules::{Validator, ValidatorMetadata, json_type_name, line_col_at_offset};
 use crate::schemas::kiro_agent::{
     ARRAY_HOOK_ENTRY_FIELDS, CLAUDE_CODE_MODEL_ALIASES, DISPATCH_KINDS, FieldOrigin,
@@ -3123,8 +3125,9 @@ impl Ctx<'_> {
         } else if is_permission_request_trigger(trigger) && (self.engines.v3 || self.migration) {
             // KR-HK-032: object-key permission-request trigger (kiro-cli
             // 3.4.0+, V3 sessions only). Older CLI skips the hook; info
-            // instead of the KR-HK-005 v3_unknown warning.
-            if self.enabled("KR-HK-032") {
+            // instead of the KR-HK-005 v3_unknown warning. Silent when the
+            // CLI is pinned to 3.4.0+, like the standalone-file rule.
+            if self.enabled("KR-HK-032") && kiro_cli_below(self.config, (3, 4, 0)) {
                 out.push(
                     self.diag(
                         Info,
@@ -3482,8 +3485,12 @@ impl Ctx<'_> {
             // KR-HK-032: the permission-request trigger (kiro-cli 3.4.0+,
             // V3 sessions only) also shares the hook schema. Older CLI skips
             // the hook. Info, not the KR-HK-005 unknown-trigger warning, and
-            // checked before the KR-HK-005 gate for the same reason.
-            if self.enabled("KR-HK-032") && (self.engines.v3 || self.migration) {
+            // checked before the KR-HK-005 gate for the same reason. Silent
+            // when the CLI is pinned to 3.4.0+, like the standalone rule.
+            if self.enabled("KR-HK-032")
+                && (self.engines.v3 || self.migration)
+                && kiro_cli_below(self.config, (3, 4, 0))
+            {
                 out.push(
                     self.diag(
                         Info,
@@ -5431,6 +5438,20 @@ mod tests {
             "{:#?}",
             v2_only.diagnostics
         );
+
+        // Pinned to Kiro CLI 3.4.0+ the trigger is fully supported: the
+        // agent-embedded forms are silent too, like the standalone files.
+        for pinned in ["3.4.0", "v3.4.1", "4.1"] {
+            let run = check_with("a.json", &object, Some(pinned), &[]);
+            assert!(
+                run.rule("KR-HK-032").is_empty() && run.rule("KR-HK-005").is_empty(),
+                "{pinned}: {:#?}",
+                run.diagnostics
+            );
+        }
+        // A major-only pin ("3") proves no minor version, so it reports.
+        let run = check_with("a.json", &object, Some("3"), &[]);
+        assert_eq!(run.rule("KR-HK-032").len(), 1, "{:#?}", run.diagnostics);
     }
 
     #[test]

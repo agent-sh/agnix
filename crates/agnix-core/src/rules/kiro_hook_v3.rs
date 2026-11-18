@@ -35,7 +35,7 @@
 //! <https://kiro.dev/docs/cli/v3/hooks-migration/>, and the V3 engine bundled
 //! with kiro-cli 2.32.1 (hook file loader and zod schema).
 
-use super::kiro_engine::{KiroEngine, pinned_engine};
+use super::kiro_engine::{KiroEngine, kiro_cli_below, pinned_engine};
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, DiagnosticLevel, Fix},
@@ -1481,17 +1481,6 @@ impl Ctx<'_> {
     }
 }
 
-/// Whether the pinned Kiro CLI version is below `minimum`, counting an
-/// unpinned or unparseable version as below: the version-gated info rules
-/// fire in exactly those cases, because the file may then be read by an
-/// older CLI.
-fn kiro_cli_below(config: &PerFileLintConfig<'_>, minimum: (u64, u64, u64)) -> bool {
-    config
-        .get_kiro_version()
-        .and_then(|version| semver::Version::parse(version.trim()).ok())
-        .is_none_or(|parsed| parsed < semver::Version::new(minimum.0, minimum.1, minimum.2))
-}
-
 /// A `confirm` string field that is missing (when required), not a string,
 /// or empty when `non_empty` (zod `min(1)`).
 fn confirm_string_problem(
@@ -1923,10 +1912,27 @@ mod tests {
             ))),
             ["KR-HK-032", "KR-HK-027"]
         );
-        // Pinned to Kiro CLI 3.4.0+ the trigger is fully supported: silent.
+        // Pinned to Kiro CLI 3.4.0+ the trigger is fully supported: silent,
+        // including the loose pin spellings pinned_engine accepts.
+        for pinned in ["3.4.0", "v3.4.1", "3.4", "4.1"] {
+            let config = LintConfig::builder()
+                .tool_versions(crate::config::ToolVersions {
+                    kiro: Some(pinned.into()),
+                    ..Default::default()
+                })
+                .build()
+                .unwrap();
+            let diagnostics = KiroV3HookValidator.validate(
+                Path::new(".kiro/hooks/a.json"),
+                &hook_doc(serde_json::json!({"name": "a", "trigger": "PermissionRequest", "matcher": "^read_file$", "action": {"type": "command", "command": "echo"}})),
+                &config,
+            );
+            assert!(diagnostics.is_empty(), "{pinned}: {diagnostics:?}");
+        }
+        // A major-only pin proves no minor version, so it reports.
         let config = LintConfig::builder()
             .tool_versions(crate::config::ToolVersions {
-                kiro: Some("3.4.0".into()),
+                kiro: Some("3".into()),
                 ..Default::default()
             })
             .build()
@@ -1936,7 +1942,7 @@ mod tests {
             &hook_doc(serde_json::json!({"name": "a", "trigger": "PermissionRequest", "matcher": "^read_file$", "action": {"type": "command", "command": "echo"}})),
             &config,
         );
-        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        assert_eq!(rules(&diagnostics), ["KR-HK-032"]);
         // The engine lookup is exact: misspellings stay unknown triggers.
         assert_eq!(
             rules(&validate(&hook_doc(

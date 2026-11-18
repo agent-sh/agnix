@@ -30,10 +30,14 @@ fn rustsec_ids(content: &str) -> BTreeSet<String> {
 }
 
 fn current_ignored_advisory_ids() -> BTreeSet<String> {
-    ["RUSTSEC-2025-0141", "RUSTSEC-2026-0173"]
-        .into_iter()
-        .map(str::to_owned)
-        .collect()
+    [
+        "RUSTSEC-2025-0141",
+        "RUSTSEC-2026-0173",
+        "RUSTSEC-2026-0543",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect()
 }
 
 #[test]

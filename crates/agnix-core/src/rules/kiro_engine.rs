@@ -13,7 +13,7 @@
 //!   (`toolsSettings`, `allowedTools`, `toolAliases`, object-form hooks,
 //!   `timeout_ms`) targets V2, and a file with both or neither targets both.
 
-use crate::config::LintConfig;
+use crate::config::{LintConfig, PerFileLintConfig};
 
 /// A Kiro CLI agent engine.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -78,6 +78,38 @@ pub(crate) fn pinned_engine(config: &LintConfig) -> Option<KiroEngine> {
     } else {
         KiroEngine::V2
     })
+}
+
+/// Whether the pinned Kiro CLI version is below `minimum`, counting an
+/// unpinned or unrecognizable version as below: the version-gated info rules
+/// (KR-HK-032/033) fire in exactly those cases, because the file may then be
+/// read by an older CLI. Pins are parsed the way [`pinned_engine`] reads them
+/// (an optional `v`/`V` prefix, missing components defaulting to 0, build and
+/// pre-release suffixes ignored), so "3", "v3.3.2" and "4.1" all resolve. A
+/// pin with only a major version ("3") does not prove the minor is present,
+/// so it counts as below "3.4.0".
+pub(crate) fn kiro_cli_below(config: &PerFileLintConfig<'_>, minimum: (u64, u64, u64)) -> bool {
+    let Some(version) = config.get_kiro_version() else {
+        return true;
+    };
+    let core = version
+        .trim()
+        .trim_start_matches(['v', 'V'])
+        .split(['-', '+'])
+        .next()
+        .unwrap_or("");
+    let mut components = core.split('.');
+    let mut next_component = || {
+        components
+            .next()
+            .map(|segment| {
+                let digits: String = segment.chars().filter(char::is_ascii_digit).collect();
+                digits.parse().unwrap_or(0)
+            })
+            .unwrap_or(0)
+    };
+    let parsed = (next_component(), next_component(), next_component());
+    parsed < minimum
 }
 
 /// The engines a file is checked against, given whether it has V2-only and
