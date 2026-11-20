@@ -13,7 +13,7 @@ keywords: ["KR-MCP-007", "invalid kiro mcp server field type", "kiro mcp", "vali
 - **Category**: `Kiro MCP`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-20`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["KR-MCP-007", "invalid kiro mcp server field type", "kiro mcp", "vali
 
 - https://kiro.dev/docs/mcp/configuration/
 - https://kiro.dev/docs/custom-agents/configuration-reference/
+- https://kiro.dev/changelog/cli/
 
 ## Test Coverage Metadata
 

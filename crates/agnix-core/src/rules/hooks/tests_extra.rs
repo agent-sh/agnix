@@ -253,6 +253,19 @@ fn cc_hk_029_on_failure_cases() {
             Some(DiagnosticLevel::Info),
         ),
         (
+            // v2.1.328: onFailure works on mcp_tool hooks.
+            "PreToolUse",
+            serde_json::json!({"type": "mcp_tool", "server": "s", "tool": "t", "onFailure": "block"}),
+            None,
+        ),
+        (
+            // Exit code 2 on Stop already sends Claude back to work, so a
+            // failed mcp_tool hook cannot block it either.
+            "Stop",
+            serde_json::json!({"type": "mcp_tool", "server": "s", "tool": "t", "onFailure": "block"}),
+            Some(DiagnosticLevel::Info),
+        ),
+        (
             "PreToolUse",
             serde_json::json!({"type": "command", "command": "x", "async": true, "onFailure": "block"}),
             Some(DiagnosticLevel::Info),
@@ -287,6 +300,45 @@ fn cc_hk_029_version_pinned_below_2_1_295() {
     let hits = rule(&diagnostics, "CC-HK-029");
     assert_eq!(hits.len(), 1, "{diagnostics:?}");
     assert!(hits[0].message.contains("2.1.295"));
+}
+
+#[test]
+fn cc_hk_029_mcp_tool_version_pinned_below_2_1_328() {
+    // v2.1.328 added onFailure for mcp_tool hooks; a pin between 2.1.295 and
+    // 2.1.327 keeps the generic onFailure support but not the mcp_tool one.
+    for pin in ["2.1.300", "2.1.327"] {
+        let mut config = LintConfig::default();
+        config.tool_versions_mut().claude_code = Some(pin.to_string());
+        let diagnostics = HooksValidator.validate(
+            Path::new("settings.json"),
+            &settings(
+                "PreToolUse",
+                Some("Bash"),
+                serde_json::json!({"type": "mcp_tool", "server": "s", "tool": "t", "onFailure": "block"}),
+            ),
+            &config,
+        );
+        let hits = rule(&diagnostics, "CC-HK-029");
+        assert_eq!(hits.len(), 1, "{pin}: {diagnostics:?}");
+        assert!(hits[0].message.contains("2.1.328"), "{pin}");
+    }
+    // 2.1.328 itself is fine, and a command hook on the same pin is too.
+    let mut config = LintConfig::default();
+    config.tool_versions_mut().claude_code = Some("2.1.328".to_string());
+    for hook in [
+        serde_json::json!({"type": "mcp_tool", "server": "s", "tool": "t", "onFailure": "block"}),
+        serde_json::json!({"type": "command", "command": "x", "onFailure": "block"}),
+    ] {
+        let diagnostics = HooksValidator.validate(
+            Path::new("settings.json"),
+            &settings("PreToolUse", Some("Bash"), hook.clone()),
+            &config,
+        );
+        assert!(
+            rule(&diagnostics, "CC-HK-029").is_empty(),
+            "{hook}: {diagnostics:?}"
+        );
+    }
 }
 
 // ===== CC-HK-030: unquoted placeholders, relative scripts =====

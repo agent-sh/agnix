@@ -2558,9 +2558,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/hooks"
+          "https://code.claude.com/docs/en/hooks",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.328"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-20",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.295"
@@ -5871,9 +5872,10 @@
           "https://developers.openai.com/codex/config-reference",
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration",
-          "https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-09-14",
+        "verified_on": "2026-11-20",
         "applies_to": {
           "tool": "codex"
         },
@@ -6046,9 +6048,11 @@
           "https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json",
           "https://github.com/openai/codex/blob/rust-v0.165.0/codex-rs/core/config.schema.json",
           "https://github.com/openai/codex/blob/rust-v0.167.2/codex-rs/core/config.schema.json",
-          "https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/rust-v0.170.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-11-15",
+        "verified_on": "2026-11-20",
         "applies_to": {
           "tool": "codex"
         },
@@ -14220,9 +14224,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://kiro.dev/docs/mcp/configuration/",
-          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/changelog/cli/"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-20",
         "applies_to": {
           "tool": "kiro"
         },
@@ -15121,7 +15126,7 @@
           "https://kiro.dev/docs/reference/settings/",
           "https://kiro.dev/changelog/cli/"
         ],
-        "verified_on": "2026-11-04",
+        "verified_on": "2026-11-20",
         "applies_to": {
           "tool": "kiro"
         },
@@ -21583,7 +21588,7 @@
           "https://docs.x.ai/build/settings/zdr-video-storage",
           "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-tools/src/implementations/grok_build/video_gen/mod.rs"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-20",
         "applies_to": {
           "tool": "grok-code",
           "version_range": ">=1.0.70"
@@ -21701,9 +21706,10 @@
         "source_type": "vendor_code",
         "source_urls": [
           "https://docs.x.ai/build/features/sandbox",
-          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-config/src/sandbox_mode.rs"
+          "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-config/src/sandbox_mode.rs",
+          "https://x.ai/changelog/build"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-20",
         "applies_to": {
           "tool": "grok-code",
           "version_range": ">=1.0.70"
@@ -21755,9 +21761,10 @@
         "source_type": "vendor_code",
         "source_urls": [
           "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-config/src/mcp_server_config.rs",
-          "https://docs.x.ai/build/features/mcp-servers"
+          "https://docs.x.ai/build/features/mcp-servers",
+          "https://x.ai/changelog/build"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-20",
         "applies_to": {
           "tool": "grok-code",
           "version_range": ">=1.0.70"

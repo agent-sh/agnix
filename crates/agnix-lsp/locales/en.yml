@@ -3021,7 +3021,8 @@ rules:
     no_effect: 'onFailure at %{location} has no effect: %{reason}'
     no_effect_suggestion: Remove onFailure, or move the check to a hook where a failure can block
     version: it requires Claude Code v2.1.295 or later, and the pinned version is %{version}
-    wrong_type: it applies only to command and http hooks, not %{hook_type} hooks
+    version_mcp_tool: onFailure on mcp_tool hooks requires Claude Code v2.1.328 or later, and the pinned version is %{version}
+    wrong_type: it applies only to command, http and mcp_tool hooks, not %{hook_type} hooks
     non_blocking_event: exit code 2 on %{event} already sends Claude back to work, so a failed hook can't block it
     background: background hooks that set async or asyncRewake can't block
   cc_hk_030:

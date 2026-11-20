@@ -122,6 +122,103 @@ fn codex_0169_accepts_tagged_feature_flags_and_tui_keys() {
 }
 
 #[test]
+fn codex_0171_accepts_tagged_feature_flags_and_tui_key() {
+    // The tagged rust-v0.170.0 schema adds multi_environment_mcp to
+    // [features]; rust-v0.171.0 adds eight more flags plus the
+    // tui.status_line_provider preference. None are named in the release
+    // notes, so the allowlists behind CDX-CFG-011 and CDX-CFG-006 are
+    // reconciled against the tagged schemas.
+    let features = serde_json::json!({
+        "catalog_apps_instructions": true,
+        "file_backed_tool_audio": true,
+        "guardian_nested_approval_context": true,
+        "mcp_shared_repl_cwd": true,
+        "multi_environment_mcp": true,
+        "per_environment_context": true,
+        "restored_history_prewarm": true,
+        "safe_image_decoder": true,
+        "utc_environment_date": true
+    });
+    let tui = serde_json::json!({"status_line_provider": "builtin"});
+    let value = serde_json::json!({"features": features, "tui": tui});
+    for (file, content) in [
+        (".codex/config.json", value.to_string()),
+        (".codex/config.yaml", serde_yaml::to_string(&value).unwrap()),
+        (".codex/config.toml", toml::to_string(&value).unwrap()),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(file),
+            &content,
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(diagnostics.is_empty(), "{file}: {diagnostics:?}");
+    }
+}
+
+#[test]
+fn grok_1_0_89_accepts_changelog_reconciled_config_surfaces() {
+    // 1.0.79 adds `/vim-mode all` (keys.vim = "all"), 1.0.82 the `minimal`
+    // built-in sandbox profile, 1.0.88 the MCP `headers_helper` command
+    // (x.ai changelog). The reconciled contract accepts all three.
+    let diagnostics = validate_content(
+        Path::new(".grok/config.toml"),
+        "[mcp_servers.helper]\nurl = \"https://mcp.example.com/mcp\"\nheaders_helper = \"get-headers.sh\"\n",
+        &LintConfig::default(),
+        &ValidatorRegistry::with_defaults(),
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+
+    // keys.vim = "all" no longer violates the enum (GRK-CFG-003); the
+    // project-file warning for the [keys] section (GRK-CFG-002) is expected.
+    for vim in ["all", "nav", "off"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/config.toml"),
+            &format!("[keys]\nvim = \"{vim}\"\n"),
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "GRK-CFG-003"),
+            "{vim}: {diagnostics:?}"
+        );
+    }
+    let diagnostics = validate_content(
+        Path::new(".grok/config.toml"),
+        "[keys]\nvim = \"bogus\"\n",
+        &LintConfig::default(),
+        &ValidatorRegistry::with_defaults(),
+    );
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "GRK-CFG-003"),
+        "{diagnostics:?}"
+    );
+
+    // A wrong-typed headers_helper is GRK-MCP-001's finding, and a custom
+    // sandbox profile can no longer redefine the 1.0.82 `minimal` built-in.
+    let diagnostics = validate_content(
+        Path::new(".grok/config.toml"),
+        "[mcp_servers.helper]\nurl = \"https://mcp.example.com/mcp\"\nheaders_helper = 42\n",
+        &LintConfig::default(),
+        &ValidatorRegistry::with_defaults(),
+    );
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "GRK-MCP-001"),
+        "{diagnostics:?}"
+    );
+    let diagnostics = validate_content(
+        Path::new(".grok/sandbox.toml"),
+        "[profiles.minimal]\nextends = \"workspace\"\n",
+        &LintConfig::default(),
+        &ValidatorRegistry::with_defaults(),
+    );
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "GRK-SBX-001"),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
 fn opencode_223_accepts_separate_managed_policy_actions() {
     for version in [None, Some("2.2.3")] {
         let config = LintConfig::builder()

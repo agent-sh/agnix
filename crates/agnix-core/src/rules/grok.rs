@@ -114,8 +114,17 @@ impl Validator for GrokValidator {
                 );
                 if let Some(profiles) = value.get("profiles").and_then(Value::as_object) {
                     for name in profiles.keys() {
-                        if ["off", "workspace", "read-only", "strict", "devbox"]
-                            .contains(&name.as_str())
+                        // 1.0.82 adds the `minimal` built-in profile to the
+                        // reserved names (x.ai changelog, v1.0.82).
+                        if [
+                            "off",
+                            "workspace",
+                            "read-only",
+                            "strict",
+                            "devbox",
+                            "minimal",
+                        ]
+                        .contains(&name.as_str())
                         {
                             push(
                                 &mut cx,
@@ -529,9 +538,15 @@ fn mcp_server(cx: &mut JsonCx<'_>, source: &Source<'_>, server: &Value, path: &s
     }
     for (key, entry) in object {
         let valid = match key.as_str() {
-            "command" | "url" | "cwd" | "bearer_token_env_var" | "bearer_token_file" => {
-                entry.is_string()
-            }
+            // `headers_helper` (1.0.88): "MCP servers can now specify a
+            // headers_helper command to provide dynamic request headers"
+            // (x.ai changelog, v1.0.88).
+            "command"
+            | "url"
+            | "cwd"
+            | "bearer_token_env_var"
+            | "bearer_token_file"
+            | "headers_helper" => entry.is_string(),
             "args" => strings(entry),
             "env" | "headers" => string_map(entry),
             "enabled" => entry.is_boolean(),

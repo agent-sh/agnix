@@ -863,3 +863,32 @@ fn test_metadata() {
     assert_eq!(metadata.rule_ids, RULE_IDS);
     assert_eq!(metadata.rule_ids.len(), 15);
 }
+
+// ===== oauth.mode (Kiro CLI 3.5.0) =====
+
+#[test]
+fn test_kr_mcp_007_oauth_mode_string_allowed() {
+    // 3.5.0: "oauth.mode chooses between a browser sign-in and your
+    // organization's sign-in ... Kiro CLI V2 sessions ignore it"
+    // (MCP configuration reference). The three documented values pass.
+    for mode in ["browser", "enterprise", "auto"] {
+        let content = server(&format!(
+            r#""url": "https://example.com/mcp", "oauth": {{"mode": "{mode}"}}"#
+        ));
+        assert!(
+            validate(&content).is_empty(),
+            "{mode}: {:#?}",
+            validate(&content)
+        );
+    }
+}
+
+#[test]
+fn test_kr_mcp_007_oauth_mode_wrong_type_is_v3_only() {
+    // V2 sessions ignore oauth.mode, so only a pinned V3 engine reports the
+    // wrong type; an unpinned file checks both engines and V3 fails it.
+    let content = server(r#""url": "https://example.com/mcp", "oauth": {"mode": 3}"#);
+    let d = only(&validate(&content), "KR-MCP-007");
+    assert!(d.message.contains("oauth.mode"), "{d:?}");
+    assert!(d.message.contains("a string"), "{d:?}");
+}

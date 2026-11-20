@@ -37,6 +37,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Address PR #1862 review findings against the 2026-11-20 baseline sweep,
+  all verified against live vendor sources on 2026-11-20:
+  - Grok Code: the derived contract and NATIVE-TOOL-CONTRACTS pins advance
+    from CLI 1.0.77 to 1.0.89 after an item-by-item triage of every x.ai
+    changelog entry from 1.0.78 through 1.0.89. Three items touch a
+    validated surface: `keys.vim = "all"` joins the enum ("`/vim-mode all`
+    enables full Vim editing inside the agent prompt", 1.0.79, GRK-CFG-003),
+    the `minimal` sandbox builtin joins GRK-SBX-001's reserved names
+    ("New `minimal` sandbox profile", 1.0.82), and the MCP `headers_helper`
+    string command joins the typed server fields ("MCP servers can now
+    specify a `headers_helper` command", 1.0.88, GRK-MCP-001). Every other
+    item in range is TUI/dashboard/runtime or installer work with no static
+    config surface; `workspace_write` (1.0.82 custom sandbox profiles)
+    stays open-typed because no vendor source documents its type yet.
+  - Codex CLI: the closed allow-lists behind CDX-CFG-011 and CDX-CFG-006
+    are reconciled against the tagged rust-v0.170.0 and rust-v0.171.0
+    config.schema.json (diffed against the 0.169.0 set pinned on
+    2026-11-15; none of the additions are named in release notes). Nine
+    `[features]` flags are accepted (`multi_environment_mcp` in 0.170.0;
+    `catalog_apps_instructions`, `file_backed_tool_audio`,
+    `guardian_nested_approval_context`, `mcp_shared_repl_cwd`,
+    `per_environment_context`, `restored_history_prewarm`,
+    `safe_image_decoder` and `utc_environment_date` in 0.171.0) plus the
+    `tui.status_line_provider` preference, with a TOML/JSON/YAML
+    regression and evidence repinned to the tagged schemas.
+  - Kiro CLI 3.5.0: `auth.portalUrl` joins the known-settings list as a
+    string ("Set `auth.portalUrl` and `kiro-cli login` opens that portal in
+    your browser instead of the default one", CLI changelog; the settings
+    reference table has not caught up yet), and MCP `oauth.mode` joins
+    KR-MCP-007's typed `oauth.*` fields as a string (`browser`/`enterprise`
+    /`auto`; "Kiro CLI V2 sessions ignore it", so the finding is V3-only).
+    The `AuthPortalUrl` policy, `auth_portal_url` in managed-settings.json
+    and the top-level `identityProvider` block are documented no-rule-change
+    surfaces: KR-PM validates only `rules`/`policies`, Kiro ignores extra
+    managed `settings` keys by design, and the settings mcp.json variant
+    has no unknown-top-level-key rule.
+  - Claude Code v2.1.328: CC-HK-029 accepts `onFailure` on `mcp_tool`
+    hooks ("Added `onFailure: "block"` for `mcp_tool` hooks, as for command
+    and HTTP hooks", tagged release notes published 2026-11-19; the hooks
+    reference "MCP tool hook fields" table has not caught up yet). A pinned
+    version below 2.1.328 keeps the no-effect note, now naming the
+    mcp_tool minimum.
 - Advance the 2026-11-20 baselines to the live markers (#1852, #1853,
   #1855, #1856, #1857, #1858, #1859, #1860, #1861): Claude Code v2.1.329
   (covers v2.1.328), Codex CLI rust-v0.171.0 (covers rust-v0.170.0),

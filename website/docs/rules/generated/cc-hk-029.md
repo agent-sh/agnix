@@ -13,7 +13,7 @@ keywords: ["CC-HK-029", "invalid or ineffective onfailure", "claude hooks", "val
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-20`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-HK-029", "invalid or ineffective onfailure", "claude hooks", "val
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/hooks
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.328
 
 ## Test Coverage Metadata
 

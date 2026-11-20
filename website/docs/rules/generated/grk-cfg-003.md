@@ -13,7 +13,7 @@ keywords: ["GRK-CFG-003", "invalid grok setting value", "grok", "validation", "a
 - **Category**: `grok`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-20`
 
 ## Applicability
 

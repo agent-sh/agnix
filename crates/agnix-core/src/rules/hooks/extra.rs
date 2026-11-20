@@ -135,7 +135,7 @@ fn matcher_path(event: &str, matcher_idx: usize) -> Vec<PathSeg> {
 
 /// The pinned Claude Code version when it is older than 2.`minor`.`patch`.
 /// Only used for features released within the last few months (onFailure,
-/// v2.1.295, 2026-10-08).
+/// v2.1.295, 2026-10-08; onFailure on mcp_tool hooks, v2.1.328, 2026-11-19).
 fn version_below(config: &PerFileLintConfig<'_>, minor: u64, patch: u64) -> Option<String> {
     let pinned = config.get_claude_code_version()?;
     let version = semver::Version::parse(pinned.trim_start_matches('v')).ok()?;
@@ -478,7 +478,17 @@ fn check_handler(
         } else {
             let reason = if let Some(version) = version_below(config, 1, 295) {
                 Some(t!("rules.cc_hk_029.version", version = version.as_str()))
-            } else if !matches!(hook_type, "command" | "http") {
+            } else if hook_type == "mcp_tool"
+                && let Some(version) = version_below(config, 1, 328)
+            {
+                // v2.1.328: "Added `\"onFailure\": \"block\"` for `mcp_tool`
+                // hooks, as for command and HTTP hooks: a hook whose call
+                // fails blocks the action" (tagged release notes).
+                Some(t!(
+                    "rules.cc_hk_029.version_mcp_tool",
+                    version = version.as_str()
+                ))
+            } else if !matches!(hook_type, "command" | "http" | "mcp_tool") {
                 Some(t!("rules.cc_hk_029.wrong_type", hook_type = hook_type))
             } else if NO_ON_FAILURE_EVENTS.contains(&event) {
                 Some(t!("rules.cc_hk_029.non_blocking_event", event = event))

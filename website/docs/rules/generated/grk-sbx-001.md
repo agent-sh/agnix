@@ -13,7 +13,7 @@ keywords: ["GRK-SBX-001", "redefined grok sandbox builtin", "grok", "validation"
 - **Category**: `grok`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-20`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["GRK-SBX-001", "redefined grok sandbox builtin", "grok", "validation"
 
 - https://docs.x.ai/build/features/sandbox
 - https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-config/src/sandbox_mode.rs
+- https://x.ai/changelog/build
 
 ## Test Coverage Metadata
 

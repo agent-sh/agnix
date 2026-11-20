@@ -13,7 +13,7 @@ keywords: ["GRK-MCP-001", "invalid grok mcp server", "grok", "validation", "agni
 - **Category**: `grok`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-20`
 
 ## Applicability
 
@@ -25,6 +25,7 @@ keywords: ["GRK-MCP-001", "invalid grok mcp server", "grok", "validation", "agni
 
 - https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-config/src/mcp_server_config.rs
 - https://docs.x.ai/build/features/mcp-servers
+- https://x.ai/changelog/build
 
 ## Test Coverage Metadata
 

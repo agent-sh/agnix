@@ -1308,12 +1308,13 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 <a id="cc-hk-029"></a>
 ### CC-HK-029 [MEDIUM] Invalid or Ineffective onFailure
+**v2.1.328 refresh**: `onFailure` now also takes effect on `mcp_tool` hooks: "Added `"onFailure": "block"` for `mcp_tool` hooks, as for command and HTTP hooks: a hook whose call fails blocks the action" (v2.1.328 release notes, published 2026-11-19; the hooks reference "MCP tool hook fields" table has not caught up yet). A pinned version below 2.1.328 keeps the no-effect note, now naming the mcp_tool minimum.
 **Requirement**: `onFailure` MUST be `"continue"` or `"block"`, and SHOULD only be set where it has an effect. Vendor text: "`onFailure` | no | Whether the action that triggered the hook goes ahead when the hook fails: `"continue"` or `"block"`" and "The field has no effect on these hooks: ... `Stop`, `SubagentStop`, `TaskCompleted`, and `TeammateIdle` hooks ... Background command hooks: command hooks that set `async` or `asyncRewake`" (hooks, "Command hook fields", "Block the action when a hook fails"). "Requires Claude Code v2.1.295 or later."
 **Detection**:
   - value other than `continue` or `block`: warning at the value
-  - info when it has no effect: on a hook type other than `command` or `http`, on Stop, SubagentStop, TaskCompleted or TeammateIdle, on an `async` or `asyncRewake` command hook, or when the pinned Claude Code version is older than 2.1.295 (released 2026-10-08)
+  - info when it has no effect: on a hook type other than `command`, `http` or `mcp_tool` (mcp_tool since v2.1.328), on Stop, SubagentStop, TaskCompleted or TeammateIdle, on an `async` or `asyncRewake` command hook, or when the pinned Claude Code version is older than 2.1.295 (released 2026-10-08), or older than 2.1.328 for an `mcp_tool` hook (released 2026-11-19)
 **Fix**: Manual
-**Source**: code.claude.com/docs/en/hooks
+**Source**: code.claude.com/docs/en/hooks, github.com/anthropics/claude-code/releases/tag/v2.1.328
 
 <a id="cc-hk-030"></a>
 ### CC-HK-030 [MEDIUM] Unquoted Path Placeholder in Shell-Form Hook
@@ -3612,6 +3613,7 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 ### CDX-CFG-006 [MEDIUM] Unknown Codex Config Field
 **0.154 schema refresh**: Accept the new `tui.question_esc_back` and `tui.whimsy` preferences and the feature names listed under CDX-CFG-011.
 **0.169 schema refresh**: Accept the new `tui.collapse_turn_details`, `tui.default_hosts` and `tui.sidebar_width_percent` preferences added by the tagged rust-v0.168.0/rust-v0.169.0 schemas.
+**0.171 schema refresh**: Accept the new `tui.status_line_provider` preference added by the tagged rust-v0.171.0 schema (absent from rust-v0.170.0; not named in release notes). Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/config.schema.json).
 **Requirement**: Codex config keys SHOULD match the official schema at top-level and known nested sections (`features`, `tui`, `shell_environment_policy`, `mcp_servers`, `apps`)
 **Detection**: Parse `.codex/config.toml|json|yaml`, compare observed keys against allowlists, and report unknown keys
 **Fix**: No auto-fix (remove or rename unsupported fields)
@@ -3651,6 +3653,7 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 **0.165 schema refresh**: Accept `guardian_recorded_items`, `guardianv3`, `prediction_preserve_parent_tools` and `tui_multi_backend` in TOML, JSON and YAML configs. `guardianv3` accepts the tagged schema's boolean or `{ enabled: boolean }` form.
 **0.167 schema refresh**: Accept the nine `[features]` flags added by the tagged rust-v0.167.0 through rust-v0.167.2 schemas and never named in release notes: `apps_early_resource_discovery`, `code_mode_host_output_truncation`, `gcp_setup_wizard`, `incremental_exec_tools`, `incremental_tools_legacy`, `incremental_tools_legacy_gcp` (the rust-v0.167.2 flat-bool opt-out from incremental tool updates on Google Cloud Vertex AI), `interrupt_on_cancel`, `suppress_model_change_announcements` and `tui_extensions_statusline`. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.167.2/codex-rs/core/config.schema.json).
 **0.169 schema refresh**: Accept the twelve `[features]` flags added across the tagged rust-v0.168.0 and rust-v0.169.0 schemas: rust-v0.168.0 adds `agent_message_board_mcp`, `async_compaction_root_only`, `cli_resume_account_check`, `command_sessions_world_state`, `guardian_denial_reconsideration`, `guardian_include_additional_context`, `hosted_search_policy`, `image_generation_animation` and `tui_workspace`, and removes both `incremental_tools_legacy` names; rust-v0.169.0 adds `daybreak_program_propagation`, `gateway_setup_wizard`, `mcp_lazy_stdio_startup` and restores both `incremental_tools_legacy` names, so the net allowlist keeps them. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/core/config.schema.json).
+**0.171 schema refresh**: Accept the nine `[features]` flags added by the tagged rust-v0.170.0 and rust-v0.171.0 schemas, none named in release notes: rust-v0.170.0 adds `multi_environment_mcp`; rust-v0.171.0 adds `catalog_apps_instructions`, `file_backed_tool_audio`, `guardian_nested_approval_context`, `mcp_shared_repl_cwd`, `per_environment_context`, `restored_history_prewarm`, `safe_image_decoder` and `utc_environment_date`. Diffed against the rust-v0.169.0 set pinned on 2026-11-15. Sources: [rust-v0.170.0 schema](https://github.com/openai/codex/blob/rust-v0.170.0/codex-rs/core/config.schema.json), [rust-v0.171.0 schema](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/config.schema.json).
 **Requirement**: Keys under `[features]` SHOULD use known Codex feature flag names; `non_prefixed_mcp_tool_names` MUST be a boolean or an object with optional boolean `enabled` and string-array `server_names`
 **Detection**: Parse config, report unknown keys under `features`, and validate the structured `non_prefixed_mcp_tool_names` value
 **Fix**: No auto-fix (remove unsupported flags or rename)
@@ -4872,9 +4875,10 @@ Kiro reads MCP servers from `~/.kiro/settings/mcp.json` and `<workspace>/.kiro/s
 <a id="kr-mcp-007"></a>
 ### KR-MCP-007 [HIGH] Invalid Kiro MCP Server Field Type
 **Requirement**: Server fields MUST have the documented types: `command`, `url`, `cwd`, `type` strings; `args`, `disabledTools`, `autoApprove`, `oauthScopes` arrays of strings; `env`, `headers` objects of strings; `disabled`, `waitForReady` booleans; `timeout` a whole number of milliseconds of at least 1; `versionNegotiation` `"auto"` or `"legacy"`; `oauth` an object with string `clientId`, `redirectUri`, `clientMetadataUrl`, `clientSecret` and a string-array `oauthScopes`.
+**3.5.0 refresh**: `oauth.mode` joins the typed `oauth.*` fields as a string: "How Kiro IDE (1.4.236 or later) or a Kiro CLI V3 session (3.5.0 or later) gets the server's token: `browser` (default), `enterprise`, or `auto`. ... Kiro CLI V2 sessions ignore it" (MCP configuration reference, "OAuth properties", verified 2026-11-20). Only a V3 session fails on a wrong type; V2 ignores the key, so the finding is V3-only. The documented `browser`/`enterprise`/`auto` value set is not enforced because no vendor source states what an unrecognized value does. The 3.5.0 top-level `identityProvider` block (issuer/clientId/...) needs no rule change: it is read only from the user-level `mcp.json`, and the settings-file variant has no unknown-top-level-key rule.
 **Detection**: Kiro CLI 2.x rejects the whole file on any wrong type it reads (`null` included, except for `env`, `type` and `oauth`), observed with `kiro-cli mcp list` 2.32.1; the V3 engine skips the server (`null` never passes). Severity follows the engines each value fails in, for example `timeout: 0` fails only in V3 and `timeout: 1.5` only in V2. A server entry that is not an object is an error.
 **Fix**: No auto-fix - write the value with the documented type.
-**Source**: kiro.dev/docs/mcp/configuration, kiro.dev/docs/custom-agents/configuration-reference
+**Source**: kiro.dev/docs/mcp/configuration, kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/changelog/cli
 
 <a id="kr-mcp-008"></a>
 ### KR-MCP-008 [HIGH] Kiro MCP Remote URL Uses Plain HTTP
@@ -4974,6 +4978,7 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 **2.35 changelog refresh**: `app.warnOnElevatedPrivileges` is a documented boolean setting ("turn the warning off with `kiro-cli settings app.warnOnElevatedPrivileges false`", CLI 2.35.0 changelog). The settings reference now says it "is global; a workspace's `.kiro/settings/cli.json` cannot override it", so KR-SET-011 applies.
 **2.36 reference refresh**: `acp.agentEngine` is a documented global string setting, the harness `kiro-cli acp` starts: "`v3`, `v2`, or `v1` (Kiro CLI 2.36 or later)". KR-SET-009 checks its choices.
 **3.2.0 changelog refresh**: `chat.keybindings.viewDiagram` is a documented string setting ("Change the key with chat.keybindings.viewDiagram", CLI 3.2.0 changelog, 2026-11-10; opens the newest wide Mermaid diagram on its own screen). Added to the settings table and the not-loaded list, following the other `chat.keybindings.*` string settings.
+**3.5.0 changelog refresh**: `auth.portalUrl` is a documented string setting: "Set `auth.portalUrl` and `kiro-cli login` opens that portal in your browser instead of the default one. Administrators can set the portal for their users through the `AuthPortalUrl` policy or `auth_portal_url` in `managed-settings.json`" (CLI 3.5.0 changelog, verified live 2026-11-20; the settings reference table has not caught up yet). Added to the settings table as a string. The managed-settings surfaces need no rule change: KR-PM validates only `rules` and `policies`, and Kiro "ignores" extra keys in the managed `settings` object by design (sign-in controls reference, "Validation and error handling").
 
 **Fix**: No auto-fix - correct or remove the key.
 **Source**: kiro.dev/docs/reference/settings
@@ -5854,7 +5859,7 @@ Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2
 
 ### GRK-CFG-003 [MEDIUM] Invalid Grok Setting Value
 
-Detection: Documented static settings must use their native field types and choices; extension and future settings remain open.
+Detection: Documented static settings must use their native field types and choices; extension and future settings remain open. The qualified contract now accepts `keys.vim = "all"` ("`/vim-mode all` enables full Vim editing inside the agent prompt", CLI 1.0.79) alongside `off` and `nav`.
 
 Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
 
@@ -5886,7 +5891,7 @@ Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2
 
 ### GRK-SBX-001 [HIGH] Redefined Grok Sandbox Builtin
 
-Detection: Custom sandbox profiles cannot redefine off, workspace, read-only, strict or devbox.
+Detection: Custom sandbox profiles cannot redefine off, workspace, read-only, strict, devbox or minimal (the `minimal` builtin added by CLI 1.0.82, "New `minimal` sandbox profile and `workspace_write` option"; x.ai changelog, verified 2026-11-20). `workspace_write` itself stays open-typed until a vendor source documents its type.
 
 Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
 
@@ -5902,7 +5907,7 @@ Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2
 
 ### GRK-MCP-001 [HIGH] Invalid Grok MCP Server
 
-Detection: Configure native stdio or remote servers with the documented field types and transport settings.
+Detection: Configure native stdio or remote servers with the documented field types and transport settings, including the `headers_helper` string command added by CLI 1.0.88 ("MCP servers can now specify a `headers_helper` command to provide dynamic request headers"; x.ai changelog, verified 2026-11-20).
 
 Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
 

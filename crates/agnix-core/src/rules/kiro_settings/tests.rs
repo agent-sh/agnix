@@ -478,10 +478,11 @@ fn test_does_not_panic_on_non_ascii_content() {
 
 #[test]
 fn test_settings_table_includes_kiro_234_workflow_launch() {
-    // 146 with the Kiro 3.2.0 chat.keybindings.viewDiagram addition and the
+    // 147 with the Kiro 3.2.0 chat.keybindings.viewDiagram addition, the
     // 3.3.0 review's compaction.autoCompactionThreshold and
-    // chat.enableSessionRecap (3.1.0) additions.
-    assert_eq!(SETTINGS.len(), 146);
+    // chat.enableSessionRecap (3.1.0) additions, and the 3.5.0 review's
+    // auth.portalUrl.
+    assert_eq!(SETTINGS.len(), 147);
     let mut keys: Vec<_> = SETTINGS.iter().map(|s| s.key).collect();
     keys.sort_unstable();
     keys.dedup();
@@ -639,4 +640,14 @@ fn test_kr_set_005_knows_the_3_1_0_session_recap_key() {
     // Documented with Kiro CLI 3.1.0 in the settings reference table; absent
     // from the 2.32.1 `settings list --all` baseline.
     assert!(validate(r#"{"chat.enableSessionRecap": true}"#).is_empty());
+}
+
+#[test]
+fn test_kr_set_005_knows_the_3_5_0_auth_portal_url() {
+    // Kiro CLI 3.5.0: "Set `auth.portalUrl` and `kiro-cli login` opens that
+    // portal in your browser instead of the default one" (CLI changelog).
+    // A string value is accepted; a wrong type is KR-SET-008's finding.
+    assert!(validate(r#"{"auth.portalUrl": "https://portal.example.com"}"#).is_empty());
+    let d = only(&validate(r#"{"auth.portalUrl": true}"#), "KR-SET-008");
+    assert!(d.message.contains("string"), "{d:?}");
 }

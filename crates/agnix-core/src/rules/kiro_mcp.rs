@@ -648,13 +648,24 @@ fn field_type_issue(key: &str, value: &JsonValue) -> Option<TypeIssue> {
 }
 
 /// `oauth.*` field types. V2 accepts `null` for these optional strings; V3
-/// keeps only clientId, redirectUri and clientMetadataUrl (others stripped).
+/// keeps only clientId, redirectUri and clientMetadataUrl (others stripped),
+/// plus `mode` since Kiro CLI 3.5.0: "`oauth.mode` chooses between a browser
+/// sign-in and your organization's sign-in ... Kiro CLI V2 sessions ignore
+/// it" (MCP configuration reference, "OAuth properties"). V2 ignores `mode`
+/// entirely, so only a V3 session fails on a wrong type.
 fn oauth_field_type_issue(key: &str, value: &JsonValue) -> Option<TypeIssue> {
     let not_string = value.as_str().is_none();
     match key {
         "clientId" | "redirectUri" | "clientMetadataUrl" if not_string => Some(TypeIssue {
             fatal: Fatal {
                 v2: !value.is_null(),
+                v3: true,
+            },
+            expected: "a string",
+        }),
+        "mode" if not_string => Some(TypeIssue {
+            fatal: Fatal {
+                v2: false,
                 v3: true,
             },
             expected: "a string",

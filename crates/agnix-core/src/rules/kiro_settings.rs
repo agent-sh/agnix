@@ -24,6 +24,9 @@
 //! `acp.agentEngine` from the 2.36 reference, `chat.enableSessionRecap` from
 //! the 3.1.0 settings reference and `compaction.autoCompactionThreshold`
 //! (KR-SET-013) from the 3.3.0 CLI changelog and settings reference.
+//! `auth.portalUrl` joins with 3.5.0: "Set `auth.portalUrl` and
+//! `kiro-cli login` opens that portal in your browser instead of the
+//! default one" (CLI changelog; a URL string).
 //! A value of the wrong type is not coerced: the Q
 //! Developer CLI lineage reads settings with typed getters that return no
 //! value, so Kiro falls back to the default.
@@ -135,6 +138,11 @@ const SETTINGS: &[SettingSpec] = &[
     spec("api.streamIdleSoftTimeout", Number, false, &[]),
     spec("api.streamIdleHardTimeout", Number, false, &[]),
     spec("api.subagentTimeout", Number, false, &[]),
+    // Kiro CLI 3.5.0: "Set `auth.portalUrl` and `kiro-cli login` opens that
+    // portal in your browser instead of the default one" (CLI changelog;
+    // administrators deploy it through the `AuthPortalUrl` policy or
+    // `auth_portal_url` in managed-settings.json).
+    spec("auth.portalUrl", Str, false, &[]),
     spec("chat.editMode", Bool, false, &[]),
     spec("chat.enableNotifications", Bool, false, &[]),
     spec(
