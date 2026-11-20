@@ -132,7 +132,7 @@
       ],
       "github_repo": "anomalyco/opencode",
       "release_tag_regex": "^v1\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "v1.19.5",
+      "last_known_version": "v1.19.6",
       "tracked": true,
       "notes": "OpenCode 1 line (npm opencode-ai, docs at https://opencode.ai/docs/). The repository moved from sst/opencode to anomalyco/opencode. OpenCode 2 ships from the same repository and is tracked separately as opencode-v2; release_tag_regex keeps this entry on the v1.X.Y GitHub releases even if a v2 release is ever marked latest. Validators are shared by both lines and gated by [tool_versions] opencode (rules with version_range <2.0.0 or >=2.0.0).",
       "changes_of_interest": {
