@@ -143,3 +143,72 @@ still applies.
 - `cargo test -p agnix-cli --test rule_parity`: pass
 - `node scripts/sync-rule-bookkeeping.js` then `--check`: clean
 - `bash scripts/preflight.sh --quick`: pass
+
+## Review findings round 2 (PR #1862)
+
+The round-1 sweep above landed three findings whose new checks were not
+gated on the pinned CLI version, plus one missing tagged-schema
+comparison. Each item was re-verified on 2026-11-20.
+
+### OpenCode 1 v1.19.5...v1.19.6 tagged schema-tree comparison
+
+Mirroring the 2026-10-29 OpenCode comparison, the complete Git trees at
+[v1.19.5](https://github.com/anomalyco/opencode/tree/v1.19.5/packages/schema/src)
+and
+[v1.19.6](https://github.com/anomalyco/opencode/tree/v1.19.6/packages/schema/src)
+were fetched live (6,627 and 6,651 blobs, not truncated) and the
+`packages/schema/src` subtrees compared blob by blob: the same 64 files,
+byte-identical (every blob SHA matches; nothing added or removed). The
+remaining tree delta is release infrastructure (`.github/release/**`,
+publish workflows), desktop-app updater and i18n bundles, package.json
+version bumps, `packages/llm` provider-error internals and
+`packages/opencode/src/session/message-v2.ts` (runtime session code, not
+a validated config surface). No schema source the validators depend on
+moved, so the v1.19.6 advance recorded in the baseline table is
+confirmed baseline-only: no rule, contract or docs change.
+
+### Version gates for the round-1 Grok and Kiro additions
+
+- GRK-SBX-001 `minimal` (1.0.82): the reserved name now applies only
+  when the pinned grok-code version is >= 1.0.82 (unpinned files are
+  checked against the latest release). A config pinned to 1.0.81 with a
+  custom `profiles.minimal` no longer errors. Boundary tests on both
+  sides (1.0.81/1.0.77 vs 1.0.82/1.0.89, plus the always-reserved
+  pre-1.0.82 builtins).
+- GRK-MCP-001 `headers_helper` (1.0.88): gated identically. The rule's
+  own shape treats unknown server fields as valid (`_ => true`), so a
+  wrong-typed `headers_helper` on a pin below 1.0.88 - a CLI that does
+  not read the field - was a false positive relative to that semantic.
+  A pin below 1.0.88 keeps the unknown-field treatment; >= 1.0.88 and
+  unpinned require the documented string. Boundary tests on both sides.
+- GRK-CFG-003 `keys.vim` enum value `all` (1.0.79): **no gate needed**.
+  Adding an enum member only widens the accepted set, so no pinned-older
+  config can newly fail: a 1.0.78-pinned file using `all` now passes
+  lint where the old CLI would reject it, which is the lenient direction
+  (a missed finding, not a false positive), consistent with how schema
+  drift is otherwise handled. Enforcing the narrower pre-1.0.79 enum
+  would require version-parameterized contract enums, which the static
+  `grok_contract.json` does not support, and no existing rule encodes
+  per-version enum sets. Unknown-enum semantics stay
+  version-independent.
+- KR-MCP-007 `oauth.mode` (3.5.0): the typed check is skipped when the
+  Kiro version is pinned below 3.5.0, because the pre-3.5.0 V3 contract
+  strips the unknown field (a pinned 3.4.x session never fails on its
+  type). Unpinned files and >= 3.5.0 pins keep the check. New
+  pinned-older test (3.4.0, 3.4.2, 3.2.0, 2.32.1 pass; 3.5.0 still
+  reports the wrong type).
+
+VALIDATION-RULES.md detection text updated for GRK-SBX-001,
+GRK-MCP-001 and KR-MCP-007; no rules.json metadata change (the rule
+applicability floors are unchanged and `verified_on` is already
+2026-11-20 for all three).
+
+### Verification (review round 2)
+
+- `cargo check -p agnix-core`: pass
+- `cargo test -p agnix-core --test release_triage`: pass (28 tests,
+  including the two new grok boundary tests)
+- `cargo test -p agnix-core --lib kiro_mcp` (62) `kiro_settings` (39):
+  pass
+- `cargo test -p agnix-cli --test rule_parity`: pass
+- `node scripts/sync-rule-bookkeeping.js` then `--check`: clean

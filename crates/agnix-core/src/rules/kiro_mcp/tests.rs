@@ -892,3 +892,21 @@ fn test_kr_mcp_007_oauth_mode_wrong_type_is_v3_only() {
     assert!(d.message.contains("oauth.mode"), "{d:?}");
     assert!(d.message.contains("a string"), "{d:?}");
 }
+
+#[test]
+fn test_kr_mcp_007_oauth_mode_pinned_below_3_5_0_is_stripped() {
+    // The pre-3.5.0 V3 contract strips the unknown `mode` field, so a CLI
+    // pinned below 3.5.0 never fails on its type however it is written.
+    let content = server(r#""url": "https://example.com/mcp", "oauth": {"mode": 3}"#);
+    for version in ["3.4.0", "3.4.2", "3.2.0", "2.32.1"] {
+        assert!(
+            validate_pinned(&content, version).is_empty(),
+            "{version}: {:#?}",
+            validate_pinned(&content, version)
+        );
+    }
+    // At the 3.5.0 boundary the typed check applies again.
+    let d = only(&validate_pinned(&content, "3.5.0"), "KR-MCP-007");
+    assert!(d.message.contains("oauth.mode"), "{d:?}");
+    assert!(d.message.contains("a string"), "{d:?}");
+}

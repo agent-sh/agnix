@@ -219,6 +219,114 @@ fn grok_1_0_89_accepts_changelog_reconciled_config_surfaces() {
 }
 
 #[test]
+fn grok_version_pins_gate_the_1_0_82_minimal_sandbox_builtin() {
+    // GRK-SBX-001: `minimal` is a builtin only from 1.0.82 (x.ai
+    // changelog). A pin below 1.0.82 may still define a custom
+    // `profiles.minimal`; 1.0.82 and later (and unpinned files, checked
+    // against the latest release) reserve the name.
+    fn pinned(version: &str) -> LintConfig {
+        LintConfig::builder()
+            .tool_versions(agnix_core::config::ToolVersions {
+                grok_code: Some(version.to_string()),
+                ..Default::default()
+            })
+            .build()
+            .unwrap()
+    }
+    let sandbox = "[profiles.minimal]\nextends = \"workspace\"\n";
+    for version in ["1.0.81", "1.0.77"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/sandbox.toml"),
+            sandbox,
+            &pinned(version),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "GRK-SBX-001"),
+            "{version}: {diagnostics:?}"
+        );
+    }
+    for version in ["1.0.82", "1.0.89"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/sandbox.toml"),
+            sandbox,
+            &pinned(version),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "GRK-SBX-001"),
+            "{version}: {diagnostics:?}"
+        );
+    }
+    // The pre-1.0.82 builtins stay reserved whatever the pin.
+    for version in ["1.0.77", "1.0.82"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/sandbox.toml"),
+            "[profiles.strict]\nextends = \"workspace\"\n",
+            &pinned(version),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "GRK-SBX-001"),
+            "{version}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn grok_version_pins_gate_the_1_0_88_headers_helper_field() {
+    // GRK-MCP-001: `headers_helper` is read only from 1.0.88 (x.ai
+    // changelog). A pin below 1.0.88 does not read the field, so any
+    // value keeps the unknown-field treatment; 1.0.88 and later (and
+    // unpinned files) require the documented string type.
+    fn pinned(version: &str) -> LintConfig {
+        LintConfig::builder()
+            .tool_versions(agnix_core::config::ToolVersions {
+                grok_code: Some(version.to_string()),
+                ..Default::default()
+            })
+            .build()
+            .unwrap()
+    }
+    let wrong_type =
+        "[mcp_servers.helper]\nurl = \"https://mcp.example.com/mcp\"\nheaders_helper = 42\n";
+    for version in ["1.0.87", "1.0.82"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/config.toml"),
+            wrong_type,
+            &pinned(version),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(
+            !diagnostics.iter().any(|d| d.rule == "GRK-MCP-001"),
+            "{version}: {diagnostics:?}"
+        );
+    }
+    for version in ["1.0.88", "1.0.89"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/config.toml"),
+            wrong_type,
+            &pinned(version),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "GRK-MCP-001"),
+            "{version}: {diagnostics:?}"
+        );
+    }
+    // The documented string form passes on both sides of the boundary.
+    for version in ["1.0.87", "1.0.88"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/config.toml"),
+            "[mcp_servers.helper]\nurl = \"https://mcp.example.com/mcp\"\nheaders_helper = \"get-headers.sh\"\n",
+            &pinned(version),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(diagnostics.is_empty(), "{version}: {diagnostics:?}");
+    }
+}
+
+#[test]
 fn opencode_223_accepts_separate_managed_policy_actions() {
     for version in [None, Some("2.2.3")] {
         let config = LintConfig::builder()

@@ -4875,7 +4875,7 @@ Kiro reads MCP servers from `~/.kiro/settings/mcp.json` and `<workspace>/.kiro/s
 <a id="kr-mcp-007"></a>
 ### KR-MCP-007 [HIGH] Invalid Kiro MCP Server Field Type
 **Requirement**: Server fields MUST have the documented types: `command`, `url`, `cwd`, `type` strings; `args`, `disabledTools`, `autoApprove`, `oauthScopes` arrays of strings; `env`, `headers` objects of strings; `disabled`, `waitForReady` booleans; `timeout` a whole number of milliseconds of at least 1; `versionNegotiation` `"auto"` or `"legacy"`; `oauth` an object with string `clientId`, `redirectUri`, `clientMetadataUrl`, `clientSecret` and a string-array `oauthScopes`.
-**3.5.0 refresh**: `oauth.mode` joins the typed `oauth.*` fields as a string: "How Kiro IDE (1.4.236 or later) or a Kiro CLI V3 session (3.5.0 or later) gets the server's token: `browser` (default), `enterprise`, or `auto`. ... Kiro CLI V2 sessions ignore it" (MCP configuration reference, "OAuth properties", verified 2026-11-20). Only a V3 session fails on a wrong type; V2 ignores the key, so the finding is V3-only. The documented `browser`/`enterprise`/`auto` value set is not enforced because no vendor source states what an unrecognized value does. The 3.5.0 top-level `identityProvider` block (issuer/clientId/...) needs no rule change: it is read only from the user-level `mcp.json`, and the settings-file variant has no unknown-top-level-key rule.
+**3.5.0 refresh**: `oauth.mode` joins the typed `oauth.*` fields as a string: "How Kiro IDE (1.4.236 or later) or a Kiro CLI V3 session (3.5.0 or later) gets the server's token: `browser` (default), `enterprise`, or `auto`. ... Kiro CLI V2 sessions ignore it" (MCP configuration reference, "OAuth properties", verified 2026-11-20). Only a V3 session fails on a wrong type; V2 ignores the key, so the finding is V3-only, and a Kiro pin below 3.5.0 skips the type check entirely because the pre-3.5.0 V3 contract strips the unknown field. The documented `browser`/`enterprise`/`auto` value set is not enforced because no vendor source states what an unrecognized value does. The 3.5.0 top-level `identityProvider` block (issuer/clientId/...) needs no rule change: it is read only from the user-level `mcp.json`, and the settings-file variant has no unknown-top-level-key rule.
 **Detection**: Kiro CLI 2.x rejects the whole file on any wrong type it reads (`null` included, except for `env`, `type` and `oauth`), observed with `kiro-cli mcp list` 2.32.1; the V3 engine skips the server (`null` never passes). Severity follows the engines each value fails in, for example `timeout: 0` fails only in V3 and `timeout: 1.5` only in V2. A server entry that is not an object is an error.
 **Fix**: No auto-fix - write the value with the documented type.
 **Source**: kiro.dev/docs/mcp/configuration, kiro.dev/docs/custom-agents/configuration-reference, kiro.dev/changelog/cli
@@ -5891,7 +5891,7 @@ Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2
 
 ### GRK-SBX-001 [HIGH] Redefined Grok Sandbox Builtin
 
-Detection: Custom sandbox profiles cannot redefine off, workspace, read-only, strict, devbox or minimal (the `minimal` builtin added by CLI 1.0.82, "New `minimal` sandbox profile and `workspace_write` option"; x.ai changelog, verified 2026-11-20). `workspace_write` itself stays open-typed until a vendor source documents its type.
+Detection: Custom sandbox profiles cannot redefine off, workspace, read-only, strict, devbox or minimal (the `minimal` builtin added by CLI 1.0.82, "New `minimal` sandbox profile and `workspace_write` option"; x.ai changelog, verified 2026-11-20). `minimal` is reserved only when the pinned grok-code version is 1.0.82 or later; a pin below 1.0.82 has no such builtin, so its custom `profiles.minimal` is valid, and unpinned files are checked against the latest release. `workspace_write` itself stays open-typed until a vendor source documents its type.
 
 Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
 
@@ -5907,7 +5907,7 @@ Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2
 
 ### GRK-MCP-001 [HIGH] Invalid Grok MCP Server
 
-Detection: Configure native stdio or remote servers with the documented field types and transport settings, including the `headers_helper` string command added by CLI 1.0.88 ("MCP servers can now specify a `headers_helper` command to provide dynamic request headers"; x.ai changelog, verified 2026-11-20).
+Detection: Configure native stdio or remote servers with the documented field types and transport settings, including the `headers_helper` string command added by CLI 1.0.88 ("MCP servers can now specify a `headers_helper` command to provide dynamic request headers"; x.ai changelog, verified 2026-11-20). The string type is required only when the pinned grok-code version is 1.0.88 or later (or unpinned); a pin below 1.0.88 does not read the field, so any value keeps the unknown-field treatment.
 
 Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
 

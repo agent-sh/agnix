@@ -113,19 +113,18 @@ impl Validator for GrokValidator {
                     DiagnosticLevel::Error,
                 );
                 if let Some(profiles) = value.get("profiles").and_then(Value::as_object) {
+                    // 1.0.82 adds the `minimal` built-in profile to the
+                    // reserved names (x.ai changelog, v1.0.82). A pin below
+                    // 1.0.82 has no such builtin, so its custom `minimal`
+                    // profile is valid; unpinned files are checked against
+                    // the latest release.
+                    let mut reserved: Vec<&str> =
+                        ["off", "workspace", "read-only", "strict", "devbox"].into();
+                    if grok_at_least(&cx, "1.0.82") {
+                        reserved.push("minimal");
+                    }
                     for name in profiles.keys() {
-                        // 1.0.82 adds the `minimal` built-in profile to the
-                        // reserved names (x.ai changelog, v1.0.82).
-                        if [
-                            "off",
-                            "workspace",
-                            "read-only",
-                            "strict",
-                            "devbox",
-                            "minimal",
-                        ]
-                        .contains(&name.as_str())
-                        {
+                        if reserved.contains(&name.as_str()) {
                             push(
                                 &mut cx,
                                 &source,
@@ -322,6 +321,17 @@ fn string_map(v: &Value) -> bool {
         .is_some_and(|map| map.values().all(Value::is_string))
 }
 
+fn grok_at_least(cx: &JsonCx<'_>, minimum: &str) -> bool {
+    cx.config
+        .tool_versions()
+        .grok_code
+        .as_deref()
+        .and_then(|version| semver::Version::parse(version.trim_start_matches('v')).ok())
+        .is_none_or(|version| {
+            version >= semver::Version::parse(minimum).expect("fixed Grok release version")
+        })
+}
+
 fn configuration(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, path: &Path) {
     schema(
         cx,
@@ -393,15 +403,7 @@ fn configuration(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, path: 
             t!("rules.grk_cfg_004.grok_1_0_63_retired_memory_v2").as_ref(),
         ),
     ] {
-        let qualified = cx
-            .config
-            .tool_versions()
-            .grok_code
-            .as_deref()
-            .and_then(|version| semver::Version::parse(version.trim_start_matches('v')).ok())
-            .is_none_or(|version| {
-                version >= semver::Version::parse(minimum).expect("fixed Grok release version")
-            });
+        let qualified = grok_at_least(cx, minimum);
         if qualified && value.pointer(pointer).is_some() {
             push(
                 cx,
@@ -540,13 +542,13 @@ fn mcp_server(cx: &mut JsonCx<'_>, source: &Source<'_>, server: &Value, path: &s
         let valid = match key.as_str() {
             // `headers_helper` (1.0.88): "MCP servers can now specify a
             // headers_helper command to provide dynamic request headers"
-            // (x.ai changelog, v1.0.88).
-            "command"
-            | "url"
-            | "cwd"
-            | "bearer_token_env_var"
-            | "bearer_token_file"
-            | "headers_helper" => entry.is_string(),
+            // (x.ai changelog, v1.0.88). A pin below 1.0.88 does not read
+            // the field, so it keeps the unknown-field treatment whatever
+            // its type.
+            "headers_helper" => !grok_at_least(cx, "1.0.88") || entry.is_string(),
+            "command" | "url" | "cwd" | "bearer_token_env_var" | "bearer_token_file" => {
+                entry.is_string()
+            }
             "args" => strings(entry),
             "env" | "headers" => string_map(entry),
             "enabled" => entry.is_boolean(),

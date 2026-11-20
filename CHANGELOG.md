@@ -37,6 +37,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Address the three P2 findings of PR #1862's round-2 review, verified
+  against live vendor sources on 2026-11-20:
+  - The `minimal` sandbox builtin (GRK-SBX-001) is reserved only when the
+    pinned grok-code version is 1.0.82 or later; a 1.0.81-pinned config
+    with a custom `profiles.minimal` no longer errors (unpinned files
+    keep the latest-release behavior). Boundary tests on both sides.
+  - The MCP `headers_helper` string type (GRK-MCP-001) is required only
+    from grok-code 1.0.88; a pin below 1.0.88 does not read the field,
+    so any value keeps the unknown-field treatment. Boundary tests on
+    both sides. `keys.vim = "all"` (GRK-CFG-003) needs no gate: adding an
+    enum member only widens the accepted set, so no pinned-older config
+    can newly fail (unknown-enum semantics are version-independent).
+  - The `oauth.mode` typed check (KR-MCP-007) is skipped for a Kiro
+    version pinned below 3.5.0 (the pre-3.5.0 V3 contract strips the
+    unknown field); unpinned files and >= 3.5.0 pins keep the check.
+    New pinned-older test (3.4.x/3.2.x/2.x pass, 3.5.0 still reports).
+  - OpenCode 1 v1.19.5...v1.19.6: complete tagged tree comparison of
+    `packages/schema/src` (64 files, byte-identical; the rest of the
+    delta is release infra, updater/i18n and version bumps) confirms the
+    v1.19.6 advance is baseline-only; no rule change.
 - Address PR #1862 review findings against the 2026-11-20 baseline sweep,
   all verified against live vendor sources on 2026-11-20:
   - Grok Code: the derived contract and NATIVE-TOOL-CONTRACTS pins advance

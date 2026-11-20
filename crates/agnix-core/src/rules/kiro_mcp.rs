@@ -40,7 +40,7 @@ use crate::{
     diagnostics::{Diagnostic, DiagnosticLevel},
     rules::{
         Validator, ValidatorMetadata,
-        kiro_engine::{KiroEngine, KiroEngines, engines_for},
+        kiro_engine::{KiroEngine, KiroEngines, engines_for, kiro_cli_below},
         seems_plaintext_secret,
     },
     schemas::kiro_json::{
@@ -464,6 +464,16 @@ fn validate_server(cx: &mut Cx<'_>, member: &JsonMember) {
             && let Some(oauth_fields) = field.value.value.as_object()
         {
             for oauth_field in oauth_fields {
+                // The pre-3.5.0 V3 contract strips the unknown `mode`
+                // field, so a CLI pinned below 3.5.0 never fails on its
+                // type; unpinned files may be read by a 3.5.0+ session
+                // and keep the check.
+                if oauth_field.key == "mode"
+                    && cx.config.get_kiro_version().is_some()
+                    && kiro_cli_below(cx.config, (3, 5, 0))
+                {
+                    continue;
+                }
                 if let Some(issue) =
                     oauth_field_type_issue(&oauth_field.key, &oauth_field.value.value)
                 {
@@ -652,7 +662,9 @@ fn field_type_issue(key: &str, value: &JsonValue) -> Option<TypeIssue> {
 /// plus `mode` since Kiro CLI 3.5.0: "`oauth.mode` chooses between a browser
 /// sign-in and your organization's sign-in ... Kiro CLI V2 sessions ignore
 /// it" (MCP configuration reference, "OAuth properties"). V2 ignores `mode`
-/// entirely, so only a V3 session fails on a wrong type.
+/// entirely, so only a V3 session fails on a wrong type, and a pin below
+/// 3.5.0 skips the check entirely (the pre-3.5.0 V3 contract strips the
+/// unknown field); see the call site.
 fn oauth_field_type_issue(key: &str, value: &JsonValue) -> Option<TypeIssue> {
     let not_string = value.as_str().is_none();
     match key {
