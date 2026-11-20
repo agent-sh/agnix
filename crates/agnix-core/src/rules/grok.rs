@@ -543,8 +543,8 @@ fn mcp_server(cx: &mut JsonCx<'_>, source: &Source<'_>, server: &Value, path: &s
             // `headers_helper` (1.0.88): "MCP servers can now specify a
             // headers_helper command to provide dynamic request headers"
             // (x.ai changelog, v1.0.88). A pin below 1.0.88 does not read
-            // the field, so it keeps the unknown-field treatment whatever
-            // its type.
+            // the field, so it is accepted unconditionally (GRK-MCP-001
+            // has no unknown-field diagnostic for server entries).
             "headers_helper" => !grok_at_least(cx, "1.0.88") || entry.is_string(),
             "command" | "url" | "cwd" | "bearer_token_env_var" | "bearer_token_file" => {
                 entry.is_string()

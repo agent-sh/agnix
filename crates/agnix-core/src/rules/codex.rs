@@ -179,9 +179,11 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "browser_use",
     "browser_use_external",
     "browser_use_full_cdp_access",
-    // rust-v0.170.0/rust-v0.171.0 schema refresh: catalog_apps_instructions
-    // (0.170.0) plus the eight 0.171.0 flags below (see the 0.171 note in
-    // knowledge-base/VALIDATION-RULES.md, CDX-CFG-011).
+    // rust-v0.170.0/rust-v0.171.0 schema refresh: multi_environment_mcp
+    // (0.170.0, listed at its sorted position) plus
+    // catalog_apps_instructions and the seven other 0.171.0 flags below
+    // (see the 0.171 note in knowledge-base/VALIDATION-RULES.md,
+    // CDX-CFG-011).
     "catalog_apps_instructions",
     "child_agents_md",
     "chronicle",
