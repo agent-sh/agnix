@@ -1,6 +1,6 @@
 {
   "version": "1.1",
-  "last_updated": "2026-11-18",
+  "last_updated": "2026-11-20",
   "description": "Support tiers and release baselines for the owner-selected tool roster. Tier is a maintenance priority, not a claim that a validator exists. Entries with validation_status=pending have no tool-specific validation yet. Shared Agent Skills monitoring and the second OpenCode release line are separate entries. validators lists implemented rule modules only. tracked=false entries include a primary publication URL and a manual-monitoring reason. retired_tools preserves old baselines for shipped compatibility checks but is never polled. excluded_tools receives no active support or release monitoring. Optional changes_of_interest describes validated surfaces and relevant configuration changes for issue triage.",
   "tools": {
     "claude-code": {
@@ -21,7 +21,7 @@
         "agents_md"
       ],
       "github_repo": "anthropics/claude-code",
-      "last_known_version": "v2.1.327",
+      "last_known_version": "v2.1.329",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -79,7 +79,7 @@
         "mcp"
       ],
       "github_repo": "openai/codex",
-      "last_known_version": "rust-v0.169.0",
+      "last_known_version": "rust-v0.171.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -230,7 +230,7 @@
       "github_repo": null,
       "html_url": "https://kiro.dev/changelog/cli/",
       "notes_extractor": "glm",
-      "last_known_version": "3.4.0",
+      "last_known_version": "3.5.0",
       "tracked": true,
       "notes": "Proprietary CLI. Extract the highest published CLI release or patch from canonical /changelog/cli/ release links. Ignore other products, prose and framework versions. Release-note bodies may be upgraded via GLM. The IDE has a separate changelog and is not tracked here.",
       "changes_of_interest": {
@@ -370,7 +370,7 @@
       "github_repo": null,
       "html_url": "https://api2.cursor.sh/updates/api/update/darwin/cursor/0.0.1/stable",
       "version_regex": "[0-9]+\\.[0-9]+\\.[0-9]+",
-      "last_known_version": "3.30.14",
+      "last_known_version": "3.31.11",
       "tracked": true,
       "notes": "Tracked via Cursor's stable update endpoint (the same one the desktop app polls). Returns JSON like {\"url\":\"...\",\"name\":\"3.1.17\"}. Channel is hardcoded to 'stable' for darwin; the version is platform-agnostic (same release ships across darwin/linux/win32). Prose changelog at https://cursor.com/changelog (readable in the HTML on 2026-10-22). Baseline 3.29.15 is the live stable marker reviewed on 2026-11-09. The changelog's newest entry is voice chat with agents (2026-11-06), the only one published after 2026-11-05 Build Live Apps; the Agent SDK (2026-10-20), cloud-agent canvases/environments (2026-10-16) and Origin app marketplace (2026-10-13) entries predate that release, were visible but untriaged during the 2026-11-06 review, and are covered by the 2026-11-09 triage. None of them changes a validated config surface; the endpoint provides no per-patch release notes.",
       "changes_of_interest": {
@@ -424,7 +424,7 @@
         "per_client_skill"
       ],
       "github_repo": "google-gemini/gemini-cli",
-      "last_known_version": "v0.68.0",
+      "last_known_version": "v0.70.0",
       "tracked": true,
       "changes_of_interest": {
         "config_surfaces": [
@@ -535,7 +535,7 @@
         "mcp"
       ],
       "validation_status": "implemented",
-      "last_known_version": "1.5.11",
+      "last_known_version": "1.5.13",
       "tracked": true,
       "notes": "Native static configuration validation. Read official CLI release notes with agy changelog, documented at https://antigravity.google/docs/cli/commands/changelog; the old /docs/release-notes URL is unavailable. v1.4.10 has six runtime fixes and byte-identical published settings/plugin schemas. Review: knowledge-base/reviews/2026-10-29-antigravity-opencode-release-triage.md. No extension or command execution during validation. Latest review: knowledge-base/reviews/2026-11-15-release-triage.md.",
       "html_url": "https://antigravity.google/docs/cli/commands/changelog",
@@ -578,7 +578,7 @@
         "mcp"
       ],
       "validation_status": "implemented",
-      "last_known_version": "1.0.77",
+      "last_known_version": "1.0.89",
       "tracked": true,
       "notes": "Native static configuration validation. Research and qualified versions: knowledge-base/NATIVE-TOOL-CONTRACTS.md. No extension or command execution.",
       "html_url": "https://x.ai/changelog/build",
@@ -628,7 +628,7 @@
       "validation_status": "pending",
       "github_repo": "MoonshotAI/kimi-code",
       "release_tag_regex": "^@moonshot-ai/kimi-code@[0-9]+\\.[0-9]+\\.[0-9]+$",
-      "last_known_version": "@moonshot-ai/kimi-code@2.6.2",
+      "last_known_version": "@moonshot-ai/kimi-code@2.7.1",
       "tracked": true,
       "notes": "Tracks the current Kimi Code CLI release line, not the retired Python kimi-cli. Release tracking is implemented; tool-specific validation remains pending. https://moonshotai.github.io/kimi-code/"
     }

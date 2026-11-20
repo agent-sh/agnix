@@ -37,6 +37,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Advance the 2026-11-20 baselines to the live markers (#1852, #1853,
+  #1855, #1856, #1857, #1858, #1859, #1860): Claude Code v2.1.329
+  (covers v2.1.328), Codex CLI rust-v0.171.0 (covers rust-v0.170.0),
+  Cursor 3.31.11 (covers 3.31.10), Gemini CLI v0.70.0 (covers v0.69.0),
+  Kiro CLI 3.5.0, Antigravity CLI 1.5.13 (covers 1.5.12), Grok Code
+  1.0.89 (covers 1.0.78-1.0.88) and Kimi Code @moonshot-ai/kimi-code
+  2.7.1 (covers 2.6.3; baseline-only, validator still pending). Every
+  marker was re-verified against its live source before writing; no
+  rule change was needed.
 - Claude Code v2.1.326/v2.1.327 (#1849): CC-PL-010 drops from
   HIGH/error to MEDIUM/warning and CC-PL-009's detection note records
   that v2.1.326 ignores a malformed `plugin.json` display field such as
