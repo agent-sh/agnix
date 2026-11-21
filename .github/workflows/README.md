@@ -39,7 +39,7 @@ actions/checkout@v7.0.1: 3d3c42e5aac5ba805825da76410c181273ba90b1
 actions/configure-pages@v6.0.0: 45bfe0192ca1faeb007ade9deae92b16b8254a0d
 actions/deploy-pages@v5.0.1: 368f82528645a54fb793d4d04e342629a3f51346
 actions/download-artifact@v8.0.2: 9000827ccba6bdab643e8b6fd33ac0654aef8333
-actions/setup-java@v6.2.0: 77dd5b2ce225ea11469928ac317850245a74ae78
+actions/setup-java@v6.3.0: d1374f8ac74474200d16ef8ecee22c7ae7a51880
 actions/setup-node@v7.1.0: 949feb2413d6458794dcd2491c4babbbce0c15c1
 actions/setup-python@v7.1.0: 6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
 actions/stale@v11.0.0: 4391f3da665fdf50b6810c1a66712fb9ba21aa93
@@ -50,10 +50,10 @@ rhysd/actionlint@v1.7.12: 914e7df21a07ef503a81201c76d2b11c789d3fca
 # Rust Tooling
 Swatinem/rust-cache@v2.9.3: d1527c8f67ef9af357290475d4af4b0fab8f12e0
 dtolnay/rust-toolchain@stable: 4be9e76fd7c4901c61fb841f559994984270fce7
-taiki-e/install-action@v2.90.3: cfdb7ed4ccc7c7dce37759eae89dc5674b469b39
+taiki-e/install-action@v2.90.5: ab49d3c64680143e184118bed66a46419fc15519
 
 # Security
-EmbarkStudios/cargo-deny-action@v2.1.1: 3c6349835b2b7b196a839186cb8b78e02f7b5f25
+EmbarkStudios/cargo-deny-action@v2.1.2: 70f81531115945ba6eb6b941ec9d39d063438eb9
 github/codeql-action/analyze@v4.39.3: 33d7b85da1a04171e211befe2c739303b9a4c066
 github/codeql-action/init@v4.39.3: 33d7b85da1a04171e211befe2c739303b9a4c066
 github/codeql-action/upload-sarif@v4.39.3: 33d7b85da1a04171e211befe2c739303b9a4c066
@@ -62,7 +62,7 @@ github/codeql-action/upload-sarif@v4.39.3: 33d7b85da1a04171e211befe2c739303b9a4c
 softprops/action-gh-release@v3.0.4: 8a0cd651e5b2365bd640854a3fa5dfc70e4875f3
 
 # Claude Code
-anthropics/claude-code-action@v1.0.271: 4fa93a88de49bbef68b10eb15aabedf28ca0e1ed
+anthropics/claude-code-action@v1.0.278: cc98b3ae241b0fcfb6a42a2690751afffecb4452
 ```
 
 ## Updating Action Versions
