@@ -105,11 +105,11 @@ pub struct AgentSchema {
     pub omit_claude_md: Option<bool>,
 
     /// Optional token count at which this agent compacts when it runs as a
-    /// subagent (Claude Code 2.1.296+): "a token count from `100000` to
-    /// `1000000`". Kept as a raw value: "in frontmatter Claude Code reads
-    /// `200k` as 200, which is outside the allowed range. The subagent still
-    /// loads", so a string or out-of-range value is reported as ignored
-    /// (CC-AG-019), not as a parse error.
+    /// subagent (Claude Code 2.1.296+): "a token count of `100000` or more"
+    /// (no upper bound is documented). Kept as a raw value: "in frontmatter
+    /// Claude Code reads `200k` as 200, which is below the minimum. The
+    /// subagent still loads", so a string or below-minimum value is reported
+    /// as ignored (CC-AG-019), not as a parse error.
     #[serde(skip_serializing_if = "Option::is_none", rename = "autoCompactWindow")]
     pub auto_compact_window: Option<serde_yaml::Value>,
 

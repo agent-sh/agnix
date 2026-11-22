@@ -1,4 +1,4 @@
-//! Pi configuration contracts, pinned to the documented v1.5.2 formats.
+//! Pi configuration contracts, pinned to the documented v1.6.0 formats.
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, DiagnosticLevel},
