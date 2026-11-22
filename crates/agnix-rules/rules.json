@@ -2,7 +2,7 @@
   "description": "Machine-readable source of truth for all validation rules. When adding a new rule, add it here AND in VALIDATION-RULES.md. CI parity tests enforce sync.",
   "version": "1.1.0",
   "total_rules": 763,
-  "last_updated": "2026-11-18",
+  "last_updated": "2026-11-22",
   "schema": {
     "evidence": {
       "source_type": "spec|vendor_docs|vendor_code|paper|community",
@@ -1632,7 +1632,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/sub-agents"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-22",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3416,7 +3416,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/plugins/manifest-reference"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-22",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -15948,7 +15948,7 @@
         "source_urls": [
           "https://modelcontextprotocol.io/specification/2026-07-28/deprecated"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-22",
         "applies_to": {
           "spec_revision": "2026-07-28"
         },
@@ -16130,7 +16130,7 @@
           "https://cursor.com/docs/mcp",
           "https://kiro.dev/docs/mcp/security"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-22",
         "applies_to": {},
         "normative_level": "SHOULD",
         "tests": {
@@ -16235,7 +16235,7 @@
         "source_urls": [
           "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-22",
         "applies_to": {
           "spec_revision": "2025-11-25, 2026-07-28"
         },

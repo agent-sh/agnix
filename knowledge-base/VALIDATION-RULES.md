@@ -1473,8 +1473,8 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 <a id="cc-ag-019"></a>
 ### CC-AG-019 [MEDIUM] Unknown or Ignored Agent Frontmatter Field
-**Requirement**: Agent frontmatter fields SHOULD be fields Claude Code reads, with values it accepts. Vendor text: "Multi-word field names use camelCase, such as `maxTurns` and `disallowedTools`, and must match the table exactly: Claude Code ignores a field it doesn't recognize without reporting an error." and, for `autoCompactWindow`, "set `autoCompactWindow` in its frontmatter to a token count from `100000` to `1000000`" and "Write the value as a plain integer such as `200000`, because in frontmatter Claude Code reads `200k` as 200, which is outside the allowed range. The subagent still loads and compacts as if the field were absent." (sub-agents, "Supported frontmatter fields", "Set the auto-compact window for one subagent")
-**Detection**: keys not in the known agent fields (with a specific hint for a top-level `cacheTtl`, which belongs inside `experimental`), and an `autoCompactWindow` that is not an integer from 100000 to 1000000 (a string such as `200k` is reported as ignored, not as a parse error). `experimental.cacheTtl` recognizes `5m` and `1h`; Claude Code ignores other values, so those are accepted; a non-map `experimental` value is a CC-AG-007 parse error.
+**Requirement**: Agent frontmatter fields SHOULD be fields Claude Code reads, with values it accepts. Vendor text: "Multi-word field names use camelCase, such as `maxTurns` and `disallowedTools`, and must match the table exactly: Claude Code ignores a field it doesn't recognize without reporting an error." and, for `autoCompactWindow`, "set `autoCompactWindow` in its frontmatter to a token count of `100000` or more" and "Write the value as a plain integer such as `200000`, because in frontmatter Claude Code reads `200k` as 200, which is below the minimum. The subagent still loads and compacts as if the field were absent." (sub-agents, "Supported frontmatter fields", "Set the auto-compact window for one subagent")
+**Detection**: keys not in the known agent fields (with a specific hint for a top-level `cacheTtl`, which belongs inside `experimental`), and an `autoCompactWindow` that is not an integer of at least 100000 (no upper bound is documented; a string such as `200k` is reported as ignored, not as a parse error). `experimental.cacheTtl` recognizes `5m` and `1h`; Claude Code ignores other values, so those are accepted; a non-map `experimental` value is a CC-AG-007 parse error.
 **Fix**: Manual - remove or fix typo; write `autoCompactWindow` as a plain integer
 **Source**: code.claude.com/docs/en/sub-agents
 
@@ -1741,7 +1741,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-pl-004"></a>
 ### CC-PL-004 [HIGH] Missing Required/Recommended Plugin Field
-**Requirement**: plugin.json REQUIRES name; description and version are RECOMMENDED
+**Requirement**: plugin.json REQUIRES name ("name is the only required key"); flagging a missing description or version is an agnix heuristic Warning (the manifest reference no longer marks description/version as recommended)
 **Detection**: Parse JSON, check required fields (error for name, warning for description/version)
 **Fix**: Add missing fields
 **Source**: code.claude.com/docs/en/plugins/manifest-reference

@@ -1234,9 +1234,10 @@ impl Validator for AgentValidator {
                 );
             }
             // "set `autoCompactWindow` in its frontmatter to a token count
-            // from `100000` to `1000000`" and "in frontmatter Claude Code
-            // reads `200k` as 200, which is outside the allowed range. The
-            // subagent still loads and compacts as if the field were absent."
+            // of `100000` or more" (the reference no longer documents an
+            // upper bound) and "in frontmatter Claude Code reads `200k` as
+            // 200, which is below the minimum. The subagent still loads and
+            // compacts as if the field were absent."
             if let Some(value) = &schema.auto_compact_window
                 && let Some(problem) = auto_compact_window_problem(value)
             {
@@ -1505,7 +1506,7 @@ fn frontmatter_key_pos(content: &str, parts: &FrontmatterParts, key: &str) -> (u
 fn auto_compact_window_problem(value: &serde_yaml::Value) -> Option<String> {
     match value {
         serde_yaml::Value::Number(n) => match n.as_u64() {
-            Some(v) if (100_000..=1_000_000).contains(&v) => None,
+            Some(v) if v >= 100_000 => None,
             _ => Some(n.to_string()),
         },
         serde_yaml::Value::String(s) => Some(format!("'{s}'")),
@@ -5431,8 +5432,9 @@ Agent instructions"#;
             ("200000", false),
             ("100000", false),
             ("1000000", false),
+            ("1000001", false),
+            ("5000000", false),
             ("99999", true),
-            ("1000001", true),
             ("200k", true),
             ("\"200000\"", true),
         ] {

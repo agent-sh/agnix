@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-11-18T07:40:10Z",
+  "last_updated": "2026-11-22",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -28,7 +28,7 @@
       "mcp-spec": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/index.md",
-        "hash": "367fe3c143676f4cffcd01cbd9699c7ea7c58c3224e29c9a4432ffc60d017d96",
+        "hash": "fa6c3afbf991d2b05d3dbc88e2e9c640dc9e7b588a8a8f15c2b7ffa3973625bf",
         "github_repo": "modelcontextprotocol/modelcontextprotocol",
         "rules": [
           "MCP-001",
@@ -55,7 +55,7 @@
       "mcp-spec-tools": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/tools",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/server/tools.md",
-        "hash": "2e0808ce801b61502f1a227f2bf965e5a2ebbadd9b62fcbfa78a3f0abd362856",
+        "hash": "30b2db501261cfeeaa621d26d55890f53fa38a3012f740a1a3fcdb02e0316cba",
         "rules": [
           "MCP-002",
           "MCP-003",
@@ -71,7 +71,7 @@
       "mcp-spec-resources": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/resources",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/server/resources.md",
-        "hash": "d910e577dad5f6955c01ef36f4b4b1a47c264002b7668b0e878a4f870254195e",
+        "hash": "56be062571b959c4e5bb35dc7b2409c3b3b415db4b8a09b419121a6f52b10657",
         "rules": [
           "MCP-015"
         ]
@@ -79,7 +79,7 @@
       "mcp-spec-prompts": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/server/prompts",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/server/prompts.md",
-        "hash": "c7084a0df8d45571c246770ba0be4d5738ee2faa981e6a8c8e3180805827e1fb",
+        "hash": "327703d6a30f47a64c6f06669576c59ef14f9179ebe90edf5b54473c5d224f5b",
         "rules": [
           "MCP-016"
         ]
@@ -87,7 +87,7 @@
       "mcp-spec-transports": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/transports.md",
-        "hash": "e7782ecc90710a0f544a4521dbec9534d9b787da358aef63d98650c14331a1e7",
+        "hash": "128f18978b8a3f16bbde6e62bbaf2071e14441409d8dcf9944d434bba1cd4920",
         "rules": [
           "MCP-009",
           "MCP-010",
@@ -100,9 +100,9 @@
         ]
       },
       "mcp-spec-security": {
-        "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/security_best_practices",
-        "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/security_best_practices.md",
-        "hash": "a38640214db9bd1253ffac3cfc1389710861746c8e4b2546879e6561a291a257",
+        "url": "https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices",
+        "content_url": "https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices.md",
+        "hash": "3f654ff190ddf7d882e6a496a2de35b8fe31df2ba5d2edb4461df91afe013964",
         "rules": [
           "MCP-018",
           "MCP-019",
@@ -112,7 +112,7 @@
       "mcp-spec-versioning": {
         "url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning",
         "content_url": "https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning.md",
-        "hash": "a9ae76726d1fe3fe479759ed228f495f016ce621ccd7d16c76845ce2851c9d62",
+        "hash": "f42c89c87d9ac718cffa8bfc3be2e0002f92027274cec50399ea17a613edc46a",
         "rules": [
           "MCP-008",
           "MCP-020"
@@ -121,7 +121,7 @@
       "claude-code-memory": {
         "url": "https://code.claude.com/docs/en/memory",
         "content_url": "https://code.claude.com/docs/en/memory.md",
-        "hash": "59dc16a661447ba674f35f2877241ae1a4db865ffe9862f0b64292ffd3105b79",
+        "hash": "e1d15229b5610fb5a144e9f3ad865bc2de2ae60eee8d3ad31d16d4556a1bf22a",
         "rules": [
           "CC-MEM-001",
           "CC-MEM-002",
@@ -140,7 +140,7 @@
       "claude-code-hooks": {
         "url": "https://code.claude.com/docs/en/hooks",
         "content_url": "https://code.claude.com/docs/en/hooks.md",
-        "hash": "7ceda675627fff38e81d4629a57fbd2b4d173129248f5b2d4745bee0087b21a6",
+        "hash": "28e6937b0199ab4465b0d73f1ec3c08a0bf15228a978fa3025880d42d85516d8",
         "rules": [
           "CC-HK-001",
           "CC-HK-002",
@@ -167,7 +167,7 @@
       "claude-code-skills": {
         "url": "https://code.claude.com/docs/en/skills",
         "content_url": "https://code.claude.com/docs/en/skills.md",
-        "hash": "7f651afc13392cf8f716826a3482fdf0b6db684552cf8c67fe721cf5e2d00010",
+        "hash": "fa841a358dbc781860c649886a9b82756a99b645ce50a5ff7d9764b015b2ca02",
         "rules": [
           "AS-021",
           "CC-SK-001",
@@ -187,7 +187,7 @@
       "claude-code-plugins": {
         "url": "https://code.claude.com/docs/en/plugins-reference",
         "content_url": "https://code.claude.com/docs/en/plugins-reference.md",
-        "hash": "0c841fc3dd19233e9651625302e463a318dbac53650e10ffd852936413ec9688",
+        "hash": "aa6c14ed2cd77e25827c8e0a1b96fdbee564d8b20f76b54426b4994bf07fbc38",
         "rules": [
           "CC-PL-002",
           "CC-PL-003",
@@ -205,7 +205,7 @@
       "claude-code-subagents": {
         "url": "https://code.claude.com/docs/en/sub-agents",
         "content_url": "https://code.claude.com/docs/en/sub-agents.md",
-        "hash": "c882b207572a81c77c7ca2ac122c9b5cedf9438f87b76a483d1dacc05c1e801f",
+        "hash": "101953b39498234e3a27166f62ab73420309a965abf372203597b9b69deb28f2",
         "rules": [
           "CC-AG-001",
           "CC-AG-002",

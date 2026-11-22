@@ -4,41 +4,41 @@
     "source_url": "https://antigravity.google/schemas/v1/plugin.json",
     "source_sha256": "0eea5e483af6f03fa099f32b065d2924a323f1a616ed0323cfa0b7a74ff9543c",
     "constraint_sha256": "1497addd7543ea960eb8e43c0d119f7bfb8cd29f03ef16536bd924f10e1008c0",
-    "verified_on": "2026-11-04"
+    "verified_on": "2026-11-22"
   },
   {
     "file": "antigravity-settings.json",
     "source_url": "https://antigravity.google/schemas/v1/settings.json",
-    "source_sha256": "ab765e72f41321d2b36a388271e7b996499e4d116965f015c33dfeb19e273c2c",
-    "constraint_sha256": "1aab6bf9e0464f437abdcc2674eb4449f51058112144d28012fba68b66cdcb2b",
-    "verified_on": "2026-11-11"
+    "source_sha256": "0d88365f7f29120a041d946f27c3ef2b913942c19640c3218ecaeee536dfa739",
+    "constraint_sha256": "fa38cc96a944761ddebd7f1d4312c418a5d318fc10d3398257b2c3f0be321a0a",
+    "verified_on": "2026-11-22"
   },
   {
     "file": "pi-keybindings.json",
-    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.2/packages/coding-agent/schemas/keybindings.schema.json",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.6.0/packages/coding-agent/schemas/keybindings.schema.json",
     "source_sha256": "46d494b2493cd9fcf957d352aac653fe6f04121254f34033a5664e7c8f9928aa",
     "constraint_sha256": "454120eeed85d2c4905878457d0e9bfbfdff58be84d3a57a657b1f23ea3bf055",
-    "verified_on": "2026-11-11"
+    "verified_on": "2026-11-22"
   },
   {
     "file": "pi-models.json",
-    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.2/packages/coding-agent/schemas/models.schema.json",
-    "source_sha256": "3e4cb1963defc0ea67a25d81a652536ed0a0d480c536db04dabe9d02baad8bdc",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.6.0/packages/coding-agent/schemas/models.schema.json",
+    "source_sha256": "b5679d7ad00fa34aa4f0b42aa7578ed85ae1fbf4b254ddeba5a4288e1c3c4f27",
     "constraint_sha256": "c03a0de6c742761e50d7c4192da1f5fd5442a82c20104cd79c5398be6bf290fd",
-    "verified_on": "2026-11-11"
+    "verified_on": "2026-11-22"
   },
   {
     "file": "pi-settings.json",
-    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.2/packages/coding-agent/schemas/settings.schema.json",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.6.0/packages/coding-agent/schemas/settings.schema.json",
     "source_sha256": "10c0b73ace40dd0a3461a45f08cb819b39b1089ce7037e27b746fc812f28beb9",
-    "constraint_sha256": "17d7228a42501e244a141b5df7862d7970b3106359dff78873047c1ccdbe915c",
-    "verified_on": "2026-11-11"
+    "constraint_sha256": "f57a023139b7424ac6cb85d9597ad226609a7a4d44de8734df87abc451e13e81",
+    "verified_on": "2026-11-22"
   },
   {
     "file": "pi-theme.json",
-    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.5.2/packages/coding-agent/schemas/theme.schema.json",
+    "source_url": "https://raw.githubusercontent.com/earendil-works/pi/v1.6.0/packages/coding-agent/schemas/theme.schema.json",
     "source_sha256": "f526a690b63c6303296f683c9df6077ddc290ee9acb1bc27eedef169c0caad59",
     "constraint_sha256": "22a314dc5b46af77bb7bdd41b44e0f22aa8a8ebde8d46ebbba22f0ef275ccd20",
-    "verified_on": "2026-11-11"
+    "verified_on": "2026-11-22"
   }
 ]

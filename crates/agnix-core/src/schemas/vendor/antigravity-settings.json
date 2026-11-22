@@ -70,7 +70,9 @@
         "vim"
       ]
     },
-    "enableTelemetry": {},
+    "enableTelemetry": {
+      "deprecated": true
+    },
     "enableTerminalSandbox": {
       "type": "boolean"
     },
@@ -84,7 +86,9 @@
       "type": "integer",
       "minimum": -1
     },
-    "hooks": {},
+    "hooks": {
+      "deprecated": true
+    },
     "model": {
       "type": "string"
     },
@@ -139,17 +143,8 @@
           "$ref": "#/$defs/statusLine"
         },
         {
-          "type": "boolean"
-        }
-      ]
-    },
-    "title": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/title"
-        },
-        {
-          "type": "boolean"
+          "type": "boolean",
+          "deprecated": true
         }
       ]
     },
@@ -240,24 +235,6 @@
         }
       }
     },
-    "title": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "command"
-          ]
-        },
-        "command": {
-          "type": "string"
-        },
-        "enabled": {
-          "type": "boolean"
-        }
-      }
-    },
     "customModelsConfig": {
       "type": "object",
       "additionalProperties": false,
@@ -329,7 +306,8 @@
           "type": "string"
         },
         "modelId": {
-          "type": "string"
+          "type": "string",
+          "deprecated": true
         }
       }
     },

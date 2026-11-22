@@ -816,7 +816,7 @@ rules:
     unknown: Unknown agent frontmatter field '%{field}'; Claude Code ignores fields it doesn't recognize
     unknown_suggestion: 'Remove or rename ''%{field}'' - known fields: %{known}'
     cache_ttl_suggestion: Write cacheTtl inside the experimental map (experimental.cacheTtl), not at the top level
-    auto_compact_window: autoCompactWindow %{value} is ignored; Claude Code accepts a plain integer token count from 100000 to 1000000
+    auto_compact_window: autoCompactWindow %{value} is ignored; Claude Code accepts a plain integer token count of 100000 or more
     auto_compact_window_suggestion: Write the value as a plain integer such as 200000 (in frontmatter '200k' reads as 200)
   cc_ag_021:
     message: The project's subagent descriptions add up to about %{tokens} tokens across %{count} files, over the %{budget}-token total that makes Claude Code show a startup warning

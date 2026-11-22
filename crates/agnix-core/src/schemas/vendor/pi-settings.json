@@ -176,7 +176,8 @@
           }
         },
         "maxDelayMs": {
-          "type": "number"
+          "type": "number",
+          "deprecated": true
         }
       }
     },
@@ -324,7 +325,8 @@
                 "type": "string"
               }
             }
-          }
+          },
+          "deprecated": true
         }
       ]
     },
@@ -666,10 +668,12 @@
           "type": "string",
           "const": "one-at-a-time"
         }
-      ]
+      ],
+      "deprecated": true
     },
     "websockets": {
-      "type": "boolean"
+      "type": "boolean",
+      "deprecated": true
     }
   },
   "additionalProperties": true,

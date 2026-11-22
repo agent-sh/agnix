@@ -37,6 +37,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Review Claude Code v2.1.330, Cursor 3.31.15, Kimi Code 2.7.2, Pi
+  v1.6.0, Antigravity CLI 1.5.14, Cline v4.1.27 and OpenCode 2 v2.3.2
+  against their live sources (npm dist-tags, `agy changelog`, tagged
+  schema compares, api2.cursor.sh and GitHub releases); advance all
+  seven release baselines. No new validation constraints: the Claude
+  Code 2.1.330 npm tarball changes only SDK types (`cli.js` is
+  byte-identical), Kimi Code 2.7.2's bundled CLI key set is unchanged,
+  Pi v1.6.0 changes model lists and two schema descriptions, and
+  OpenCode 2 v2.3.2's new `compaction.background` boolean (default
+  true) replaces the removed `background_compaction` experimental flag
+  without touching a key agnix constrains.
+- Re-derive the vendored Antigravity settings constraints (the
+  published schema drops the `title` setting and marks `enableTelemetry`,
+  `hooks`, the boolean `statusLine` form and `customModelsConfig.modelId`
+  deprecated) and Pi settings constraints at the v1.6.0 tag (recovering
+  four `deprecated` markers the previous bundle missed); root
+  `additionalProperties: true` keeps unknown keys tolerated, and
+  `deprecated` is annotation-only, so no diagnostic changes.
+- Refresh the twelve spec baseline hashes from the 2026-11-22 drift
+  sentinel (#1878); the MCP spec revision stays 2026-07-28, MCP-021's
+  wildcard-bind guidance is still verbatim on the streamable-http page,
+  and the mcp-spec-security entry now points at the canonical
+  `/docs/2026-07-28/tutorials/security/` URL. CC-PL-004's requirement
+  text records that flagging missing description/version is an agnix
+  heuristic (the manifest reference no longer marks them recommended).
 - Address the three P2 findings of PR #1862's round-2 review, verified
   against live vendor sources on 2026-11-20:
   - The `minimal` sandbox builtin (GRK-SBX-001) is reserved only when the
@@ -243,6 +268,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fields.
 
 ### Fixed
+- CC-AG-019 no longer reports `autoCompactWindow` values above 1,000,000
+  as ignored: the sub-agents reference documents "a token count of
+  `100000` or more" with no upper bound, so any integer of at least
+  100000 is accepted (the plain-integer and string checks are unchanged).
 - Rule docs pages for empty-file rules (WS-001, KIRO-004, CDX-AG-001, CLN-001, COP-001) show the empty or whitespace-only file that triggers them instead of a generic "Configuration omitted required fields" placeholder.
 
 ## [0.61.0] - 2026-11-04
