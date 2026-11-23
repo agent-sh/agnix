@@ -37,6 +37,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Review Antigravity CLI 1.5.15 against its live sources (auto-updater
+  manifest, `agy changelog` release notes and the published
+  settings/plugin schemas) and advance the release baseline. No new
+  validation constraints: the notes list no settings.json,
+  mcp_config.json, hooks.json, plugin.json or rules change - the
+  `AGY_CLI_AUTO_COMPACT_OVERRIDE` syntax extension is an environment
+  variable rather than a validated file, the Orchestrator thinking
+  `Effort` default change leaves saved `orchestrator` choices
+  untouched, and both published schemas are byte-identical to the
+  vendored bundles (sources.json verified_on refreshed) (#1881).
 - Review Claude Code v2.1.330, Cursor 3.31.15, Kimi Code 2.7.2, Pi
   v1.6.0, Antigravity CLI 1.5.14, Cline v4.1.27 and OpenCode 2 v2.3.2
   against their live sources (npm dist-tags, `agy changelog`, tagged
