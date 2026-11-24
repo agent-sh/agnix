@@ -735,9 +735,11 @@ fn fixture_rules(dir: &str) -> Vec<(String, Vec<String>)> {
 
 /// Hook rules scoped to a V3 hook document carry a Kiro `version_range` in the
 /// rule book, and each one reports on a single hook file, so each one owns a
-/// `kr-hk-0NN-*.json` fixture under `kiro-hooks/v3/invalid`. KR-HK-025 is a
-/// project finding about the pinned Kiro version and is covered by the
-/// `kiro-reach/kr-hk-025` project instead.
+/// `kr-hk-0NN-*.json` fixture under `kiro-hooks/v3/invalid`. Cross-format rules
+/// such as KR-HK-010 carry a `spec_revision` instead and are not selected.
+/// KR-HK-025 fires only under a project Kiro 2.x pin, which the default
+/// `LintConfig` does not supply, so it is covered by the `kiro-reach/kr-hk-025`
+/// project.
 const V3_HOOK_RULES_COVERED_ELSEWHERE: &[&str] = &["KR-HK-025"];
 
 fn v3_hook_rules() -> BTreeSet<String> {
@@ -772,12 +774,11 @@ fn kiro_v3_hook_fixtures_cover_each_rule() {
         covered.insert(expected);
     }
     let expected = v3_hook_rules();
-    assert_eq!(
-        covered,
-        expected,
-        "V3 hook rules without an invalid fixture: {:?}; fixtures outside the V3 hook rules: {:?}",
-        expected.difference(&covered),
-        covered.difference(&expected)
+    let missing: Vec<_> = expected.difference(&covered).collect();
+    let unexpected: Vec<_> = covered.difference(&expected).collect();
+    assert!(
+        missing.is_empty() && unexpected.is_empty(),
+        "V3 hook rules without an invalid fixture: {missing:?}; fixtures outside the V3 hook rules: {unexpected:?}"
     );
 }
 
