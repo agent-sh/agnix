@@ -3,7 +3,7 @@ use agnix_core::{
     Diagnostic, DiagnosticLevel, FileSystem, FileType, LintConfig, MockFileSystem,
     ValidatorRegistry, apply_fixes_with_fs, detect_file_type,
 };
-use std::{path::Path, sync::Arc};
+use std::{collections::BTreeSet, path::Path, sync::Arc};
 
 fn validate(path: &Path, content: &str, config: &LintConfig) -> Vec<Diagnostic> {
     let content = agnix_core::normalize_line_endings(content);
@@ -733,18 +733,52 @@ fn fixture_rules(dir: &str) -> Vec<(String, Vec<String>)> {
     out
 }
 
+/// Hook rules scoped to a V3 hook document carry a Kiro `version_range` in the
+/// rule book, and each one reports on a single hook file, so each one owns a
+/// `kr-hk-0NN-*.json` fixture under `kiro-hooks/v3/invalid`. KR-HK-025 is a
+/// project finding about the pinned Kiro version and is covered by the
+/// `kiro-reach/kr-hk-025` project instead.
+const V3_HOOK_RULES_COVERED_ELSEWHERE: &[&str] = &["KR-HK-025"];
+
+fn v3_hook_rules() -> BTreeSet<String> {
+    let book: serde_json::Value = serde_json::from_str(agnix_rules::rules_json()).unwrap();
+    book["rules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|rule| {
+            rule["id"]
+                .as_str()
+                .is_some_and(|id| id.starts_with("KR-HK-"))
+                && rule["evidence"]["applies_to"]
+                    .get("version_range")
+                    .is_some()
+        })
+        .map(|rule| rule["id"].as_str().unwrap().to_string())
+        .filter(|id| !V3_HOOK_RULES_COVERED_ELSEWHERE.contains(&id.as_str()))
+        .collect()
+}
+
 #[test]
 fn kiro_v3_hook_fixtures_cover_each_rule() {
     for (name, rules) in fixture_rules("valid") {
         assert!(rules.is_empty(), "{name}: {rules:?}");
     }
-    let invalid = fixture_rules("invalid");
-    assert_eq!(invalid.len(), 19);
-    for (name, rules) in invalid {
+    let mut covered = BTreeSet::new();
+    for (name, rules) in fixture_rules("invalid") {
         // kr-hk-0NN-*.json reports exactly its own rule.
         let expected = name[..9].to_uppercase();
-        assert_eq!(rules, [expected], "{name}");
+        assert_eq!(rules, [expected.as_str()], "{name}");
+        covered.insert(expected);
     }
+    let expected = v3_hook_rules();
+    assert_eq!(
+        covered,
+        expected,
+        "V3 hook rules without an invalid fixture: {:?}; fixtures outside the V3 hook rules: {:?}",
+        expected.difference(&covered),
+        covered.difference(&expected)
+    );
 }
 
 #[test]
