@@ -53,6 +53,10 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact: agnix
+          # Apple Silicon host, Intel Mach-O. This target ships the LSP only.
+          - os: macos-26
+            target: x86_64-apple-darwin
+            lsp_only: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact: agnix.exe
@@ -80,8 +84,12 @@ jobs:
           tool: cross@0.2.5
 
       - name: Build release binary
-        if: ${{ !matrix.cross }}
+        if: ${{ !matrix.cross && !matrix.lsp_only }}
         run: cargo build --release --target ${{ matrix.target }} -p agnix-cli -p agnix-lsp -p agnix-mcp
+
+      - name: Build Intel macOS LSP
+        if: matrix.lsp_only
+        run: cargo build --locked --release --target ${{ matrix.target }} -p agnix-lsp
 
       - name: Build release binary (cross)
         if: matrix.cross
@@ -98,7 +106,7 @@ jobs:
             target/${{ matrix.target }}/release/agnix-mcp
 
       - name: Create CLI archive (Unix)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && !matrix.lsp_only
         run: |
           set -euo pipefail
           cd target/${{ matrix.target }}/release
@@ -108,16 +116,7 @@ jobs:
 
       - name: Create LSP archive (Unix)
         if: runner.os != 'Windows'
-        run: |
-          set -euo pipefail
-          cd target/${{ matrix.target }}/release
-          if [ -f agnix-lsp ]; then
-            lsp_hash="$(shasum -a 256 agnix-lsp | awk '{print $1}')"
-            printf '%s  agnix-lsp\n' "$lsp_hash" > ../../../agnix-lsp-${{ matrix.target }}.sha256
-            tar czvf ../../../agnix-lsp-${{ matrix.target }}.tar.gz agnix-lsp
-            cd ../../..
-            shasum -a 256 agnix-lsp-${{ matrix.target }}.tar.gz > agnix-lsp-${{ matrix.target }}.tar.gz.sha256
-          fi
+        run: python3 scripts/package-unix-lsp.py ${{ matrix.target }} target/${{ matrix.target }}/release/agnix-lsp
 
       - name: Create CLI archive (Windows)
         if: runner.os == 'Windows'
@@ -142,7 +141,7 @@ jobs:
           }
 
       - name: Create MCP archive (Unix)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && !matrix.lsp_only
         run: |
           set -euo pipefail
           cd target/${{ matrix.target }}/release

@@ -20,6 +20,7 @@ import {
   parseLspVersionOutput,
 } from './version-check';
 import { verifySha256File } from './checksum';
+import { getPlatformInfo } from './platform';
 import { AGNIX_DOCUMENT_SELECTOR, AGNIX_WATCH_PATTERNS } from './filePatterns';
 
 const execAsync = promisify(exec);
@@ -92,11 +93,6 @@ let diagnosticsTreeProvider: AgnixDiagnosticsTreeProvider | undefined;
 let extensionContext: vscode.ExtensionContext;
 
 const GITHUB_REPO = 'agent-sh/agnix';
-
-interface PlatformInfo {
-  asset: string;
-  binary: string;
-}
 
 /**
  * LSP configuration structure sent to the language server.
@@ -333,52 +329,6 @@ function filterAgnixFixActions(
     const diagnostics = action.diagnostics || [];
     return diagnostics.some(isAgnixDiagnostic);
   });
-}
-
-/**
- * Get platform-specific download info for agnix-lsp.
- */
-function getPlatformInfo(): PlatformInfo | null {
-  const platform = process.platform;
-  const arch = process.arch;
-
-  if (platform === 'darwin') {
-    if (arch === 'arm64') {
-      return {
-        asset: 'agnix-lsp-aarch64-apple-darwin.tar.gz',
-        binary: 'agnix-lsp',
-      };
-    }
-    // x64 Mac can use ARM binary via Rosetta
-    return {
-      asset: 'agnix-lsp-aarch64-apple-darwin.tar.gz',
-      binary: 'agnix-lsp',
-    };
-  } else if (platform === 'linux') {
-    if (arch === 'x64') {
-      return {
-        asset: 'agnix-lsp-x86_64-unknown-linux-gnu.tar.gz',
-        binary: 'agnix-lsp',
-      };
-    }
-    if (arch === 'arm64') {
-      return {
-        asset: 'agnix-lsp-aarch64-unknown-linux-gnu.tar.gz',
-        binary: 'agnix-lsp',
-      };
-    }
-    return null;
-  } else if (platform === 'win32') {
-    if (arch === 'x64') {
-      return {
-        asset: 'agnix-lsp-x86_64-pc-windows-msvc.zip',
-        binary: 'agnix-lsp.exe',
-      };
-    }
-    return null;
-  }
-
-  return null;
 }
 
 /**

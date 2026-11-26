@@ -125,6 +125,7 @@ jobs:
         # nothing else exercises them (see #1371).
         run: |
           bash scripts/check-glibc-floor.test.sh
+          bash scripts/package-unix-lsp.test.sh
           node npm/test/install-helpers.test.js
           python3 -m unittest discover -s pypi/test
           node --test scripts/glm-extract.test.js

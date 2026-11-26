@@ -48,6 +48,19 @@ fn release_publish_jobs_are_gated_by_tests() {
 }
 
 #[test]
+fn intel_macos_lsp_is_built_and_packaged_on_macos() {
+    let workflow = include_str!("../.github/workflows/release.yml").replace("\r\n", "\n");
+    assert!(workflow.contains(
+        "- os: macos-26\n            target: x86_64-apple-darwin\n            lsp_only: true"
+    ));
+    assert!(
+        workflow
+            .contains("cargo build --locked --release --target ${{ matrix.target }} -p agnix-lsp")
+    );
+    assert!(workflow.contains("python3 scripts/package-unix-lsp.py ${{ matrix.target }}"));
+}
+
+#[test]
 fn release_workflow_publishes_lsp_binary_checksums() {
     let root = env!("CARGO_MANIFEST_DIR");
     let workflow = fs::read_to_string(format!("{root}/.github/workflows/release.yml"))
@@ -57,10 +70,6 @@ fn release_workflow_publishes_lsp_binary_checksums() {
     assert!(
         workflow.contains("agnix-lsp-${{ matrix.target }}.sha256"),
         "release workflow must publish binary checksum assets for Zed"
-    );
-    assert!(
-        workflow.contains("printf '%s  agnix-lsp\\n'"),
-        "Unix LSP checksum must name the extracted binary"
     );
     assert!(
         workflow.contains("\"$lspHash  agnix-lsp.exe\""),

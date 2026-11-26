@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Build the Intel macOS language server and both checksum files for editor downloads. VS Code now selects the Intel binary on x64 Macs.
+
 ## [0.62.0] - 2026-11-26
 
 Five new rules bring the catalog to 763: four check Kiro hooks and settings, and one checks OpenCode MCP connection pooling.

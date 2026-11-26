@@ -69,7 +69,7 @@ cargo deny check advisories
    ```
 
 2. The GitHub Actions release workflow will automatically:
-   - Build binaries for Linux (x86_64 GNU/musl, aarch64 GNU), macOS (aarch64), and Windows (x86_64)
+   - Build CLI, LSP and MCP binaries for Linux (x86_64 GNU/musl, aarch64 GNU), macOS (aarch64), and Windows (x86_64). On macOS, also cross-compile the LSP for Intel using the Apple SDK and Rust's `x86_64-apple-darwin` target.
    - Create a GitHub Release with the binaries
    - Publish the crates, the npm package, and the PyPI wheels
    - Publish VS Code and JetBrains plugins, and move the floating `v0` tag
@@ -79,6 +79,82 @@ cargo deny check advisories
 The Homebrew and Zed jobs open pull requests in their registry repositories.
 Review their diffs, wait for CI and Revuto, and merge those PRs before treating
 the distribution update as complete.
+
+### Staging the v0.62.0 Intel macOS LSP backfill
+
+Zed needs the archive and a checksum of the **extracted executable**. JetBrains
+needs a third file, the checksum of the **archive**. Normal releases ship all
+three. The two-file v0.62.0 repair below is for Zed only; it does not update a
+marketplace extension or claim to restore JetBrains downloads.
+
+On macOS with Xcode and rustup, start at the root of the reviewed fix checkout.
+Use a fresh build directory and the compiler from the v0.62.0 macOS build
+(job `140065461592`). The packaging helper comes from the fix; the binary and
+Cargo.lock must come from the original release commit, never from the fix.
+These commands stage files locally without a GitHub write token:
+
+```bash
+set -euo pipefail
+pack="$PWD/scripts/package-unix-lsp.py"
+repo=agent-sh/agnix
+tag=v0.62.0
+commit=66c82e01f10281198449b2ab1ae125d97b3e1c2f
+target=x86_64-apple-darwin
+stem=agnix-lsp-$target
+stage=$(mktemp -d "${TMPDIR%/}/agnix-intel.XXXXXXXX")
+git clone --depth 1 --branch "$tag" "https://github.com/$repo.git" "$stage/src"
+cd "$stage/src"
+test "$(git rev-parse "$tag^{commit}")" = "$commit"
+test "$(git rev-parse HEAD)" = "$commit"
+test -z "$(git status --porcelain)"
+rustup toolchain install 1.100.0 --profile minimal --target "$target"
+export CARGO_TARGET_DIR="$stage/target"
+# Keep checkout and registry paths out of diagnostic strings in the binary.
+export CARGO_ENCODED_RUSTFLAGS="--remap-path-prefix=$stage=/build"$'\x1f'"--remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/cargo"
+cargo +1.100.0 build --locked --release --target "$target" -p agnix-lsp
+mkdir "$stage/assets" "$stage/check"
+cd "$stage/assets"
+python3 "$pack" "$target" "$CARGO_TARGET_DIR/$target/release/agnix-lsp"
+shasum -a 256 -c "$stem.tar.gz.sha256"
+test "$(tar -tzf "$stem.tar.gz")" = agnix-lsp
+tar -xzf "$stem.tar.gz" -C ../check
+(cd ../check && test -x agnix-lsp && shasum -a 256 -c "../assets/$stem.sha256")
+test "$(lipo -archs ../check/agnix-lsp)" = x86_64
+file ../check/agnix-lsp
+```
+
+Record `rustc +1.100.0 -vV`, `xcodebuild -version`, `xcrun --show-sdk-version`,
+`python3 --version` and the digests with the staged files. Packing the same
+binary with the same tools is deterministic. Do not infer native execution
+from a Mach-O header; use an Intel Mac for a native `agnix-lsp --version` check.
+
+**Publication is a separate maintainer step.** Do not rerun the release
+workflow, move tags, use `--clobber`, or upload `assets/*`. Immediately before
+upload, verify the remote tag and release and take an inventory:
+
+```bash
+test "$(git ls-remote "https://github.com/$repo.git" "refs/tags/$tag^{}" | cut -f1)" = "$commit"
+gh api "repos/$repo/releases/tags/$tag" > "$stage/before.json"
+jq -e --arg stem "$stem" '.id == 459711967 and .tag_name == "v0.62.0"
+  and .draft == false and .immutable == false
+  and all(.assets[]; .name != ($stem + ".tar.gz") and .name != ($stem + ".sha256"))' "$stage/before.json"
+```
+
+Only after approval, upload the two named files without replacement:
+
+```bash
+gh release upload "$tag" "$stem.sha256" "$stem.tar.gz" --repo "$repo"
+```
+
+Read back the release by ID and confirm every original asset's name, ID and
+digest is unchanged and the only additions are those two files. Download both
+into a fresh directory with `gh release download --repo "$repo" "$tag" -p "$stem.sha256" -p "$stem.tar.gz"`;
+compare each byte-for-byte to the staged files and repeat the archive and raw
+checksum checks above. If interrupted or either file already exists, stop:
+compare the existing asset against the retained staging directory before
+uploading only a confirmed missing file. Never replace a mismatched asset.
+The `.tar.gz.sha256` sidecar is staged for verification; publishing it for
+JetBrains requires expanding the historical backfill scope.
 
 ### glibc floor
 
