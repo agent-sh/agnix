@@ -5568,15 +5568,15 @@ Detection: Use the file's native JSON dialect, with an object at its root. model
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.2/packages/coding-agent/src).
+Sources: [settings.md](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/docs/settings.md), [settings.schema.json](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/schemas/settings.schema.json), [settings-manager.ts](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/src/core/settings-manager.ts).
 
 ### PI-CFG-002 [HIGH] Invalid Pi Settings Value
 
-Detection: Pi settings must satisfy the published field types, enums and numeric constraints. Unknown settings remain permitted.
+Detection: Pi settings must satisfy the published field types, enums and numeric constraints. In v1.6.1, `notices` is an object with boolean `cacheMisses`, `cacheWarming`, `compactionCosts` and `reasoningDrops` fields. The deprecated `showCacheMissNotices` is still a boolean. Unknown settings remain permitted.
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.2/packages/coding-agent/src).
+Sources: [settings.md](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/docs/settings.md), [settings.schema.json](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/schemas/settings.schema.json), [settings-manager.ts](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/src/core/settings-manager.ts).
 
 ### PI-CFG-003 [MEDIUM] Ignored Pi Project Configuration
 
@@ -5584,7 +5584,7 @@ Detection: Global-only settings, models and keybindings belong in the agent dire
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.2/packages/coding-agent/src).
+Sources: [settings.md](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/docs/settings.md), [settings.schema.json](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/schemas/settings.schema.json), [settings-manager.ts](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/src/core/settings-manager.ts).
 
 ### PI-MDL-001 [HIGH] Invalid Pi Model Definition
 
@@ -5592,7 +5592,7 @@ Detection: Provider and model definitions must match the published models schema
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.2/packages/coding-agent/src).
+Sources: [models.md](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/docs/models.md), [models.schema.json](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/schemas/models.schema.json), [model-config.ts](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/src/core/model-config.ts).
 
 ### PI-MDL-002 [HIGH] Unusable Pi Provider Configuration
 
@@ -5600,7 +5600,7 @@ Detection: OAuth needs an explicit baseUrl. A provider entry must change models,
 
 Applies to: `pi`; qualified configuration reference `>=1.4.0`.
 
-Sources: [reference 1](https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/configuration.md), [reference 2](https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/docs/settings.md), [reference 3](https://github.com/earendil-works/pi/tree/v1.5.2/packages/coding-agent/src).
+Sources: [models.md](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/docs/models.md), [models.schema.json](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/schemas/models.schema.json), [model-config.ts](https://github.com/earendil-works/pi/blob/v1.6.1/packages/coding-agent/src/core/model-config.ts).
 
 ### PI-KB-001 [HIGH] Invalid Pi Keybinding
 

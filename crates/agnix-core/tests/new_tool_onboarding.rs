@@ -26,6 +26,29 @@ fn pi_settings_validate_nested_numeric_constraints() {
 }
 
 #[test]
+fn pi_settings_validate_notice_toggles() {
+    let path = ".pi/settings.json";
+    let valid = r#"{"notices":{"cacheMisses":true,"cacheWarming":false,"compactionCosts":true,"reasoningDrops":false},"showCacheMissNotices":false}"#;
+    let found = rules(path, valid);
+    assert!(!found.iter().any(|id| id.starts_with("PI-")), "{found:?}");
+
+    for invalid in [
+        r#"{"notices":true}"#,
+        r#"{"notices":{"cacheMisses":"yes"}}"#,
+        r#"{"notices":{"cacheWarming":"yes"}}"#,
+        r#"{"notices":{"compactionCosts":"yes"}}"#,
+        r#"{"notices":{"reasoningDrops":"yes"}}"#,
+        r#"{"showCacheMissNotices":"yes"}"#,
+    ] {
+        let found = rules(path, invalid);
+        assert!(
+            found.iter().any(|id| id == "PI-CFG-002"),
+            "{invalid}: {found:?}"
+        );
+    }
+}
+
+#[test]
 fn pi_project_scope_reports_settings_the_client_ignores() {
     assert!(
         rules(".pi/settings.json", r#"{"defaultProjectTrust":"always"}"#)

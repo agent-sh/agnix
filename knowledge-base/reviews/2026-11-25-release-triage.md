@@ -1,5 +1,7 @@
 # Release compatibility review - 2026-11-25
 
+For the later markers and Pi v1.6.1 qualification, see the [November 26 follow-up](2026-11-26-release-triage.md).
+
 The Wednesday sweep re-ran the release poll (`UPDATE_BASELINES=true bash
 scripts/check-tool-releases.sh`) on 2026-11-25: `ok=5 new=9 errors=0
 skipped=1`. Each marker below was read from its live source before
@@ -61,7 +63,7 @@ Baseline-only advances:
 - Gemini CLI v0.71.1: the settings schema is byte-identical to v0.70.0.
 - Kimi Code 2.7.3: no validator yet; the bundle's quoted-key set grows by 21
   feedback and MCP OAuth runtime fields.
-- Pi v1.6.0 is still the latest release.
+- Pi v1.6.0 was the latest release at the time of this poll.
 
 Spec sentinels (#1890 and the sources the same day's reproduction found
 drifted on top of it): `pi-models` (two description changes against

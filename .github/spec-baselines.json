@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "Baseline hashes for canonical specification content. Human-facing URLs are kept separately from machine-readable content URLs.",
-  "last_updated": "2026-11-25",
+  "last_updated": "2026-11-26",
   "sources": {
     "s-tier": {
       "agent-skills-spec": {
@@ -272,23 +272,23 @@
       "pi-settings": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/settings.schema.json",
         "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/settings.schema.json",
-        "hash": "07d7bfa2fcefe57a7d6ca2cde4807afa9428912dfcb7aabb5c57ff768df2f4d0",
+        "hash": "9884725fbd56119e020006571d37f251aca562ff4dbd702ceecfc4c06978ddf3",
         "rules": [
           "PI-CFG-001",
           "PI-CFG-002",
           "PI-CFG-003"
         ],
-        "last_checked": "2026-11-25"
+        "last_checked": "2026-11-26"
       },
       "pi-models": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
         "content_url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/models.schema.json",
-        "hash": "b54edc352fec7c9888cfad58f896e6d6dc44c39a8629a0688792e950e3b0db25",
+        "hash": "05f98ddde4e69401dca4f0831a6142217ea48cfdffa46c43e4b9f9ac62bdfbae",
         "rules": [
           "PI-MDL-001",
           "PI-MDL-002"
         ],
-        "last_checked": "2026-11-25"
+        "last_checked": "2026-11-26"
       },
       "pi-keybindings": {
         "url": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/coding-agent/schemas/keybindings.schema.json",
@@ -464,7 +464,7 @@
           "AGY-CFG-005",
           "AGY-KB-001"
         ],
-        "last_checked": "2026-11-25"
+        "last_checked": "2026-11-26"
       },
       "antigravity-plugin": {
         "url": "https://antigravity.google/schemas/v1/plugin.json",
@@ -486,13 +486,13 @@
           "AGY-RL-003",
           "AGY-RL-004"
         ],
-        "last_checked": "2026-11-25"
+        "last_checked": "2026-11-26"
       },
       "antigravity-discovery": {
         "url": "https://antigravity.google/docs/customization-discovery",
         "content_url": "https://antigravity.google/docs/customization-discovery.md",
         "hash": "0de33b78a4d1ab24675d0d7721ea4d504ba483f4d7672aa4fa4575c9fbbcce3c",
-        "last_checked": "2026-11-25",
+        "last_checked": "2026-11-26",
         "rules": [
           "AGY-RL-001",
           "AGY-RL-002",

@@ -184,9 +184,6 @@
     "hideThinkingBlock": {
       "type": "boolean"
     },
-    "showCacheMissNotices": {
-      "type": "boolean"
-    },
     "externalEditor": {
       "type": "string"
     },
@@ -537,6 +534,23 @@
         }
       }
     },
+    "notices": {
+      "type": "object",
+      "properties": {
+        "cacheMisses": {
+          "type": "boolean"
+        },
+        "cacheWarming": {
+          "type": "boolean"
+        },
+        "compactionCosts": {
+          "type": "boolean"
+        },
+        "reasoningDrops": {
+          "type": "boolean"
+        }
+      }
+    },
     "codemode": {
       "type": "object",
       "properties": {
@@ -672,6 +686,10 @@
       "deprecated": true
     },
     "websockets": {
+      "type": "boolean",
+      "deprecated": true
+    },
+    "showCacheMissNotices": {
       "type": "boolean",
       "deprecated": true
     }

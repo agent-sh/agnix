@@ -45,6 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- PI-CFG-002 checks Pi v1.6.1 `notices` and its four boolean fields. The legacy
+  `showCacheMissNotices` boolean remains accepted (#1895).
+- Review Antigravity CLI 1.5.18, Cline v4.1.28, Cursor 3.32.10, Kimi Code
+  2.8.1, Kiro CLI 3.6.2 and OpenCode v2.4.2. No additional static validation
+  constraints were identified in these releases. See the
+  [release and spec review](knowledge-base/reviews/2026-11-26-release-triage.md).
 - Review the 2026-11-25 tool releases against their live sources (baselines:
   Antigravity CLI 1.5.17, Claude Code v2.1.332, Codex rust-v0.172.0, Cursor
   3.32.4, Gemini CLI v0.71.1, Grok CLI 1.0.92, Kimi Code 2.7.3, Kiro CLI
