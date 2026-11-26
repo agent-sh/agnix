@@ -1027,9 +1027,7 @@ fn clone_option_conflict(clone: &JsonValue) -> Option<String> {
                 _ => continue,
             };
             if !settings.insert(name) {
-                return Some(format!(
-                    "clone setting '{name}' is specified more than once"
-                ));
+                return Some(t!("rules.cur_016.clone_duplicate", name = name).to_string());
             }
         }
     }
@@ -1039,13 +1037,23 @@ fn clone_option_conflict(clone: &JsonValue) -> Option<String> {
         ("shallowSince", "bundleUri"),
     ] {
         if settings.contains(first) && settings.contains(second) {
-            return Some(format!(
-                "clone settings '{first}' and '{second}' cannot be combined"
-            ));
+            return Some(
+                t!(
+                    "rules.cur_016.clone_conflict",
+                    first = first,
+                    second = second
+                )
+                .to_string(),
+            );
         }
     }
     (all_branches && settings.contains("shallowSince")).then(|| {
-        "clone setting 'shallowSince' cannot be combined with 'singleBranch: false'".to_owned()
+        t!(
+            "rules.cur_016.clone_conflict",
+            first = "shallowSince",
+            second = "singleBranch: false"
+        )
+        .to_string()
     })
 }
 
@@ -1261,7 +1269,11 @@ fn validate_cursor_environment_file(
                 path,
                 content,
                 "clone",
-                format!("Invalid clone{}: {}", error.instance_path(), error.masked()),
+                t!(
+                    "rules.cur_016.clone_schema",
+                    path = error.instance_path(),
+                    keyword = error.kind().keyword()
+                ),
             ));
         }
         if let Some(message) = clone_option_conflict(clone) {

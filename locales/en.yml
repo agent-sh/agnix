@@ -173,6 +173,7 @@ rules:
     grok_custom_profiles_cannot_redefine_a_built: "Grok custom profiles cannot redefine a built-in sandbox profile."
     choose_a_custom_name_and_extend_a: "Choose a custom name and extend a supported built-in profile."
   grk_sbx_002:
+    minimal_version: "The minimal sandbox base requires Grok 1.0.82 or later."
     schema_message: "Grok field violates the documented %{keyword} constraint."
     schema_suggestion: "Use the native Grok configuration field types and values."
     unknown_sandbox_root_key: "Grok ignores the whole sandbox.toml: '%{key}' is not a sandbox.toml key, only 'profiles' is."
@@ -1227,6 +1228,9 @@ rules:
     message: Cursor subagent definition is empty after frontmatter
     suggestion: Add body instructions below the frontmatter section
   cur_016:
+    clone_schema: "clone%{path} violates the documented %{keyword} constraint."
+    clone_duplicate: "clone setting '%{name}' is specified more than once"
+    clone_conflict: "clone settings '%{first}' and '%{second}' cannot be combined"
     message: .cursor/environment.json must be an object matching Cursor's published environment schema
     parse_error: 'Failed to parse .cursor/environment.json: %{error}'
     install: Field 'install' must be a string
@@ -1554,6 +1558,10 @@ rules:
     root_type: "OpenCode config must be a JSON object, found %{found}"
     suggestion: "Fix the JSON syntax (OpenCode accepts comments and trailing commas)"
   oc_004:
+    automations_version: "The 'automations' key requires OpenCode 2.4.0 or later."
+    automations_version_suggestion: "Remove 'automations' or upgrade OpenCode."
+    automations_type: "The 'automations' field must be a boolean."
+    automations_type_suggestion: "Set 'automations' to true or false."
     message: "Unknown config key '%{key}' in opencode.json"
     did_you_mean: "Did you mean '%{key}'? The config schema (opencode.ai/config.json) lists the valid keys"
     suggestion: "Remove the key or check https://opencode.ai/config.json for valid options"

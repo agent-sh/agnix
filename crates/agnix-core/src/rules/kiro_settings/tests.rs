@@ -449,6 +449,40 @@ fn test_kr_set_011_global_only_key_in_workspace_file() {
 }
 
 #[test]
+fn notification_sound_honors_version_pin() {
+    for (version, known) in [("3.5.9", false), ("3.6.0", true)] {
+        let mut config = LintConfig::default();
+        config.tool_versions_mut().kiro = Some(version.into());
+        for (input, rule) in [
+            (r#"{"chat.notificationSound":"true"}"#, "KR-SET-008"),
+            (r#"{"chat":{"notificationSound":true}}"#, "KR-SET-007"),
+        ] {
+            let diagnostics = KiroSettingsValidator.validate(Path::new(PATH), input, &config);
+            assert_eq!(
+                hits(&diagnostics, rule).len(),
+                usize::from(known),
+                "{version}: {diagnostics:?}"
+            );
+            assert_eq!(
+                hits(&diagnostics, "KR-SET-005").len(),
+                usize::from(!known),
+                "{version}: {diagnostics:?}"
+            );
+            if !known {
+                assert!(diagnostics.iter().all(|d| {
+                    d.rule != "KR-SET-011"
+                        && !d
+                            .suggestion
+                            .as_deref()
+                            .unwrap_or_default()
+                            .contains("notificationSound")
+                }));
+            }
+        }
+    }
+}
+
+#[test]
 fn notification_sound_is_boolean() {
     for value in ["true", "false", r#""true""#] {
         let diagnostics = validate(&format!(r#"{{"chat.notificationSound":{value}}}"#));
@@ -500,6 +534,7 @@ fn test_settings_table_includes_kiro_234_workflow_launch() {
     keys.sort_unstable();
     keys.dedup();
     assert_eq!(keys.len(), SETTINGS.len(), "duplicate keys in SETTINGS");
+    let setting = |key: &str| SETTINGS.iter().find(|s| s.key == key);
     assert!(setting("chat.uiMode").unwrap().global_only);
     assert!(!setting("chat.defaultAgent").unwrap().global_only);
     assert!(setting("acp.agentEngine").unwrap().global_only);

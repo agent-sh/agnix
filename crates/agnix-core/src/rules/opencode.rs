@@ -270,15 +270,15 @@ impl Cx<'_, '_, '_> {
                     self.out.warn(
                         "OC-004",
                         member.pos,
-                        "The 'automations' key requires OpenCode 2.4.0 or later.",
-                        "Remove 'automations' or upgrade OpenCode.",
+                        t!("rules.oc_004.automations_version"),
+                        t!("rules.oc_004.automations_version_suggestion"),
                     );
                 } else if member.value.bool().is_none() {
                     self.out.warn(
                         "OC-004",
                         member.pos,
-                        "The 'automations' field must be a boolean.",
-                        "Set 'automations' to true or false.",
+                        t!("rules.oc_004.automations_type"),
+                        t!("rules.oc_004.automations_type_suggestion"),
                     );
                 }
             }

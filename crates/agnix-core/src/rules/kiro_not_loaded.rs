@@ -257,7 +257,7 @@ impl Validator for KiroNotLoadedValidator {
                 t!("rules.kiro_026.move_suggestion", expected = expected),
             ),
             KiroNotLoadedReason::LegacySettings => {
-                let Some((key, line, column)) = first_cli_setting_key(content) else {
+                let Some((key, line, column)) = first_cli_setting_key(content, config) else {
                     return Vec::new();
                 };
                 (
@@ -353,14 +353,20 @@ fn is_hook_document(content: &str) -> bool {
 
 /// The first top-level key of a JSON object that is a Kiro CLI setting, with
 /// its 1-based line and column.
-fn first_cli_setting_key(content: &str) -> Option<(String, usize, usize)> {
+fn first_cli_setting_key(
+    content: &str,
+    config: &PerFileLintConfig<'_>,
+) -> Option<(String, usize, usize)> {
     let serde_json::Value::Object(map) = serde_json::from_str::<serde_json::Value>(content).ok()?
     else {
         return None;
     };
     let key = map
         .keys()
-        .find(|key| KIRO_CLI_SETTING_KEYS.contains(&key.as_str()))?
+        .find(|key| {
+            KIRO_CLI_SETTING_KEYS.contains(&key.as_str())
+                && super::kiro_settings::available_on_pin(key, config)
+        })?
         .clone();
     let (line, column) = top_level_key_position(content, &key).unwrap_or((1, 0));
     Some((key, line, column))
@@ -585,6 +591,25 @@ mod tests {
             .is_empty()
         );
         assert!(validate(".kiro/settings.json", "not json").is_empty());
+    }
+
+    #[test]
+    fn legacy_notification_sound_honors_version_pin() {
+        let path = Path::new(".kiro/settings.json");
+        for (version, known) in [("3.5.9", false), ("3.6.0", true)] {
+            let mut config = LintConfig::default();
+            config.tool_versions_mut().kiro = Some(version.into());
+            let diagnostics = KiroNotLoadedValidator.validate_per_file(
+                path,
+                r#"{"chat.notificationSound":true}"#,
+                &config.for_path(path),
+            );
+            assert_eq!(
+                diagnostics.len(),
+                usize::from(known),
+                "{version}: {diagnostics:?}"
+            );
+        }
     }
 
     #[test]

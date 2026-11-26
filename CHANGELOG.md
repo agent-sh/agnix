@@ -12,8 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   V3 profile arrays. An explicit pin below CLI 3.6.0 reports that the hook is skipped.
 - CDX-CFG-024 validates `approvals_reviewer` under
   `apps.<app_id>.tools.<tool_id>` (Codex rust-v0.172.0 tagged schema).
-- CUR-016 accepts the root `clone` object of Cursor's published
-  `environment.schema.json`.
+- CUR-016 validates `clone` in `.cursor/environment.json`. Unknown fields, invalid values,
+  and duplicate or conflicting options across fields and `extraArgs` are errors.
 - KR-HK-032 (Info): the Kiro `PermissionRequest` trigger (Kiro CLI 3.4.0,
   "Hooks That Rewrite Tool Inputs and Answer Permission Prompts") needs
   Kiro CLI 3.4.0 in a V3 session; an older CLI (3.3.x and earlier) skips
@@ -54,8 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   3.32.4, Gemini CLI v0.71.1, Grok CLI 1.0.92, Kimi Code 2.7.3, Kiro CLI
   3.6.0, OpenCode v2.4.1) and refresh the reviewed spec sentinels
   (`knowledge-base/reviews/2026-11-25-release-triage.md`).
-- OC-004 accepts the OpenCode `automations` top-level key (v2.4.0).
-- KR-SET-005 accepts `chat.notificationSound` (Kiro CLI 3.6.0, global only).
+- OC-004 accepts the OpenCode `automations` boolean from 2.4.0. It warns on older pins or a non-boolean value.
+- KR-SET-005 accepts `chat.notificationSound` from Kiro CLI 3.6.0 (global only) and reports it as unknown on older pins.
 - GRK-SBX-002 types `workspace_write` as a boolean and accepts `minimal` as
   an `extends` value (Grok CLI 1.0.82).
 - Review Antigravity CLI 1.5.15 against its live sources (auto-updater

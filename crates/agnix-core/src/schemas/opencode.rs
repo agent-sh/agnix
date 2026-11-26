@@ -21,10 +21,10 @@ pub const VALID_UPDATE_MODES: &[&str] = &["disable", "notify", "auto"];
 /// (`theme`, `keybinds`, `tui`; OC-DEP-005).
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "$schema",
-    "automations",
     "agent",
     "agents",
     "attachment",
+    "automations",
     "autoshare",
     "autoupdate",
     "command",

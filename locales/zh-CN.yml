@@ -175,6 +175,7 @@ rules:
     grok_custom_profiles_cannot_redefine_a_built: "Grok 自定义配置不能重新定义内置沙箱配置。"
     choose_a_custom_name_and_extend_a: "请选择自定义名称，并扩展受支持的内置配置。"
   grk_sbx_002:
+    minimal_version: "minimal 沙箱基础配置需要 Grok 1.0.82 或更高版本。"
     schema_message: "Grok 字段不符合文档规定的 %{keyword} 约束。"
     schema_suggestion: "请使用 Grok 原生配置字段的类型和值。"
     unknown_sandbox_root_key: "Grok 会忽略整个 sandbox.toml：'%{key}' 不是 sandbox.toml 的键，只有 'profiles' 是。"
@@ -541,6 +542,10 @@ rules:
   cur_003:
     message: '无效的 YAML frontmatter: %{error}'
     suggestion: 修复 frontmatter 中的 YAML 语法
+  cur_016:
+    clone_schema: "clone%{path} 不符合文档规定的 %{keyword} 约束。"
+    clone_duplicate: "重复指定了 clone 设置 '%{name}'"
+    clone_conflict: "clone 设置 '%{first}' 和 '%{second}' 不能同时使用"
   cur_004:
     message: '无效的 glob 模式 ''%{pattern}'': %{error}'
     suggestion: 使用有效的 glob 语法，如 '**/*.ts' 或 'src/**/*.js'
@@ -563,6 +568,11 @@ rules:
     suggestion: 使用有效的 glob 语法，如 '**/*.ts' 或 'src/**/*.js'
   cln_003:
     message: Cline 规则文件中未知的 frontmatter 键 '%{key}'
+  oc_004:
+    automations_version: "'automations' 键需要 OpenCode 2.4.0 或更高版本。"
+    automations_version_suggestion: "移除 'automations' 或升级 OpenCode。"
+    automations_type: "'automations' 字段必须是布尔值。"
+    automations_type_suggestion: "将 'automations' 设置为 true 或 false。"
   cln_004:
     suggestion: "将 paths 改为数组格式: paths:\n  - \"%{pattern}\""
     fix: 将标量 paths 转换为数组格式

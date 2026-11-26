@@ -2895,6 +2895,115 @@ fn native_diagnostics_follow_the_selected_locale_including_shared_helpers() {
     }
 }
 
+fn check_release_locales(path: &str, input: &str, pins: &str, expected: [&str; 3]) {
+    let temp = tempfile::tempdir().unwrap();
+    let config = temp.path().join(".agnix.toml");
+    std::fs::write(&config, format!("[tool_versions]\n{pins}\n")).unwrap();
+    let path = temp.path().join(path);
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, input).unwrap();
+    for (locale, message) in ["en", "es", "zh-CN"].into_iter().zip(expected) {
+        let output = agnix()
+            .arg(&path)
+            .arg("--config")
+            .arg(&config)
+            .args(["--locale", locale, "--format", "text", "--verbose"])
+            .output()
+            .unwrap();
+        let stdout = String::from_utf8(output.stdout).unwrap();
+        for fragment in message.split('|') {
+            assert!(
+                stdout.contains(fragment),
+                "{locale}: expected {fragment}: {stdout}"
+            );
+        }
+    }
+}
+
+#[test]
+fn release_locale_grok_minimal() {
+    check_release_locales(
+        ".grok/sandbox.toml",
+        "[profiles.tiny]\nextends = 'minimal'\n",
+        "grok_code = '1.0.81'",
+        [
+            "requires Grok 1.0.82",
+            "requiere Grok 1.0.82",
+            "需要 Grok 1.0.82",
+        ],
+    );
+}
+
+#[test]
+fn release_locale_opencode_automations() {
+    let input = r#"{"automations":"yes"}"#;
+    check_release_locales(
+        "opencode.json",
+        input,
+        "opencode = '2.3'",
+        [
+            "requires OpenCode|Remove 'automations'",
+            "requiere OpenCode|Elimina 'automations'",
+            "需要 OpenCode|移除 'automations'",
+        ],
+    );
+    check_release_locales(
+        "opencode.json",
+        input,
+        "opencode = '2.4'",
+        [
+            "must be a boolean|Set 'automations'",
+            "debe ser un booleano|Establece 'automations'",
+            "必须是布尔值|将 'automations' 设置为",
+        ],
+    );
+}
+
+#[test]
+fn release_locale_cursor_clone() {
+    for (clone, messages) in [
+        (
+            r#"{"depth":0}"#,
+            [
+                "clone/depth violates|minimum",
+                "clone/depth no cumple|minimum",
+                "clone/depth 不符合|minimum",
+            ],
+        ),
+        (
+            r#"{"tags":true,"extraArgs":["--no-tags"]}"#,
+            [
+                "'tags' is specified",
+                "'tags' se ha especificado",
+                "重复指定了 clone 设置 'tags'",
+            ],
+        ),
+        (
+            r#"{"depth":1,"bundleUri":true}"#,
+            [
+                "'depth' and 'bundleUri' cannot",
+                "'depth' y 'bundleUri' no se pueden",
+                "'depth' 和 'bundleUri' 不能",
+            ],
+        ),
+        (
+            r#"{"shallowSince":"1.days.ago","singleBranch":false}"#,
+            [
+                "'shallowSince' and 'singleBranch: false' cannot",
+                "'shallowSince' y 'singleBranch: false' no se pueden",
+                "'shallowSince' 和 'singleBranch: false' 不能",
+            ],
+        ),
+    ] {
+        check_release_locales(
+            ".cursor/environment.json",
+            &format!(r#"{{"clone":{clone}}}"#),
+            "",
+            messages,
+        );
+    }
+}
+
 #[test]
 fn test_locale_flag_switches_output_to_chinese() {
     use std::fs;

@@ -175,6 +175,7 @@ rules:
     grok_custom_profiles_cannot_redefine_a_built: "Los perfiles personalizados de Grok no pueden redefinir un perfil de sandbox integrado."
     choose_a_custom_name_and_extend_a: "Elige un nombre personalizado y extiende un perfil integrado compatible."
   grk_sbx_002:
+    minimal_version: "El perfil base minimal requiere Grok 1.0.82 o posterior."
     schema_message: "El campo de Grok incumple la restricción %{keyword} documentada."
     schema_suggestion: "Usa los tipos y valores de campos de configuración nativos de Grok."
     unknown_sandbox_root_key: "Grok ignora todo el sandbox.toml: '%{key}' no es una clave de sandbox.toml, solo lo es 'profiles'."
@@ -554,6 +555,10 @@ rules:
   cur_003:
     message: 'Frontmatter YAML invalido: %{error}'
     suggestion: Corrige la sintaxis YAML en el frontmatter
+  cur_016:
+    clone_schema: "clone%{path} no cumple la restricción documentada %{keyword}."
+    clone_duplicate: "La opción de clone '%{name}' se ha especificado más de una vez"
+    clone_conflict: "Las opciones de clone '%{first}' y '%{second}' no se pueden combinar"
   cur_004:
     message: 'Patron glob invalido ''%{pattern}'': %{error}'
     suggestion: Usa sintaxis glob valida como '**/*.ts' o 'src/**/*.js'
@@ -577,6 +582,11 @@ rules:
     suggestion: Usa sintaxis glob valida como '**/*.ts' o 'src/**/*.js'
   cln_003:
     message: Clave de frontmatter desconocida '%{key}' en archivo de reglas de Cline
+  oc_004:
+    automations_version: "La clave 'automations' requiere OpenCode 2.4.0 o posterior."
+    automations_version_suggestion: "Elimina 'automations' o actualiza OpenCode."
+    automations_type: "El campo 'automations' debe ser un booleano."
+    automations_type_suggestion: "Establece 'automations' en true o false."
   cln_004:
     suggestion: "Cambia paths a formato de arreglo: paths:\n  - \"%{pattern}\""
     fix: Convertir paths escalar a formato de arreglo

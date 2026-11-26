@@ -351,12 +351,16 @@ const GLOBAL_STATE_KEYS: &[&str] = &[
     "chat.disabledModelFallbacks",
 ];
 
-fn setting(key: &str) -> Option<&'static SettingSpec> {
-    SETTINGS.iter().find(|s| s.key == key)
+pub(super) fn available_on_pin(key: &str, config: &PerFileLintConfig<'_>) -> bool {
+    key != "chat.notificationSound"
+        || config.get_kiro_version().is_none()
+        || !super::kiro_engine::kiro_cli_below(config, (3, 6, 0))
 }
 
-fn setting_keys() -> Vec<&'static str> {
-    SETTINGS.iter().map(|s| s.key).collect()
+fn setting(key: &str, config: &PerFileLintConfig<'_>) -> Option<&'static SettingSpec> {
+    SETTINGS
+        .iter()
+        .find(|s| s.key == key && available_on_pin(key, config))
 }
 
 /// Keys of other Kiro files that people paste into cli.json, with the file
@@ -539,7 +543,7 @@ fn offset_of(content: &str, line: usize, column: usize) -> usize {
 
 fn validate_member(cx: &mut Cx<'_>, content: &str, member: &JsonMember, workspace_file: bool) {
     let key = member.key.as_str();
-    let Some(spec) = setting(key) else {
+    let Some(spec) = setting(key, cx.config) else {
         report_unknown_key(cx, member);
         return;
     };
@@ -613,7 +617,7 @@ fn report_unknown_key(cx: &mut Cx<'_>, member: &JsonMember) {
     // flat dotted keys, so the nested values are ignored.
     if let Some(members) = member.value.value.as_object() {
         let mut nested = Vec::new();
-        collect_nested_settings(key, members, &mut nested);
+        collect_nested_settings(key, members, &mut nested, cx.config);
         if !nested.is_empty() {
             if cx.enabled("KR-SET-007") {
                 let list = nested.join(", ");
@@ -637,7 +641,11 @@ fn report_unknown_key(cx: &mut Cx<'_>, member: &JsonMember) {
     if !cx.enabled("KR-SET-005") {
         return;
     }
-    let keys = setting_keys();
+    let keys: Vec<_> = SETTINGS
+        .iter()
+        .map(|s| s.key)
+        .filter(|key| available_on_pin(key, cx.config))
+        .collect();
     let suggestion = match alias(key).or_else(|| closest_name(key, &keys)) {
         Some(close) => t!("rules.kr_set_005.did_you_mean", key = close).to_string(),
         None => t!("rules.kr_set_005.suggestion").to_string(),
@@ -652,13 +660,18 @@ fn report_unknown_key(cx: &mut Cx<'_>, member: &JsonMember) {
     );
 }
 
-fn collect_nested_settings(prefix: &str, members: &[JsonMember], out: &mut Vec<String>) {
+fn collect_nested_settings(
+    prefix: &str,
+    members: &[JsonMember],
+    out: &mut Vec<String>,
+    config: &PerFileLintConfig<'_>,
+) {
     for member in members {
         let dotted = format!("{prefix}.{}", member.key);
-        if setting(&dotted).is_some() {
+        if setting(&dotted, config).is_some() {
             out.push(dotted);
         } else if let Some(children) = member.value.value.as_object() {
-            collect_nested_settings(&dotted, children, out);
+            collect_nested_settings(&dotted, children, out, config);
         }
     }
 }
