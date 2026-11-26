@@ -979,6 +979,31 @@ fn validate_cursor_agent_file(
     diagnostics
 }
 
+// Validation keywords from definitions.common.properties.clone in
+// https://cursor.com/schemas/environment.schema.json (draft 2019-09).
+static CLONE_SCHEMA: std::sync::LazyLock<jsonschema::Validator> = std::sync::LazyLock::new(|| {
+    let since = r"([1-9]\d{0,5}\.(days|weeks)\.ago|\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))";
+    let filter = r"blob:(none|limit=\d+[kmg]?)";
+    let bundle = r#"https://[^\s\u0000-\u001f\u007f'"/?#@]+([/?#][^\s\u0000-\u001f\u007f'"]*)?"#;
+    let args = format!(
+        r"^(--no-tags|--single-branch|--no-single-branch|--config=transfer\.bundleURI=true|--depth=[1-9]\d{{0,9}}|--shallow-since={since}|--filter={filter}|--bundle-uri={bundle})$"
+    );
+    jsonschema::validator_for(&serde_json::json!({
+        "$schema": "https://json-schema.org/draft/2019-09/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+            "depth": { "type": "integer", "minimum": 1, "maximum": 2_147_483_647 },
+            "shallowSince": { "type": "string", "pattern": format!("^{since}$") },
+            "singleBranch": { "type": "boolean" },
+            "tags": { "type": "boolean" },
+            "filter": { "type": "string", "pattern": format!("^{filter}$") },
+            "bundleUri": { "oneOf": [{ "const": true }, { "type": "string", "pattern": format!("^{bundle}$") }] },
+            "extraArgs": { "type": "array", "items": { "type": "string", "pattern": args } }
+        }
+    })).expect("Cursor clone schema must compile")
+});
+
 fn validate_cursor_environment_file(
     path: &Path,
     content: &str,
@@ -1183,6 +1208,17 @@ fn validate_cursor_environment_file(
             )
             .with_suggestion(t!("rules.cur_016.update_renamed_suggestion")),
         );
+    }
+
+    if let Some(clone) = root.get("clone") {
+        for error in CLONE_SCHEMA.iter_errors(clone) {
+            diagnostics.push(cursor_environment_error(
+                path,
+                content,
+                "clone",
+                format!("Invalid clone{}: {}", error.instance_path(), error.masked()),
+            ));
+        }
     }
 
     if let Some(build) = root.get("build") {

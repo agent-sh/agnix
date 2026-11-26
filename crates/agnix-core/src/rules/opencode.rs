@@ -254,6 +254,25 @@ impl Cx<'_, '_, '_> {
                     t!("rules.oc_004.v2_key_on_v1", key = key),
                     t!("rules.oc_004.v2_key_on_v1_suggestion"),
                 );
+            } else if key == "automations" {
+                let pinned = self.out.config.get_opencode_version().and_then(|version| {
+                    semver::Version::parse(version.trim().trim_start_matches(['v', 'V'])).ok()
+                });
+                if pinned.is_some_and(|v| v < semver::Version::new(2, 4, 0)) {
+                    self.out.warn(
+                        "OC-004",
+                        member.pos,
+                        "The 'automations' key requires OpenCode 2.4.0 or later.",
+                        "Remove 'automations' or upgrade OpenCode.",
+                    );
+                } else if member.value.bool().is_none() {
+                    self.out.warn(
+                        "OC-004",
+                        member.pos,
+                        "The 'automations' field must be a boolean.",
+                        "Set 'automations' to true or false.",
+                    );
+                }
             }
         }
 

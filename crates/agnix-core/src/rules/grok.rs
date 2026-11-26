@@ -400,6 +400,21 @@ fn sandbox_closed_shape(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value)
         }
     }
     if !grok_at_least(cx, "1.0.82") {
+        // `extends` selects a built-in, not another custom profile. Only the
+        // base reference is invalid here, not a custom profile named minimal.
+        for (name, profile) in profiles {
+            if profile.get("extends").and_then(Value::as_str) == Some("minimal") {
+                push(
+                    cx,
+                    source,
+                    "GRK-SBX-002",
+                    &format!("/profiles/{}/extends", escape(name)),
+                    DiagnosticLevel::Error,
+                    "The minimal sandbox base requires Grok 1.0.82 or later.",
+                    t!("rules.grk_sbx_002.schema_suggestion").as_ref(),
+                );
+            }
+        }
         return;
     }
     for (name, profile) in profiles {

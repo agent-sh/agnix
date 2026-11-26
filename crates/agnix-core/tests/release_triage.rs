@@ -1008,12 +1008,29 @@ fn codex_0172_accepts_tagged_feature_flags_and_per_tool_reviewer() {
 }
 
 #[test]
+fn codex_0172_locates_each_app_tool_reviewer() {
+    let content = "approvals_reviewer = \"user\"\n[apps.\"a.b\".tools.one]\napprovals_reviewer = \"typo\"\n[apps.\"a.b\".tools.two]\napprovals_reviewer = 42\n";
+    let diagnostics = validate_content(
+        Path::new(".codex/config.toml"),
+        content,
+        &LintConfig::default(),
+        &ValidatorRegistry::with_defaults(),
+    );
+    let positions: Vec<_> = diagnostics
+        .iter()
+        .filter(|d| d.rule == "CDX-CFG-024")
+        .map(|d| (d.line, d.column))
+        .collect();
+    assert_eq!(positions, [(3, 1), (5, 1)], "{diagnostics:?}");
+}
+
+#[test]
 fn opencode_2_4_1_accepts_root_automations() {
     // v2.4.0: "Set `\"automations\": false` in your config if you don't want
     // them": a native OpenCode 2 root key.
     let registry = ValidatorRegistry::with_defaults();
     let content = r#"{"$schema":"https://opencode.ai/config.json","automations":false}"#;
-    for version in [None, Some("2.4.1"), Some("2.3.2")] {
+    for version in [None, Some("2.4.0"), Some("2.4.1")] {
         let config = LintConfig::builder()
             .tool_versions(agnix_core::config::ToolVersions {
                 opencode: version.map(str::to_string),
@@ -1025,6 +1042,35 @@ fn opencode_2_4_1_accepts_root_automations() {
         assert!(
             diagnostics.iter().all(|d| d.rule != "OC-004"),
             "{version:?}: {diagnostics:?}"
+        );
+    }
+
+    let older = LintConfig::builder()
+        .tool_versions(agnix_core::config::ToolVersions {
+            opencode: Some("2.3.2".into()),
+            ..Default::default()
+        })
+        .build()
+        .unwrap();
+    let diagnostics = validate_content(Path::new("opencode.json"), content, &older, &registry);
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "OC-004"),
+        "{diagnostics:?}"
+    );
+
+    for bad in ["null", "0", r#""false""#, "{}", "[]"] {
+        let content = format!(r#"{{"automations":{bad}}}"#);
+        let diagnostics = validate_content(
+            Path::new("opencode.json"),
+            &content,
+            &LintConfig::default(),
+            &registry,
+        );
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "OC-004"
+                && d.message.contains("automations")
+                && d.message.contains("boolean")),
+            "{bad}: {diagnostics:?}"
         );
     }
 
@@ -1064,6 +1110,54 @@ fn cursor_environment_accepts_clone_root_field() {
         diagnostics.iter().all(|d| d.rule != "CUR-016"),
         "{diagnostics:?}"
     );
+
+    use serde_json::json;
+    for clone in [
+        json!({}),
+        json!({"tags": false, "shallowSince": "2.weeks.ago", "singleBranch": true, "filter": "blob:none", "extraArgs": []}),
+        json!({"bundleUri": true}),
+        json!({"bundleUri": "https://example.com/bundle", "extraArgs": ["--no-tags"]}),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(".cursor/environment.json"),
+            &json!({"clone":clone}).to_string(),
+            &LintConfig::default(),
+            &registry,
+        );
+        assert!(diagnostics.is_empty(), "{clone}: {diagnostics:?}");
+    }
+    for clone in [
+        json!(null),
+        json!(false),
+        json!({"typo":1}),
+        json!({"depth":"1"}),
+        json!({"depth":0}),
+        json!({"depth":2147483648_i64}),
+        json!({"tags":1}),
+        json!({"singleBranch":"true"}),
+        json!({"bundleUri":false}),
+        json!({"bundleUri":"http://example.com"}),
+        json!({"filter":1}),
+        json!({"filter":"none"}),
+        json!({"shallowSince":false}),
+        json!({"shallowSince":"yesterday"}),
+        json!({"extraArgs":"--no-tags"}),
+        json!({"extraArgs":[3]}),
+        json!({"extraArgs":["--bare"]}),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(".cursor/environment.json"),
+            &json!({"clone":clone}).to_string(),
+            &LintConfig::default(),
+            &registry,
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.rule == "CUR-016" && d.message.contains("clone")),
+            "{clone}: {diagnostics:?}"
+        );
+    }
 
     let unknown = r#"{"install":"npm ci","clon":{}}"#;
     let diagnostics = validate_content(
@@ -1136,7 +1230,27 @@ fn grok_1_0_82_types_workspace_write_and_accepts_extends_minimal() {
     }
     let registry = ValidatorRegistry::with_defaults();
     let sandbox = "[profiles.tiny]\nextends = \"minimal\"\nread_only = [\"/usr\"]\nread_write = [\"~/.cache\"]\nworkspace_write = true\n";
-    for version in ["1.0.81", "1.0.82", "1.0.92"] {
+    let diagnostics = validate_content(
+        Path::new(".grok/sandbox.toml"),
+        sandbox,
+        &pinned("1.0.81"),
+        &registry,
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .any(|d| d.rule == "GRK-SBX-002" && d.line == 2),
+        "{diagnostics:?}"
+    );
+    let custom = "[profiles.minimal]\nextends = \"workspace\"\n";
+    let diagnostics = validate_content(
+        Path::new(".grok/sandbox.toml"),
+        custom,
+        &pinned("1.0.81"),
+        &registry,
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    for version in ["1.0.82", "1.0.92"] {
         let diagnostics = validate_content(
             Path::new(".grok/sandbox.toml"),
             sandbox,
@@ -1153,7 +1267,7 @@ fn grok_1_0_82_types_workspace_write_and_accepts_extends_minimal() {
     );
     assert!(diagnostics.is_empty(), "{diagnostics:?}");
 
-    let wrong = "[profiles.tiny]\nextends = \"minimal\"\nworkspace_write = \"yes\"\n";
+    let wrong = "[profiles.tiny]\nextends = \"workspace\"\nworkspace_write = \"yes\"\n";
     for version in ["1.0.81", "1.0.77"] {
         let diagnostics = validate_content(
             Path::new(".grok/sandbox.toml"),

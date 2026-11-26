@@ -2421,11 +2421,18 @@ fn validate_codex_config_rules(
                             None => None,
                         };
                         if let Some(message) = message {
+                            let (line, column) = pos(&[
+                                Seg::Key("apps"),
+                                Seg::Key(app_name),
+                                Seg::Key("tools"),
+                                Seg::Key(tool_name),
+                                Seg::Key("approvals_reviewer"),
+                            ]);
                             diagnostics.push(
                                 Diagnostic::warning(
                                     path.to_path_buf(),
-                                    line_for("approvals_reviewer"),
-                                    0,
+                                    line,
+                                    column,
                                     "CDX-CFG-024",
                                     message,
                                 )
