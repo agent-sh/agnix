@@ -256,7 +256,15 @@ impl Cx<'_, '_, '_> {
                 );
             } else if key == "automations" {
                 let pinned = self.out.config.get_opencode_version().and_then(|version| {
-                    semver::Version::parse(version.trim().trim_start_matches(['v', 'V'])).ok()
+                    let version = version.trim().trim_start_matches(['v', 'V']);
+                    semver::Version::parse(version).ok().or_else(|| {
+                        // A major.minor pin names the release line (e.g. 2.3).
+                        let (_, minor) = version.split_once('.')?;
+                        if !minor.bytes().all(|b| b.is_ascii_digit()) {
+                            return None;
+                        }
+                        semver::Version::parse(&format!("{version}.0")).ok()
+                    })
                 });
                 if pinned.is_some_and(|v| v < semver::Version::new(2, 4, 0)) {
                     self.out.warn(

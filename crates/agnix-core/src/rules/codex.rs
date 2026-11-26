@@ -19,7 +19,7 @@
 //! checked a `sandbox_workspace_write.mode` field no Codex schema defines.
 
 use crate::rules::codex_hooks::{HookCheck, HookLayer, HookSpans, check_hook_events};
-use crate::rules::config_span::{Seg, TomlSpans, line_col};
+use crate::rules::config_span::{Seg, TomlSpans, YamlSpans, json_offset, line_col};
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, Fix},
@@ -1198,18 +1198,23 @@ fn validate_codex_config_rules(
     };
 
     let line_for = |key: &str| key_lines.get(key).copied().unwrap_or(1);
-    let is_toml = path
-        .extension()
-        .and_then(OsStr::to_str)
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("toml"));
-    let toml_spans = if is_toml {
-        TomlSpans::parse(content)
-    } else {
-        None
-    };
-    // Position of a key path: exact for TOML, the first line naming the last
-    // key otherwise.
+    let ext = path.extension().and_then(OsStr::to_str).unwrap_or_default();
+    let is_toml = ext.eq_ignore_ascii_case("toml");
+    let toml_spans = is_toml.then(|| TomlSpans::parse(content)).flatten();
+    let yaml_spans = std::cell::LazyCell::new(|| YamlSpans::parse(content));
+    let json_spans = std::cell::LazyCell::new(|| {
+        crate::schemas::kiro_json::parse_json_document(content, false).ok()
+    });
     let pos = |segs: &[Seg<'_>]| -> (usize, usize) {
+        if ext.eq_ignore_ascii_case("json") {
+            return json_spans
+                .as_ref()
+                .and_then(|doc| json_offset(&doc.root, segs))
+                .map_or((1, 0), |offset| line_col(content, offset));
+        }
+        if ext.eq_ignore_ascii_case("yaml") || ext.eq_ignore_ascii_case("yml") {
+            return yaml_spans.as_ref().map_or((1, 0), |spans| spans.pos(segs));
+        }
         if let Some(offset) = toml_spans.as_ref().and_then(|spans| spans.offset(segs)) {
             return line_col(content, offset);
         }
@@ -1977,47 +1982,50 @@ fn validate_codex_config_rules(
         }
     }
 
-    // CDX-CFG-024: Invalid approvals_reviewer enum value
-    if config.is_rule_enabled("CDX-CFG-024")
-        && let Some(value) = value_at_path(&root, &["approvals_reviewer"])
-    {
-        if let Some(reviewer) = value.as_str() {
-            if !VALID_APPROVALS_REVIEWER.contains(&reviewer) {
-                diagnostics.push(
-                    Diagnostic::warning(
-                        path.to_path_buf(),
-                        line_for("approvals_reviewer"),
-                        0,
-                        "CDX-CFG-024",
-                        format!(
-                            "Invalid approvals_reviewer value '{}'. Must be one of: {}",
-                            reviewer,
-                            VALID_APPROVALS_REVIEWER.join(", ")
-                        ),
-                    )
-                    .with_suggestion(format!(
-                        "Set approvals_reviewer to one of: {}.",
-                        VALID_APPROVALS_REVIEWER.join(", ")
-                    )),
-                );
+    // CDX-CFG-024: the same reviewer enum appears at the root, on apps
+    // (including _default), and since rust-v0.172.0 on individual tools.
+    if config.is_rule_enabled("CDX-CFG-024") {
+        let mut check = |parent: &Value, keys: &[&str]| {
+            let Some(reviewer) = parent.get("approvals_reviewer") else {
+                return;
+            };
+            if reviewer.is_null()
+                || reviewer
+                    .as_str()
+                    .is_some_and(|s| VALID_APPROVALS_REVIEWER.contains(&s))
+            {
+                return;
             }
-        } else if !value.is_null() {
+            let field = keys.join(".");
+            let allowed = VALID_APPROVALS_REVIEWER.join(", ");
+            let message = match reviewer.as_str() {
+                Some(s) => format!("Invalid {field} value '{s}'. Must be one of: {allowed}"),
+                None => format!(
+                    "{field} must be a string, not {}",
+                    value_type_name(reviewer)
+                ),
+            };
+            let (line, column) = pos(&keys.iter().copied().map(Seg::Key).collect::<Vec<_>>());
             diagnostics.push(
-                Diagnostic::warning(
-                    path.to_path_buf(),
-                    line_for("approvals_reviewer"),
-                    0,
-                    "CDX-CFG-024",
-                    format!(
-                        "approvals_reviewer must be a string, not {}",
-                        value_type_name(value)
-                    ),
-                )
-                .with_suggestion(format!(
-                    "Set approvals_reviewer to one of: {}.",
-                    VALID_APPROVALS_REVIEWER.join(", ")
-                )),
+                Diagnostic::warning(path.to_path_buf(), line, column, "CDX-CFG-024", message)
+                    .with_suggestion(format!("Set {field} to one of: {allowed}.")),
             );
+        };
+        check(&root, &["approvals_reviewer"]);
+        if let Some(apps) = root.get("apps").and_then(Value::as_object) {
+            for (app_name, app) in apps {
+                check(app, &["apps", app_name, "approvals_reviewer"]);
+                if app_name != "_default"
+                    && let Some(tools) = app.get("tools").and_then(Value::as_object)
+                {
+                    for (tool_name, tool) in tools {
+                        check(
+                            tool,
+                            &["apps", app_name, "tools", tool_name, "approvals_reviewer"],
+                        );
+                    }
+                }
+            }
         }
     }
 
@@ -2287,164 +2295,6 @@ fn validate_codex_config_rules(
                 Diagnostic::error(path.to_path_buf(), line, column, "CDX-APP-001", message)
                     .with_suggestion(t!("rules.cdx_app_001.suggestion")),
             );
-        }
-    }
-
-    if (config.is_rule_enabled("CDX-APP-001") || config.is_rule_enabled("CDX-CFG-024"))
-        && let Some(apps) = value_at_path(&root, &["apps"])
-    {
-        if let Some(apps_obj) = apps.as_object() {
-            for (app_name, app_value) in apps_obj {
-                if app_name == "_default" {
-                    if config.is_rule_enabled("CDX-CFG-024")
-                        && let Some(default_obj) = app_value.as_object()
-                        && let Some(reviewer) = default_obj.get("approvals_reviewer")
-                    {
-                        if let Some(reviewer_str) = reviewer.as_str() {
-                            if !VALID_APPROVALS_REVIEWER.contains(&reviewer_str) {
-                                diagnostics.push(
-                                    Diagnostic::warning(
-                                        path.to_path_buf(),
-                                        line_for("approvals_reviewer"),
-                                        0,
-                                        "CDX-CFG-024",
-                                        format!(
-                                            "Invalid apps._default.approvals_reviewer value '{}'. Must be one of: {}",
-                                            reviewer_str,
-                                            VALID_APPROVALS_REVIEWER.join(", ")
-                                        ),
-                                    )
-                                    .with_suggestion(format!(
-                                        "Set apps._default.approvals_reviewer to one of: {}.",
-                                        VALID_APPROVALS_REVIEWER.join(", ")
-                                    )),
-                                );
-                            }
-                        } else if !reviewer.is_null() {
-                            diagnostics.push(
-                                Diagnostic::warning(
-                                    path.to_path_buf(),
-                                    line_for("approvals_reviewer"),
-                                    0,
-                                    "CDX-CFG-024",
-                                    format!(
-                                        "apps._default.approvals_reviewer must be a string, not {}",
-                                        value_type_name(reviewer)
-                                    ),
-                                )
-                                .with_suggestion(format!(
-                                    "Set apps._default.approvals_reviewer to one of: {}.",
-                                    VALID_APPROVALS_REVIEWER.join(", ")
-                                )),
-                            );
-                        }
-                    }
-                    continue;
-                }
-                let Some(app_obj) = app_value.as_object() else {
-                    continue;
-                };
-                if config.is_rule_enabled("CDX-CFG-024")
-                    && let Some(reviewer) = app_obj.get("approvals_reviewer")
-                {
-                    if let Some(reviewer_str) = reviewer.as_str() {
-                        if !VALID_APPROVALS_REVIEWER.contains(&reviewer_str) {
-                            diagnostics.push(
-                                Diagnostic::warning(
-                                    path.to_path_buf(),
-                                    line_for("approvals_reviewer"),
-                                    0,
-                                    "CDX-CFG-024",
-                                    format!(
-                                        "Invalid apps.{}.approvals_reviewer value '{}'. Must be one of: {}",
-                                        app_name,
-                                        reviewer_str,
-                                        VALID_APPROVALS_REVIEWER.join(", ")
-                                    ),
-                                )
-                                .with_suggestion(format!(
-                                    "Set apps.{}.approvals_reviewer to one of: {}.",
-                                    app_name,
-                                    VALID_APPROVALS_REVIEWER.join(", ")
-                                )),
-                            );
-                        }
-                    } else if !reviewer.is_null() {
-                        diagnostics.push(
-                            Diagnostic::warning(
-                                path.to_path_buf(),
-                                line_for("approvals_reviewer"),
-                                0,
-                                "CDX-CFG-024",
-                                format!(
-                                    "apps.{}.approvals_reviewer must be a string, not {}",
-                                    app_name,
-                                    value_type_name(reviewer)
-                                ),
-                            )
-                            .with_suggestion(format!(
-                                "Set apps.{}.approvals_reviewer to one of: {}.",
-                                app_name,
-                                VALID_APPROVALS_REVIEWER.join(", ")
-                            )),
-                        );
-                    }
-                }
-                // rust-v0.172.0: `approvals_reviewer` on one connected app
-                // tool (`[apps.<app>.tools.<tool>]`), beside the app-level key.
-                if config.is_rule_enabled("CDX-CFG-024")
-                    && let Some(tools) = app_obj.get("tools").and_then(serde_json::Value::as_object)
-                {
-                    for (tool_name, tool_value) in tools {
-                        let Some(tool) = tool_value.as_object() else {
-                            continue;
-                        };
-                        let Some(reviewer) = tool.get("approvals_reviewer") else {
-                            continue;
-                        };
-                        let setting =
-                            format!("apps.{app_name}.tools.{tool_name}.approvals_reviewer");
-                        let message = match reviewer.as_str() {
-                            Some(reviewer_str)
-                                if !VALID_APPROVALS_REVIEWER.contains(&reviewer_str) =>
-                            {
-                                Some(format!(
-                                    "Invalid {setting} value '{reviewer_str}'. Must be one of: {}",
-                                    VALID_APPROVALS_REVIEWER.join(", ")
-                                ))
-                            }
-                            Some(_) => None,
-                            None if !reviewer.is_null() => Some(format!(
-                                "{setting} must be a string, not {}",
-                                value_type_name(reviewer)
-                            )),
-                            None => None,
-                        };
-                        if let Some(message) = message {
-                            let (line, column) = pos(&[
-                                Seg::Key("apps"),
-                                Seg::Key(app_name),
-                                Seg::Key("tools"),
-                                Seg::Key(tool_name),
-                                Seg::Key("approvals_reviewer"),
-                            ]);
-                            diagnostics.push(
-                                Diagnostic::warning(
-                                    path.to_path_buf(),
-                                    line,
-                                    column,
-                                    "CDX-CFG-024",
-                                    message,
-                                )
-                                .with_suggestion(format!(
-                                    "Set {setting} to one of: {}.",
-                                    VALID_APPROVALS_REVIEWER.join(", ")
-                                )),
-                            );
-                        }
-                    }
-                }
-            }
         }
     }
 

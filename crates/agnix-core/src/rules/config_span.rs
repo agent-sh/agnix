@@ -86,6 +86,99 @@ impl<'i> TomlSpans<'i> {
     }
 }
 
+/// Source positions for YAML mappings and sequences, including flow syntax.
+/// Store decoded keys rather than splitting dotted names or searching raw text.
+pub(crate) struct YamlSpans<'a> {
+    pos: (usize, usize),
+    children: YamlChildren<'a>,
+}
+
+enum YamlChildren<'a> {
+    Mapping(std::collections::HashMap<std::borrow::Cow<'a, str>, YamlSpans<'a>>),
+    Sequence(Vec<YamlSpans<'a>>),
+    Leaf,
+}
+
+impl<'a> YamlSpans<'a> {
+    pub fn parse(content: &'a str) -> Option<Self> {
+        use granit_parser::{Event, Parser};
+        let mut events = Parser::new_from_str(content).filter(|item| {
+            !matches!(
+                item,
+                Ok((
+                    Event::Comment(..) | Event::StreamStart | Event::DocumentStart(..),
+                    _
+                ))
+            )
+        });
+        let first = events.next()?.ok()?;
+        Self::node(first, &mut events, 0)
+    }
+
+    fn node(
+        (event, span): (granit_parser::Event<'a>, granit_parser::Span),
+        events: &mut impl Iterator<Item = granit_parser::ParseResult<'a>>,
+        depth: usize,
+    ) -> Option<Self> {
+        use granit_parser::Event;
+        // Match the nesting budget of the config value deserializer.
+        if depth > 128 {
+            return None;
+        }
+        let children = match event {
+            Event::MappingStart(..) => {
+                let mut entries = std::collections::HashMap::new();
+                loop {
+                    let (key, key_span) = events.next()?.ok()?;
+                    if matches!(key, Event::MappingEnd) {
+                        break;
+                    }
+                    let Event::Scalar(name, ..) = key else {
+                        return None;
+                    };
+                    let mut child = Self::node(events.next()?.ok()?, events, depth + 1)?;
+                    child.pos = (key_span.start.line(), key_span.start.col() + 1);
+                    entries.insert(name, child);
+                }
+                YamlChildren::Mapping(entries)
+            }
+            Event::SequenceStart(..) => {
+                let mut items = Vec::new();
+                loop {
+                    let next = events.next()?.ok()?;
+                    if matches!(next.0, Event::SequenceEnd) {
+                        break;
+                    }
+                    items.push(Self::node(next, events, depth + 1)?);
+                }
+                YamlChildren::Sequence(items)
+            }
+            Event::Scalar(..) | Event::Alias(_) => YamlChildren::Leaf,
+            _ => return None,
+        };
+        Some(Self {
+            pos: (span.start.line(), span.start.col() + 1),
+            children,
+        })
+    }
+
+    pub fn pos(&self, path: &[Seg<'_>]) -> (usize, usize) {
+        let mut node = self;
+        for seg in path {
+            let child = match (seg, &node.children) {
+                (Seg::Key(key), YamlChildren::Mapping(entries)) => entries.get(*key),
+                (Seg::Index(index), YamlChildren::Sequence(items)) => items.get(*index),
+                _ => None,
+            };
+            let Some(child) = child else {
+                break;
+            };
+            node = child;
+        }
+        node.pos
+    }
+}
+
 /// The member at the end of `path` in a JSON tree (for a key segment).
 pub(crate) fn json_member<'a>(root: &'a JsonNode, path: &[Seg<'_>]) -> Option<&'a JsonMember> {
     let (last, parent) = path.split_last()?;

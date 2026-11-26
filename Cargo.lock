@@ -43,6 +43,7 @@ dependencies = [
  "criterion",
  "dirs",
  "glob",
+ "granit-parser",
  "iai-callgrind",
  "ignore",
  "jsonschema",

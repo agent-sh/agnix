@@ -1055,19 +1055,52 @@ fn codex_0172_accepts_tagged_feature_flags_and_per_tool_reviewer() {
 
 #[test]
 fn codex_0172_locates_each_app_tool_reviewer() {
-    let content = "approvals_reviewer = \"user\"\n[apps.\"a.b\".tools.one]\napprovals_reviewer = \"typo\"\n[apps.\"a.b\".tools.two]\napprovals_reviewer = 42\n";
-    let diagnostics = validate_content(
-        Path::new(".codex/config.toml"),
-        content,
-        &LintConfig::default(),
-        &ValidatorRegistry::with_defaults(),
-    );
-    let positions: Vec<_> = diagnostics
-        .iter()
-        .filter(|d| d.rule == "CDX-CFG-024")
-        .map(|d| (d.line, d.column))
-        .collect();
-    assert_eq!(positions, [(3, 1), (5, 1)], "{diagnostics:?}");
+    for (file, content, expected) in [
+        (
+            ".codex/config.toml",
+            "approvals_reviewer = \"user\"\n[apps.\"a.b\".tools.one]\napprovals_reviewer = \"typo\"\n[apps.\"a.b\".tools.two]\napprovals_reviewer = 42\n",
+            [(3, 1), (5, 1)],
+        ),
+        (
+            ".codex/config.json",
+            r#"{
+  "approvals_reviewer": "user",
+  "apps": {"a.b": {"tools": {
+    "one": {
+      "approvals_reviewer": "typo"},
+    "two": {
+      "approvals_reviewer": 42}
+  }}}}"#,
+            [(5, 7), (7, 7)],
+        ),
+        (
+            ".codex/config.yaml",
+            "approvals_reviewer: user\napps:\n  a.b:\n    tools:\n      one:\n        approvals_reviewer: typo\n      two:\n        approvals_reviewer: 42\n",
+            [(6, 9), (8, 9)],
+        ),
+        (
+            ".codex/config.yaml",
+            r#"approvals_reviewer: user
+apps: {a.b: {tools: {
+  one: {approvals_reviewer: typo},
+  two: {approvals_reviewer: 42}
+}}}"#,
+            [(3, 9), (4, 9)],
+        ),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(file),
+            content,
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        let positions: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CDX-CFG-024")
+            .map(|d| (d.line, d.column))
+            .collect();
+        assert_eq!(positions, expected, "{file}: {diagnostics:?}");
+    }
 }
 
 #[test]
@@ -1076,7 +1109,7 @@ fn opencode_2_4_1_accepts_root_automations() {
     // them": a native OpenCode 2 root key.
     let registry = ValidatorRegistry::with_defaults();
     let content = r#"{"$schema":"https://opencode.ai/config.json","automations":false}"#;
-    for version in [None, Some("2.4.0"), Some("2.4.1")] {
+    for version in [None, Some("2.4"), Some("2.4.0"), Some("2.4.1")] {
         let config = LintConfig::builder()
             .tool_versions(agnix_core::config::ToolVersions {
                 opencode: version.map(str::to_string),
@@ -1091,18 +1124,20 @@ fn opencode_2_4_1_accepts_root_automations() {
         );
     }
 
-    let older = LintConfig::builder()
-        .tool_versions(agnix_core::config::ToolVersions {
-            opencode: Some("2.3.2".into()),
-            ..Default::default()
-        })
-        .build()
-        .unwrap();
-    let diagnostics = validate_content(Path::new("opencode.json"), content, &older, &registry);
-    assert!(
-        diagnostics.iter().any(|d| d.rule == "OC-004"),
-        "{diagnostics:?}"
-    );
+    for version in ["2.3.2", "2.3"] {
+        let older = LintConfig::builder()
+            .tool_versions(agnix_core::config::ToolVersions {
+                opencode: Some(version.into()),
+                ..Default::default()
+            })
+            .build()
+            .unwrap();
+        let diagnostics = validate_content(Path::new("opencode.json"), content, &older, &registry);
+        assert!(
+            diagnostics.iter().any(|d| d.rule == "OC-004"),
+            "{version}: {diagnostics:?}"
+        );
+    }
 
     for bad in ["null", "0", r#""false""#, "{}", "[]"] {
         let content = format!(r#"{{"automations":{bad}}}"#);
@@ -1162,6 +1197,8 @@ fn cursor_environment_accepts_clone_root_field() {
         json!({}),
         json!({"tags": false, "shallowSince": "2.weeks.ago", "singleBranch": true, "filter": "blob:none", "extraArgs": []}),
         json!({"bundleUri": true}),
+        json!({"depth":1, "singleBranch":false}),
+        json!({"extraArgs":["--depth=3", "--no-single-branch", "--no-tags"]}),
         json!({"bundleUri": "https://example.com/bundle", "extraArgs": ["--no-tags"]}),
     ] {
         let diagnostics = validate_content(
@@ -1190,6 +1227,19 @@ fn cursor_environment_accepts_clone_root_field() {
         json!({"extraArgs":"--no-tags"}),
         json!({"extraArgs":[3]}),
         json!({"extraArgs":["--bare"]}),
+        json!({"depth":1, "shallowSince":"1.days.ago"}),
+        json!({"bundleUri":true, "extraArgs":["--depth=1"]}),
+        json!({"extraArgs":["--shallow-since=2.weeks.ago", "--bundle-uri=https://example.com/b"]}),
+        json!({"singleBranch":false, "extraArgs":["--shallow-since=2.weeks.ago"]}),
+        json!({"shallowSince":"2.weeks.ago", "extraArgs":["--no-single-branch"]}),
+        json!({"depth":1, "extraArgs":["--depth=2"]}),
+        json!({"shallowSince":"1.days.ago", "extraArgs":["--shallow-since=2.days.ago"]}),
+        json!({"singleBranch":true, "extraArgs":["--no-single-branch"]}),
+        json!({"tags":true, "extraArgs":["--no-tags"]}),
+        json!({"filter":"blob:none", "extraArgs":["--filter=blob:limit=2k"]}),
+        json!({"bundleUri":true, "extraArgs":["--bundle-uri=https://example.com/b"]}),
+        json!({"extraArgs":["--bundle-uri=https://example.com/b", "--config=transfer.bundleURI=true"]}),
+        json!({"extraArgs":["--single-branch", "--no-single-branch"]}),
     ] {
         let diagnostics = validate_content(
             Path::new(".cursor/environment.json"),

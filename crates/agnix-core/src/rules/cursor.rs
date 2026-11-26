@@ -1004,6 +1004,51 @@ static CLONE_SCHEMA: std::sync::LazyLock<jsonschema::Validator> = std::sync::Laz
     })).expect("Cursor clone schema must compile")
 });
 
+// The property descriptions specify these constraints across both spellings;
+// the JSON Schema keywords above only validate individual fields and arguments.
+fn clone_option_conflict(clone: &JsonValue) -> Option<String> {
+    let fields = clone.as_object()?;
+    let mut settings: std::collections::HashSet<&str> = fields.keys().map(String::as_str).collect();
+    let mut all_branches = fields.get("singleBranch").and_then(JsonValue::as_bool) == Some(false);
+    if let Some(args) = fields.get("extraArgs").and_then(JsonValue::as_array) {
+        for arg in args.iter().filter_map(JsonValue::as_str) {
+            let name = match arg.split('=').next()? {
+                "--single-branch" => "singleBranch",
+                "--no-single-branch" => {
+                    all_branches = true;
+                    "singleBranch"
+                }
+                "--no-tags" => "tags",
+                "--depth" => "depth",
+                "--shallow-since" => "shallowSince",
+                "--filter" => "filter",
+                "--bundle-uri" => "bundleUri",
+                "--config" if arg == "--config=transfer.bundleURI=true" => "bundleUri",
+                _ => continue,
+            };
+            if !settings.insert(name) {
+                return Some(format!(
+                    "clone setting '{name}' is specified more than once"
+                ));
+            }
+        }
+    }
+    for (first, second) in [
+        ("depth", "shallowSince"),
+        ("depth", "bundleUri"),
+        ("shallowSince", "bundleUri"),
+    ] {
+        if settings.contains(first) && settings.contains(second) {
+            return Some(format!(
+                "clone settings '{first}' and '{second}' cannot be combined"
+            ));
+        }
+    }
+    (all_branches && settings.contains("shallowSince")).then(|| {
+        "clone setting 'shallowSince' cannot be combined with 'singleBranch: false'".to_owned()
+    })
+}
+
 fn validate_cursor_environment_file(
     path: &Path,
     content: &str,
@@ -1218,6 +1263,9 @@ fn validate_cursor_environment_file(
                 "clone",
                 format!("Invalid clone{}: {}", error.instance_path(), error.masked()),
             ));
+        }
+        if let Some(message) = clone_option_conflict(clone) {
+            diagnostics.push(cursor_environment_error(path, content, "clone", message));
         }
     }
 

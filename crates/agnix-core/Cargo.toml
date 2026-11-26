@@ -28,6 +28,7 @@ serde.workspace = true
 serde_json.workspace = true
 url = "2"
 serde_yaml.workspace = true
+granit-parser = { version = "1.2", default-features = false }
 thiserror.workspace = true
 anyhow.workspace = true
 regex.workspace = true
