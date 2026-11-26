@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.62.0] - 2026-11-26
+
+Five new rules bring the catalog to 763: four check Kiro hooks and settings, and one checks OpenCode MCP connection pooling.
+
 ### Added
 - KR-HK-012 and KR-HK-005 accept `SubagentStop` in standalone Kiro hooks and
   V3 profile arrays. An explicit pin below CLI 3.6.0 reports that the hook is skipped.
