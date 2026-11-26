@@ -93,6 +93,7 @@ pub(crate) const KIRO_CLI_SETTING_KEYS: &[&str] = &[
     "chat.modelPicker.lastUsed",
     "chat.modelPicker.sortBy",
     "chat.notificationMethod",
+    "chat.notificationSound",
     "chat.outputStyle",
     "chat.preserveScrollback",
     "chat.screenReader",
@@ -625,7 +626,8 @@ mod tests {
         sorted.sort_unstable();
         sorted.dedup();
         assert_eq!(sorted, KIRO_CLI_SETTING_KEYS);
-        // 144 with the Kiro 3.2.0 chat.keybindings.viewDiagram addition.
-        assert_eq!(KIRO_CLI_SETTING_KEYS.len(), 144);
+        // 145: 144 with the Kiro 3.2.0 chat.keybindings.viewDiagram addition,
+        // plus chat.notificationSound from the 3.6.0 review.
+        assert_eq!(KIRO_CLI_SETTING_KEYS.len(), 145);
     }
 }

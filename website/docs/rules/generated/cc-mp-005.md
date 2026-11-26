@@ -13,7 +13,7 @@ keywords: ["CC-MP-005", "marketplace field ignored or missing metadata", "claude
 - **Category**: `Claude Marketplaces`
 - **Normative Level**: `SHOULD`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-25`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-MP-005", "marketplace field ignored or missing metadata", "claude
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/plugins/marketplace-reference
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.331
 
 ## Test Coverage Metadata
 

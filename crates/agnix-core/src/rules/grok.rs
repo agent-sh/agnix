@@ -112,6 +112,7 @@ impl Validator for GrokValidator {
                     "GRK-SBX-002",
                     DiagnosticLevel::Error,
                 );
+                sandbox_closed_shape(&mut cx, &source, &value);
                 if let Some(profiles) = value.get("profiles").and_then(Value::as_object) {
                     // 1.0.82 adds the `minimal` built-in profile to the
                     // reserved names (x.ai changelog, v1.0.82). A pin below
@@ -330,6 +331,93 @@ fn grok_at_least(cx: &JsonCx<'_>, minimum: &str) -> bool {
         .is_none_or(|version| {
             version >= semver::Version::parse(minimum).expect("fixed Grok release version")
         })
+}
+
+/// Keys a `sandbox.toml` profile reads: the six the released CLI names in its
+/// own "unknown field, expected one of" error (read on 1.0.93).
+const SANDBOX_PROFILE_KEYS: &[&str] = &[
+    "extends",
+    "restrict_network",
+    "read_only",
+    "read_write",
+    "deny",
+    "workspace_write",
+];
+
+/// The parts of the `sandbox.toml` contract the static schema cannot carry.
+///
+/// CLI 1.0.90: "unknown keys in sandbox.toml are reported as errors", and
+/// Grok then ignores the whole file, so every profile it defined is missing.
+/// `workspace_write` arrived in CLI 1.0.82 ("New `minimal` sandbox profile
+/// and `workspace_write` option") and is a Boolean in the bundled guide. A
+/// pin below either release keeps the older, open shape; unpinned files take
+/// the latest one.
+fn sandbox_closed_shape(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value) {
+    let profiles = value
+        .get("profiles")
+        .and_then(Value::as_object)
+        .into_iter()
+        .flat_map(|profiles| profiles.iter());
+    if grok_at_least(cx, "1.0.90") {
+        for key in value.as_object().into_iter().flat_map(|root| root.keys()) {
+            if key != "profiles" {
+                push(
+                    cx,
+                    source,
+                    "GRK-SBX-002",
+                    &format!("/{}", escape(key)),
+                    DiagnosticLevel::Error,
+                    t!(
+                        "rules.grk_sbx_002.unknown_sandbox_root_key",
+                        key = key.as_str()
+                    )
+                    .as_ref(),
+                    t!("rules.grk_sbx_002.unknown_sandbox_key_suggestion").as_ref(),
+                );
+            }
+        }
+        for (name, profile) in profiles.clone() {
+            let Some(fields) = profile.as_object() else {
+                continue;
+            };
+            for key in fields.keys() {
+                if !SANDBOX_PROFILE_KEYS.contains(&key.as_str()) {
+                    push(
+                        cx,
+                        source,
+                        "GRK-SBX-002",
+                        &format!("/profiles/{}/{}", escape(name), escape(key)),
+                        DiagnosticLevel::Error,
+                        t!(
+                            "rules.grk_sbx_002.unknown_sandbox_profile_key",
+                            key = key.as_str()
+                        )
+                        .as_ref(),
+                        t!("rules.grk_sbx_002.unknown_sandbox_key_suggestion").as_ref(),
+                    );
+                }
+            }
+        }
+    }
+    if !grok_at_least(cx, "1.0.82") {
+        return;
+    }
+    for (name, profile) in profiles {
+        if profile
+            .get("workspace_write")
+            .is_some_and(|field| !field.is_boolean())
+        {
+            push(
+                cx,
+                source,
+                "GRK-SBX-002",
+                &format!("/profiles/{}/workspace_write", escape(name)),
+                DiagnosticLevel::Error,
+                t!("rules.grk_sbx_002.workspace_write_must_be_boolean").as_ref(),
+                t!("rules.grk_sbx_002.schema_suggestion").as_ref(),
+            );
+        }
+    }
 }
 
 fn configuration(cx: &mut JsonCx<'_>, source: &Source<'_>, value: &Value, path: &Path) {

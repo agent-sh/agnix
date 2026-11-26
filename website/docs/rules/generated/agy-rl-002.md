@@ -13,7 +13,7 @@ keywords: ["AGY-RL-002", "invalid antigravity rule metadata", "antigravity", "va
 - **Category**: `antigravity`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-11-04`
+- **Verified On**: `2026-11-25`
 
 ## Applicability
 

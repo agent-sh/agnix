@@ -840,3 +840,394 @@ fn kiro_v3_agent_profile_fields_and_migration_rule() {
         "{diagnostics:?}"
     );
 }
+
+#[test]
+fn claude_code_021332_accepts_pre_skill_shell_command_hook() {
+    // v2.1.332: "Added a `PreSkillShellCommand` hook event that can refuse a
+    // skill or command's inline shell commands as it loads". The hooks
+    // reference evaluates `if` on the event and matches it on the tool that
+    // runs the command.
+    let registry = ValidatorRegistry::with_defaults();
+    let settings = serde_json::json!({"hooks": {"PreSkillShellCommand": [
+        {
+            "matcher": "Bash|PowerShell",
+            "hooks": [{"type": "command", "command": "echo x", "if": "Bash(git *)", "onFailure": "block"}]
+        },
+        {"hooks": [{"type": "command", "command": "echo y"}]}
+    ]}})
+    .to_string();
+    let hook_file = serde_json::json!({
+        "PreSkillShellCommand": [{"hooks": [{"type": "command", "command": "echo y"}]}]
+    })
+    .to_string();
+    for (path, content) in [
+        (".claude/settings.json", settings.as_str()),
+        (".claude/hooks/hooks.json", hook_file.as_str()),
+    ] {
+        let diagnostics =
+            validate_content(Path::new(path), content, &LintConfig::default(), &registry);
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.rule != "CC-HK-001" && d.rule != "CC-HK-021"),
+            "{path}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn claude_code_pins_below_2_1_332_keep_the_error_for_pre_skill_shell_command() {
+    // "on 2.1.331 and older, a settings file naming it opens a dialog at
+    // start" (v2.1.332 release notes): the hook never runs there.
+    fn pinned(version: &str) -> LintConfig {
+        LintConfig::builder()
+            .tool_versions(agnix_core::config::ToolVersions {
+                claude_code: Some(version.to_string()),
+                ..Default::default()
+            })
+            .build()
+            .unwrap()
+    }
+    let registry = ValidatorRegistry::with_defaults();
+    let settings =
+        r#"{"hooks":{"PreSkillShellCommand":[{"hooks":[{"type":"command","command":"echo x"}]}]}}"#;
+    for version in ["2.1.330", "2.1.331"] {
+        let diagnostics = validate_content(
+            Path::new(".claude/settings.json"),
+            settings,
+            &pinned(version),
+            &registry,
+        );
+        let errors: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "CC-HK-001")
+            .collect();
+        assert_eq!(errors.len(), 1, "{version}: {diagnostics:?}");
+        assert!(
+            errors[0].message.contains("2.1.332"),
+            "{version}: {diagnostics:?}"
+        );
+    }
+    for version in ["2.1.332", "2.2.0"] {
+        let diagnostics = validate_content(
+            Path::new(".claude/settings.json"),
+            settings,
+            &pinned(version),
+            &registry,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "CC-HK-001"),
+            "{version}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn claude_code_021331_accepts_optional_plugin_dependencies() {
+    // v2.1.331: "Added `optionalDependencies` to plugin manifests: plugins
+    // that install with the plugin listing them and can be disabled or
+    // uninstalled on their own". A marketplace entry carries the same key.
+    let registry = ValidatorRegistry::with_defaults();
+    let manifest = r#"{"name":"my-plugin","description":"demo plugin","version":"1.0.0","dependencies":[{"name":"required-helper","version":"^1.0.0"}],"optionalDependencies":[{"name":"optional-helper","version":"^1.0.0"}]}"#;
+    let diagnostics = validate_content(
+        Path::new("my-plugin/.claude-plugin/plugin.json"),
+        manifest,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "CC-PL-017"),
+        "{diagnostics:?}"
+    );
+
+    // A misspelling is still unknown to Claude Code.
+    let misspelled = manifest.replace("\"optionalDependencies\"", "\"optionalDependencies2\"");
+    let diagnostics = validate_content(
+        Path::new("my-plugin/.claude-plugin/plugin.json"),
+        &misspelled,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "CC-PL-017"),
+        "{diagnostics:?}"
+    );
+
+    let marketplace = r#"{"name":"acme","description":"Acme plugins","owner":{"name":"acme"},"plugins":[{"name":"with-optional","source":"./plugins/with-optional","description":"d","version":"1.0.0","optionalDependencies":[{"name":"optional-helper","version":"^1.0.0"}]}]}"#;
+    let diagnostics = validate_content(
+        Path::new(".claude-plugin/marketplace.json"),
+        marketplace,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .all(|d| !(d.rule == "CC-MP-005" && d.message.contains("optionalDependencies"))),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn codex_0172_accepts_tagged_feature_flags_and_per_tool_reviewer() {
+    // The tagged rust-v0.172.0 schema adds connector_tool_result_passthrough
+    // and realtime_frames_local to [features], approvals_reviewer to
+    // apps.<app>.tools.<tool>, and the tui.keymap.agents bindings. None are
+    // named in the release notes, so the allowlists behind CDX-CFG-011 and
+    // CDX-CFG-006 are reconciled against the tagged schema.
+    let value = serde_json::json!({
+        "features": {
+            "connector_tool_result_passthrough": true,
+            "realtime_frames_local": true,
+            "guardianv3": {
+                "enabled": true,
+                "message_board_in_memory": true,
+                "max_instruction_tokens": 4096,
+                "housekeeper": {"batch_timeout_ms": 30000, "routing_instructions": "x"},
+                "reviewer": {"retrieval_instructions": "y"}
+            }
+        },
+        "apps": {
+            "browser": {"tools": {"search": {"enabled": true, "approvals_reviewer": "user"}}}
+        },
+        "tui": {"keymap": {"agents": {"next_group": "n", "previous_group": "p"}}}
+    });
+    for (file, content) in [
+        (".codex/config.json", value.to_string()),
+        (".codex/config.yaml", serde_yaml::to_string(&value).unwrap()),
+        (".codex/config.toml", toml::to_string(&value).unwrap()),
+    ] {
+        let diagnostics = validate_content(
+            Path::new(file),
+            &content,
+            &LintConfig::default(),
+            &ValidatorRegistry::with_defaults(),
+        );
+        assert!(diagnostics.is_empty(), "{file}: {diagnostics:?}");
+    }
+}
+
+#[test]
+fn opencode_2_4_1_accepts_root_automations() {
+    // v2.4.0: "Set `\"automations\": false` in your config if you don't want
+    // them": a native OpenCode 2 root key.
+    let registry = ValidatorRegistry::with_defaults();
+    let content = r#"{"$schema":"https://opencode.ai/config.json","automations":false}"#;
+    for version in [None, Some("2.4.1"), Some("2.3.2")] {
+        let config = LintConfig::builder()
+            .tool_versions(agnix_core::config::ToolVersions {
+                opencode: version.map(str::to_string),
+                ..Default::default()
+            })
+            .build()
+            .unwrap();
+        let diagnostics = validate_content(Path::new("opencode.json"), content, &config, &registry);
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "OC-004"),
+            "{version:?}: {diagnostics:?}"
+        );
+    }
+
+    // OpenCode 1 does not read the key.
+    let pinned_v1 = LintConfig::builder()
+        .tool_versions(agnix_core::config::ToolVersions {
+            opencode: Some("1.19.6".into()),
+            ..Default::default()
+        })
+        .build()
+        .unwrap();
+    let diagnostics = validate_content(Path::new("opencode.json"), content, &pinned_v1, &registry);
+    assert!(
+        diagnostics
+            .iter()
+            .any(|d| d.rule == "OC-004" && d.message.contains("OpenCode 2")),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn cursor_environment_accepts_clone_root_field() {
+    // The published environment.schema.json carries a root `clone` object
+    // (`depth`, `shallowSince`, `singleBranch`, `tags`, `filter`,
+    // `bundleUri`, `extraArgs`), re-checked 2026-11-25.
+    let registry = ValidatorRegistry::with_defaults();
+    let content =
+        serde_json::json!({"install": "npm ci", "clone": {"depth": 1, "singleBranch": true}})
+            .to_string();
+    let diagnostics = validate_content(
+        Path::new(".cursor/environment.json"),
+        &content,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(
+        diagnostics.iter().all(|d| d.rule != "CUR-016"),
+        "{diagnostics:?}"
+    );
+
+    let unknown = r#"{"install":"npm ci","clon":{}}"#;
+    let diagnostics = validate_content(
+        Path::new(".cursor/environment.json"),
+        unknown,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .any(|d| d.rule == "CUR-016" && d.message.contains("clon")),
+        "{diagnostics:?}"
+    );
+}
+
+#[test]
+fn grok_1_0_92_reports_unknown_sandbox_keys_from_1_0_90() {
+    // 1.0.90: "unknown keys in sandbox.toml are reported as errors". Grok
+    // then ignores the whole file, so every profile it defined is missing.
+    // A pin below 1.0.90 keeps the open shape; unpinned files take the
+    // latest release.
+    fn pinned(version: &str) -> LintConfig {
+        LintConfig::builder()
+            .tool_versions(agnix_core::config::ToolVersions {
+                grok_code: Some(version.to_string()),
+                ..Default::default()
+            })
+            .build()
+            .unwrap()
+    }
+    let registry = ValidatorRegistry::with_defaults();
+    let sandbox = "profile = \"workspace\"\n\n[profiles.typo]\nextends = \"workspace\"\nread_onlys = [\"/data\"]\nworkspace_writ = true\nworkspace_write = true\n";
+    for config in [&LintConfig::default(), &pinned("1.0.90"), &pinned("1.0.92")] {
+        let diagnostics =
+            validate_content(Path::new(".grok/sandbox.toml"), sandbox, config, &registry);
+        let found: Vec<_> = diagnostics
+            .iter()
+            .filter(|d| d.rule == "GRK-SBX-002")
+            .collect();
+        assert_eq!(found.len(), 3, "{diagnostics:?}");
+    }
+    for version in ["1.0.89", "1.0.82"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/sandbox.toml"),
+            sandbox,
+            &pinned(version),
+            &registry,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "GRK-SBX-002"),
+            "{version}: {diagnostics:?}"
+        );
+    }
+}
+
+#[test]
+fn grok_1_0_82_types_workspace_write_and_accepts_extends_minimal() {
+    // 1.0.82: "New `minimal` sandbox profile and `workspace_write` option
+    // let custom profiles control launch-folder writes". The bundled
+    // configuration reference types `workspace_write` as a boolean.
+    fn pinned(version: &str) -> LintConfig {
+        LintConfig::builder()
+            .tool_versions(agnix_core::config::ToolVersions {
+                grok_code: Some(version.to_string()),
+                ..Default::default()
+            })
+            .build()
+            .unwrap()
+    }
+    let registry = ValidatorRegistry::with_defaults();
+    let sandbox = "[profiles.tiny]\nextends = \"minimal\"\nread_only = [\"/usr\"]\nread_write = [\"~/.cache\"]\nworkspace_write = true\n";
+    for version in ["1.0.81", "1.0.82", "1.0.92"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/sandbox.toml"),
+            sandbox,
+            &pinned(version),
+            &registry,
+        );
+        assert!(diagnostics.is_empty(), "{version}: {diagnostics:?}");
+    }
+    let diagnostics = validate_content(
+        Path::new(".grok/sandbox.toml"),
+        sandbox,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(diagnostics.is_empty(), "{diagnostics:?}");
+
+    let wrong = "[profiles.tiny]\nextends = \"minimal\"\nworkspace_write = \"yes\"\n";
+    for version in ["1.0.81", "1.0.77"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/sandbox.toml"),
+            wrong,
+            &pinned(version),
+            &registry,
+        );
+        assert!(
+            diagnostics.iter().all(|d| d.rule != "GRK-SBX-002"),
+            "{version}: {diagnostics:?}"
+        );
+    }
+    for version in ["1.0.82", "1.0.92"] {
+        let diagnostics = validate_content(
+            Path::new(".grok/sandbox.toml"),
+            wrong,
+            &pinned(version),
+            &registry,
+        );
+        assert_eq!(diagnostics.len(), 1, "{version}: {diagnostics:?}");
+        assert_eq!(
+            diagnostics[0].rule, "GRK-SBX-002",
+            "{version}: {diagnostics:?}"
+        );
+    }
+    let diagnostics = validate_content(
+        Path::new(".grok/sandbox.toml"),
+        wrong,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert_eq!(diagnostics.len(), 1, "{diagnostics:?}");
+    assert_eq!(diagnostics[0].rule, "GRK-SBX-002", "{diagnostics:?}");
+}
+
+#[test]
+fn kiro_360_accepts_subagent_stop_hook() {
+    // kiro-cli 3.6.0 ("Subagent Stop Hooks and Guided Compaction"): "In a V3
+    // session, a SubagentStop Hook runs when a dispatched subagent finishes".
+    let registry = ValidatorRegistry::with_defaults();
+    let pinned = LintConfig::builder()
+        .tool_versions(agnix_core::config::ToolVersions {
+            kiro: Some("3.6.0".into()),
+            ..Default::default()
+        })
+        .build()
+        .unwrap();
+    let content = serde_json::json!({
+        "version": "v1",
+        "hooks": [
+            {"name": "subagent-stop", "trigger": "SubagentStop", "action": {"type": "command", "command": "echo done"}}
+        ]
+    })
+    .to_string();
+    for config in [&LintConfig::default(), &pinned] {
+        let diagnostics = validate_content(
+            Path::new(".kiro/hooks/subagent-stop.json"),
+            &content,
+            config,
+            &registry,
+        );
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    }
+
+    // The trigger name is still exact and case-sensitive.
+    let wrong = content.replace("\"SubagentStop\"", "\"subagentStop\"");
+    let diagnostics = validate_content(
+        Path::new(".kiro/hooks/subagent-stop.json"),
+        &wrong,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(
+        diagnostics.iter().any(|d| d.rule == "KR-HK-012"),
+        "{diagnostics:?}"
+    );
+}

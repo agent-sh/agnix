@@ -177,6 +177,10 @@ rules:
   grk_sbx_002:
     schema_message: "El campo de Grok incumple la restricción %{keyword} documentada."
     schema_suggestion: "Usa los tipos y valores de campos de configuración nativos de Grok."
+    unknown_sandbox_root_key: "Grok ignora todo el sandbox.toml: '%{key}' no es una clave de sandbox.toml, solo lo es 'profiles'."
+    unknown_sandbox_profile_key: "Grok ignora todo el sandbox.toml: '%{key}' no es una clave de perfil de sandbox (se esperan extends, restrict_network, read_only, read_write, deny o workspace_write)."
+    unknown_sandbox_key_suggestion: "Elimina o corrige la clave. Desde Grok CLI 1.0.90, una clave desconocida hace que Grok descarte todos los perfiles que define el archivo."
+    workspace_write_must_be_boolean: "'workspace_write' de Grok debe ser true o false."
   grk_sk_001:
     grok_skill_allowed_tools_does_not_grant: "allowed-tools de los skills de Grok no concede ni restringe herramientas."
     use_grok_permission_rules_or_an_agent: "Usa reglas de permisos de Grok o una política de herramientas del agente para restringir herramientas."
@@ -370,6 +374,8 @@ rules:
   cc_hk_001:
     message: 'Evento de hook invalido ''%{event}'', eventos validos: %{valid}'
     fix: Reemplazar '%{old}' con '%{new}'
+    version_event: "Evento de hook no válido '%{event}' para Claude Code %{version}: el evento existe desde v2.1.332 y las versiones anteriores lo ignoran con un diálogo al iniciar."
+    version_event_suggestion: "Actualiza la versión fijada a v2.1.332 o posterior, o elimina el hook."
   cc_hk_002:
     message: 'El hook %{hook_type} en %{location} no es compatible con los eventos ''%{event}'''
     suggestion: 'Usa un evento compatible para este hook %{hook_type}, o usa ''type'': ''command'''

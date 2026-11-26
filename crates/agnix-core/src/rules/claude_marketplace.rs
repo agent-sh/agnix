@@ -115,6 +115,8 @@ const ENTRY_KEYS: &[&str] = &[
     "strict",
     "relevance",
     "dependencies",
+    // v2.1.331: the entry's `optionalDependencies` is parsed like `dependencies`.
+    "optionalDependencies",
     "defaultEnabled",
     "displayName",
     "metadata",

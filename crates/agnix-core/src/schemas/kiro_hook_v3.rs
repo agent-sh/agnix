@@ -78,6 +78,19 @@ pub fn is_permission_request_trigger(trigger: &str) -> bool {
     KIRO_V3_HOOK_TRIGGERS_SINCE_3_4_0.contains(&trigger)
 }
 
+/// The trigger kiro-cli 3.6.0 added ("Subagent Stop Hooks and Guided
+/// Compaction", 2026-11-24): in a V3 session `SubagentStop` runs when a
+/// subagent finishes a turn, before its result returns to the parent. The
+/// mirrored 2.32.1 engine table does not know it, so it stays out of the
+/// canonical list and the validator accepts it instead of reporting
+/// KR-HK-012.
+pub const KIRO_V3_HOOK_TRIGGERS_SINCE_3_6_0: &[&str] = &["SubagentStop"];
+
+/// Whether `trigger` is the subagent-stop trigger of kiro-cli 3.6.0.
+pub fn is_subagent_stop_trigger(trigger: &str) -> bool {
+    KIRO_V3_HOOK_TRIGGERS_SINCE_3_6_0.contains(&trigger)
+}
+
 /// Every trigger name the V3 engine accepts (canonical names and aliases).
 /// Kept for validators of agent-embedded array hooks, which share the hook
 /// schema; prefer [`resolve_trigger`], which also returns the canonical name.

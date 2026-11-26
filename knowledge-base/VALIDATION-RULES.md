@@ -1117,11 +1117,11 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 <a id="cc-hk-001"></a>
 ### CC-HK-001 [HIGH] Invalid Hook Event
-**Requirement**: Event MUST be one of 33 valid names (case-sensitive)
-**Valid**: PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, Notification, MessageDisplay, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStart, SubagentStop, TeammateIdle, TaskCompleted, TaskCreated, PreCompact, PostCompact, PreModelSwitch, PostModelSwitch, Setup, SessionStart, SessionEnd, InstructionsLoaded, ConfigChange, CwdChanged, DirectoryAdded, FileChanged, WorktreeCreate, WorktreeRemove, Elicitation, ElicitationResult, PermissionDenied, PostToolBatch, StopFailure
-**Detection**: `!VALID_EVENTS.contains(event)`
+**Requirement**: Event MUST be one of 34 valid names (case-sensitive)
+**Valid**: PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, Notification, MessageDisplay, UserPromptSubmit, UserPromptExpansion, Stop, SubagentStart, SubagentStop, TeammateIdle, TaskCompleted, TaskCreated, PreCompact, PostCompact, PreModelSwitch, PostModelSwitch, Setup, SessionStart, SessionEnd, InstructionsLoaded, ConfigChange, CwdChanged, DirectoryAdded, FileChanged, WorktreeCreate, WorktreeRemove, Elicitation, ElicitationResult, PermissionDenied, PostToolBatch, StopFailure, PreSkillShellCommand
+**Detection**: `!VALID_EVENTS.contains(event)`, or the name is `PreSkillShellCommand` (v2.1.332) while the pinned Claude Code version is older: "Requires Claude Code v2.1.332 or later" and "on 2.1.331 and older, a settings file naming it opens a dialog at start" (hooks reference). An unpinned run takes the latest release, and the pin path carries no auto-fix
 **Fix**: [AUTO-FIX] Replace with closest matching valid event name
-**Source**: code.claude.com/docs/en/hooks, github.com/anthropics/claude-code/releases/tag/v2.1.219, github.com/anthropics/claude-code/releases/tag/v2.1.251
+**Source**: code.claude.com/docs/en/hooks, github.com/anthropics/claude-code/releases/tag/v2.1.219, github.com/anthropics/claude-code/releases/tag/v2.1.251, github.com/anthropics/claude-code/releases/tag/v2.1.332
 
 <a id="cc-hk-002"></a>
 ### CC-HK-002 [HIGH] Prompt or Agent Hook on Wrong Event
@@ -1136,7 +1136,7 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 <a id="cc-hk-003"></a>
 ### CC-HK-003 [LOW] Matcher Hint for Tool Events
 **Requirement**: Tool events support an optional matcher field; omitting it matches all tools
-**Detection**: `["PreToolUse", "PermissionDenied", "PostToolUse", "PostToolUseFailure"].contains(event) && matcher.is_none()`. A PermissionRequest group without a matcher is reported by CC-HK-035 instead.
+**Detection**: `["PreToolUse", "PermissionDenied", "PostToolUse", "PostToolUseFailure", "PreSkillShellCommand"].contains(event) && matcher.is_none()`. A PermissionRequest group without a matcher is reported by CC-HK-035 instead.
 **Fix**: Consider adding `"matcher": "Bash"` or `"*"` to target specific tools
 **Source**: code.claude.com/docs/en/hooks
 
@@ -1245,14 +1245,14 @@ Kiro agent rules check `.kiro/agents/**/*.json` and `*.md` against the engines a
 
 <a id="cc-hk-021"></a>
 ### CC-HK-021 [HIGH] Invalid If Field
-**Requirement**: `if` MUST only appear on tool events and MUST hold one permission rule. Vendor text: "Only evaluated on tool events: `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, and `PermissionDenied`. On other events, a hook with `if` set never runs" and "The `if` field holds exactly one permission rule. There is no `&&`, `||`, or list syntax for combining rules; to apply multiple conditions, define a separate hook handler for each." (hooks, "Common fields")
-**Tool events**: PreToolUse, PermissionRequest, PermissionDenied, PostToolUse, PostToolUseFailure
+**Requirement**: `if` MUST only appear on tool events and MUST hold one permission rule. Vendor text: "Only evaluated on `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest`, `PermissionDenied`, and `PreSkillShellCommand`. On other events, a hook with `if` set doesn't run" and "The `if` field holds exactly one permission rule. There is no `&&`, `||`, or list syntax for combining rules; to apply multiple conditions, define a separate hook handler for each." (hooks, "Common fields")
+**Tool events**: PreToolUse, PermissionRequest, PermissionDenied, PostToolUse, PostToolUseFailure, PreSkillShellCommand
 **Detection**:
   - `if` on any other event: error at the `if` key (the hook never runs)
   - `&&`, `||` or a `,` list outside the rule's parentheses: warning (how Claude Code treats a combined string is not documented). Text inside `Tool(...)`, such as a Bash pattern with `&&`, is the rule's own argument and is not reported.
   - empty or non-string `if`: warning
 **Fix**: Manual
-**Source**: code.claude.com/docs/en/hooks
+**Source**: code.claude.com/docs/en/hooks, github.com/anthropics/claude-code/releases/tag/v2.1.332
 
 <a id="cc-hk-022"></a>
 ### CC-HK-022 [MEDIUM] Invalid Shell Value
@@ -1836,10 +1836,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="cc-pl-017"></a>
 ### CC-PL-017 [MEDIUM] Unknown Plugin Manifest Field
 **v2.1.323 refresh**: Accept the new `engines` top-level field: "Added `engines[\"claude-code\"]` to `plugin.json`: plugins outside their stated Claude Code version range are not installed, updated or loaded" (v2.1.323 release notes; the manifest reference table has not caught up yet).
+**v2.1.331 refresh**: Accept the new `optionalDependencies` top-level field: "Added `optionalDependencies` to plugin manifests: plugins that install with the plugin listing them and can be disabled or uninstalled on their own" (v2.1.331 release notes; the manifest reference has not caught up yet).
 **Requirement**: Manifest keys SHOULD match the documented top-level fields. Claude Code strips unknown keys at load time.
 **Detection**: Warn for keys outside the manifest reference, including misspellings such as `homepag`.
 **Fix**: Correct the key spelling or remove it.
-**Source**: code.claude.com/docs/en/plugins/manifest-reference, github.com/anthropics/claude-code/releases/tag/v2.1.323
+**Source**: code.claude.com/docs/en/plugins/manifest-reference, github.com/anthropics/claude-code/releases/tag/v2.1.323, github.com/anthropics/claude-code/releases/tag/v2.1.331
 
 <a id="cc-pl-018"></a>
 ### CC-PL-018 [HIGH] Reserved Plugin Name
@@ -1851,9 +1852,9 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 <a id="cc-pl-019"></a>
 ### CC-PL-019 [MEDIUM] Invalid Dependency Version Range
 **Requirement**: A dependency `version` MUST be a semantic-version range. Vendor text: "`version` | A semantic-version range such as `~2.1.0`, `^2.0`, `>=1.4`, or `=2.1.0`. The dependency installs at the highest git tag that satisfies this range, so the dependency's maintainer must tag releases." (plugin dependencies, "Declare a dependency with a version constraint")
-**Detection**: `dependencies[i].version` that is not a node-semver range: `||` alternatives of comparators (`<`, `<=`, `>`, `>=`, `=`, `~`, `~>`, `^`, X-ranges) or a hyphen range
+**Detection**: `dependencies[i].version` or `optionalDependencies[i].version` (v2.1.331) that is not a node-semver range: `||` alternatives of comparators (`<`, `<=`, `>`, `>=`, `=`, `~`, `~>`, `^`, X-ranges) or a hyphen range
 **Fix**: Manual
-**Source**: code.claude.com/docs/en/plugins/dependencies, code.claude.com/docs/en/plugins/manifest-reference
+**Source**: code.claude.com/docs/en/plugins/dependencies, code.claude.com/docs/en/plugins/manifest-reference, github.com/anthropics/claude-code/releases/tag/v2.1.331
 
 <a id="cc-pl-020"></a>
 ### CC-PL-020 [MEDIUM] Unbraced Plugin Variable in Plugin Content
@@ -1924,10 +1925,11 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cc-mp-005"></a>
 ### CC-MP-005 [LOW] Marketplace Field Ignored or Missing Metadata
+**v2.1.331 refresh**: `plugins[i].optionalDependencies` is a known plugin-entry key: the 2.1.331 binary validates it on marketplace entries beside `dependencies`, so it is not reported as unknown (the marketplace reference has not caught up yet).
 **Requirement**: Marketplace files SHOULD avoid fields Claude Code ignores and SHOULD describe the marketplace. Vendor text: "Claude Code ignores an unknown top-level key or plugin-entry key rather than rejecting it, so a typo loads silently. `claude plugin validate` reports each unknown key as a warning." ("Marketplace file"), plus the warnings "No marketplace description provided", "Marketplace has no plugins defined", "Entry declares version "x" but <path>/plugin.json says "y". At install time, plugin.json wins" and "sets headers/headersHelper, which only apply to "archive" sources; they have no effect on this entry." ("Validation messages")
 **Detection**: unknown keys at the top level, under `metadata` and in entries (directory listing fields such as `icon` count as unknown in an entry); no `description` or `metadata.description`; an empty `plugins` array; an entry `version` that differs from the relative-path plugin's `plugin.json`; `headers` or `headersHelper` on a non-archive entry
 **Fix**: Manual
-**Source**: code.claude.com/docs/en/plugins/marketplace-reference
+**Source**: code.claude.com/docs/en/plugins/marketplace-reference, github.com/anthropics/claude-code/releases/tag/v2.1.331
 
 ## MCP RULES
 
@@ -2533,7 +2535,7 @@ Output-style files (`.claude/output-styles/*.md` or `~/.claude/output-styles/*.m
 
 <a id="cur-016"></a>
 ### CUR-016 [HIGH] Invalid .cursor/environment.json Schema
-**Requirement**: `.cursor/environment.json` MUST match the published schema at cursor.com/schemas/environment.schema.json. Comments are allowed, trailing commas are not, no root field is required, `build` needs `dockerfile` or `dockerfileContents` (the schema's `anyOf`) with an optional `context`, and unknown root/build fields are rejected except for the conventional root `$schema` association key. The root accepts the union of the schema's `common` and `container` definitions: `name`, `user`, `install`, `start`, `repositoryDependencies`, `disableAllMcpServers`, `mcpServerAllowlist`, `egressAllowlist` (array of strings), `egressMode` (`allow_all`, `parent_plus_network_settings`, `default_with_network_settings`, or `network_settings_only`), `chromeExecutablePath`, `enable_testing` (boolean or the strings `"true"`/`"false"`), `ports`, `terminals`, `build`, `image`, `snapshot`, and `agentCanUpdateSnapshot`. Each `mcpServerAllowlist` entry identifies an HTTP server by `serverUrl` or a stdio server by `command`, with an optional `toolAllowlist` array of strings. Terminal entries require only `command`; `name` and `description` are optional. `update` is not in the schema and is reported as renamed to `install`.
+**Requirement**: `.cursor/environment.json` MUST match the published schema at cursor.com/schemas/environment.schema.json. Comments are allowed, trailing commas are not, no root field is required, `build` needs `dockerfile` or `dockerfileContents` (the schema's `anyOf`) with an optional `context`, and unknown root/build fields are rejected except for the conventional root `$schema` association key. The root also accepts the published schema's `clone` object (`depth`, `shallowSince`, `singleBranch`, `tags`, `filter`, `bundleUri`, `extraArgs`; the `common` definition of the published schema, absent from the setup page's prose). The root accepts the union of the schema's `common` and `container` definitions: `name`, `user`, `install`, `start`, `repositoryDependencies`, `disableAllMcpServers`, `mcpServerAllowlist`, `egressAllowlist` (array of strings), `egressMode` (`allow_all`, `parent_plus_network_settings`, `default_with_network_settings`, or `network_settings_only`), `chromeExecutablePath`, `enable_testing` (boolean or the strings `"true"`/`"false"`), `ports`, `terminals`, `build`, `image`, `snapshot`, and `agentCanUpdateSnapshot`. Each `mcpServerAllowlist` entry identifies an HTTP server by `serverUrl` or a stdio server by `command`, with an optional `toolAllowlist` array of strings. Terminal entries require only `command`; `name` and `description` are optional. `update` is not in the schema and is reported as renamed to `install`.
 **Detection**: Strip JSON comments, parse JSON, enforce the root/build/MCP-server closed-field sets, and validate setup strings, repository dependencies, MCP policy, egress policy, testing flag, ports, build fields, image and snapshot fields, and terminal entries
 **Fix**: Correct field types; rename `update` to `install`
 **Source**: cursor.com/docs/cloud-agent/setup
@@ -2838,9 +2840,9 @@ OpenCode 1 (`opencode-ai`) and OpenCode 2 (`@opencode/cli`, released 2026-09-11)
 <a id="oc-004"></a>
 ### OC-004 [MEDIUM] Unknown Config Key
 **Requirement**: Top-level keys SHOULD be keys of https://opencode.ai/config.json (top-level `additionalProperties: false`), which lists the native OpenCode 2 keys and the OpenCode 1 keys it still reads ("supported V1 and native V2 fields may coexist at the top level").
-**Detection**: Warning at each key outside the schema (plus the OpenCode 1 TUI keys `theme`, `keybinds`, `tui`, which OC-DEP-005 reports), with a closest-key hint. When `[tool_versions] opencode` pins 1.x, native OpenCode 2 keys (`agents`, `permissions`, `policies`, `commands`, `providers`, `plugins`, `snapshots`, `update`, `media`, `websearch`, `worktree`, `warming`, `timezone`) are reported as keys OpenCode 1 does not read. An unpinned file using these native keys is checked as OpenCode 2.
+**Detection**: Warning at each key outside the schema (plus the OpenCode 1 TUI keys `theme`, `keybinds`, `tui`, which OC-DEP-005 reports), with a closest-key hint. When `[tool_versions] opencode` pins 1.x, native OpenCode 2 keys (`agents`, `permissions`, `policies`, `commands`, `providers`, `plugins`, `snapshots`, `update`, `media`, `websearch`, `worktree`, `warming`, `timezone`, `automations`) are reported as keys OpenCode 1 does not read. An unpinned file using these native keys is checked as OpenCode 2.
 **Fix**: No auto-fix
-**Source**: opencode.ai/config.json, opencode.ai/v2/docs/migrate-v1
+**Source**: opencode.ai/config.json, opencode.ai/v2/docs/migrate-v1, github.com/anomalyco/opencode/releases/tag/v2.4.0
 
 <a id="oc-006"></a>
 ### OC-006 [LOW] Remote URL in Instructions
@@ -3614,6 +3616,7 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 **0.154 schema refresh**: Accept the new `tui.question_esc_back` and `tui.whimsy` preferences and the feature names listed under CDX-CFG-011.
 **0.169 schema refresh**: Accept the new `tui.collapse_turn_details`, `tui.default_hosts` and `tui.sidebar_width_percent` preferences added by the tagged rust-v0.168.0/rust-v0.169.0 schemas.
 **0.171 schema refresh**: Accept the new `tui.status_line_provider` preference added by the tagged rust-v0.171.0 schema (absent from rust-v0.170.0; not named in release notes). Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/config.schema.json).
+**0.172 schema refresh**: Accept `approvals_reviewer` under `apps.<id>.tools.<tool>` (CDX-CFG-024) and the feature names listed under CDX-CFG-011. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/core/config.schema.json).
 **Requirement**: Codex config keys SHOULD match the official schema at top-level and known nested sections (`features`, `tui`, `shell_environment_policy`, `mcp_servers`, `apps`)
 **Detection**: Parse `.codex/config.toml|json|yaml`, compare observed keys against allowlists, and report unknown keys
 **Fix**: No auto-fix (remove or rename unsupported fields)
@@ -3654,6 +3657,7 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 **0.167 schema refresh**: Accept the nine `[features]` flags added by the tagged rust-v0.167.0 through rust-v0.167.2 schemas and never named in release notes: `apps_early_resource_discovery`, `code_mode_host_output_truncation`, `gcp_setup_wizard`, `incremental_exec_tools`, `incremental_tools_legacy`, `incremental_tools_legacy_gcp` (the rust-v0.167.2 flat-bool opt-out from incremental tool updates on Google Cloud Vertex AI), `interrupt_on_cancel`, `suppress_model_change_announcements` and `tui_extensions_statusline`. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.167.2/codex-rs/core/config.schema.json).
 **0.169 schema refresh**: Accept the twelve `[features]` flags added across the tagged rust-v0.168.0 and rust-v0.169.0 schemas: rust-v0.168.0 adds `agent_message_board_mcp`, `async_compaction_root_only`, `cli_resume_account_check`, `command_sessions_world_state`, `guardian_denial_reconsideration`, `guardian_include_additional_context`, `hosted_search_policy`, `image_generation_animation` and `tui_workspace`, and removes both `incremental_tools_legacy` names; rust-v0.169.0 adds `daybreak_program_propagation`, `gateway_setup_wizard`, `mcp_lazy_stdio_startup` and restores both `incremental_tools_legacy` names, so the net allowlist keeps them. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/core/config.schema.json).
 **0.171 schema refresh**: Accept the nine `[features]` flags added by the tagged rust-v0.170.0 and rust-v0.171.0 schemas, none named in release notes: rust-v0.170.0 adds `multi_environment_mcp`; rust-v0.171.0 adds `catalog_apps_instructions`, `file_backed_tool_audio`, `guardian_nested_approval_context`, `mcp_shared_repl_cwd`, `per_environment_context`, `restored_history_prewarm`, `safe_image_decoder` and `utc_environment_date`. Diffed against the rust-v0.169.0 set pinned on 2026-11-15. Sources: [rust-v0.170.0 schema](https://github.com/openai/codex/blob/rust-v0.170.0/codex-rs/core/config.schema.json), [rust-v0.171.0 schema](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/config.schema.json).
+**0.172 schema refresh**: Accept the two `[features]` flags added by the tagged rust-v0.172.0 schema and not named in release notes: `connector_tool_result_passthrough` and `realtime_frames_local`. The same release deprecates `code_mode_host_grpc` ("Code Mode now uses gRPC for all host connections. The `code_mode_host_grpc` setting is deprecated"); the key stays in the schema, so it remains accepted. Diffed against the rust-v0.171.0 set pinned on 2026-11-20. Source: [tagged configuration schema](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/core/config.schema.json).
 **Requirement**: Keys under `[features]` SHOULD use known Codex feature flag names; `non_prefixed_mcp_tool_names` MUST be a boolean or an object with optional boolean `enabled` and string-array `server_names`
 **Detection**: Parse config, report unknown keys under `features`, and validate the structured `non_prefixed_mcp_tool_names` value
 **Fix**: No auto-fix (remove unsupported flags or rename)
@@ -3766,10 +3770,10 @@ Rules for Gemini agent markdown files at `.gemini/agents/*.md` (project and `~/.
 
 <a id="cdx-cfg-024"></a>
 ### CDX-CFG-024 [MEDIUM] Invalid Approvals Reviewer Value
-**Requirement**: `approvals_reviewer`, `apps.<app_id>.approvals_reviewer`, and `apps._default.approvals_reviewer` SHOULD be one of `user|auto_review|guardian_subagent`
-**Detection**: Parse config and validate top-level, app-level, and app-default `approvals_reviewer` enum values
+**Requirement**: `approvals_reviewer`, `apps.<app_id>.approvals_reviewer`, `apps.<app_id>.tools.<tool_id>.approvals_reviewer`, and `apps._default.approvals_reviewer` SHOULD be one of `user|auto_review|guardian_subagent`
+**Detection**: Parse config and validate top-level, app-level, app-tool and app-default `approvals_reviewer` enum values (app-tool since rust-v0.172.0)
 **Fix**: Manual
-**Source**: github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.137.0 and rust-v0.140.0)
+**Source**: github.com/openai/codex (codex-rs/core/config.schema.json @ rust-v0.137.0, rust-v0.140.0 and rust-v0.172.0)
 
 <a id="cdx-cfg-025"></a>
 ### CDX-CFG-025 [MEDIUM] Invalid Service Tier Value
@@ -4597,9 +4601,9 @@ Kiro CLI V3 (opt-in in CLI 2.x with `kiro-cli --v3`, the default from CLI 3.0) a
 <a id="kr-hk-012"></a>
 ### KR-HK-012 [HIGH] Invalid Kiro V3 Hook Entry
 **Requirement**: A hook file MUST be a JSON object with a non-empty `hooks` array of objects, and each hook MUST have a non-empty string `name`, a recognized `trigger` and an `action` object
-**Detection**: Invalid JSON (with serde's line and column); a non-object document; `hooks` missing, not an array or empty; a bare hook definition without the wrapper; an entry that is not an object; `name` / `trigger` missing, not a string or empty (whitespace-only passes the schema); `action` missing (with a hint when `command` or `prompt` sits at the hook level). These skip the whole file. An unrecognized trigger name skips only that hook: the lookup is exact and case-sensitive over SessionStart, SessionEnd, Stop, PreToolUse, PostToolUse, PreTaskExec, PostTaskExec, UserPromptSubmit, PostFileCreate, PostFileSave, PostFileDelete, Manual and the aliases sessionStart, agentSpawn, agentStop, stop, promptSubmit, userPromptSubmit, preToolUse, postToolUse, preTaskExecution, postTaskExecution, fileEdited, AfterFileEdit, fileCreated, fileDeleted and userTriggered. `AgentSpawn` is not accepted, although the hook-types docs say it is.
+**Detection**: Invalid JSON (with serde's line and column); a non-object document; `hooks` missing, not an array or empty; a bare hook definition without the wrapper; an entry that is not an object; `name` / `trigger` missing, not a string or empty (whitespace-only passes the schema); `action` missing (with a hint when `command` or `prompt` sits at the hook level). These skip the whole file. An unrecognized trigger name skips only that hook: the lookup is exact and case-sensitive over SessionStart, SessionEnd, Stop, PreToolUse, PostToolUse, PreTaskExec, PostTaskExec, UserPromptSubmit, PostFileCreate, PostFileSave, PostFileDelete, Manual and the aliases sessionStart, agentSpawn, agentStop, stop, promptSubmit, userPromptSubmit, preToolUse, postToolUse, preTaskExecution, postTaskExecution, fileEdited, AfterFileEdit, fileCreated, fileDeleted and userTriggered. `AgentSpawn` is not accepted, although the hook-types docs say it is. V3 triggers that the mirrored 2.32.1 engine table does not know are accepted by name: `PreCompact` and `PostCompact` (3.1.0, KR-HK-031), `PermissionRequest` (3.4.0, KR-HK-032) and `SubagentStop` (3.6.0: in a V3 session it "runs when a subagent dispatched with `invoke_sub_agent` finishes a turn, before its result returns to the parent").
 **Fix**: [AUTO-FIX, unsafe] An unrecognized trigger that matches a canonical name or alias ignoring case (for example `AgentSpawn`, `postfilesave`) is replaced with the canonical name. Unsafe because the hook starts running.
-**Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/types, kiro.dev/docs/cli/v3/hooks-migration
+**Source**: kiro.dev/docs/hooks, kiro.dev/docs/hooks/types, kiro.dev/docs/cli/v3/hooks-migration, kiro.dev/changelog/cli
 
 <a id="kr-hk-013"></a>
 ### KR-HK-013 [HIGH] Invalid Kiro V3 Hook Action
@@ -4979,6 +4983,7 @@ Rules for the Kiro CLI settings files `~/.kiro/settings/cli.json` (global, `$KIR
 **2.36 reference refresh**: `acp.agentEngine` is a documented global string setting, the harness `kiro-cli acp` starts: "`v3`, `v2`, or `v1` (Kiro CLI 2.36 or later)". KR-SET-009 checks its choices.
 **3.2.0 changelog refresh**: `chat.keybindings.viewDiagram` is a documented string setting ("Change the key with chat.keybindings.viewDiagram", CLI 3.2.0 changelog, 2026-11-10; opens the newest wide Mermaid diagram on its own screen). Added to the settings table and the not-loaded list, following the other `chat.keybindings.*` string settings.
 **3.5.0 changelog refresh**: `auth.portalUrl` is a documented string setting: "Set `auth.portalUrl` and `kiro-cli login` opens that portal in your browser instead of the default one. Administrators can set the portal for their users through the `AuthPortalUrl` policy or `auth_portal_url` in `managed-settings.json`" (CLI 3.5.0 changelog, verified live 2026-11-20; the settings reference table has not caught up yet). Added to the settings table as a string. The managed-settings surfaces need no rule change: KR-PM validates only `rules` and `policies`, and Kiro "ignores" extra keys in the managed `settings` object by design (sign-in controls reference, "Validation and error handling").
+**3.6.0 changelog refresh**: `chat.notificationSound` is a documented boolean setting ("Play Kiro's tone with each notification. Global only", settings reference; the CLI's notification controls "write `chat.enableNotifications`, `chat.notificationMethod`, and `chat.notificationSound`", CLI chat settings). Added to the settings table and the not-loaded list. Global only, so KR-SET-011 applies.
 
 **Fix**: No auto-fix - correct or remove the key.
 **Source**: kiro.dev/docs/reference/settings
@@ -5891,7 +5896,7 @@ Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2
 
 ### GRK-SBX-001 [HIGH] Redefined Grok Sandbox Builtin
 
-Detection: Custom sandbox profiles cannot redefine off, workspace, read-only, strict, devbox or minimal (the `minimal` builtin added by CLI 1.0.82, "New `minimal` sandbox profile and `workspace_write` option"; x.ai changelog, verified 2026-11-20). `minimal` is reserved only when the pinned grok-code version is 1.0.82 or later; a pin below 1.0.82 has no such builtin, so its custom `profiles.minimal` is valid, and unpinned files are checked against the latest release. `workspace_write` itself stays open-typed until a vendor source documents its type.
+Detection: Custom sandbox profiles cannot redefine off, workspace, read-only, strict, devbox or minimal (the `minimal` builtin added by CLI 1.0.82, "New `minimal` sandbox profile and `workspace_write` option"; x.ai changelog, verified 2026-11-20). `minimal` is reserved only when the pinned grok-code version is 1.0.82 or later; a pin below 1.0.82 has no such builtin, so its custom `profiles.minimal` is valid, and unpinned files are checked against the latest release. `workspace_write` (CLI 1.0.82) is typed under GRK-SBX-002: a boolean, from the bundled CLI guide's field table.
 
 Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
 
@@ -5899,7 +5904,7 @@ Sources: [reference 1](https://docs.x.ai/build/settings/reference), [reference 2
 
 ### GRK-SBX-002 [HIGH] Invalid Grok Sandbox Profile
 
-Detection: Use a documented extends value and valid network/path-list fields in custom profiles.
+Detection: Use a documented extends value and valid network/path-list fields in custom profiles. `extends` takes `workspace`, `devbox`, `read-only`, `strict` or `minimal`, and `workspace_write` is a boolean (both from CLI 1.0.82, "New `minimal` sandbox profile and `workspace_write` option"; the bundled CLI guide's field table). From CLI 1.0.90 the file is closed: "unknown keys in sandbox.toml are reported as errors", and the bundled guide says Grok "ignores the whole `sandbox.toml`". A key outside `profiles` at the root and an unknown key inside a profile are errors for grok-code pinned to 1.0.90 or later, or unpinned; a pin below 1.0.90 keeps the open shape.
 
 Applies to: `grok-code`; qualified configuration reference `>=1.0.70`.
 

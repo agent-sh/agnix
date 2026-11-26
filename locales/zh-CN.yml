@@ -177,6 +177,10 @@ rules:
   grk_sbx_002:
     schema_message: "Grok 字段不符合文档规定的 %{keyword} 约束。"
     schema_suggestion: "请使用 Grok 原生配置字段的类型和值。"
+    unknown_sandbox_root_key: "Grok 会忽略整个 sandbox.toml：'%{key}' 不是 sandbox.toml 的键，只有 'profiles' 是。"
+    unknown_sandbox_profile_key: "Grok 会忽略整个 sandbox.toml：'%{key}' 不是沙箱配置文件的键（应为 extends、restrict_network、read_only、read_write、deny 或 workspace_write）。"
+    unknown_sandbox_key_suggestion: "移除或更正该键。从 Grok CLI 1.0.90 起，未知键会使 Grok 丢弃该文件定义的全部配置文件。"
+    workspace_write_must_be_boolean: "Grok 的 'workspace_write' 必须为 true 或 false。"
   grk_sk_001:
     grok_skill_allowed_tools_does_not_grant: "Grok skill 的 allowed-tools 不会授予或限制工具权限。"
     use_grok_permission_rules_or_an_agent: "请使用 Grok 权限规则或代理工具策略来限制工具。"
@@ -367,6 +371,8 @@ rules:
   cc_hk_001:
     message: '无效的 hook 事件 ''%{event}''，有效事件: %{valid}'
     fix: 将 '%{old}' 替换为 '%{new}'
+    version_event: "Claude Code %{version} 的 hook 事件 '%{event}' 无效：该事件从 v2.1.332 起存在，更早的版本会在启动时弹窗并忽略它。"
+    version_event_suggestion: "请将固定的版本升级到 v2.1.332 或更高，或移除该 hook。"
   cc_hk_002:
     message: '%{location} 中的 %{hook_type} hook 不支持 ''%{event}'' 事件'
     suggestion: '为此 %{hook_type} hook 使用受支持的事件，或改用 ''type'': ''command'''

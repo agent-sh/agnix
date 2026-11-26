@@ -312,14 +312,48 @@ fn has_unknown_exact_matcher(event: &str, matcher: &str, valid_values: &[&str]) 
         .any(|value| !valid_values.contains(&value))
 }
 
+/// The pinned Claude Code release when it predates `event`, which that
+/// release then ignores with a warning dialog at start.
+pub(super) fn event_after_pin(config: &PerFileLintConfig<'_>, event: &str) -> Option<String> {
+    HooksSchema::EVENTS_SINCE
+        .iter()
+        .find(|(name, _, _)| *name == event)
+        .and_then(|(_, minor, patch)| super::extra::version_below(config, *minor, *patch))
+}
+
+/// Whether the pinned release knows `event`. An unpinned run takes the
+/// latest release.
+pub(super) fn event_known_to_pin(config: &PerFileLintConfig<'_>, event: &str) -> bool {
+    HooksSchema::VALID_EVENTS.contains(&event) && event_after_pin(config, event).is_none()
+}
+
 /// CC-HK-001: Invalid event name with auto-fix support
 pub(super) fn validate_cc_hk_001_event_name(
     event: &str,
     path: &Path,
     content: &str,
+    config: &PerFileLintConfig<'_>,
     diagnostics: &mut Vec<Diagnostic>,
 ) -> bool {
     if HooksSchema::VALID_EVENTS.contains(&event) {
+        // An event the pinned release predates never runs there.
+        if let Some(version) = event_after_pin(config, event) {
+            diagnostics.push(
+                Diagnostic::error(
+                    path.to_path_buf(),
+                    1,
+                    0,
+                    "CC-HK-001",
+                    t!(
+                        "rules.cc_hk_001.version_event",
+                        event = event,
+                        version = version.as_str()
+                    ),
+                )
+                .with_suggestion(t!("rules.cc_hk_001.version_event_suggestion").to_string()),
+            );
+            return false;
+        }
         return true;
     }
 
@@ -338,7 +372,10 @@ pub(super) fn validate_cc_hk_001_event_name(
     .with_suggestion(closest.suggestion);
 
     // Add auto-fix if we found a matching event
-    if let Some(corrected) = closest.corrected_event {
+    // No fix to an event the pinned release does not run.
+    if let Some(corrected) = closest.corrected_event.as_deref()
+        && event_after_pin(config, corrected).is_none()
+    {
         if let Some((start, end)) = find_event_key_position(content, event) {
             let replacement = format!("\"{}\"", corrected);
             let description = t!("rules.cc_hk_001.fix", old = event, new = corrected);

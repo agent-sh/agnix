@@ -13,7 +13,7 @@ keywords: ["CC-HK-021", "invalid if field", "claude hooks", "validation", "agnix
 - **Category**: `Claude Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-25`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-HK-021", "invalid if field", "claude hooks", "validation", "agnix
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/hooks
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.332
 
 ## Test Coverage Metadata
 

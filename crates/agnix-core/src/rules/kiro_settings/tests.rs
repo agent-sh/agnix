@@ -480,9 +480,9 @@ fn test_does_not_panic_on_non_ascii_content() {
 fn test_settings_table_includes_kiro_234_workflow_launch() {
     // 147 with the Kiro 3.2.0 chat.keybindings.viewDiagram addition, the
     // 3.3.0 review's compaction.autoCompactionThreshold and
-    // chat.enableSessionRecap (3.1.0) additions, and the 3.5.0 review's
-    // auth.portalUrl.
-    assert_eq!(SETTINGS.len(), 147);
+    // chat.enableSessionRecap (3.1.0) additions, the 3.5.0 review's
+    // auth.portalUrl, and the 3.6.0 review's chat.notificationSound.
+    assert_eq!(SETTINGS.len(), 148);
     let mut keys: Vec<_> = SETTINGS.iter().map(|s| s.key).collect();
     keys.sort_unstable();
     keys.dedup();

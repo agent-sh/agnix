@@ -1037,6 +1037,7 @@ fn validate_cursor_environment_file(
         "$schema",
         "name",
         "user",
+        "clone",
         "install",
         "start",
         "repositoryDependencies",

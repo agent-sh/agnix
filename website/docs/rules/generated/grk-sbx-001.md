@@ -13,7 +13,7 @@ keywords: ["GRK-SBX-001", "redefined grok sandbox builtin", "grok", "validation"
 - **Category**: `grok`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-11-20`
+- **Verified On**: `2026-11-25`
 
 ## Applicability
 

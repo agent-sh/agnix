@@ -201,6 +201,13 @@ impl Hook {
 }
 
 impl HooksSchema {
+    /// Hook events and the Claude Code release that introduced each one. A
+    /// pinned release older than that ignores the event: `PreSkillShellCommand`
+    /// arrived in v2.1.332 and "on 2.1.331 and older, a settings file naming
+    /// it opens a dialog at start".
+    pub const EVENTS_SINCE: &'static [(&'static str, u64, u64)] =
+        &[("PreSkillShellCommand", 1, 332)];
+
     /// Valid hook event names (case-sensitive)
     pub const VALID_EVENTS: &'static [&'static str] = &[
         "PreToolUse",
@@ -218,6 +225,7 @@ impl HooksSchema {
         "TaskCompleted",
         "TaskCreated",
         "PreCompact",
+        "PreSkillShellCommand",
         "PostCompact",
         "PreModelSwitch",
         "PostModelSwitch",
@@ -241,6 +249,7 @@ impl HooksSchema {
     /// Tool-related events (matcher recommended via CC-HK-003 hint)
     pub const TOOL_EVENTS: &'static [&'static str] = &[
         "PreToolUse",
+        "PreSkillShellCommand",
         "PermissionRequest",
         "PermissionDenied",
         "PostToolUse",
@@ -252,6 +261,7 @@ impl HooksSchema {
     pub const MATCHER_EVENTS: &'static [&'static str] = &[
         // Tool events
         "PreToolUse",
+        "PreSkillShellCommand",
         "PermissionRequest",
         "PostToolUse",
         "PostToolUseFailure",

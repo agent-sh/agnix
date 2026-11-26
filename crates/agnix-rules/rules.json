@@ -1797,9 +1797,10 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks",
           "https://github.com/anthropics/claude-code/releases/tag/v2.1.219",
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.251"
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.251",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.332"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -1854,7 +1855,7 @@
         "source_urls": [
           "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -2281,9 +2282,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/hooks"
+          "https://code.claude.com/docs/en/hooks",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.332"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "claude-code",
           "file_types": [
@@ -5873,9 +5875,10 @@
           "https://developers.openai.com/codex/config-schema.json",
           "https://developers.openai.com/codex/enterprise/managed-configuration",
           "https://github.com/openai/codex/blob/rust-v0.154.0/codex-rs/core/config.schema.json",
-          "https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-11-20",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "codex"
         },
@@ -6050,9 +6053,10 @@
           "https://github.com/openai/codex/blob/rust-v0.167.2/codex-rs/core/config.schema.json",
           "https://github.com/openai/codex/blob/rust-v0.169.0/codex-rs/core/config.schema.json",
           "https://github.com/openai/codex/blob/rust-v0.170.0/codex-rs/core/config.schema.json",
-          "https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-11-20",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "codex"
         },
@@ -7270,9 +7274,10 @@
         "source_type": "vendor_code",
         "source_urls": [
           "https://github.com/openai/codex/blob/rust-v0.137.0/codex-rs/core/config.schema.json",
-          "https://github.com/openai/codex/blob/rust-v0.140.0/codex-rs/core/config.schema.json"
+          "https://github.com/openai/codex/blob/rust-v0.140.0/codex-rs/core/config.schema.json",
+          "https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/core/config.schema.json"
         ],
-        "verified_on": "2026-06-16",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "codex"
         },
@@ -7287,8 +7292,8 @@
         "autofix": true,
         "fix_safety": "unsafe"
       },
-      "good_example": "approvals_reviewer = \"auto_review\"\n\n[apps.browser]\napprovals_reviewer = \"user\"\n\n[apps._default]\napprovals_reviewer = \"guardian_subagent\"",
-      "bad_example": "approvals_reviewer = \"approve\"\n\n[apps.browser]\napprovals_reviewer = 42\n\n[apps._default]\napprovals_reviewer = \"approve\""
+      "good_example": "approvals_reviewer = \"auto_review\"\n\n[apps.browser]\napprovals_reviewer = \"user\"\n\n[apps._default]\napprovals_reviewer = \"guardian_subagent\"\n\n[apps.browser.tools.search]\napprovals_reviewer = \"user\"",
+      "bad_example": "approvals_reviewer = \"approve\"\n\n[apps.browser]\napprovals_reviewer = 42\n\n[apps._default]\napprovals_reviewer = \"approve\"\n\n[apps.browser.tools.search]\napprovals_reviewer = \"approve\""
     },
     {
       "id": "CDX-CFG-025",
@@ -9972,7 +9977,7 @@
           "https://cursor.com/docs/cloud-agent/setup",
           "https://cursor.com/schemas/environment.schema.json"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "cursor"
         },
@@ -13446,7 +13451,7 @@
           "https://kiro.dev/docs/hooks/types/",
           "https://kiro.dev/docs/cli/v3/hooks-migration/"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "kiro",
           "version_range": ">=2.8.0"
@@ -15126,7 +15131,7 @@
           "https://kiro.dev/docs/reference/settings/",
           "https://kiro.dev/changelog/cli/"
         ],
-        "verified_on": "2026-11-20",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "kiro"
         },
@@ -16808,9 +16813,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://opencode.ai/config.json",
-          "https://opencode.ai/v2/docs/migrate-v1/"
+          "https://opencode.ai/v2/docs/migrate-v1/",
+          "https://github.com/anomalyco/opencode/releases/tag/v2.4.0"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "opencode"
         },
@@ -19844,9 +19850,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://code.claude.com/docs/en/plugins/manifest-reference",
-          "https://github.com/anthropics/claude-code/releases/tag/v2.1.323"
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.323",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.331"
         ],
-        "verified_on": "2026-11-15",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "claude-code",
           "version_range": ">=2.1.0"
@@ -19901,9 +19908,10 @@
         "source_type": "vendor_docs",
         "source_urls": [
           "https://code.claude.com/docs/en/plugins/dependencies",
-          "https://code.claude.com/docs/en/plugins/manifest-reference"
+          "https://code.claude.com/docs/en/plugins/manifest-reference",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.331"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -20150,9 +20158,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/plugins/marketplace-reference"
+          "https://code.claude.com/docs/en/plugins/marketplace-reference",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.331"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -20651,7 +20660,7 @@
           "https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/schemas/models.schema.json",
           "https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/src/core/model-config.ts"
         ],
-        "verified_on": "2026-11-11",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -20679,7 +20688,7 @@
           "https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/schemas/models.schema.json",
           "https://github.com/earendil-works/pi/blob/v1.5.2/packages/coding-agent/src/core/model-config.ts"
         ],
-        "verified_on": "2026-11-11",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "pi",
           "version_range": ">=1.4.0"
@@ -21358,7 +21367,7 @@
           "https://antigravity.google/docs/rules",
           "https://antigravity.google/docs/customization-discovery"
         ],
-        "verified_on": "2026-11-04",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -21385,7 +21394,7 @@
           "https://antigravity.google/docs/rules",
           "https://antigravity.google/docs/customization-discovery"
         ],
-        "verified_on": "2026-11-04",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -21412,7 +21421,7 @@
           "https://antigravity.google/docs/rules",
           "https://antigravity.google/docs/customization-discovery"
         ],
-        "verified_on": "2026-11-04",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -21439,7 +21448,7 @@
           "https://antigravity.google/docs/rules",
           "https://antigravity.google/docs/customization-discovery"
         ],
-        "verified_on": "2026-11-04",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "antigravity",
           "version_range": ">=1.4.9"
@@ -21709,7 +21718,7 @@
           "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-config/src/sandbox_mode.rs",
           "https://x.ai/changelog/build"
         ],
-        "verified_on": "2026-11-20",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "grok-code",
           "version_range": ">=1.0.70"
@@ -21736,7 +21745,7 @@
           "https://docs.x.ai/build/features/sandbox",
           "https://github.com/xai-org/grok-build/blob/2bdd1d6a6369de0e8c68132ea4539e9abd9e14a8/crates/codegen/xai-grok-config/src/sandbox_mode.rs"
         ],
-        "verified_on": "2026-10-29",
+        "verified_on": "2026-11-25",
         "applies_to": {
           "tool": "grok-code",
           "version_range": ">=1.0.70"

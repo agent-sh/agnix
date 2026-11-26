@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- KR-HK-012 accepts the Kiro `SubagentStop` trigger (Kiro CLI 3.6.0, "Subagent
+  Stop Hooks and Guided Compaction"): in a V3 session it runs when a
+  dispatched subagent finishes a turn. The 2.32.1 engine table this validator
+  mirrors does not know it.
+- CDX-CFG-024 validates `approvals_reviewer` under
+  `apps.<app_id>.tools.<tool_id>` (Codex rust-v0.172.0 tagged schema).
+- CUR-016 accepts the root `clone` object of Cursor's published
+  `environment.schema.json`.
 - KR-HK-032 (Info): the Kiro `PermissionRequest` trigger (Kiro CLI 3.4.0,
   "Hooks That Rewrite Tool Inputs and Answer Permission Prompts") needs
   Kiro CLI 3.4.0 in a V3 session; an older CLI (3.3.x and earlier) skips
@@ -37,6 +45,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sharing; only 2026-07-28-protocol connections are shared).
 
 ### Changed
+- Review the 2026-11-25 tool releases against their live sources (baselines:
+  Antigravity CLI 1.5.17, Claude Code v2.1.332, Codex rust-v0.172.0, Cursor
+  3.32.4, Gemini CLI v0.71.1, Grok CLI 1.0.92, Kimi Code 2.7.3, Kiro CLI
+  3.6.0, OpenCode v2.4.1) and refresh the reviewed spec sentinels
+  (`knowledge-base/reviews/2026-11-25-release-triage.md`).
+- OC-004 accepts the OpenCode `automations` top-level key (v2.4.0).
+- KR-SET-005 accepts `chat.notificationSound` (Kiro CLI 3.6.0, global only).
+- GRK-SBX-002 types `workspace_write` as a boolean and accepts `minimal` as
+  an `extends` value (Grok CLI 1.0.82).
 - Review Antigravity CLI 1.5.15 against its live sources (auto-updater
   manifest, `agy changelog` release notes and the published
   settings/plugin schemas) and advance the release baseline. No new
@@ -278,6 +295,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fields.
 
 ### Fixed
+- CC-HK-001, CC-HK-003 and CC-HK-021 accept `PreSkillShellCommand` (Claude
+  Code v2.1.332). A pin below v2.1.332 keeps the error for the event name.
+- CC-PL-017 and CC-MP-005 accept `optionalDependencies` in plugin manifests
+  and marketplace entries (Claude Code v2.1.331); CC-PL-019 checks its
+  versions too.
+- GRK-SBX-002 reports unknown keys in `sandbox.toml` (root and profiles) as
+  errors when grok-code is pinned to 1.0.90 or later or left unpinned: the
+  CLI reports them as errors and ignores the whole file ("unknown keys in
+  sandbox.toml are reported as errors", CLI 1.0.90).
 - CC-AG-019 no longer reports `autoCompactWindow` values above 1,000,000
   as ignored: the sub-agents reference documents "a token count of
   `100000` or more" with no upper bound, so any integer of at least

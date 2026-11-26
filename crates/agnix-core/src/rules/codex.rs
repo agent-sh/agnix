@@ -200,6 +200,11 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "compaction_image_budget",
     "computer_use",
     "concurrent_reasoning_summaries",
+    // rust-v0.172.0 schema refresh: connector_tool_result_passthrough and
+    // realtime_frames_local (sorted positions), neither named in release
+    // notes (see the 0.172 note in knowledge-base/VALIDATION-RULES.md,
+    // CDX-CFG-011).
+    "connector_tool_result_passthrough",
     "connectors",
     "context_management",
     "critical_path_timing",
@@ -267,6 +272,7 @@ const KNOWN_FEATURE_KEYS: &[&str] = &[
     "prediction_preserve_parent_tools",
     "prevent_idle_sleep",
     "realtime_conversation",
+    "realtime_frames_local",
     "reasoning_effort_override",
     "remote_compaction_v2",
     "remote_control",
@@ -525,7 +531,9 @@ const KNOWN_APP_CONFIG_KEYS: &[&str] = &[
     "omit_tools_from",
     "tools",
 ];
-const KNOWN_APP_TOOL_CONFIG_KEYS: &[&str] = &["enabled", "approval_mode"];
+// rust-v0.172.0: `approvals_reviewer` on a single connected app tool
+// (`[apps.<app>.tools.<tool>]`), beside the app-level key.
+const KNOWN_APP_TOOL_CONFIG_KEYS: &[&str] = &["approval_mode", "approvals_reviewer", "enabled"];
 
 impl Validator for CodexValidator {
     fn metadata(&self) -> ValidatorMetadata {
@@ -2380,6 +2388,53 @@ fn validate_codex_config_rules(
                                 VALID_APPROVALS_REVIEWER.join(", ")
                             )),
                         );
+                    }
+                }
+                // rust-v0.172.0: `approvals_reviewer` on one connected app
+                // tool (`[apps.<app>.tools.<tool>]`), beside the app-level key.
+                if config.is_rule_enabled("CDX-CFG-024")
+                    && let Some(tools) = app_obj.get("tools").and_then(serde_json::Value::as_object)
+                {
+                    for (tool_name, tool_value) in tools {
+                        let Some(tool) = tool_value.as_object() else {
+                            continue;
+                        };
+                        let Some(reviewer) = tool.get("approvals_reviewer") else {
+                            continue;
+                        };
+                        let setting =
+                            format!("apps.{app_name}.tools.{tool_name}.approvals_reviewer");
+                        let message = match reviewer.as_str() {
+                            Some(reviewer_str)
+                                if !VALID_APPROVALS_REVIEWER.contains(&reviewer_str) =>
+                            {
+                                Some(format!(
+                                    "Invalid {setting} value '{reviewer_str}'. Must be one of: {}",
+                                    VALID_APPROVALS_REVIEWER.join(", ")
+                                ))
+                            }
+                            Some(_) => None,
+                            None if !reviewer.is_null() => Some(format!(
+                                "{setting} must be a string, not {}",
+                                value_type_name(reviewer)
+                            )),
+                            None => None,
+                        };
+                        if let Some(message) = message {
+                            diagnostics.push(
+                                Diagnostic::warning(
+                                    path.to_path_buf(),
+                                    line_for("approvals_reviewer"),
+                                    0,
+                                    "CDX-CFG-024",
+                                    message,
+                                )
+                                .with_suggestion(format!(
+                                    "Set {setting} to one of: {}.",
+                                    VALID_APPROVALS_REVIEWER.join(", ")
+                                )),
+                            );
+                        }
                     }
                 }
             }

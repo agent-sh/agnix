@@ -15,11 +15,13 @@ pub const VALID_SHARE_MODES: &[&str] = &["manual", "auto", "disabled"];
 /// Valid values for the OpenCode 2 `update` field.
 pub const VALID_UPDATE_MODES: &[&str] = &["disable", "notify", "auto"];
 
-/// Top-level keys of https://opencode.ai/config.json (fetched 2026-10-17),
-/// plus the OpenCode 1 TUI keys that the schema dropped and OpenCode 1 still
-/// migrates (`theme`, `keybinds`, `tui`; OC-DEP-005).
+/// Top-level keys of https://opencode.ai/config.json (fetched 2026-10-17;
+/// `automations` added at v2.4.0, re-checked 2026-11-25 at v2.4.1), plus the
+/// OpenCode 1 TUI keys that the schema dropped and OpenCode 1 still migrates
+/// (`theme`, `keybinds`, `tui`; OC-DEP-005).
 pub const KNOWN_TOP_LEVEL_KEYS: &[&str] = &[
     "$schema",
+    "automations",
     "agent",
     "agents",
     "attachment",

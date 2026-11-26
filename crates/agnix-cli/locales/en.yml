@@ -175,6 +175,10 @@ rules:
   grk_sbx_002:
     schema_message: "Grok field violates the documented %{keyword} constraint."
     schema_suggestion: "Use the native Grok configuration field types and values."
+    unknown_sandbox_root_key: "Grok ignores the whole sandbox.toml: '%{key}' is not a sandbox.toml key, only 'profiles' is."
+    unknown_sandbox_profile_key: "Grok ignores the whole sandbox.toml: '%{key}' is not a sandbox profile key (expected extends, restrict_network, read_only, read_write, deny or workspace_write)."
+    unknown_sandbox_key_suggestion: "Remove or correct the key. Since Grok CLI 1.0.90 an unknown key makes Grok drop every profile the file defines."
+    workspace_write_must_be_boolean: "Grok 'workspace_write' must be true or false."
   grk_sk_001:
     grok_skill_allowed_tools_does_not_grant: "Grok skill allowed-tools does not grant or restrict tools."
     use_grok_permission_rules_or_an_agent: "Use Grok permission rules or an agent tool policy for tool restrictions."
@@ -620,6 +624,8 @@ rules:
   cc_hk_001:
     message: 'Invalid hook event ''%{event}'', valid events: %{valid}'
     fix: Replace '%{old}' with '%{new}'
+    version_event: "Invalid hook event '%{event}' for Claude Code %{version}: the event exists from v2.1.332, and older versions ignore it with a dialog at start."
+    version_event_suggestion: "Upgrade the pinned version to v2.1.332 or later, or remove the hook."
   cc_hk_002:
     message: '%{hook_type} hook at %{location} is not supported on ''%{event}'' events'
     suggestion: 'Use a supported event for this %{hook_type} hook, or use ''type'': ''command'' instead'

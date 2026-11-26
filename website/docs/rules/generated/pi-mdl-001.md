@@ -13,7 +13,7 @@ keywords: ["PI-MDL-001", "invalid pi model definition", "pi", "validation", "agn
 - **Category**: `pi`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-11-11`
+- **Verified On**: `2026-11-25`
 
 ## Applicability
 

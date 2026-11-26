@@ -43,9 +43,9 @@ use crate::{
     schemas::kiro_hook_v3::{
         JsonSpans, KIRO_V3_HOOK_ACTION_KEYS, KIRO_V3_HOOK_KEYS, KIRO_V3_HOOK_TRIGGERS_SINCE_3_1_0,
         MatcherSubject, Seg, VALID_KIRO_V3_HOOK_DOC_VERSIONS, compile_js_regex, foreign_tool_names,
-        is_compaction_trigger, is_permission_request_trigger, is_tool_selector, matcher_subject,
-        matches_everything, resolve_trigger, tool_matcher_matches_builtin,
-        trigger_case_insensitive_match,
+        is_compaction_trigger, is_permission_request_trigger, is_subagent_stop_trigger,
+        is_tool_selector, matcher_subject, matches_everything, resolve_trigger,
+        tool_matcher_matches_builtin, trigger_case_insensitive_match,
     },
 };
 use rust_i18n::t;
@@ -608,6 +608,14 @@ impl Ctx<'_> {
                 Some(canonical)
             }
             None => {
+                // kiro-cli 3.6.0 ("Subagent Stop Hooks and Guided Compaction"):
+                // `SubagentStop` runs in a V3 session when a dispatched
+                // subagent finishes a turn. The mirrored engine table is
+                // 2.32.1, so an install on 3.5.x or older skips the hook and
+                // 3.6.0+ runs it.
+                if is_subagent_stop_trigger(trigger) {
+                    return Some("SubagentStop");
+                }
                 // KR-HK-032: the PermissionRequest trigger arrived with
                 // kiro-cli 3.4.0 ("Hooks That Rewrite Tool Inputs and Answer
                 // Permission Prompts"). The mirrored engine table is

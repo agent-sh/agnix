@@ -135,8 +135,13 @@ fn matcher_path(event: &str, matcher_idx: usize) -> Vec<PathSeg> {
 
 /// The pinned Claude Code version when it is older than 2.`minor`.`patch`.
 /// Only used for features released within the last few months (onFailure,
-/// v2.1.295, 2026-10-08; onFailure on mcp_tool hooks, v2.1.328, 2026-11-19).
-fn version_below(config: &PerFileLintConfig<'_>, minor: u64, patch: u64) -> Option<String> {
+/// v2.1.295, 2026-10-08; onFailure on mcp_tool hooks, v2.1.328, 2026-11-19;
+/// the PreSkillShellCommand event, v2.1.332, 2026-11-24).
+pub(super) fn version_below(
+    config: &PerFileLintConfig<'_>,
+    minor: u64,
+    patch: u64,
+) -> Option<String> {
     let pinned = config.get_claude_code_version()?;
     let version = semver::Version::parse(pinned.trim_start_matches('v')).ok()?;
     (version < semver::Version::new(2, minor, patch)).then(|| pinned.to_string())

@@ -13,7 +13,7 @@ keywords: ["PI-MDL-002", "unusable pi provider configuration", "pi", "validation
 - **Category**: `pi`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-11-11`
+- **Verified On**: `2026-11-25`
 
 ## Applicability
 

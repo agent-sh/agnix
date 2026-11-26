@@ -13,7 +13,7 @@ keywords: ["AGY-RL-001", "invalid antigravity rule trigger", "antigravity", "val
 - **Category**: `antigravity`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-11-04`
+- **Verified On**: `2026-11-25`
 
 ## Applicability
 

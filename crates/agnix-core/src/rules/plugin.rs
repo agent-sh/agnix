@@ -339,6 +339,8 @@ impl Validator for PluginValidator {
                 "displayName",
                 "defaultEnabled",
                 "dependencies",
+                // v2.1.331: "Added `optionalDependencies` to plugin manifests".
+                "optionalDependencies",
                 "termsOfServiceUrl",
                 "engines",
                 "types",
@@ -1161,28 +1163,29 @@ fn check_manifest_extras(
     }
 
     // ---- CC-PL-019: dependency version ranges ----
-    if config.is_rule_enabled("CC-PL-019")
-        && let Some(deps) = raw_value.get("dependencies").and_then(|d| d.as_array())
-    {
-        for (i, dep) in deps.iter().enumerate() {
-            let Some(version) = dep.get("version").and_then(|v| v.as_str()) else {
+    // v2.1.331 added `optionalDependencies`, which Claude Code parses with
+    // the same schema as `dependencies`.
+    if config.is_rule_enabled("CC-PL-019") {
+        for list in ["dependencies", "optionalDependencies"] {
+            let Some(deps) = raw_value.get(list).and_then(|d| d.as_array()) else {
                 continue;
             };
-            if !is_semver_range(version) {
-                let name = dep.get("name").and_then(|n| n.as_str()).unwrap_or("?");
-                push(
-                    diagnostics,
-                    path,
-                    Warning,
-                    locator.value_pos(&[
-                        Seg::Key("dependencies"),
-                        Seg::Index(i),
-                        Seg::Key("version"),
-                    ]),
-                    "CC-PL-019",
-                    t!("rules.cc_pl_019.message", name = name, version = version).to_string(),
-                    t!("rules.cc_pl_019.suggestion").to_string(),
-                );
+            for (i, dep) in deps.iter().enumerate() {
+                let Some(version) = dep.get("version").and_then(|v| v.as_str()) else {
+                    continue;
+                };
+                if !is_semver_range(version) {
+                    let name = dep.get("name").and_then(|n| n.as_str()).unwrap_or("?");
+                    push(
+                        diagnostics,
+                        path,
+                        Warning,
+                        locator.value_pos(&[Seg::Key(list), Seg::Index(i), Seg::Key("version")]),
+                        "CC-PL-019",
+                        t!("rules.cc_pl_019.message", name = name, version = version).to_string(),
+                        t!("rules.cc_pl_019.suggestion").to_string(),
+                    );
+                }
             }
         }
     }

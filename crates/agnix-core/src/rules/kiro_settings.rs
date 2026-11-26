@@ -151,6 +151,12 @@ const SETTINGS: &[SettingSpec] = &[
         false,
         &["auto", "bel", "osc9"],
     ),
+    // kiro-cli 3.6.0 (\"Notification controls\"): \"Use **Sound** to choose
+    // whether Kiro plays a tone with each alert. ... These controls write
+    // `chat.enableNotifications`, `chat.notificationMethod`, and
+    // `chat.notificationSound`\" (CLI chat settings; \"Global only\" in the
+    // settings reference).
+    spec("chat.notificationSound", Bool, true, &[]),
     spec("api.oidc.scopePrefix", Str, true, &[]),
     spec("api.codewhisperer.service", Str, true, &[]),
     spec("api.krs.service", Object, true, &[]),

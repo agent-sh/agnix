@@ -565,11 +565,13 @@ impl Validator for HooksValidator {
             // --- Event-level validation ---
             // CC-HK-001: Invalid event name
             if config.is_rule_enabled("CC-HK-001") {
-                if !validate_cc_hk_001_event_name(event, path, content, &mut diagnostics) {
+                if !validate_cc_hk_001_event_name(event, path, content, config, &mut diagnostics) {
                     continue;
                 }
-            } else if !HooksSchema::VALID_EVENTS.contains(&event.as_str()) {
-                continue; // Skip invalid events even if rule disabled
+            } else if !event_known_to_pin(config, event.as_str()) {
+                // Skip invalid events, and events the pinned release does
+                // not run, even if the rule is disabled.
+                continue;
             }
 
             for (matcher_idx, matcher) in matchers.iter().enumerate() {

@@ -1608,6 +1608,7 @@ pub(crate) fn is_user_or_system_dir(dir: &Path) -> bool {
 
 /// Top-level keys that only exist in the native OpenCode 2 shape.
 pub(crate) const V2_TOP_LEVEL_KEYS: &[&str] = &[
+    "automations",
     "agents",
     "commands",
     "permissions",

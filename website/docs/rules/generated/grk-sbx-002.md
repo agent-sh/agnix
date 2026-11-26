@@ -13,7 +13,7 @@ keywords: ["GRK-SBX-002", "invalid grok sandbox profile", "grok", "validation", 
 - **Category**: `grok`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-29`
+- **Verified On**: `2026-11-25`
 
 ## Applicability
 
