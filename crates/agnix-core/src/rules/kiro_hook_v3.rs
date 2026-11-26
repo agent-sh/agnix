@@ -35,7 +35,7 @@
 //! <https://kiro.dev/docs/cli/v3/hooks-migration/>, and the V3 engine bundled
 //! with kiro-cli 2.32.1 (hook file loader and zod schema).
 
-use super::kiro_engine::{KiroEngine, kiro_cli_below, pinned_engine};
+use super::kiro_engine::{KiroEngine, kiro_cli_below, pinned_engine, subagent_stop_needs_upgrade};
 use crate::{
     config::PerFileLintConfig,
     diagnostics::{Diagnostic, DiagnosticLevel, Fix},
@@ -614,6 +614,14 @@ impl Ctx<'_> {
                 // 2.32.1, so an install on 3.5.x or older skips the hook and
                 // 3.6.0+ runs it.
                 if is_subagent_stop_trigger(trigger) {
+                    if subagent_stop_needs_upgrade(self.config) {
+                        self.push(Finding::new(
+                            "KR-HK-012",
+                            DiagnosticLevel::Info,
+                            At::Value(&trigger_path),
+                            t!("rules.kr_hk_012.subagent_stop_version"),
+                        ));
+                    }
                     return Some("SubagentStop");
                 }
                 // KR-HK-032: the PermissionRequest trigger arrived with

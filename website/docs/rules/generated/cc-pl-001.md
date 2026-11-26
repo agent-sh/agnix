@@ -13,7 +13,7 @@ keywords: ["CC-PL-001", "plugin manifest not in .claude-plugin/", "claude plugin
 - **Category**: `Claude Plugins`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-17`
+- **Verified On**: `2026-11-26`
 
 ## Applicability
 
@@ -26,6 +26,7 @@ keywords: ["CC-PL-001", "plugin manifest not in .claude-plugin/", "claude plugin
 - https://code.claude.com/docs/en/plugins/manifest-reference
 - https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference
 - https://code.visualstudio.com/docs/agents/reference/agent-plugin-reference
+- https://github.com/anthropics/claude-code/releases/tag/v2.1.331
 
 ## Test Coverage Metadata
 

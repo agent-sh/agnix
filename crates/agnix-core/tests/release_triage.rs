@@ -856,9 +856,9 @@ fn claude_code_021332_accepts_pre_skill_shell_command_hook() {
         {"hooks": [{"type": "command", "command": "echo y"}]}
     ]}})
     .to_string();
-    let hook_file = serde_json::json!({
+    let hook_file = serde_json::json!({"hooks": {
         "PreSkillShellCommand": [{"hooks": [{"type": "command", "command": "echo y"}]}]
-    })
+    }})
     .to_string();
     for (path, content) in [
         (".claude/settings.json", settings.as_str()),
@@ -891,34 +891,53 @@ fn claude_code_pins_below_2_1_332_keep_the_error_for_pre_skill_shell_command() {
     let registry = ValidatorRegistry::with_defaults();
     let settings =
         r#"{"hooks":{"PreSkillShellCommand":[{"hooks":[{"type":"command","command":"echo x"}]}]}}"#;
-    for version in ["2.1.330", "2.1.331"] {
-        let diagnostics = validate_content(
-            Path::new(".claude/settings.json"),
-            settings,
-            &pinned(version),
-            &registry,
-        );
-        let errors: Vec<_> = diagnostics
-            .iter()
-            .filter(|d| d.rule == "CC-HK-001")
-            .collect();
-        assert_eq!(errors.len(), 1, "{version}: {diagnostics:?}");
-        assert!(
-            errors[0].message.contains("2.1.332"),
-            "{version}: {diagnostics:?}"
-        );
-    }
-    for version in ["2.1.332", "2.2.0"] {
-        let diagnostics = validate_content(
-            Path::new(".claude/settings.json"),
-            settings,
-            &pinned(version),
-            &registry,
-        );
-        assert!(
-            diagnostics.iter().all(|d| d.rule != "CC-HK-001"),
-            "{version}: {diagnostics:?}"
-        );
+    let frontmatter = "---\nname: demo\ndescription: Demo hooks\nhooks:\n  PreSkillShellCommand:\n    - hooks:\n        - type: command\n          command: echo x\n---\nRun checks.\n";
+    for (path, content, rule) in [
+        (".claude/settings.json", settings, "CC-HK-001"),
+        (".claude/hooks/hooks.json", settings, "CC-HK-001"),
+        (".claude/agents/demo.md", frontmatter, "CC-AG-011"),
+        (".claude/skills/demo/SKILL.md", frontmatter, "CC-SK-010"),
+    ] {
+        for version in ["2.1.331", "2.1.332", "2.2.0"] {
+            let config = pinned(version);
+            let diagnostics = validate_content(Path::new(path), content, &config, &registry);
+            let errors: Vec<_> = diagnostics.iter().filter(|d| d.rule == rule).collect();
+            let old = version == "2.1.331";
+            assert_eq!(
+                errors.len(),
+                usize::from(old),
+                "{path} {version}: {diagnostics:?}"
+            );
+            if old && rule == "CC-HK-001" {
+                assert!(errors[0].message.contains("2.1.332"));
+                assert!(errors[0].fixes.is_empty());
+            }
+            let typo = content.replace("PreSkillShellCommand", "preskillshellcommand");
+            let diagnostics = validate_content(Path::new(path), &typo, &config, &registry);
+            let error = diagnostics.iter().find(|d| d.rule == rule).unwrap();
+            assert_eq!(
+                error.message.contains("PreSkillShellCommand"),
+                !old,
+                "{path} {version}: {error:?}"
+            );
+            if rule == "CC-HK-001" {
+                assert_eq!(
+                    error
+                        .suggestion
+                        .as_deref()
+                        .unwrap()
+                        .contains("PreSkillShellCommand"),
+                    !old
+                );
+                assert_eq!(error.fixes.len(), usize::from(!old));
+                if let Some(fix) = error.fixes.first() {
+                    let mut fixed = typo.clone();
+                    fixed.replace_range(fix.start_byte..fix.end_byte, &fix.replacement);
+                    assert!(fix.safe);
+                    assert_eq!(fixed, content);
+                }
+            }
+        }
     }
 }
 
@@ -937,6 +956,33 @@ fn claude_code_021331_accepts_optional_plugin_dependencies() {
     );
     assert!(
         diagnostics.iter().all(|d| d.rule != "CC-PL-017"),
+        "{diagnostics:?}"
+    );
+
+    let optional_only =
+        r#"{"name":"demo","optionalDependencies":[{"name":"helper","version":"latest"}]}"#;
+    let diagnostics = validate_content(
+        Path::new("demo/.claude-plugin/plugin.json"),
+        optional_only,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .any(|d| d.rule == "CC-PL-019" && d.message.contains("latest")),
+        "{diagnostics:?}"
+    );
+    let diagnostics = validate_content(
+        Path::new("demo/plugin.json"),
+        optional_only,
+        &LintConfig::default(),
+        &registry,
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .any(|d| d.rule == "CC-PL-001" && d.level == agnix_core::DiagnosticLevel::Error),
         "{diagnostics:?}"
     );
 
@@ -1305,43 +1351,59 @@ fn grok_1_0_82_types_workspace_write_and_accepts_extends_minimal() {
 
 #[test]
 fn kiro_360_accepts_subagent_stop_hook() {
-    // kiro-cli 3.6.0 ("Subagent Stop Hooks and Guided Compaction"): "In a V3
-    // session, a SubagentStop Hook runs when a dispatched subagent finishes".
     let registry = ValidatorRegistry::with_defaults();
-    let pinned = LintConfig::builder()
-        .tool_versions(agnix_core::config::ToolVersions {
-            kiro: Some("3.6.0".into()),
-            ..Default::default()
-        })
-        .build()
-        .unwrap();
-    let content = serde_json::json!({
-        "version": "v1",
-        "hooks": [
-            {"name": "subagent-stop", "trigger": "SubagentStop", "action": {"type": "command", "command": "echo done"}}
-        ]
-    })
-    .to_string();
-    for config in [&LintConfig::default(), &pinned] {
-        let diagnostics = validate_content(
-            Path::new(".kiro/hooks/subagent-stop.json"),
-            &content,
-            config,
-            &registry,
-        );
-        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+    let hooks = serde_json::json!([{"name":"subagent-stop","trigger":"SubagentStop","action":{"type":"command","command":"echo done"}}]);
+    for (path, content, rule) in [
+        (
+            ".kiro/hooks/end.json",
+            serde_json::json!({"version":"v1","hooks":hooks}),
+            "KR-HK-012",
+        ),
+        (
+            ".kiro/agents/demo.json",
+            serde_json::json!({"name":"demo","hooks":hooks}),
+            "KR-HK-005",
+        ),
+    ] {
+        for pin in [None, Some("3.5.9"), Some("3.6.0")] {
+            let config = LintConfig::builder()
+                .tool_versions(agnix_core::config::ToolVersions {
+                    kiro: pin.map(str::to_owned),
+                    ..Default::default()
+                })
+                .build()
+                .unwrap();
+            let content = content.to_string();
+            let diagnostics = validate_content(Path::new(path), &content, &config, &registry);
+            let hits: Vec<_> = diagnostics.iter().filter(|d| d.rule == rule).collect();
+            assert_eq!(
+                hits.len(),
+                usize::from(pin == Some("3.5.9")),
+                "{path} {pin:?}: {diagnostics:?}"
+            );
+            if let Some(d) = hits.first() {
+                assert_eq!(d.level, agnix_core::DiagnosticLevel::Info);
+                assert!(d.message.contains("3.6.0") && d.fixes.is_empty(), "{d:?}");
+            }
+            let typo = content.replace("SubagentStop", "subagentStop");
+            let diagnostics = validate_content(Path::new(path), &typo, &config, &registry);
+            assert!(
+                diagnostics
+                    .iter()
+                    .any(|d| d.rule == rule && d.message.contains("subagentStop")),
+                "{path}: {diagnostics:?}"
+            );
+        }
     }
-
-    // The trigger name is still exact and case-sensitive.
-    let wrong = content.replace("\"SubagentStop\"", "\"subagentStop\"");
+    let legacy = r#"{"name":"demo","hooks":{"SubagentStop":[{"command":"echo done"}]}}"#;
     let diagnostics = validate_content(
-        Path::new(".kiro/hooks/subagent-stop.json"),
-        &wrong,
+        Path::new(".kiro/agents/demo.json"),
+        legacy,
         &LintConfig::default(),
         &registry,
     );
     assert!(
-        diagnostics.iter().any(|d| d.rule == "KR-HK-012"),
+        diagnostics.iter().any(|d| d.rule == "KR-HK-005"),
         "{diagnostics:?}"
     );
 }

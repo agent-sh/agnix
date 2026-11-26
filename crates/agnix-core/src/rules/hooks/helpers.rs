@@ -323,8 +323,16 @@ pub(super) fn event_after_pin(config: &PerFileLintConfig<'_>, event: &str) -> Op
 
 /// Whether the pinned release knows `event`. An unpinned run takes the
 /// latest release.
-pub(super) fn event_known_to_pin(config: &PerFileLintConfig<'_>, event: &str) -> bool {
+pub(crate) fn event_known_to_pin(config: &PerFileLintConfig<'_>, event: &str) -> bool {
     HooksSchema::VALID_EVENTS.contains(&event) && event_after_pin(config, event).is_none()
+}
+
+pub(crate) fn valid_events_for_pin(config: &PerFileLintConfig<'_>) -> Vec<&'static str> {
+    HooksSchema::VALID_EVENTS
+        .iter()
+        .copied()
+        .filter(|event| event_after_pin(config, event).is_none())
+        .collect()
 }
 
 /// CC-HK-001: Invalid event name with auto-fix support
@@ -357,7 +365,8 @@ pub(super) fn validate_cc_hk_001_event_name(
         return true;
     }
 
-    let closest = find_closest_event(event);
+    let valid_events = valid_events_for_pin(config);
+    let closest = find_closest_event(event, &valid_events);
     let mut diagnostic = Diagnostic::error(
         path.to_path_buf(),
         1,
@@ -366,23 +375,19 @@ pub(super) fn validate_cc_hk_001_event_name(
         t!(
             "rules.cc_hk_001.message",
             event = event,
-            valid = format!("{:?}", HooksSchema::VALID_EVENTS)
+            valid = format!("{valid_events:?}")
         ),
     )
     .with_suggestion(closest.suggestion);
 
-    // Add auto-fix if we found a matching event
-    // No fix to an event the pinned release does not run.
     if let Some(corrected) = closest.corrected_event.as_deref()
-        && event_after_pin(config, corrected).is_none()
+        && let Some((start, end)) = find_event_key_position(content, event)
     {
-        if let Some((start, end)) = find_event_key_position(content, event) {
-            let replacement = format!("\"{}\"", corrected);
-            let description = t!("rules.cc_hk_001.fix", old = event, new = corrected);
-            // Case-only fixes are safe (high confidence)
-            let fix = Fix::replace(start, end, replacement, description, closest.is_case_fix);
-            diagnostic = diagnostic.with_fix(fix);
-        }
+        let replacement = format!("\"{}\"", corrected);
+        let description = t!("rules.cc_hk_001.fix", old = event, new = corrected);
+        // Case-only fixes are safe (high confidence)
+        let fix = Fix::replace(start, end, replacement, description, closest.is_case_fix);
+        diagnostic = diagnostic.with_fix(fix);
     }
 
     diagnostics.push(diagnostic);
@@ -749,11 +754,11 @@ pub(super) struct ClosestEventMatch {
     pub(super) is_case_fix: bool,
 }
 
-pub(super) fn find_closest_event(invalid_event: &str) -> ClosestEventMatch {
+pub(super) fn find_closest_event(invalid_event: &str, valid_events: &[&str]) -> ClosestEventMatch {
     let lower_event = invalid_event.to_lowercase();
 
     // Check for exact case-insensitive match first (high confidence fix)
-    for valid in HooksSchema::VALID_EVENTS {
+    for valid in valid_events {
         if valid.to_lowercase() == lower_event {
             return ClosestEventMatch {
                 suggestion: format!("Did you mean '{}'? Event names are case-sensitive.", valid),
@@ -764,7 +769,7 @@ pub(super) fn find_closest_event(invalid_event: &str) -> ClosestEventMatch {
     }
 
     // Check for partial matches (lower confidence)
-    for valid in HooksSchema::VALID_EVENTS {
+    for valid in valid_events {
         let valid_lower = valid.to_lowercase();
         if valid_lower.contains(&lower_event) || lower_event.contains(&valid_lower) {
             return ClosestEventMatch {
@@ -776,7 +781,7 @@ pub(super) fn find_closest_event(invalid_event: &str) -> ClosestEventMatch {
     }
 
     ClosestEventMatch {
-        suggestion: format!("Valid events are: {}", HooksSchema::VALID_EVENTS.join(", ")),
+        suggestion: format!("Valid events are: {}", valid_events.join(", ")),
         corrected_event: None,
         is_case_fix: false,
     }

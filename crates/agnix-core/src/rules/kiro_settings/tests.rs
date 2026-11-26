@@ -448,6 +448,19 @@ fn test_kr_set_011_global_only_key_in_workspace_file() {
     );
 }
 
+#[test]
+fn notification_sound_is_boolean() {
+    for value in ["true", "false", r#""true""#] {
+        let diagnostics = validate(&format!(r#"{{"chat.notificationSound":{value}}}"#));
+        assert!(hits(&diagnostics, "KR-SET-005").is_empty());
+        assert_eq!(
+            hits(&diagnostics, "KR-SET-008").len(),
+            usize::from(value == r#""true""#),
+            "{diagnostics:?}"
+        );
+    }
+}
+
 // ===== Toggles and metadata =====
 
 #[test]
@@ -511,6 +524,7 @@ fn test_kr_set_011_kiro_3_global_settings_in_workspace_file() {
         return;
     }
     for content in [
+        r#"{"chat.notificationSound": true}"#,
         r#"{"acp.agentEngine": "v3"}"#,
         r#"{"app.warnOnElevatedPrivileges": false}"#,
         r#"{"chat.enableAutoAgentUpgrade": false}"#,

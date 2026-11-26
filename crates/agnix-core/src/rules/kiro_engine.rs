@@ -112,6 +112,11 @@ pub(crate) fn kiro_cli_below(config: &PerFileLintConfig<'_>, minimum: (u64, u64,
     parsed < minimum
 }
 
+/// Unpinned V3 hook arrays use the current trigger vocabulary.
+pub(super) fn subagent_stop_needs_upgrade(config: &PerFileLintConfig<'_>) -> bool {
+    config.get_kiro_version().is_some() && kiro_cli_below(config, (3, 6, 0))
+}
+
 /// The engines a file is checked against, given whether it has V2-only and
 /// V3-only markers. A pinned version always wins.
 pub(crate) fn engines_for(config: &LintConfig, v2_markers: bool, v3_markers: bool) -> KiroEngines {

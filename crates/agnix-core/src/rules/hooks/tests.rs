@@ -1499,7 +1499,7 @@ fn test_fixture_missing_type_field() {
 
 #[test]
 fn test_find_closest_event_exact_case_match() {
-    let closest = find_closest_event("pretooluse");
+    let closest = find_closest_event("pretooluse", HooksSchema::VALID_EVENTS);
     assert!(closest.suggestion.contains("PreToolUse"));
     assert!(closest.suggestion.contains("case-sensitive"));
     assert_eq!(closest.corrected_event, Some("PreToolUse".to_string()));
@@ -1508,7 +1508,7 @@ fn test_find_closest_event_exact_case_match() {
 
 #[test]
 fn test_find_closest_event_partial_match() {
-    let closest = find_closest_event("tool");
+    let closest = find_closest_event("tool", HooksSchema::VALID_EVENTS);
     assert!(closest.suggestion.contains("Did you mean"));
     assert!(closest.corrected_event.is_some());
     assert!(!closest.is_case_fix);
@@ -1516,7 +1516,7 @@ fn test_find_closest_event_partial_match() {
 
 #[test]
 fn test_find_closest_event_no_match() {
-    let closest = find_closest_event("CompletelyInvalid");
+    let closest = find_closest_event("CompletelyInvalid", HooksSchema::VALID_EVENTS);
     assert!(closest.suggestion.contains("Valid events are"));
     assert!(closest.corrected_event.is_none());
 }

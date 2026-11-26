@@ -1480,9 +1480,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/sub-agents"
+          "https://code.claude.com/docs/en/sub-agents",
+          "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-10-04",
+        "verified_on": "2026-11-26",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -3333,9 +3334,10 @@
         "source_urls": [
           "https://code.claude.com/docs/en/plugins/manifest-reference",
           "https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference",
-          "https://code.visualstudio.com/docs/agents/reference/agent-plugin-reference"
+          "https://code.visualstudio.com/docs/agents/reference/agent-plugin-reference",
+          "https://github.com/anthropics/claude-code/releases/tag/v2.1.331"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-26",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -4002,9 +4004,10 @@
       "evidence": {
         "source_type": "vendor_docs",
         "source_urls": [
-          "https://code.claude.com/docs/en/skills"
+          "https://code.claude.com/docs/en/skills",
+          "https://code.claude.com/docs/en/hooks"
         ],
-        "verified_on": "2026-02-07",
+        "verified_on": "2026-11-26",
         "applies_to": {
           "tool": "claude-code"
         },
@@ -13287,9 +13290,11 @@
         "source_urls": [
           "https://kiro.dev/docs/cli/2x-reference/",
           "https://kiro.dev/docs/hooks/types/",
-          "https://kiro.dev/docs/custom-agents/configuration-reference/"
+          "https://kiro.dev/docs/custom-agents/configuration-reference/",
+          "https://kiro.dev/docs/cli/v3/hooks-migration/",
+          "https://kiro.dev/changelog/cli/"
         ],
-        "verified_on": "2026-10-17",
+        "verified_on": "2026-11-26",
         "applies_to": {
           "tool": "kiro"
         },
@@ -13449,9 +13454,10 @@
         "source_urls": [
           "https://kiro.dev/docs/hooks/",
           "https://kiro.dev/docs/hooks/types/",
-          "https://kiro.dev/docs/cli/v3/hooks-migration/"
+          "https://kiro.dev/docs/cli/v3/hooks-migration/",
+          "https://kiro.dev/changelog/cli/"
         ],
-        "verified_on": "2026-11-25",
+        "verified_on": "2026-11-26",
         "applies_to": {
           "tool": "kiro",
           "version_range": ">=2.8.0"

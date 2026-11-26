@@ -9,9 +9,9 @@ use crate::{
     diagnostics::{Diagnostic, Fix},
     fs::FileSystem,
     parsers::frontmatter::{FrontmatterParts, split_frontmatter},
+    rules::hooks::{event_known_to_pin, valid_events_for_pin},
     rules::{Validator, ValidatorMetadata},
     schemas::agent::AgentSchema,
-    schemas::hooks::HooksSchema,
     schemas::skill::VALID_EFFORT_LEVELS,
     validation::is_valid_mcp_tool_format,
 };
@@ -885,16 +885,11 @@ impl Validator for AgentValidator {
         // CC-AG-011: Hooks in agent frontmatter validation
         if config.is_rule_enabled("CC-AG-011") {
             if let Some(hooks_value) = &schema.hooks {
-                // Compute valid events list once
-                static VALID_EVENTS_LIST: OnceLock<String> = OnceLock::new();
-                let valid_events_str =
-                    VALID_EVENTS_LIST.get_or_init(|| HooksSchema::VALID_EVENTS.join(", "));
-
                 // The hooks field should be an object mapping event names to arrays
                 if let Some(hooks_obj) = hooks_value.as_object() {
                     for (event_name, event_value) in hooks_obj {
                         // Validate event name
-                        if !HooksSchema::VALID_EVENTS.contains(&event_name.as_str()) {
+                        if !event_known_to_pin(config, event_name) {
                             diagnostics.push(
                                 Diagnostic::error(
                                     path.to_path_buf(),
@@ -905,7 +900,8 @@ impl Validator for AgentValidator {
                                         "rules.cc_ag_011.message",
                                         error = format!(
                                             "unknown event '{}', valid events: {}",
-                                            event_name, valid_events_str
+                                            event_name,
+                                            valid_events_for_pin(config).join(", ")
                                         )
                                     ),
                                 )

@@ -62,6 +62,7 @@ use crate::diagnostics::{Diagnostic, DiagnosticLevel, Fix};
 use crate::parsers::frontmatter::{check_yaml_depth, split_frontmatter};
 use crate::rules::kiro_engine::{
     KiroEngine, KiroEngines, engines_for, kiro_cli_below, pinned_engine,
+    subagent_stop_needs_upgrade,
 };
 use crate::rules::{Validator, ValidatorMetadata, json_type_name, line_col_at_offset};
 use crate::schemas::kiro_agent::{
@@ -74,8 +75,8 @@ use crate::schemas::kiro_agent::{
 };
 use crate::schemas::kiro_hook_v3::{
     MatcherSubject, foreign_tool_names, is_compaction_trigger, is_permission_request_trigger,
-    is_tool_selector, matches_everything, resolve_trigger, tool_matcher_matches_builtin,
-    trigger_case_insensitive_match,
+    is_subagent_stop_trigger, is_tool_selector, matches_everything, resolve_trigger,
+    tool_matcher_matches_builtin, trigger_case_insensitive_match,
 };
 use crate::schemas::kiro_permissions::VALID_PERMISSION_CAPABILITIES;
 
@@ -3511,6 +3512,17 @@ impl Ctx<'_> {
             return;
         }
         let path = [K("hooks"), I(index), K("trigger")];
+        if is_subagent_stop_trigger(trigger) {
+            if subagent_stop_needs_upgrade(self.config) {
+                out.push(self.diag(
+                    Info,
+                    "KR-HK-005",
+                    self.at(&path, Anchor::Value),
+                    t!("rules.kr_hk_012.subagent_stop_version"),
+                ));
+            }
+            return;
+        }
         let replacement = trigger_case_insensitive_match(trigger).or_else(|| {
             trigger
                 .eq_ignore_ascii_case("agentSpawn")

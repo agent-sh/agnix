@@ -8,10 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- KR-HK-012 accepts the Kiro `SubagentStop` trigger (Kiro CLI 3.6.0, "Subagent
-  Stop Hooks and Guided Compaction"): in a V3 session it runs when a
-  dispatched subagent finishes a turn. The 2.32.1 engine table this validator
-  mirrors does not know it.
+- KR-HK-012 and KR-HK-005 accept `SubagentStop` in standalone Kiro hooks and
+  V3 profile arrays. An explicit pin below CLI 3.6.0 reports that the hook is skipped.
 - CDX-CFG-024 validates `approvals_reviewer` under
   `apps.<app_id>.tools.<tool_id>` (Codex rust-v0.172.0 tagged schema).
 - CUR-016 accepts the root `clone` object of Cursor's published
@@ -302,7 +300,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - CC-HK-001, CC-HK-003 and CC-HK-021 accept `PreSkillShellCommand` (Claude
-  Code v2.1.332). A pin below v2.1.332 keeps the error for the event name.
+  Code v2.1.332). Older pins reject it in settings, hook files, agent and skill
+  frontmatter, and exclude it from suggestions and fixes.
 - CC-PL-017 and CC-MP-005 accept `optionalDependencies` in plugin manifests
   and marketplace entries (Claude Code v2.1.331); CC-PL-019 checks its
   versions too.

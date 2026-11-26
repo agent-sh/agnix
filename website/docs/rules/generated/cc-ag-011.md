@@ -13,7 +13,7 @@ keywords: ["CC-AG-011", "invalid hooks in agent frontmatter", "claude agents", "
 - **Category**: `Claude Agents`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-10-04`
+- **Verified On**: `2026-11-26`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-AG-011", "invalid hooks in agent frontmatter", "claude agents", "
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/sub-agents
+- https://code.claude.com/docs/en/hooks
 
 ## Test Coverage Metadata
 

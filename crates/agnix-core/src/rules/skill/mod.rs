@@ -5,9 +5,9 @@ use crate::{
     diagnostics::{Diagnostic, Fix},
     parsers::frontmatter::{FrontmatterParts, split_frontmatter},
     regex_util::static_regex,
+    rules::hooks::{event_known_to_pin, valid_events_for_pin},
     rules::per_client_skill::{SkillClient, claude_skill_rules_apply, resolve_skill_client},
     rules::{Validator, ValidatorMetadata},
-    schemas::hooks::HooksSchema,
     schemas::skill::{
         SkillSchema, VALID_EFFORT_LEVELS, VALID_SHELLS, deserialize_optional_bool_alias,
         is_bool_alias_value, is_valid_skill_model, parse_skill_name_parts,
@@ -1630,7 +1630,7 @@ impl<'a> ValidationContext<'a> {
             };
 
             // Validate event name
-            if !HooksSchema::VALID_EVENTS.contains(&event) {
+            if !event_known_to_pin(self.config, event) {
                 self.diagnostics.push(
                     Diagnostic::error(
                         self.path.to_path_buf(),
@@ -1642,7 +1642,7 @@ impl<'a> ValidationContext<'a> {
                             error = format!(
                                 "invalid hook event '{}', valid events: {}",
                                 event,
-                                HooksSchema::VALID_EVENTS.join(", ")
+                                valid_events_for_pin(self.config).join(", ")
                             )
                         ),
                     )

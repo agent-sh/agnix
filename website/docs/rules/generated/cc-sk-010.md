@@ -13,7 +13,7 @@ keywords: ["CC-SK-010", "invalid hooks in skill frontmatter", "claude skills", "
 - **Category**: `Claude Skills`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `No`
-- **Verified On**: `2026-02-07`
+- **Verified On**: `2026-11-26`
 
 ## Applicability
 
@@ -24,6 +24,7 @@ keywords: ["CC-SK-010", "invalid hooks in skill frontmatter", "claude skills", "
 ## Evidence Sources
 
 - https://code.claude.com/docs/en/skills
+- https://code.claude.com/docs/en/hooks
 
 ## Test Coverage Metadata
 

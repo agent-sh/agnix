@@ -2740,6 +2740,7 @@ rules:
     suggestion: 'Set "version" to "v1" at the top level of the hook file'
     fix: 'Replace the version with "v1" (activates the hooks in this file)'
   kr_hk_012:
+    subagent_stop_version: "SubagentStop requires Kiro CLI 3.6.0 or later. The pinned CLI skips this hook."
     suggestion: 'A hook file is {"version": "v1", "hooks": [...]}; each hook needs a non-empty name, a trigger and an action object'
     parse_error: 'Kiro V3 hook file is not valid JSON: %{error}; Kiro skips the whole file'
     parse_suggestion: Fix the JSON syntax. Hook files are strict JSON (no comments or trailing commas).

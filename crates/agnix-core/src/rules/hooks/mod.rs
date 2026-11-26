@@ -14,6 +14,7 @@ mod extra;
 mod helpers;
 pub(crate) use extra::{HookFinding, HookOrigin, PathSeg, PluginServers, check_hooks};
 use helpers::*;
+pub(crate) use helpers::{event_known_to_pin, valid_events_for_pin};
 
 const RULE_IDS: &[&str] = &[
     "CC-HK-001",

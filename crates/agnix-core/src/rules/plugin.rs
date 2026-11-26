@@ -88,6 +88,7 @@ const CLAUDE_ONLY_FIELDS: &[&str] = &[
     "termsOfServiceUrl",
     "defaultEnabled",
     "dependencies",
+    "optionalDependencies",
     "settings",
     "userConfig",
     "types",

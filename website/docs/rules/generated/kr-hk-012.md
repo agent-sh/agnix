@@ -13,7 +13,7 @@ keywords: ["KR-HK-012", "invalid kiro v3 hook entry", "kiro hooks", "validation"
 - **Category**: `Kiro Hooks`
 - **Normative Level**: `MUST`
 - **Auto-Fix**: `Yes (unsafe)`
-- **Verified On**: `2026-11-25`
+- **Verified On**: `2026-11-26`
 
 ## Applicability
 
@@ -26,6 +26,7 @@ keywords: ["KR-HK-012", "invalid kiro v3 hook entry", "kiro hooks", "validation"
 - https://kiro.dev/docs/hooks/
 - https://kiro.dev/docs/hooks/types/
 - https://kiro.dev/docs/cli/v3/hooks-migration/
+- https://kiro.dev/changelog/cli/
 
 ## Test Coverage Metadata
 

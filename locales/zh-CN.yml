@@ -672,6 +672,7 @@ rules:
     missing_version: "缺少 version 字段"
     fix: "将无效的版本字符串替换为 v1（可能会启用此钩子）"
   kr_hk_012:
+    subagent_stop_version: "SubagentStop 需要 Kiro CLI 3.6.0 或更高版本。固定的 CLI 版本会跳过此钩子。"
     message: 无效的 Kiro V3 hook 条目
     suggestion: 使用已记录的 PascalCase 触发器（SessionStart、UserPromptSubmit、PreToolUse、PostToolUse、PostFileCreate、PostFileSave、PostFileDelete、PreTaskExec、PostTaskExec、Stop、SessionEnd），并带必需的 name 和 action 字段
     parse_error: 'Kiro V3 hook 文件不是有效 JSON：%{error}'

@@ -690,6 +690,7 @@ rules:
     missing_version: "sin campo version"
     fix: "Sustituir la cadena de versión no válida por v1 (puede activar este hook)"
   kr_hk_012:
+    subagent_stop_version: "SubagentStop requiere Kiro CLI 3.6.0 o posterior. La versión fijada omite este hook."
     message: Entrada de hook V3 de Kiro invalida
     suggestion: Usa triggers PascalCase documentados (SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, PostFileCreate, PostFileSave, PostFileDelete, PreTaskExec, PostTaskExec, Stop, SessionEnd) con los campos name y action requeridos
     parse_error: 'El archivo de hooks V3 de Kiro no es JSON valido: %{error}'

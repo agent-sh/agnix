@@ -29,7 +29,8 @@ Validator changes, each covered by a test in `release_triage.rs`:
   ("Requires Claude Code v2.1.332 or later"). CC-HK-001 accepts it, CC-HK-003
   asks for a matcher on it, and CC-HK-021 lists it as a tool event for `if`.
   A pin below v2.1.332 keeps the CC-HK-001 error: "on 2.1.331 and older, a
-  settings file naming it opens a dialog at start".
+  settings file naming it opens a dialog at start". Agent and skill frontmatter
+  use the same version floor, as do suggested event names and fixes.
 - Claude Code v2.1.331 adds `optionalDependencies` to plugin manifests.
   CC-PL-017 accepts the key, CC-PL-019 checks its versions like
   `dependencies`, and CC-MP-005 accepts it on marketplace entries.
@@ -37,8 +38,9 @@ Validator changes, each covered by a test in `release_triage.rs`:
   (`[apps.<app_id>.tools.<tool_id>]`): CDX-CFG-024 validates the value and
   CDX-CFG-006 accepts the key. CDX-CFG-011 accepts `connector_tool_result_passthrough`
   and `realtime_frames_local`, absent from the release notes.
-- Kiro CLI 3.6.0 adds the `SubagentStop` trigger (V3 sessions): KR-HK-012
-  accepts it. The settings reference documents `chat.notificationSound`
+- Kiro CLI 3.6.0 adds the `SubagentStop` trigger. The [migration guide](https://kiro.dev/docs/cli/v3/hooks-migration/)
+  documents the same definitions in standalone files and profile arrays. KR-HK-012
+  and KR-HK-005 report it on older pins in those placements; legacy object keys are unchanged. The settings reference documents `chat.notificationSound`
   (boolean, global only): KR-SET-005 accepts it.
 - OpenCode v2.4.0 adds the root `automations` boolean: OC-004 accepts it.
 - Cursor 3.32.4's published `environment.schema.json` carries a root `clone`
@@ -80,8 +82,6 @@ constraint moves until a release carries it.
 - Codex rust-v0.172.0 deprecates `features.code_mode_host_grpc` and ignores
   it with a warning. agnix has no deprecated-key rule for Codex, so the key
   is still accepted silently. A new rule is a separate change.
-- `SubagentStop` has no version info for a Kiro CLI pin below 3.6.0, unlike
-  KR-HK-031 and KR-HK-032.
 
 ## Verification
 
