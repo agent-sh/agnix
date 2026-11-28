@@ -1,12 +1,43 @@
 //! Watch mode implementation for continuous validation
 
-use notify_debouncer_mini::{DebounceEventResult, new_debouncer, notify::RecursiveMode};
+use notify_debouncer_mini::{
+    DebounceEventResult, DebouncedEventBatch, new_debouncer, notify::RecursiveMode,
+};
 use rust_i18n::t;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::channel;
 use std::time::Duration;
+
+/// What one debouncer notification means for the watch loop.
+#[derive(Debug, PartialEq, Eq)]
+enum WatchAction {
+    /// Run validation again.
+    Revalidate,
+    /// Nothing that validation reads has changed.
+    Nothing,
+}
+
+/// Map a debouncer notification to a loop action.
+///
+/// `Rescan` is handled before the path filter: the watcher sends it when events
+/// were missed, it carries no paths, and it applies to every watched path.
+/// Notification kinds the debouncer adds later also revalidate: one extra run
+/// costs little, stale output costs more.
+fn action_for(batch: &DebouncedEventBatch) -> WatchAction {
+    match batch {
+        DebouncedEventBatch::Events(events) => {
+            if events.iter().any(|e| is_relevant_file(&e.path)) {
+                WatchAction::Revalidate
+            } else {
+                WatchAction::Nothing
+            }
+        }
+        // `Rescan` names no path, and so does any kind added later.
+        _ => WatchAction::Revalidate,
+    }
+}
 
 /// Run validation in watch mode, re-running on file changes
 pub fn watch_and_validate<F>(path: &Path, mut validate_fn: F) -> anyhow::Result<()>
@@ -33,10 +64,8 @@ where
     // Watch loop
     while running.load(Ordering::SeqCst) {
         match rx.recv_timeout(Duration::from_millis(100)) {
-            Ok(Ok(events)) => {
-                // Filter for relevant file changes
-                let relevant = events.iter().any(|e| is_relevant_file(&e.path));
-                if relevant {
+            Ok(Ok(batch)) => {
+                if action_for(&batch) == WatchAction::Revalidate {
                     clear_screen();
                     println!("{}\n", t!("cli.watch_changes_detected"));
                     let _ = validate_fn();
@@ -115,8 +144,12 @@ fn clear_screen() {
 
 #[cfg(test)]
 mod tests {
-    use super::is_relevant_file;
-    use std::path::Path;
+    use super::{DebouncedEventBatch, WatchAction, action_for, is_relevant_file};
+    use notify_debouncer_mini::{
+        DebouncedEvent, DebouncedEventKind, new_debouncer, notify::RecursiveMode,
+    };
+    use std::path::{Path, PathBuf};
+    use std::time::{Duration, Instant};
 
     #[test]
     fn codex_config_files_are_relevant() {
@@ -144,5 +177,82 @@ mod tests {
         }
 
         assert!(!is_relevant_file(Path::new("docs/test.md")));
+    }
+
+    fn events(paths: &[&str]) -> DebouncedEventBatch {
+        DebouncedEventBatch::Events(
+            paths
+                .iter()
+                .map(|path| DebouncedEvent::new(PathBuf::from(path), DebouncedEventKind::Any))
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn relevant_change_revalidates() {
+        assert_eq!(
+            action_for(&events(&["skills/lint/SKILL.md"])),
+            WatchAction::Revalidate
+        );
+        assert_eq!(
+            action_for(&events(&["notes.txt", ".cursor/rules/x.mdc"])),
+            WatchAction::Revalidate
+        );
+    }
+
+    #[test]
+    fn irrelevant_or_empty_batch_does_not_revalidate() {
+        assert_eq!(
+            action_for(&events(&["README.md", "target/debug/agnix"])),
+            WatchAction::Nothing
+        );
+        assert_eq!(action_for(&events(&[])), WatchAction::Nothing);
+    }
+
+    #[test]
+    fn rescan_revalidates_without_paths() {
+        // The debouncer sends Rescan when events were missed. It names no
+        // path, so the path filter must not apply to it.
+        assert_eq!(
+            action_for(&DebouncedEventBatch::Rescan),
+            WatchAction::Revalidate
+        );
+    }
+
+    // Runs the real watcher backend of the host. A full CI run covers inotify,
+    // FSEvents and ReadDirectoryChangesW.
+    #[test]
+    fn debouncer_reports_a_written_relevant_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let skill = dir.path().join("SKILL.md");
+        std::fs::write(&skill, "a").unwrap();
+
+        let (tx, rx) = std::sync::mpsc::channel::<super::DebounceEventResult>();
+        let mut debouncer = new_debouncer(Duration::from_millis(50), tx).unwrap();
+        debouncer
+            .watcher()
+            .watch(dir.path(), RecursiveMode::Recursive)
+            .unwrap();
+        std::fs::write(&skill, "b").unwrap();
+
+        let deadline = Instant::now() + Duration::from_secs(15);
+        let mut written = false;
+        while let Some(left) = deadline.checked_duration_since(Instant::now()) {
+            match rx.recv_timeout(left) {
+                Ok(Ok(batch)) => {
+                    if matches!(
+                        batch,
+                        DebouncedEventBatch::Events(ref events)
+                            if events.iter().any(|event| event.path == skill)
+                    ) {
+                        written = true;
+                        break;
+                    }
+                }
+                Ok(Err(_)) => {}
+                Err(_) => break,
+            }
+        }
+        assert!(written, "no debounced event for the written file");
     }
 }
