@@ -5,6 +5,10 @@
 # Deny known vulnerable crates
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
+# cargo-deny 0.22 narrowed the default from `all` to `workspace`, which would
+# stop reporting unmaintained transitive crates such as proc-macro-error2.
+# Keep the wider scope the ignores below were written for.
+unmaintained = "all"
 # Temporary ignore for unmaintained crates (tracked in #227)
 # Review these periodically - tracked in #346
 ignore = [
@@ -73,6 +77,7 @@ skip = [
     { name = "core-foundation", version = "*" },   # system-configuration v0.7 vs v0.10
     { name = "foldhash", version = "*" },          # hashbrown 0.15 vs rust-i18n-support 4.2.4
     { name = "getrandom", version = "*" },         # dirs v0.2, others v0.3/v0.4
+    { name = "granit-parser", version = "<2" },    # rust-i18n's 1.x (via serde-saphyr 1.2, build-time only); our 2.x stays checked
     { name = "hashbrown", version = "*" },         # multi-version fanout
     { name = "itertools", version = "*" },         # v0.11 vs v0.13
     { name = "jni-sys", version = "*" },           # android/JNI multi-major
